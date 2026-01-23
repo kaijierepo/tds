@@ -1785,9 +1785,7 @@ namespace fs {
 		if (std::filesystem::exists(filePath)) {
 			return true;
 		}
-		else if (std::filesystem::is_directory(filePath)) {
-			return true;
-		}
+
 		return  false;
 	}
 
