@@ -51,13 +51,15 @@ common_flags="\
 -I ./video \
 -fPIC \
 -pthread \
+-march=x86-64 -mtune=generic \
 "
 
 # 根据编译模式追加参数
 if [ "$BUILD_MODE" = "debug" ]; then
-    common_flags+=" -g"
+    common_flags+=" -g -O0 "
     output_file="../out/tds/tds_x86_64_debug"
 elif [ "$BUILD_MODE" = "release" ]; then
+    common_flags+=" -O2 -fno-math-errno -fno-trapping-math "
     output_file="../out/tds/tds_x86_64_release"
 else
     echo "❌ 错误：BUILD_MODE 只能是 debug 或 release"
