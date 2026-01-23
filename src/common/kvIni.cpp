@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include "logger.h"
-#include <string>
+#include <string.h>
 
 static std::wstring utf8_to_utf16(const string& u8str) {
 	const char* utf8_str = u8str.c_str();
