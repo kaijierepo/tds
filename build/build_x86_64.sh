@@ -2,14 +2,19 @@
 ls -l ./build_x86_64.sh
 set -e
 
+# ===================== 核心控制变量（关键配置）=====================
+# 编译模式：debug（保留调试信息） / release（剥离调试信息）
+BUILD_MODE="debug"
+# 是否清理原有.o文件
+ENABLE_CLEAN="no"
+
 # 切换到源码目录
 cd ../src
 echo "当前编译目录: $(pwd)"
 echo "目标架构: x86_64"
+echo "编译模式: $BUILD_MODE"
 
 # ===================== 清理逻辑 =====================
-ENABLE_CLEAN="no"
-
 if [ "$ENABLE_CLEAN" = "yes" ]; then
     echo "🧹 开始清理原有 .o 目标文件..."
     find . -name "*.o" -type f -delete
@@ -18,7 +23,8 @@ else
     echo "ℹ️  清理功能已禁用（ENABLE_CLEAN=no），保留原有 .o 文件"
 fi
 
-# ===================== 1. 定义x86_64专用编译参数 =====================
+# ===================== 1. 定义编译参数（根据模式适配）=====================
+# 基础通用参数
 common_flags="\
 -DENABLE_ALM_SRV_HOOK_SCRIPT \
 -DENABLE_QJS \
@@ -47,7 +53,18 @@ common_flags="\
 -pthread \
 "
 
-# x86_64架构专用优化参数[5](@ref)
+# 根据编译模式追加参数
+if [ "$BUILD_MODE" = "debug" ]; then
+    common_flags+=" -g"
+    output_file="../out/tds/tds_x86_64_debug"
+elif [ "$BUILD_MODE" = "release" ]; then
+    output_file="../out/tds/tds_x86_64_release"
+else
+    echo "❌ 错误：BUILD_MODE 只能是 debug 或 release"
+    exit 1
+fi
+
+# x86_64架构专用编译参数
 c_flags="\
 -std=gnu99 \
 "
@@ -100,7 +117,7 @@ check_architecture
 # ===================== 6. 增量编译所有文件 =====================
 echo "开始增量编译..."
 
-# 编译C文件（与您原脚本一致）
+# 编译C文件（与原脚本一致）
 compile_c_if_needed ./common/base64.c ./common/base64.o
 compile_c_if_needed ./common/miniz.c ./common/miniz.o
 compile_c_if_needed ./common/yyjson.c ./common/yyjson.o
@@ -114,7 +131,7 @@ compile_c_if_needed ./script/quickjs-libc.c ./script/quickjs-libc.o
 compile_c_if_needed ./script/quickjs.c ./script/quickjs.o
 compile_c_if_needed ./script/repl.c ./script/repl.o
 
-# 编译C++文件（与您原脚本一致）
+# 编译C++文件（与原脚本一致）
 compile_cpp_if_needed ./CDataSimu.cpp ./CDataSimu.o
 compile_cpp_if_needed ./main.cpp ./main.o
 compile_cpp_if_needed ./pch.cpp ./pch.o
@@ -185,7 +202,7 @@ compile_cpp_if_needed ./video/rtspRelay.cpp ./video/rtspRelay.o
 # ===================== 7. 链接生成可执行文件 =====================
 echo "链接生成x86_64可执行文件..."
 
-# 对象文件列表（与您原脚本一致）
+# 对象文件列表（与原脚本一致）
 obj_files="\
 ./common/base64.o \
 ./common/miniz.o \
@@ -267,18 +284,20 @@ obj_files="\
 ./video/rtspRelay.o \
 "
 
-output_file="../out/tds/tds_x86_64"
-
 # 链接生成可执行文件
 g++ $common_flags $cpp_flags $obj_files -o $output_file $linkerflags
 
-# ===================== 8. 优化和验证 =====================
-echo "开始体积优化..."
-strip --strip-all $output_file
+# ===================== 8. 优化和验证（根据模式适配）=====================
+if [ "$BUILD_MODE" = "release" ]; then
+    echo "开始体积优化（release模式）..."
+    strip --strip-all $output_file  # Release模式剥离所有符号
+else
+    echo "debug模式跳过strip，保留完整调试信息"  # Debug模式不执行strip
+fi
 
 # 验证文件架构
 echo "验证生成文件架构:"
-file .$output_file
+file $output_file  # 修复原脚本的路径错误（原脚本多了一个点）
 
 echo "编译完成！"
 echo "可执行文件: $(pwd)/$output_file"

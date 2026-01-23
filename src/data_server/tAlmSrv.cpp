@@ -415,6 +415,15 @@ namespace tAlm {
 		return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
 #else
 		std::filesystem::path filePath = pszFileName;
+
+		if (std::filesystem::exists(filePath)) {
+			return true;
+		}
+		else if (std::filesystem::is_directory(filePath)) {
+			return true;
+		}
+
+		return  false;
 #endif
 	}
 }
