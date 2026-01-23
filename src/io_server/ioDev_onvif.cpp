@@ -204,7 +204,12 @@ void thread_doImgAcq(ioDev_onvif* p) {
 void ioDev_onvif::doImgAcq() {
 	// 先移动 -> 等待镜头稳定延时 -> 拍照
 	//解析通道ptz配置并移动相机
-	ioChannel* pC = m_channels[m_curPZTChan];
+	//ioChannel* pC = m_channels[m_curPZTChan];
+	ioChannel* pC = new ioChannel();
+	pC->m_devAddr = m_channels[m_curPZTChan]->getAddr();
+	pC->m_bEnable = m_channels[m_curPZTChan]->m_bEnable;
+	pC->m_strTagBind = m_channels[m_curPZTChan]->m_strTagBind;
+
 	string chanId = pC->getAddr();
 
 	//指定下一个要巡检的通道
@@ -246,6 +251,9 @@ void ioDev_onvif::doImgAcq() {
 
 	//识别
 	doImgAnalyse(pC);
+
+	delete pC;
+	pC = nullptr;
 }
 
 void ioDev_onvif::doImgAnalyse(ioChannel* pC) {
