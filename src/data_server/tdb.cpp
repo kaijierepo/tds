@@ -5578,7 +5578,9 @@ void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, stri
 	vector<string> matchList;
 	vector<string> updateDataList;
 	matchList.push_back(match);
-	updateDataList.push_back(yyjson_val_write(yyv_row,0,nullptr));
+	auto p = yyjson_val_write(yyv_row, 0, nullptr);
+	updateDataList.push_back(p);
+	free(p);
 	tableUpdate(table, matchList, updateDataList, err);
 
 	if(err != "")
@@ -5648,6 +5650,7 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 			DB_FS::createFolderOfPath(path);
 		}
 		DB_FS::writeFile(path, p, len);
+		free(p);
 	}
 
 	int totalRow = 0;
