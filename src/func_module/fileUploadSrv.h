@@ -7,4 +7,4 @@ public:
 	void run(int port);
 };
 
-extern fileUploadSrv fileUploadServer;
+//extern fileUploadSrv fileUploadServer;

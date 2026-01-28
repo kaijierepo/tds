@@ -15,6 +15,14 @@
 #include "base64.h"
 #include "miniz.h"
 
+#include <fstream>
+#include <mutex>
+#include <map>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <sstream>
+
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
 string rootDir;
@@ -932,6 +940,166 @@ string uriFormbuff(string buff)
 	return "";
 }
 
+// 分片上传状态：文件名 -> 块索引 -> 是否已上传
+std::map<std::string, std::map<int, bool>> uploaded_chunks;
+// 线程安全锁
+std::mutex chunk_mutex;
+
+bool parse_form_data(const struct mg_http_message* hm,
+	std::map<std::string, std::string>& fields,
+	std::map<std::string, std::pair<std::string, std::string>>& files) {
+
+	// 清空输出容器
+	fields.clear();
+	files.clear();
+
+	// 检查是否是 multipart/form-data 类型（文件上传用）
+	struct mg_str* ct = mg_http_get_header(const_cast<struct mg_http_message*>(hm), "Content-Type");
+	bool is_multipart = (ct != nullptr && mg_vcasecmp(ct, "multipart/form-data") == 0);
+
+	if (is_multipart) {
+		// 解析 multipart 表单（包含文件上传）
+		struct mg_http_part part;
+		size_t ofs = 0;
+
+		while ((ofs = mg_http_next_multipart(hm->body, ofs, &part)) > 0) {
+			if (part.filename.len == 0) {
+				// 普通表单字段
+				char value_buf[1024] = { 0 };
+				mg_url_decode(part.body.ptr, part.body.len, value_buf, sizeof(value_buf), 1);
+				std::string key(part.name.ptr, part.name.len);
+				std::string value(value_buf);
+				fields[key] = value;
+			}
+			else {
+				// 文件字段（文件名 + 文件内容）
+				std::string key(part.name.ptr, part.name.len);
+				std::string filename(part.filename.ptr, part.filename.len);
+				std::string content(part.body.ptr, part.body.len);
+				files[key] = { filename, content };
+			}
+		}
+	}
+	else {
+		// 解析普通 urlencoded 表单（替换原mg_http_next_var的逻辑）
+		char buf[1024] = { 0 };
+		struct mg_str var_name, var_value;
+		const char* body_ptr = hm->body.ptr;
+		size_t body_len = hm->body.len;
+		size_t pos = 0;
+
+		while (pos < body_len) {
+			// 找到当前参数的结束位置（&分隔符）
+			size_t end = pos;
+			while (end < body_len && body_ptr[end] != '&') end++;
+
+			// 提取当前参数（name=value）
+			struct mg_str param = mg_str_n(body_ptr + pos, end - pos);
+			struct mg_str name_part, value_part;
+
+			// 分割name和value（按=分隔）
+			if (mg_span(param, &name_part, &value_part, '=')) {
+				// 解码name和value
+				char name_buf[512] = { 0 };
+				char value_buf[1024] = { 0 };
+				mg_url_decode(name_part.ptr, name_part.len, name_buf, sizeof(name_buf), 1);
+				mg_url_decode(value_part.ptr, value_part.len, value_buf, sizeof(value_buf), 1);
+
+				// 存入fields
+				std::string key(name_buf);
+				std::string value(value_buf);
+				fields[key] = value;
+			}
+
+			// 移动到下一个参数
+			pos = end + 1;
+		}
+	}
+
+	return !fields.empty() || !files.empty();
+}
+
+// 保存分片数据到本地文件
+void save_chunk(const std::string& filename, int chunk_index, const std::string& chunk_data) {
+	// 替换为你的文件存储路径
+	std::string oss = "./upload_temp/" + filename + ".part" + std::to_string(chunk_index);
+
+	// 创建目录（如果不存在）
+	size_t pos = oss.find_last_of("/");
+	if (pos != std::string::npos) {
+		std::string dir = oss.substr(0, pos);
+#ifdef _WIN32
+		// Windows 创建目录
+		std::string cmd = "mkdir \"" + dir + "\" 2>nul";
+#else
+		// Linux/Mac 创建目录
+		std::string cmd = "mkdir -p \"" + dir + "\"";
+#endif
+		system(cmd.c_str());
+	}
+
+	// 写入分片数据
+	std::ofstream ofs(oss.c_str(), std::ios::binary);
+	if (ofs) {
+		ofs.write(chunk_data.c_str(), chunk_data.size());
+		ofs.close();
+		LOG(str::format("[文件上传服务]文件片段: %s 已保存", (filename + ".part" + std::to_string(chunk_index)).c_str()).c_str());
+	}
+	else {
+		LOG(str::format("[文件上传服务]文件片段: %s 保存失败", (filename + ".part" + std::to_string(chunk_index)).c_str()).c_str());
+	}
+}
+
+// 合并所有分片为完整文件
+void merge_chunks(const std::string& filename, int total_chunks) {
+	std::string totalFilePath = "./uploads/" + filename;
+
+	// 创建上传目录（如果不存在）
+	size_t pos = totalFilePath.find_last_of("/");
+	if (pos != std::string::npos) {
+		std::string dir = totalFilePath.substr(0, pos);
+#ifdef _WIN32
+		std::string cmd = "mkdir \"" + dir + "\" 2>nul";
+#else
+		std::string cmd = "mkdir -p \"" + dir + "\"";
+#endif
+		system(cmd.c_str());
+	}
+
+	std::ofstream ofs(totalFilePath.c_str(), std::ios::binary);
+	if (ofs) {
+		for (int i = 0; i < total_chunks; ++i) {
+			std::string OneChunksPath = "./upload_temp/" + filename + ".part" + std::to_string(i);
+			std::ifstream ifs(OneChunksPath.c_str(), std::ios::binary);
+
+			if (ifs) {
+				// 获取文件大小
+				ifs.seekg(0, std::ios::end);
+				std::streamsize size = ifs.tellg();
+				ifs.seekg(0, std::ios::beg);
+
+				// 读取并写入数据
+				std::vector<char> buffer(size);
+				ifs.read(buffer.data(), size);
+				ofs.write(buffer.data(), size);
+
+				ifs.close();
+				// 删除临时分片文件
+				std::remove(OneChunksPath.c_str());
+			}
+			else {
+				LOG(str::format("[文件上传服务]文件: %s 打开失败,导致合并失败", (filename + ".part" + std::to_string(i)).c_str()).c_str());
+				break;
+			}
+		}
+		ofs.close();
+		LOG(str::format("[文件上传服务]文件: %s 合并成功", filename.c_str()).c_str());
+	}
+	else {
+		LOG(str::format("[文件上传服务]文件: %s 打开失败,合并失败", filename.c_str()).c_str());
+	}
+}
+
 //static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) 
 static void fn(struct mg_connection* c, int ev,void* ev_data)
 {
@@ -1148,6 +1316,70 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 				data->mgr = c->mgr;
 				thread t(thread_handleRpcOverHttp, data, pSession);
 				t.detach();
+			}
+			else if (mg_http_match_uri(hm, "/upload_chunk")) {
+				std::map<std::string, std::string> fields;
+				std::map<std::string, std::pair<std::string, std::string>> files;
+
+				// 解析表单数据
+				if (!parse_form_data(hm, fields, files)) {
+					mg_http_reply(c, 400,
+						"Access-Control-Allow-Origin: *\r\n"
+						"Access-Control-Allow-Private-Network: true\r\n",
+						"Invalid form data");
+					return;
+				}
+
+				try {
+					// 提取上传参数
+					std::string filename = fields["filename"];
+					int chunk_index = std::stoi(fields["chunk_index"]);
+					int chunk_total = std::stoi(fields["chunk_total"]);
+					std::string chunk_data = files["chunk"].second; // 获取分片数据
+
+					// 线程安全处理
+					std::lock_guard<std::mutex> lock(chunk_mutex);
+
+					// 保存分片数据
+					save_chunk(filename, chunk_index, chunk_data);
+
+					// 更新已上传分片状态
+					uploaded_chunks[filename][chunk_index] = true;
+
+					// 检查是否所有分片都已上传
+					bool all_chunks_uploaded = true;
+					if (uploaded_chunks[filename].size() >= chunk_total) {
+						for (int i = 0; i < chunk_total; ++i) {
+							if (uploaded_chunks[filename].find(i) == uploaded_chunks[filename].end() ||
+								!uploaded_chunks[filename][i]) {
+								all_chunks_uploaded = false;
+								break;
+							}
+						}
+
+						// 所有分片上传完成，执行合并
+						if (all_chunks_uploaded) {
+							merge_chunks(filename, chunk_total);
+							uploaded_chunks.erase(filename); // 清除状态
+						}
+					}
+
+					// 返回成功响应（支持跨域）
+					mg_http_reply(c, 200,
+						"Access-Control-Allow-Origin: *\r\n"
+						"Access-Control-Allow-Private-Network: true\r\n"
+						"Content-Type: text/plain\r\n",
+						"Chunk uploaded successfully");
+
+				}
+				catch (const std::exception& e) {
+					// 异常处理
+					mg_http_reply(c, 500,
+						"Access-Control-Allow-Origin: *\r\n"
+						"Access-Control-Allow-Private-Network: true\r\n",
+						"Error: %s", e.what());
+					LOG(str::format("[文件上传服务]处理请求异常: %s", e.what()).c_str());
+				}
 			}
 		}
 		else if (mg_http_match_uri(hm, "/release"))
@@ -1653,9 +1885,9 @@ bool runWebServers() {
 	//}
 #endif
 
-	if (tds->conf->fileUploadPort != 0) {
-		fileUploadServer.run(tds->conf->fileUploadPort);
-	}
+	//if (tds->conf->fileUploadPort != 0) {
+	//	fileUploadServer.run(tds->conf->fileUploadPort);
+	//}
 
 	return true;
 }
