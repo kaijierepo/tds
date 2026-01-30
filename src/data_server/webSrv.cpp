@@ -948,74 +948,46 @@ std::mutex chunk_mutex;
 bool parse_form_data(const struct mg_http_message* hm,
 	std::map<std::string, std::string>& fields,
 	std::map<std::string, std::pair<std::string, std::string>>& files) {
-
-	// 清空输出容器
+	// 1. 清空输出容器，避免残留旧数据
 	fields.clear();
 	files.clear();
 
-	// 检查是否是 multipart/form-data 类型（文件上传用）
+	// 2. 空指针+空请求体保护
+	if (hm == nullptr || hm->body.ptr == nullptr || hm->body.len == 0) {
+		return false;
+	}
+
+	// 3. 获取并验证 Content-Type（Mongoose 7.13 原生函数实现，无未定义函数）
 	struct mg_str* ct = mg_http_get_header(const_cast<struct mg_http_message*>(hm), "Content-Type");
-	bool is_multipart = (ct != nullptr && mg_vcasecmp(ct, "multipart/form-data") == 0);
-
-	if (is_multipart) {
-		// 解析 multipart 表单（包含文件上传）
-		struct mg_http_part part;
-		size_t ofs = 0;
-
-		while ((ofs = mg_http_next_multipart(hm->body, ofs, &part)) > 0) {
-			if (part.filename.len == 0) {
-				// 普通表单字段
-				char value_buf[1024] = { 0 };
-				mg_url_decode(part.body.ptr, part.body.len, value_buf, sizeof(value_buf), 1);
-				std::string key(part.name.ptr, part.name.len);
-				std::string value(value_buf);
-				fields[key] = value;
-			}
-			else {
-				// 文件字段（文件名 + 文件内容）
-				std::string key(part.name.ptr, part.name.len);
-				std::string filename(part.filename.ptr, part.filename.len);
-				std::string content(part.body.ptr, part.body.len);
-				files[key] = { filename, content };
-			}
-		}
+	const char* target_prefix = "multipart/form-data";
+	const size_t prefix_len = 19;
+	if (ct == nullptr || ct->len < prefix_len ||
+		mg_ncasecmp(ct->ptr, target_prefix, prefix_len) != 0) {
+		return false;
 	}
-	else {
-		// 解析普通 urlencoded 表单（替换原mg_http_next_var的逻辑）
-		char buf[1024] = { 0 };
-		struct mg_str var_name, var_value;
-		const char* body_ptr = hm->body.ptr;
-		size_t body_len = hm->body.len;
-		size_t pos = 0;
 
-		while (pos < body_len) {
-			// 找到当前参数的结束位置（&分隔符）
-			size_t end = pos;
-			while (end < body_len && body_ptr[end] != '&') end++;
+	// 4. 循环解析 multipart 表单（普通字段 + 文件分片二进制）
+	struct mg_http_part part;
+	size_t ofs = 0;
+	while ((ofs = mg_http_next_multipart(hm->body, ofs, &part)) > 0) {
+		if (part.name.ptr == nullptr || part.name.len == 0) continue;
+		std::string field_key(part.name.ptr, part.name.len);
 
-			// 提取当前参数（name=value）
-			struct mg_str param = mg_str_n(body_ptr + pos, end - pos);
-			struct mg_str name_part, value_part;
-
-			// 分割name和value（按=分隔）
-			if (mg_span(param, &name_part, &value_part, '=')) {
-				// 解码name和value
-				char name_buf[512] = { 0 };
-				char value_buf[1024] = { 0 };
-				mg_url_decode(name_part.ptr, name_part.len, name_buf, sizeof(name_buf), 1);
-				mg_url_decode(value_part.ptr, value_part.len, value_buf, sizeof(value_buf), 1);
-
-				// 存入fields
-				std::string key(name_buf);
-				std::string value(value_buf);
-				fields[key] = value;
-			}
-
-			// 移动到下一个参数
-			pos = end + 1;
+		if (part.filename.len == 0) {
+			// 解析普通字段（chunk_index/chunk_total/filename 等）
+			char value_buf[4096] = { 0 };
+			mg_url_decode(part.body.ptr, part.body.len, value_buf, sizeof(value_buf), 0);
+			fields[field_key] = std::string(value_buf);
+		}
+		else {
+			// 解析文件分片（直接保留二进制数据，不解码）
+			std::string file_name(part.filename.ptr, part.filename.len);
+			std::string file_content(part.body.ptr, part.body.len);
+			files[field_key] = { file_name, file_content };
 		}
 	}
 
+	// 5. 解析成功：至少存在一个字段或一个文件分片
 	return !fields.empty() || !files.empty();
 }
 
