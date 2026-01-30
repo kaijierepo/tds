@@ -1035,6 +1035,11 @@ string TDS_imp::getSvnVersion() {
 	return s;
 }
 
+string TDS_imp::getServerID()
+{
+	return string();
+}
+
 bool TDS_imp::isOnline(string ioAddr)
 {
 	ioDev* d = ioSrv.getIODev(ioAddr);

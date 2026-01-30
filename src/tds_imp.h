@@ -81,6 +81,7 @@ public:
 	 bool connectDev(string ioAddr) override;
 	 string getVersion() override;
 	 string getSvnVersion() override;
+	 string getServerID() override;
 	 bool isOnline(string ioAddr) override;
 	 bool isConnected(string ioAddr) override;
 	 bool isInUse(string ioAddr) override;
