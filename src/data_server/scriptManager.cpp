@@ -37,11 +37,31 @@ bool ScriptManager::init() {
 	return loadScriptList();
 }
 
+bool ScriptManager::readFile(string path, string& content) {
+	FILE* fp = nullptr;
+#ifdef _WIN32
+	_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"rb");
+#else
+	fp = fopen(path.c_str(), "rb");
+#endif
+	if (fp)
+	{
+		fseek(fp, 0, SEEK_END);
+		long len = ftell(fp);
+		content.reserve(len);
+		fseek(fp, 0, SEEK_SET);
+		fread(content.data(), 1, len, fp);
+		fclose(fp);
+		return true;
+	}
+	return false;
+}
+
 bool ScriptManager::loadScriptList() {
 	unique_lock<mutex> lock(m_csScripts);
 	m_mapScripts.clear();
 	string sScriptList;
-	if (DB_FS::readFile(m_confPath + "/scripts/list.json", sScriptList)) {
+	if (readFile(m_confPath + "/scripts/list.json", sScriptList)) {
 		yyjson_doc* doc = yyjson_read(sScriptList.c_str(), sScriptList.size(), 0);
 		yyjson_val* root = yyjson_doc_get_root(doc);
 
@@ -330,12 +350,12 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 	if (si.folderPath != "") {
 		string sMockjs;
-		if (DB_FS::readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
+		if (readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
 			si.envVarScript = sMockjs;
 			se.m_envVarScriptLine = static_cast<int>(std::count(sMockjs.begin(), sMockjs.end(), '\n')) + 1;
 		}
 		string sDebugParams;
-		if (DB_FS::readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
+		if (readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
 			yyjson_doc* d = yyjson_read(sDebugParams.c_str(), sDebugParams.size(), 0);
 			yyjson_val* r = yyjson_doc_get_root(d);
 			yyjson_val* yy_dev = yyjson_obj_get(r, "dev");
@@ -349,7 +369,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 			}
 		}
 		else {
-			LOG("DB_FS::readFile debug.json is failed");
+			LOG("readFile debug.json is failed");
 		}
 	}
 	else {
@@ -530,12 +550,12 @@ bool ScriptManager::rpc_getScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 	string s;
 	json j;
-	if (DB_FS::readFile(path1, s)) {
+	if (readFile(path1, s)) {
 		j["code"] = s;
 	}
 
 	string s1;
-	if (DB_FS::readFile(path2, s1)) {
+	if (readFile(path2, s1)) {
 		j["envVarCode"] = s1;
 	}
 
