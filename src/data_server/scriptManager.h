@@ -17,7 +17,7 @@ public:
 	bool init();
 	bool loadScriptList();
 	bool run();
-	bool readFile(string path, string& content);
+
 	void setConfPath(const string& conf);
 	string m_confPath;
 
