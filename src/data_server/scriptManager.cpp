@@ -50,7 +50,7 @@ bool ScriptManager::readFile(string path, string& content) {
 		long len = ftell(fp);
 		content.reserve(len);
 		fseek(fp, 0, SEEK_SET);
-		fread(content.data(), 1, len, fp);
+		fread((void*)content.data(), 1, len, fp);
 		fclose(fp);
 		return true;
 	}
