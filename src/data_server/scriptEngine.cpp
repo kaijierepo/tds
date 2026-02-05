@@ -231,6 +231,7 @@ extern "C" {
             }
             s = json_str;
             JS_FreeCString(ctx, json_str);
+            JS_FreeValue(ctx, json_str_val);
         }
 
         pEngine->m_vecOutput.push_back(s);

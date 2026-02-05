@@ -5610,7 +5610,6 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		data = "[]";
 
 	yyjson_read_err yy_err = { 0 };
-	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
 	yyjson_doc* yy_doc = yyjson_read_opts(
 		(char*)data.data(),
 		data.length(),
@@ -5622,7 +5621,7 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		err = JSON_STR_VAL("wrong table format,json parse error");
 		return;
 	}
-	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
+	yyjson_mut_doc* yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
 	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
 	yyjson_mut_val* yy_selected = yyjson_mut_arr(yy_mdoc);
 
