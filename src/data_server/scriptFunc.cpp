@@ -248,20 +248,18 @@ static JSValue qjs_getObj(JSContext* ctx, JSValueConst this_val, int argc, JSVal
 
     string sParams = json_str;
 
+    JS_FreeCString(ctx, json_str);
+    JS_FreeValue(ctx, json_str_val);
+
     ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     RPC_RESP rpcResp;
     tds->call("getObj", sParams, rpcResp);
 
     if (rpcResp.result != "") {
-        JSValue js_val = JS_ParseJSON(ctx, json_str, strlen(json_str), "<yyjson>");
-        JS_FreeCString(ctx, json_str);
-        JS_FreeValue(ctx, json_str_val);
+        JSValue js_val = JS_ParseJSON(ctx, rpcResp.result.c_str(), rpcResp.result.size(), "<yyjson>");
         return js_val;
     }
-
-    JS_FreeCString(ctx, json_str);
-    JS_FreeValue(ctx, json_str_val);
            
     return JS_NULL;
 }
