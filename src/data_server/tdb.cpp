@@ -5080,7 +5080,7 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language)
 {
 	bool handled = true;
-	if (method == "db.getLock") {
+	if (method == "db.getFileCtx" || method == "db.getFileContext") {
 		DB_FILE_CTX_MANAGER& lp = DB_FILE_CTX_MANAGER::instance();
 		std::lock_guard<std::mutex> lock(lp.pool_mutex_);
 		rlt += "[";
@@ -6010,30 +6010,21 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 		if (dbLock.context_->fp)
 		{
 #ifdef _WIN32
-			HANDLE hFile = dbLock.context_->fp;
-			LARGE_INTEGER fileSize;
-			GetFileSizeEx(hFile, &fileSize);
-			long len = (long)fileSize.QuadPart;
+			long len = dbLock.context_->getFileSize();
 
 			// auto upgrade compatible format to standard format
 			if (len > 0 && m_bAutoUpgrade) {
 				// check first character is '{'
-				char c;
-				DWORD bytesRead;
-				SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-				ReadFile(hFile, &c, 1, &bytesRead, NULL);
+				char c = 0;
+				dbLock.context_->readFile(&c, 0, 1);
 
 				if (c == '{') {
 					// read all data
 					char* p = (char*)malloc(len + 1);
-					//SetFilePointer(hFile, 1, NULL, FILE_BEGIN);
-					ReadFile(hFile, p + 1, len - 1, &bytesRead, NULL);
-					p[0] = c;
+					dbLock.context_->readFile(p, 0, len);
 					p[len] = 0;
 
-					// clear file
-					SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-					SetEndOfFile(hFile);
+					dbLock.context_->clearFile();
 
 					// parse JSON
 					yyjson_doc* doc = yyjson_read(p, len, 0);
@@ -6049,8 +6040,7 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 							size_t json_len = 0;
 							char* json_str = yyjson_mut_write(new_doc, YYJSON_WRITE_PRETTY, &json_len);
 							if (json_str) {
-								DWORD bytesWritten;
-								WriteFile(hFile, json_str, (DWORD)(json_len - 1), &bytesWritten, NULL);
+								dbLock.context_->writeFile(json_str, (int)(json_len - 1));
 								bConvertOld = true;
 								free(json_str);
 							}
@@ -6060,13 +6050,10 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 					}
 
 					if (!bConvertOld) {
-						DWORD bytesWritten;
-						WriteFile(hFile, "[", 1, &bytesWritten, NULL);
+						dbLock.context_->writeFile((char*)"[", 1);
 					}
 
-					// append new data 
-					DWORD bytesWritten;
-					WriteFile(hFile, appendData.c_str(), (DWORD)appendData.length(), &bytesWritten, NULL);
+					dbLock.context_->writeFile(appendData.c_str(), appendData.length());
 					bAppend = true;
 					len = 0;
 				}
@@ -8441,4 +8428,81 @@ DB_FILE_CONTEXT* DB_FILE_CTX_MANAGER::get_lock(const std::string& path) {
 	pl->last_used_.setNow();
 	pl->ref_count_++; // cleaner thread can not check ref_count because pool_mutex_, so in using lock will not be deleted
 	return pl;
+}
+
+bool DB_FILE_CONTEXT::writeFile(const char* p, int len)
+{
+	if (fp)
+	{
+#ifdef _WIN32
+		LARGE_INTEGER li;
+		li.QuadPart = 0;
+		SetFilePointerEx(fp, li, NULL, FILE_BEGIN);
+
+		// write data
+		DWORD bytesWritten;
+		BOOL result = WriteFile(fp, p, len, &bytesWritten, NULL);
+
+		SetEndOfFile(fp);
+		return result;
+#else
+		fseek(fp, 0, SEEK_SET);
+		fwrite(data, 1, len, (FILE*)fp);
+		ftruncate(fileno((FILE*)fp), len);
+		return true;
+#endif
+	}
+
+	return false;
+}
+
+bool DB_FILE_CONTEXT::appendFile(char* p, int len)
+{
+	return false;
+}
+
+bool DB_FILE_CONTEXT::readFile(char* p,int offset,int len)
+{
+#ifdef _WIN32
+	HANDLE hFile = fp;
+	DWORD bytesRead;
+	SetFilePointer(hFile, offset, NULL, FILE_BEGIN);
+	ReadFile(hFile,p,len, &bytesRead, NULL);
+#else  // Linux/Unix
+	FILE* fp = (FILE*)fp;
+	fseek(fp, 0L, SEEK_END);
+	long len = ftell(fp);
+	return len;
+#endif
+
+	return false;
+}
+
+bool DB_FILE_CONTEXT::clearFile()
+{
+#ifdef _WIN32
+	HANDLE hFile = fp;
+	SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+	SetEndOfFile(hFile);
+#else  // Linux/Unix
+	FILE* fp = (FILE*)fp;
+	fseek(fp, 0L, SEEK_END);
+	long len = ftell(fp);
+#endif
+	return true;
+}
+
+long DB_FILE_CONTEXT::getFileSize()
+{
+#ifdef _WIN32
+	HANDLE hFile = fp;
+	LARGE_INTEGER fileSize;
+	GetFileSizeEx(hFile, &fileSize);
+	return (long)fileSize.QuadPart;
+#else  // Linux/Unix
+	FILE* fp = (FILE*)fp;
+	fseek(fp, 0L, SEEK_END);
+	long len = ftell(fp);
+	return len;
+#endif
 }

@@ -505,8 +505,19 @@ public:
 	static bool m_bEnableFileDataBuffer;
 	static int dbFileCtxTTL;
 
+	bool writeFile(const char* p, int len);
+	bool appendFile(char* p, int len);
+	bool readFile(char* p,int offset, int len);
+	bool clearFile();
+	long getFileSize();
+
 	std::mutex mutex_;
 	DB_TIME last_used_;
+	DB_TIME open_time_;
+	long writeCount;
+	long readCount;
+	long writeBytes;
+	long readBytes;
 	std::atomic<int> ref_count_{ 0 };
 	void* fp;
 	string path;
@@ -516,6 +527,10 @@ public:
 		path = p;
 		fp = nullptr;
 		last_used_.setNow();
+		writeCount = 0;
+		readCount = 0;
+		writeBytes = 0;
+		readBytes = 0;
 	}
 };
 
