@@ -41,6 +41,9 @@ SOFTWARE.
 #include <functional>
 #include <thread>
 using namespace std;
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 
 class TDB;
@@ -504,13 +507,14 @@ public:
 	std::mutex mutex_;
 	DB_TIME last_used_;
 	std::atomic<int> ref_count_{ 0 };
-	FILE* fp;
+	//FILE* fp;
+	void* fp1;
 	string path;
 	string data;
 
 	DB_FILE_CONTEXT(const string& p) {
 		path = p;
-		fp = nullptr;
+		fp1 = nullptr;
 		last_used_.setNow();
 	}
 };
@@ -541,8 +545,12 @@ public:
 				for (auto it = locks_.begin(); it != locks_.end();) {
 					// in pool_mutex_ ,keep ref_count_ check thread safe
 					if (it->second->ref_count_ == 0 && it->second->last_used_.getTimePassSecond() > DB_FILE_CONTEXT::dbFileCtxTTL) {
-						if (it->second->fp != nullptr) {
-							fclose(it->second->fp);
+						if (it->second->fp1 != nullptr) {
+#ifdef _WIN32
+							CloseHandle(it->second->fp1);
+#else
+							fclose((FILE*)it->second->fp1);
+#endif
 						}
 						delete it->second;
 						it = locks_.erase(it);
@@ -579,8 +587,12 @@ struct DB_FILE_CONTEXT_GUARD {
 			context_->mutex_.unlock();
 		}
 		if (!DB_FILE_CONTEXT::m_bEnableFileHandleBuffer) {
-			if (context_->fp != nullptr) {
-                fclose(context_->fp);
+			if (context_->fp1 != nullptr) {
+#ifdef _WIN32
+				CloseHandle(context_->fp1);
+#else
+                fclose((FILE*)context_->fp1);
+#endif
 			}
 		}
 		DB_FILE_CTX_MANAGER::instance().release_lock(*context_);
