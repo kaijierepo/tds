@@ -543,8 +543,12 @@ namespace DB_FS {
 			int len = (int)fileSize.QuadPart;
 			data.resize(len);
 			char* pdata = (char*)data.data();
-			// read file content
+
+			LARGE_INTEGER li;
+			li.QuadPart = 0;
+			SetFilePointerEx(dbLock.context_->fp, li, NULL, FILE_BEGIN);
 			DWORD bytesRead = 0;
+			// read file content
 			BOOL result = ReadFile(dbLock.context_->fp, pdata, len, &bytesRead, NULL);
 			if (!result || bytesRead != static_cast<DWORD>(len)) {
 				data.clear();
@@ -580,6 +584,10 @@ namespace DB_FS {
 				return false;
 			len = (int)fileSize.QuadPart;
 			pData = new char[len];
+			LARGE_INTEGER li;
+			li.QuadPart = 0;
+			SetFilePointerEx(dbLock.context_->fp, li, NULL, FILE_BEGIN);
+
 			// read file content
 			DWORD bytesRead = 0;
 			BOOL result = ReadFile(dbLock.context_->fp, pData, len, &bytesRead, NULL);
