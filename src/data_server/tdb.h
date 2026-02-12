@@ -615,6 +615,7 @@ struct DB_FILE_CONTEXT_GUARD {
 #else
                 fclose((FILE*)context_->fp);
 #endif
+				context_->fp = nullptr;
 			}
 		}
 		DB_FILE_CTX_MANAGER::instance().release_lock(*context_);
