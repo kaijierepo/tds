@@ -507,14 +507,13 @@ public:
 	std::mutex mutex_;
 	DB_TIME last_used_;
 	std::atomic<int> ref_count_{ 0 };
-	//FILE* fp;
-	void* fp1;
+	void* fp;
 	string path;
 	string data;
 
 	DB_FILE_CONTEXT(const string& p) {
 		path = p;
-		fp1 = nullptr;
+		fp = nullptr;
 		last_used_.setNow();
 	}
 };
@@ -533,6 +532,28 @@ public:
 		//release_lock is called ,then clean thread try to check ref_count,do not clean,then ref_count--
 		//not using lock will not be cleaned, do not cause problem;clean in using lock causes problem
 		lock.ref_count_--;
+		if (lock.ref_count_ == 0) //if exclude list match,then clean
+		{
+			static std::set<std::string> excludeList = { "缺口", "斥离" };
+			for (const auto& it : excludeList)
+			{
+				if (lock.path.find(it) != std::wstring::npos)
+				{
+					std::lock_guard<std::mutex> lockG(pool_mutex_);
+
+					if (lock.fp != nullptr) 
+					{
+#ifdef _WIN32
+						CloseHandle(lock.fp);
+#else
+						fclose((FILE*)lock.fp);
+#endif
+					}
+						lock.fp = nullptr;
+					break;
+				}
+			}
+		}
 	}
 
 	DB_FILE_CTX_MANAGER() {
@@ -545,12 +566,13 @@ public:
 				for (auto it = locks_.begin(); it != locks_.end();) {
 					// in pool_mutex_ ,keep ref_count_ check thread safe
 					if (it->second->ref_count_ == 0 && it->second->last_used_.getTimePassSecond() > DB_FILE_CONTEXT::dbFileCtxTTL) {
-						if (it->second->fp1 != nullptr) {
+						if (it->second->fp != nullptr) {
 #ifdef _WIN32
-							CloseHandle(it->second->fp1);
+							CloseHandle(it->second->fp);
 #else
-							fclose((FILE*)it->second->fp1);
+							fclose((FILE*)it->second->fp);
 #endif
+							it->second->fp = nullptr;
 						}
 						delete it->second;
 						it = locks_.erase(it);
@@ -587,11 +609,11 @@ struct DB_FILE_CONTEXT_GUARD {
 			context_->mutex_.unlock();
 		}
 		if (!DB_FILE_CONTEXT::m_bEnableFileHandleBuffer) {
-			if (context_->fp1 != nullptr) {
+			if (context_->fp != nullptr) {
 #ifdef _WIN32
-				CloseHandle(context_->fp1);
+				CloseHandle(context_->fp);
 #else
-                fclose((FILE*)context_->fp1);
+                fclose((FILE*)context_->fp);
 #endif
 			}
 		}

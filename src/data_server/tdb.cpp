@@ -533,25 +533,25 @@ namespace DB_FS {
 			return true;
 		}
 
-		if (dbLock.context_->fp1) {
+		if (dbLock.context_->fp) {
 #ifdef _WIN32
 			LARGE_INTEGER fileSize;
 			fileSize.QuadPart = 0;
-			if (!GetFileSizeEx(dbLock.context_->fp1, &fileSize))
+			if (!GetFileSizeEx(dbLock.context_->fp, &fileSize))
 				return false;
 			int len = (int)fileSize.QuadPart;
 			data.resize(len);
 			char* pdata = (char*)data.data();
 			// read file content
 			DWORD bytesRead = 0;
-			BOOL result = ReadFile(dbLock.context_->fp1, pdata, len, &bytesRead, NULL);
+			BOOL result = ReadFile(dbLock.context_->fp, pdata, len, &bytesRead, NULL);
 			if (!result || bytesRead != static_cast<DWORD>(len)) {
 				data.clear();
 				len = 0;
 				return false;
 			}
 #else
-			FILE* fp = (FILE*)dbLock.context_->fp1;
+			FILE* fp = (FILE*)dbLock.context_->fp;
 			fseek(fp, 0, SEEK_END);
 
 			long len = ftell(fp);
@@ -571,17 +571,17 @@ namespace DB_FS {
 	bool readFile(string path, char*& pData, int& len)
 	{
 		DB_FILE_CONTEXT_GUARD dbLock(path);
-		if (dbLock.context_->fp1) {
+		if (dbLock.context_->fp) {
 #ifdef _WIN32
 			LARGE_INTEGER fileSize;
 			fileSize.QuadPart = 0;
-			if (!GetFileSizeEx(dbLock.context_->fp1, &fileSize))
+			if (!GetFileSizeEx(dbLock.context_->fp, &fileSize))
 				return false;
 			len = (int)fileSize.QuadPart;
 			pData = new char[len];
 			// read file content
 			DWORD bytesRead = 0;
-			BOOL result = ReadFile(dbLock.context_->fp1, pData, len, &bytesRead, NULL);
+			BOOL result = ReadFile(dbLock.context_->fp, pData, len, &bytesRead, NULL);
 			if (!result || bytesRead != static_cast<DWORD>(len)) {
 				delete[] pData;
 				pData = nullptr;
@@ -589,7 +589,7 @@ namespace DB_FS {
 				return false;
 			}
 #else
-			FILE* fp = (FILE*)dbLock.context_->fp1;
+			FILE* fp = (FILE*)dbLock.context_->fp;
 			fseek(fp, 0, SEEK_END);
 			len = ftell(fp);
 			pData = new char[len];
@@ -641,15 +641,15 @@ namespace DB_FS {
 	{
 		DB_FILE_CONTEXT_GUARD dbLock(path);
 
-		if (dbLock.context_->fp1)
+		if (dbLock.context_->fp)
 		{
 #ifdef _WIN32
 			// write data
 			DWORD bytesWritten;
-			BOOL result = WriteFile(dbLock.context_->fp1, data, len, &bytesWritten, NULL);
+			BOOL result = WriteFile(dbLock.context_->fp, data, len, &bytesWritten, NULL);
 			return result;
 #else
-			fwrite(data, 1, len, (FILE*)dbLock.context_->fp1);
+			fwrite(data, 1, len, (FILE*)dbLock.context_->fp);
 			return true;
 #endif
 		}
@@ -1552,14 +1552,14 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 	{
 		DB_FILE_CONTEXT_GUARD dbLock(dataListPath);
 
-		if (dbLock.context_->fp1)
+		if (dbLock.context_->fp)
 		{
 #ifdef _WIN32
 			// set file pointer
 			LARGE_INTEGER li;
 			li.QuadPart = 0;
 
-			if (GetFileSizeEx(dbLock.context_->fp1, &li) && li.QuadPart > 0)
+			if (GetFileSizeEx(dbLock.context_->fp, &li) && li.QuadPart > 0)
 			{
 				auto fileSize = li.QuadPart;
 
@@ -1567,7 +1567,7 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 
 				LARGE_INTEGER li;
 				li.QuadPart = writePos;
-				SetFilePointerEx(dbLock.context_->fp1, li, NULL, FILE_BEGIN);
+				SetFilePointerEx(dbLock.context_->fp, li, NULL, FILE_BEGIN);
 
 				std::string d = ",";
 
@@ -1584,7 +1584,7 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 				d += "]";
 
 				DWORD bytesWritten;
-				BOOL result = WriteFile(dbLock.context_->fp1, d.c_str(), d.size(), &bytesWritten, NULL);
+				BOOL result = WriteFile(dbLock.context_->fp, d.c_str(), d.size(), &bytesWritten, NULL);
 			}
 			else
 			{
@@ -1600,11 +1600,11 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 				fileData = "[" + fileData + "]";
 				//fwrite(fileData.c_str(), 1, fileData.length(), fp);
 				DWORD bytesWritten;
-				BOOL result = WriteFile(dbLock.context_->fp1, fileData.c_str(), fileData.size(), &bytesWritten, NULL);
-				SetEndOfFile(dbLock.context_->fp1);
+				BOOL result = WriteFile(dbLock.context_->fp, fileData.c_str(), fileData.size(), &bytesWritten, NULL);
+				SetEndOfFile(dbLock.context_->fp);
 			}
 #else
-			FILE* fp = (FILE*)dbLock.context_->fp1;
+			FILE* fp = (FILE*)dbLock.context_->fp;
 			fseek(fp, 0L, SEEK_END);
 			long len = ftell(fp);
 
@@ -5988,10 +5988,10 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 		string appendData = ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";
 		DB_FILE_CONTEXT_GUARD dbLock(dlPath);
 
-		if (dbLock.context_->fp1)
+		if (dbLock.context_->fp)
 		{
 #ifdef _WIN32
-			HANDLE hFile = dbLock.context_->fp1;
+			HANDLE hFile = dbLock.context_->fp;
 			LARGE_INTEGER fileSize;
 			GetFileSizeEx(hFile, &fileSize);
 			long len = (long)fileSize.QuadPart;
@@ -6065,7 +6065,7 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 			}
 
 #else  // Linux/Unix
-			FILE* fp = (FILE*)dbLock.context_->fp1;
+			FILE* fp = (FILE*)dbLock.context_->fp;
 			fseek(fp, 0L, SEEK_END);
 			long len = ftell(fp);
 
@@ -8397,11 +8397,11 @@ DB_FILE_CONTEXT* DB_FILE_CTX_MANAGER::get_lock(const std::string& path) {
 		pl = it->second;
 	}
 
-	if (pl->fp1 == nullptr) {
+	if (pl->fp == nullptr) {
 #ifdef _WIN32
 		wstring filename = DB_STR::utf8_to_utf16(path);
 		//pl->fp = _wfopen(filename.c_str(), L"rb+");
-		pl->fp1 = CreateFileW(
+		pl->fp = CreateFileW(
 			filename.c_str(),
 			GENERIC_READ | GENERIC_WRITE,
 			FILE_SHARE_READ,  // 
@@ -8411,8 +8411,8 @@ DB_FILE_CONTEXT* DB_FILE_CTX_MANAGER::get_lock(const std::string& path) {
 			NULL
 		);
 
-		if (pl->fp1 == INVALID_HANDLE_VALUE) {
-			pl->fp1 = nullptr;
+		if (pl->fp == INVALID_HANDLE_VALUE) {
+			pl->fp = nullptr;
 		}
 #else
 		pl->fp = fopen(dlPath.c_str(), "rb+");
