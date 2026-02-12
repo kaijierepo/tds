@@ -528,6 +528,47 @@ public:
 
 	DB_FILE_CONTEXT* get_lock(const std::string& path);
 
+	bool delete_file(const std::string& path) {
+		std::lock_guard<std::mutex> lockG(pool_mutex_);
+		auto it = locks_.find(path);
+		bool bRet = false;
+		if (it != locks_.end())
+		{
+			if (DB_FILE_CONTEXT::enableLock) {
+				it->second->mutex_.lock();
+			}
+			if (it->second->fp != nullptr)
+			{
+#ifdef _WIN32
+				CloseHandle(it->second->fp);
+				std::wstring filePath = DB_STR::utf8_to_utf16(path);
+
+				bRet = DeleteFileW(filePath.c_str());
+
+#else
+				fclose((FILE*)it->second->fp);
+				bRet = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
+#endif
+			}
+			it->second->fp = nullptr;
+
+			if (DB_FILE_CONTEXT::enableLock) {
+				it->second->mutex_.unlock();
+			}
+		}
+		else
+		{
+#ifdef _WIN32
+			std::wstring filePath = DB_STR::utf8_to_utf16(path);
+
+			bRet = DeleteFileW(filePath.c_str());
+
+#else
+			bRet = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
+#endif
+		}
+		return bRet;
+	}
 	void release_lock(DB_FILE_CONTEXT& lock) {
 		//do not need to lock pool_mutex_,not thread safe ref_count option.
 		//release_lock is called ,then clean thread try to check ref_count,do not clean,then ref_count--

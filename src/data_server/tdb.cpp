@@ -62,7 +62,7 @@ namespace fs = std::filesystem;
 TDB db;
 
 bool DB_FILE_CONTEXT::enableLock = true;
-bool DB_FILE_CONTEXT::m_bEnableFileHandleBuffer = true;
+bool DB_FILE_CONTEXT::m_bEnableFileHandleBuffer = false;
 bool DB_FILE_CONTEXT::m_bEnableFileDataBuffer = false;
 int DB_FILE_CONTEXT::dbFileCtxTTL = 30 * 60;
 std::vector<std::string> DB_FILE_CONTEXT::m_vctExcludeFilter;
@@ -653,12 +653,20 @@ namespace DB_FS {
 		if (dbLock.context_->fp)
 		{
 #ifdef _WIN32
+			LARGE_INTEGER li;
+			li.QuadPart = 0;
+			SetFilePointerEx(dbLock.context_->fp, li, NULL, FILE_BEGIN);
+
 			// write data
 			DWORD bytesWritten;
 			BOOL result = WriteFile(dbLock.context_->fp, data, len, &bytesWritten, NULL);
+
+			SetEndOfFile(dbLock.context_->fp);
 			return result;
 #else
+			fseek(dbLock.context_->fp, 0, SEEK_SET);
 			fwrite(data, 1, len, (FILE*)dbLock.context_->fp);
+			ftruncate(fileno((FILE*)dbLock.context_->fp), len);
 			return true;
 #endif
 		}
@@ -675,39 +683,41 @@ namespace DB_FS {
 	}
 	bool appendWrite(string path, char* data, size_t len)
 	{
-		FILE* fp = nullptr;
+		DB_FILE_CONTEXT_GUARD dbLock(path);
 
+		if (dbLock.context_->fp)
+		{
 #ifdef _WIN32
-		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"a");
-#else
-		fp = fopen(path.c_str(), "wb");
-#endif
-		if (fp)
-		{
-			fseek(fp, 0, SEEK_END);
-			fwrite(data, 1, len, fp);
-			fclose(fp);
-			return true;
-		}
-		else
-		{
+			LARGE_INTEGER li;
+			li.QuadPart = 0;
+			SetFilePointerEx(dbLock.context_->fp, li, NULL, FILE_END);
 
+			// write data
+			DWORD bytesWritten;
+			BOOL result = WriteFile(dbLock.context_->fp, data, len, &bytesWritten, NULL);
+			return result;
+#else
+			fseek(fp, 0, SEEK_END);
+			fwrite(data, 1, len, (FILE*)dbLock.context_->fp);
+			return true;
+#endif
 		}
 		return false;
 	}
 	bool deleteFile(string path) {
-#ifdef _WIN32
-		std::wstring filePath = DB_STR::utf8_to_utf16(path);
-
-		if (DeleteFileW(filePath.c_str())) {
-			return true;
-		}
-		else {
-			return false;
-		}
-#else
-		return std::filesystem::remove(DB_STR::utf8_to_utf16(path));
-#endif
+		return DB_FILE_CTX_MANAGER::instance().delete_file(path);
+//#ifdef _WIN32
+//		std::wstring filePath = DB_STR::utf8_to_utf16(path);
+//
+//		if (DeleteFileW(filePath.c_str())) {
+//			return true;
+//		}
+//		else {
+//			return false;
+//		}
+//#else
+//		return std::filesystem::remove(DB_STR::utf8_to_utf16(path));
+//#endif
 
 	}
 
