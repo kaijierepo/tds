@@ -65,6 +65,7 @@ bool DB_FILE_CONTEXT::enableLock = true;
 bool DB_FILE_CONTEXT::m_bEnableFileHandleBuffer = true;
 bool DB_FILE_CONTEXT::m_bEnableFileDataBuffer = false;
 int DB_FILE_CONTEXT::dbFileCtxTTL = 30 * 60;
+std::vector<std::string> DB_FILE_CONTEXT::m_vctExcludeFilter;
 
 #include <random>
 #include <cstdio>

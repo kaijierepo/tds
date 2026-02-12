@@ -500,6 +500,7 @@ struct DB_FILE {
 class DB_FILE_CONTEXT {
 public:
 	static bool enableLock;
+	static std::vector<std::string> m_vctExcludeFilter;
 	static bool m_bEnableFileHandleBuffer;
 	static bool m_bEnableFileDataBuffer;
 	static int dbFileCtxTTL;
@@ -534,10 +535,9 @@ public:
 		lock.ref_count_--;
 		if (lock.ref_count_ == 0) //if exclude list match,then clean
 		{
-			static std::set<std::string> excludeList = { "缺口", "斥离" };
-			for (const auto& it : excludeList)
+			for (const auto& it : DB_FILE_CONTEXT::m_vctExcludeFilter)
 			{
-				if (lock.path.find(it) != std::wstring::npos)
+				if (lock.path.find(it) != std::string::npos)
 				{
 					std::lock_guard<std::mutex> lockG(pool_mutex_);
 
@@ -549,7 +549,7 @@ public:
 						fclose((FILE*)lock.fp);
 #endif
 					}
-						lock.fp = nullptr;
+					lock.fp = nullptr;
 					break;
 				}
 			}
