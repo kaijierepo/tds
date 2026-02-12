@@ -531,7 +531,8 @@ public:
 	bool delete_file(const std::string& path) {
 		std::lock_guard<std::mutex> lockG(pool_mutex_);
 		auto it = locks_.find(path);
-		bool bRet = false;
+		bool ret = false;
+		bool deleted = false;
 		if (it != locks_.end())
 		{
 			if (DB_FILE_CONTEXT::enableLock) {
@@ -543,12 +544,13 @@ public:
 				CloseHandle(it->second->fp);
 				std::wstring filePath = DB_STR::utf8_to_utf16(path);
 
-				bRet = DeleteFileW(filePath.c_str());
+				ret = DeleteFileW(filePath.c_str());
 
 #else
 				fclose((FILE*)it->second->fp);
-				bRet = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
+				ret = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
 #endif
+				deleted = true;
 			}
 			it->second->fp = nullptr;
 
@@ -556,18 +558,19 @@ public:
 				it->second->mutex_.unlock();
 			}
 		}
-		else
+		
+		if (!deleted)
 		{
 #ifdef _WIN32
 			std::wstring filePath = DB_STR::utf8_to_utf16(path);
 
-			bRet = DeleteFileW(filePath.c_str());
+			ret = DeleteFileW(filePath.c_str());
 
 #else
-			bRet = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
+			ret = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
 #endif
 		}
-		return bRet;
+		return ret;
 	}
 	void release_lock(DB_FILE_CONTEXT& lock) {
 		//do not need to lock pool_mutex_,not thread safe ref_count option.
