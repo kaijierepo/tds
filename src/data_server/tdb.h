@@ -42,6 +42,7 @@ SOFTWARE.
 #include <thread>
 using namespace std;
 
+
 class TDB;
 /*
 functions：
@@ -236,6 +237,44 @@ struct DB_TIME_RANGE {
 	DB_TIME end;
 	void* p;
 };
+
+namespace DB_STR {
+	wstring utf8_to_utf16(string instr);
+	string utf16_to_utf8(wstring instr);
+	string gb_to_utf8(string instr);
+	string utf8_to_gb(string instr);
+	wstring gb_to_utf16(string instr);
+}
+
+namespace DB_FS {
+	bool readFile(string path, string& data);
+	bool readFile(string path, char*& pData, int& len);
+	void createFolderOfPath(string strFile);
+	bool writeFile(string path, char* data, size_t len);
+	bool writeFile(string path, unsigned char* data, size_t len);
+	bool writeFile(string path, string& data);
+	bool deleteFile(string path);
+	void DeleteDirectoryContents(const std::string& dirPath);
+	void deleteDirectory(string& dirPath);
+	bool copyFile(const std::string& src, const std::string& dest);
+	bool rename(const std::string& oldPath, const std::string& newPath);
+
+	string normalizationPath(string& s);
+
+	struct FILE_INFO {
+		string modifyTime;
+		string createTime;
+		size_t len;
+		string accessTime;
+		string name;
+		string path;
+		string folderPath;
+	};
+
+	void getFolderList(vector<FILE_INFO>& list, string strFolder, bool recursive = false);
+	void getFileList(vector<FILE_INFO>& list, string strFolder, bool recursive = false, string suffix = "*", vector<string>* exclude = nullptr);
+	void getFileList(vector<string>& list, string strFolder, bool includeFolder = false, bool recursive = false);
+}
 
 class TAG_SELECTOR{
 public:
@@ -455,51 +494,57 @@ struct DB_FILE {
 #include <unordered_map>
 #include <atomic>
 
-class DB_LOCK {
+class DB_FILE_CONTEXT {
 public:
+	static bool enableLock;
+	static bool m_bEnableFileHandleBuffer;
+	static bool m_bEnableFileDataBuffer;
+	static int dbFileCtxTTL;
+
 	std::mutex mutex_;
 	DB_TIME last_used_;
 	std::atomic<int> ref_count_{ 0 };
+	FILE* fp;
+	string path;
+	string data;
 
-	DB_LOCK() {
+	DB_FILE_CONTEXT(const string& p) {
+		path = p;
+		fp = nullptr;
 		last_used_.setNow();
 	}
 };
 
-class DB_LOCK_POOL {
+class DB_FILE_CTX_MANAGER {
 public:
-	static DB_LOCK_POOL& instance() {
-		static DB_LOCK_POOL pool;
+	static DB_FILE_CTX_MANAGER& instance() {
+		static DB_FILE_CTX_MANAGER pool;
 		return pool;
 	}
 
-	static int lockTTL;
+	DB_FILE_CONTEXT* get_lock(const std::string& path);
 
-	DB_LOCK& get_lock(const std::string& path) {
-		std::lock_guard<std::mutex> lock(pool_mutex_); 
-		auto& entry = locks_[path];
-		entry.last_used_.setNow();
-		entry.ref_count_++; // cleaner thread can not check ref_count because pool_mutex_, so in using lock will not be deleted
-		return entry;
-	}
-
-	void release_lock(DB_LOCK& lock) {
+	void release_lock(DB_FILE_CONTEXT& lock) {
 		//do not need to lock pool_mutex_,not thread safe ref_count option.
 		//release_lock is called ,then clean thread try to check ref_count,do not clean,then ref_count--
 		//not using lock will not be cleaned, do not cause problem;clean in using lock causes problem
 		lock.ref_count_--;
 	}
 
-	DB_LOCK_POOL() {
+	DB_FILE_CTX_MANAGER() {
 		cleaner_.store(true);
 		std::thread([this]() {
 			while (cleaner_.load()) {
-				std::this_thread::sleep_for(std::chrono::seconds(DB_LOCK_POOL::lockTTL));
+				std::this_thread::sleep_for(std::chrono::seconds(DB_FILE_CONTEXT::dbFileCtxTTL));
 				std::lock_guard<std::mutex> lock(pool_mutex_);
 				auto now = std::chrono::steady_clock::now();
 				for (auto it = locks_.begin(); it != locks_.end();) {
 					// in pool_mutex_ ,keep ref_count_ check thread safe
-					if (it->second.ref_count_ == 0 && it->second.last_used_.getTimePassSecond() > DB_LOCK_POOL::lockTTL) {
+					if (it->second->ref_count_ == 0 && it->second->last_used_.getTimePassSecond() > DB_FILE_CONTEXT::dbFileCtxTTL) {
+						if (it->second->fp != nullptr) {
+							fclose(it->second->fp);
+						}
+						delete it->second;
 						it = locks_.erase(it);
 					}
 					else {
@@ -510,32 +555,35 @@ public:
 			}).detach();
 	}
 
-	~DB_LOCK_POOL() {
+	~DB_FILE_CTX_MANAGER() {
 		cleaner_.store(false);
 	}
 
 	std::mutex pool_mutex_; //keep locks_ thread safe, keep clean and getLock thread safe
-	std::unordered_map<std::string, DB_LOCK> locks_;
+	std::unordered_map<std::string, DB_FILE_CONTEXT*> locks_;
 	std::atomic<bool> cleaner_{ false };
 };
 
-struct DB_LOCK_GUARD {
-	DB_LOCK* lock_;
+struct DB_FILE_CONTEXT_GUARD {
+	DB_FILE_CONTEXT* context_;
 
-	static bool enable;
-
-	DB_LOCK_GUARD(const std::string& path) {
-		if (DB_LOCK_GUARD::enable) {
-			lock_ = &DB_LOCK_POOL::instance().get_lock(path);
-			lock_->mutex_.lock();
+	DB_FILE_CONTEXT_GUARD(const std::string& path) {
+		context_ = DB_FILE_CTX_MANAGER::instance().get_lock(path);
+		if (DB_FILE_CONTEXT::enableLock) {
+			context_->mutex_.lock();
 		}
 	}
 
-	~DB_LOCK_GUARD() {
-		if (DB_LOCK_GUARD::enable) {
-			lock_->mutex_.unlock();
-			DB_LOCK_POOL::instance().release_lock(*lock_);
+	~DB_FILE_CONTEXT_GUARD() {
+		if (DB_FILE_CONTEXT::enableLock) {
+			context_->mutex_.unlock();
 		}
+		if (!DB_FILE_CONTEXT::m_bEnableFileHandleBuffer) {
+			if (context_->fp != nullptr) {
+                fclose(context_->fp);
+			}
+		}
+		DB_FILE_CTX_MANAGER::instance().release_lock(*context_);
 	}
 };
 
@@ -862,44 +910,6 @@ enum DB_TIME_UNIT {
 
 typedef void (*fp_getTagsByTagSelector)(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt);
 
-namespace DB_STR {
-	wstring utf8_to_utf16(string instr);
-	string utf16_to_utf8(wstring instr);
-	string gb_to_utf8(string instr);
-	string utf8_to_gb(string instr);
-	wstring gb_to_utf16(string instr);
-}
-
-namespace DB_FS {
-	bool readFile(string path, string& data);
-	bool readFile(string path, char*& pData, int& len);
-	void createFolderOfPath(string strFile);
-	bool writeFile(string path, char* data, size_t len);
-	bool writeFile(string path, unsigned char* data, size_t len);
-	bool writeFile(string path, string& data);
-	bool deleteFile(string path);
-	void DeleteDirectoryContents(const std::string& dirPath);
-	void deleteDirectory(string& dirPath);
-	bool copyFile(const std::string& src, const std::string& dest);
-	bool rename(const std::string& oldPath, const std::string& newPath);
-
-	string normalizationPath(string& s);
-
-	struct FILE_INFO {
-		string modifyTime;
-		string createTime;
-		size_t len;
-		string accessTime;
-		string name;
-		string path;
-		string folderPath;
-	};
-
-	void getFolderList(vector<FILE_INFO>& list, string strFolder, bool recursive = false);
-	void getFileList(vector<FILE_INFO>& list, string strFolder, bool recursive = false, string suffix = "*", vector<string>* exclude = nullptr);
-	void getFileList(vector<string>& list, string strFolder, bool includeFolder = false, bool recursive = false);
-}
-
 struct FILE_BUFF {
 	DB_TIME lastActive;
 	string data;
@@ -941,7 +951,6 @@ public:
 	bool setBufferTTL(string bufferTTL);
 	bool m_enableDB = true;
 	DB_FMT m_dbFmt;
-	bool m_bEnableFsBuff;
 	FS_BUFF m_FsBuff;
 	int m_bufferTTL;
 	DB_TIME_UNIT m_timeUnit;
