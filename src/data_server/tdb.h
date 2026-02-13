@@ -497,7 +497,7 @@ struct DB_FILE {
 #include <unordered_map>
 #include <atomic>
 
-class DB_FILE_CONTEXT {
+class T_FILE {
 public:
 	static bool enableLock;
 	static std::vector<std::string> m_vctExcludeFilter;
@@ -506,6 +506,7 @@ public:
 	static int dbFileCtxTTL;
 
 	bool writeFile(const char* p, int len);
+	bool writeAt(const char* p, int len, int offset);
 	bool appendFile(char* p, int len);
 	bool readFile(char* p,int offset, int len);
 	bool clearFile();
@@ -523,7 +524,7 @@ public:
 	string path;
 	string data;
 
-	DB_FILE_CONTEXT(const string& p) {
+	T_FILE(const string& p) {
 		path = p;
 		fp = nullptr;
 		last_used_.setNow();
@@ -534,151 +535,25 @@ public:
 	}
 };
 
-class DB_FILE_CTX_MANAGER {
+class T_FILE_MANAGER {
 public:
-	static DB_FILE_CTX_MANAGER& instance() {
-		static DB_FILE_CTX_MANAGER pool;
-		return pool;
-	}
+	T_FILE_MANAGER();
+	~T_FILE_MANAGER();
 
-	DB_FILE_CONTEXT* get_lock(const std::string& path);
-
-	bool delete_file(const std::string& path) {
-		std::lock_guard<std::mutex> lockG(pool_mutex_);
-		auto it = locks_.find(path);
-		bool ret = false;
-		bool deleted = false;
-		if (it != locks_.end())
-		{
-			if (DB_FILE_CONTEXT::enableLock) {
-				it->second->mutex_.lock();
-			}
-			if (it->second->fp != nullptr)
-			{
-#ifdef _WIN32
-				CloseHandle(it->second->fp);
-				std::wstring filePath = DB_STR::utf8_to_utf16(path);
-
-				ret = DeleteFileW(filePath.c_str());
-
-#else
-				fclose((FILE*)it->second->fp);
-				ret = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
-#endif
-				deleted = true;
-			}
-			it->second->fp = nullptr;
-
-			if (DB_FILE_CONTEXT::enableLock) {
-				it->second->mutex_.unlock();
-			}
-		}
-		
-		if (!deleted)
-		{
-#ifdef _WIN32
-			std::wstring filePath = DB_STR::utf8_to_utf16(path);
-
-			ret = DeleteFileW(filePath.c_str());
-
-#else
-			ret = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
-#endif
-		}
-		return ret;
-	}
-	void release_lock(DB_FILE_CONTEXT& lock) {
-		//do not need to lock pool_mutex_,not thread safe ref_count option.
-		//release_lock is called ,then clean thread try to check ref_count,do not clean,then ref_count--
-		//not using lock will not be cleaned, do not cause problem;clean in using lock causes problem
-		lock.ref_count_--;
-		if (lock.ref_count_ == 0) //if exclude list match,then clean
-		{
-			for (const auto& it : DB_FILE_CONTEXT::m_vctExcludeFilter)
-			{
-				if (lock.path.find(it) != std::string::npos)
-				{
-					std::lock_guard<std::mutex> lockG(pool_mutex_);
-
-					if (lock.fp != nullptr) 
-					{
-#ifdef _WIN32
-						CloseHandle(lock.fp);
-#else
-						fclose((FILE*)lock.fp);
-#endif
-					}
-					lock.fp = nullptr;
-					break;
-				}
-			}
-		}
-	}
-
-	DB_FILE_CTX_MANAGER() {
-		cleaner_.store(true);
-		std::thread([this]() {
-			while (cleaner_.load()) {
-				std::this_thread::sleep_for(std::chrono::seconds(DB_FILE_CONTEXT::dbFileCtxTTL));
-				std::lock_guard<std::mutex> lock(pool_mutex_);
-				auto now = std::chrono::steady_clock::now();
-				for (auto it = locks_.begin(); it != locks_.end();) {
-					// in pool_mutex_ ,keep ref_count_ check thread safe
-					if (it->second->ref_count_ == 0 && it->second->last_used_.getTimePassSecond() > DB_FILE_CONTEXT::dbFileCtxTTL) {
-						if (it->second->fp != nullptr) {
-#ifdef _WIN32
-							CloseHandle(it->second->fp);
-#else
-							fclose((FILE*)it->second->fp);
-#endif
-							it->second->fp = nullptr;
-						}
-						delete it->second;
-						it = locks_.erase(it);
-					}
-					else {
-						++it;
-					}
-				}
-			}
-			}).detach();
-	}
-
-	~DB_FILE_CTX_MANAGER() {
-		cleaner_.store(false);
-	}
+	T_FILE* getFile(const std::string& path);
+	bool delete_file(const std::string& path);
+	void add_ref(T_FILE& tFile);
+	void release_ref(T_FILE& lock);
 
 	std::mutex pool_mutex_; //keep locks_ thread safe, keep clean and getLock thread safe
-	std::unordered_map<std::string, DB_FILE_CONTEXT*> locks_;
+	std::unordered_map<std::string, T_FILE*> locks_;
 	std::atomic<bool> cleaner_{ false };
 };
 
-struct DB_FILE_CONTEXT_GUARD {
-	DB_FILE_CONTEXT* context_;
-
-	DB_FILE_CONTEXT_GUARD(const std::string& path) {
-		context_ = DB_FILE_CTX_MANAGER::instance().get_lock(path);
-		if (DB_FILE_CONTEXT::enableLock) {
-			context_->mutex_.lock();
-		}
-	}
-
-	~DB_FILE_CONTEXT_GUARD() {
-		if (DB_FILE_CONTEXT::enableLock) {
-			context_->mutex_.unlock();
-		}
-		if (!DB_FILE_CONTEXT::m_bEnableFileHandleBuffer) {
-			if (context_->fp != nullptr) {
-#ifdef _WIN32
-				CloseHandle(context_->fp);
-#else
-                fclose((FILE*)context_->fp);
-#endif
-				context_->fp = nullptr;
-			}
-		}
-		DB_FILE_CTX_MANAGER::instance().release_lock(*context_);
-	}
+struct T_FILE_LOCK_GUARD {
+	T_FILE* file;
+	T_FILE_LOCK_GUARD(T_FILE* tf);
+	~T_FILE_LOCK_GUARD();
 };
 
 //as the data after aggregate, only time and items are valid
@@ -1139,7 +1014,8 @@ public:
 	bool Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDataSet, vector<DATA_SET*>& outputDataSet);
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
-	bool saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe);
+	bool saveDeToFile(const string& dataListPath, yyjson_mut_val* yymDe);
+	bool saveDeToFile(const string& dataListPath, string sDe);
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt,SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, vector<yyjson_mut_val*>& vecRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
