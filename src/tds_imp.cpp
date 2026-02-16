@@ -688,8 +688,10 @@ bool TDS_imp::run(string cmdline) {
 
 		::db.m_confPath      = tds->conf->confPath;
 		::db.m_currentPath   = tds->conf->currentPath;
-		::db.m_bEnableFsBuff = tds->conf->getInt("dbBuffer", 0) == 1 ? true : false;
 		::db.m_enableDB = tds->conf->getInt("enableDB", 1) == 1 ? true : false;
+		T_FILE::m_bEnableFileHandleBuffer = tds->conf->getInt("enableFileHandleBuffer", 1) == 1 ? true : false;
+		T_FILE::m_bEnableFileDataBuffer = tds->conf->getInt("enableFileDataBuffer", 1) == 1 ? true : false;
+		T_FILE::dbFileCtxTTL = tds->conf->getInt("dbFileCtxTTL", 5 * 60);
 	}
 		
 	prj.loadObjTemplate();
@@ -758,6 +760,7 @@ bool TDS_imp::run(string cmdline) {
 	ssc.udpSrvPort      = tds->conf->getInt("udpPort", 0);
 	ssc.tcpKeepAliveSec = tds->conf->tcpKeepAliveDS;
 	ssc.tcpClientRegPkt = rpcSrv.getChildTdsRegPkt();
+
 
 	sockSrv.m_pCallback       = onSockSrvCallback;
 	sockSrv.m_pStatusCallback = onSockSrvStatusCallback;

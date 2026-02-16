@@ -64,7 +64,7 @@ T_FILE_MANAGER tFileMgr;
 bool T_FILE::enableLock = true;
 bool T_FILE::m_bEnableFileHandleBuffer = false;
 bool T_FILE::m_bEnableFileDataBuffer = false;
-int T_FILE::dbFileCtxTTL = 30 * 60;
+int T_FILE::dbFileCtxTTL = 5 * 60;
 std::vector<std::string> T_FILE::m_vctExcludeFilter;
 
 #include <random>
@@ -363,9 +363,9 @@ namespace TIME_OPT {
 
 	DB_TIME now() {
 		auto now = std::chrono::system_clock::now();
-		//通过不同精度获取相差的毫秒数 <1000毫秒值
-		unsigned short milli = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
-			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
+
+		int milli = (int)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+			- (int)std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
 		time_t tt = std::chrono::system_clock::to_time_t(now);
 
 		return Unix2DBTime(tt, milli);
@@ -633,7 +633,7 @@ namespace DB_FS {
 		int iStartPos = 0;
 		while (1)
 		{
-			int iSlash = strFile.find('/', iStartPos);
+			size_t iSlash = strFile.find('/', iStartPos);
 			if (iSlash == string::npos) { break; }
 
 			string strFolder = strFile.substr(0, iSlash);
@@ -650,29 +650,29 @@ namespace DB_FS {
 	}
 	bool writeFile(string path, char* data, size_t len)
 	{
-		T_FILE* tFile = tFileMgr.getFile(path);
-		T_FILE_LOCK_GUARD g(tFile);
-		if (tFile->fp)
+		createFolderOfPath(path);
+
+		FILE* fp = nullptr;
+#ifdef _WIN32
+		wstring wpath = DB_STR::utf8_to_utf16(path);
+		_wfopen_s(&fp, wpath.c_str(), L"wb");
+#else
+		fp = fopen(path.c_str(), "wb");
+#endif
+		if (fp)
+		{
+			fwrite(data, 1, len, fp);
+			fclose(fp);
+			return true;
+		}
+		else
 		{
 #ifdef _WIN32
-			LARGE_INTEGER li;
-			li.QuadPart = 0;
-			SetFilePointerEx(tFile->fp, li, NULL, FILE_BEGIN);
-
-			// write data
-			DWORD bytesWritten;
-			BOOL result = WriteFile(tFile->fp, data, len, &bytesWritten, NULL);
-
-			SetEndOfFile(tFile->fp);
-			return result;
-#else
-			fseek(tFile->fp, 0, SEEK_SET);
-			fwrite(data, 1, len, (FILE*)tFile->fp);
-			ftruncate(fileno((FILE*)tFile->fp), len);
-			return true;
+			string info = DB_STR::format("writeFile,path=%s,len=%d", path.c_str(), len);
+			DWORD errCode = GetLastError();
+			printf("[error]%d", errCode);
 #endif
 		}
-		
 		return false;
 	}
 	bool writeFile(string path, unsigned char* data, size_t len)
@@ -1465,7 +1465,7 @@ void TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 			size_t max = 0;
 			yyjson_val* item;
 			yyjson_arr_foreach(yyv_file, idx, max, item) {
-				string url = saveDEFile(item, deFilesFolder, stTime, fileType);
+				string url = saveToDeFile(item, deFilesFolder, stTime, fileType);
 				url = url.substr(m_path.length(), url.length() - m_path.length());
 				fileUrl.push_back(url);
 			}
@@ -1473,7 +1473,7 @@ void TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 		//save to a de file in the same folder as deList file
 		else if (yyjson_is_obj(yyv_file)) {
 			//Data element files: curves, various custom JSON (such as inspection records), data element related files: images
-			saveDEFile(yyv_file, deListFolderPath, stTime, fileType);
+			saveToDeFile(yyv_file, deListFolderPath, stTime, fileType);
 		}
 	}
 
@@ -1511,7 +1511,7 @@ void TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 		}
 	}
 
-	saveDeToFile(dataListPath, yymDe);
+	saveToDeListFile(dataListPath, yymDe);
 
 	yyjson_mut_doc_free(mdoc);
 	yyjson_doc_free(doc);
@@ -1528,54 +1528,22 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 	string folderPath = getPath_dataFolder(strTag, stTime);
 	string dlPath = folderPath + "/" + m_dbFmt.deListName;
 	string sDe = "{\n\"time\":\"" + stTime.toStr() + "\",\n\"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}";
-	saveDeToFile(dlPath, sDe);
-
-	if (T_FILE::m_bEnableFileDataBuffer) {
-		string& fileData = tFile->data;  // can be an empty file ,length is 0
-		if (fileData.size() > 0) {
-			fileData.resize(fileData.size() - 1);
-			fileData += "," + sDe + "]";
-		}
-		else {
-			fileData = "[" + sVal + "]";
-		}
-	}
-
-	bool bAppend = false;
-	if (fileExist(dlPath))
-	{
-		string appendData = ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";
-		if (dbLock.context_->fp)
-		{
-			long len = dbLock.context_->getFileSize();
-
-			
-		}
-	}
-	if (!bAppend) {
-		T_FILE_LOCK_GUARD dbLock(dlPath);
-		string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
-		if (!dbLock.context_->writeAt(s.c_str(), s.length(), 0))
-		{
-			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s.c_str());
-		}
-	}
+	saveToDeListFile(dlPath, sDe);
 }
 
 bool TDB::doFileUpgrade(T_FILE* file) {
 	// auto upgrade compatible format to standard format
+	size_t len = file->getFileSize();
 	if (len > 0 && m_bAutoUpgrade) {
 		// check first character is '{'
 		char c = 0;
-		dbLock.context_->readFile(&c, 0, 1);
+		file->read(&c, 0, 1);
 
 		if (c == '{') {
 			// read all data
 			char* p = (char*)malloc(len + 1);
-			dbLock.context_->readFile(p, 0, len);
+			file->read(p, 0, len);
 			p[len] = 0;
-
-			dbLock.context_->clearFile();
 
 			// parse JSON
 			yyjson_doc* doc = yyjson_read(p, len, 0);
@@ -1591,32 +1559,20 @@ bool TDB::doFileUpgrade(T_FILE* file) {
 					size_t json_len = 0;
 					char* json_str = yyjson_mut_write(new_doc, YYJSON_WRITE_PRETTY, &json_len);
 					if (json_str) {
-						dbLock.context_->writeFile(json_str, (int)(json_len - 1));
-						bConvertOld = true;
+						file->write(json_str, (int)(json_len - 1));
 						free(json_str);
 					}
 					yyjson_mut_doc_free(new_doc);
 				}
 				yyjson_doc_free(doc);
 			}
-
-			if (!bConvertOld) {
-				dbLock.context_->writeFile((char*)"[", 1);
-			}
-
-			dbLock.context_->writeFile(appendData.c_str(), appendData.length());
-			bAppend = true;
 		}
 	}
-	else if (len > 0) {
-		// move file pointer to the last character( overwrite the last ']' character)
-		dbLock.context_->writeAt(appendData.c_str(), (int)appendData.length(), len - 1);
-		bAppend = true;
-	}
+	return true;
 }
 
 
-bool TDB::saveDeToFile(const string& dataListPath, yyjson_mut_val* yymDe) {
+bool TDB::saveToDeListFile(const string& dataListPath, yyjson_mut_val* yymDe) {
 	string sDe;
 	char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, nullptr);
 	if (pDe) {
@@ -1624,10 +1580,10 @@ bool TDB::saveDeToFile(const string& dataListPath, yyjson_mut_val* yymDe) {
 		free(pDe);
 	}
 	
-	return saveDeToFile(dataListPath, sDe);
+	return saveToDeListFile(dataListPath, sDe);
 }
 
-bool TDB::saveDeToFile(const string& dataListPath, string sDe) {
+bool TDB::saveToDeListFile(const string& dataListPath, string sDe) {
 	if (!m_enableDB)
 		return false;
 
@@ -1637,6 +1593,7 @@ bool TDB::saveDeToFile(const string& dataListPath, string sDe) {
 	}
 
 	T_FILE_LOCK_GUARD g(tFile);
+	doFileUpgrade(tFile);
 
 	if (T_FILE::m_bEnableFileDataBuffer) {
 		bool bAppend = false;
@@ -1665,7 +1622,7 @@ bool TDB::saveDeToFile(const string& dataListPath, string sDe) {
 	else
 	{
 		sDe = "," + sDe + "]";
-		if (!tFile->writeAt(sDe.c_str(), sDe.length(), tFile->getFileSize() - 1 - 1))
+		if (!tFile->writeAt(sDe.c_str(), sDe.length(), tFile->getFileSize() - 1))
 		{
 			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), sDe.c_str());
 		}
@@ -4218,7 +4175,7 @@ void TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time)
 
 	string dataListPath;
 	dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
-	saveDeToFile(dataListPath, yymDe);
+	saveToDeListFile(dataListPath, yymDe);
 
 	yyjson_mut_doc_free(mdoc);
 	yyjson_doc_free(doc);
@@ -5089,11 +5046,21 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 	if (method == "db.getFileCtx" || method == "db.getFileContext") {
 		std::lock_guard<std::mutex> lock(tFileMgr.pool_mutex_);
 		rlt += "[";
-		for (auto it = tFileMgr.locks_.begin(); it != tFileMgr.locks_.end();it++) {
+		for (auto it = tFileMgr.mapFiles_.begin(); it != tFileMgr.mapFiles_.end();it++) {
+			T_FILE* file = it->second;
 			if (rlt != "[") {
 				rlt += ",";
 			}
-			rlt += "{\"path\":\"" + it->first + "\",\"refCount\":" + to_string(it->second->ref_count_) + ",\"lastUse\":\"" + it->second->last_used_.toStr() + "\"}";
+			rlt += "{\"path\":\"" + file->path + "\"" +
+				",\"isOpen\":" + (file->fp!=nullptr?"true":"false") +
+				",\"refCount\":" + to_string(file->ref_count_) + 
+				",\"lastUse\":\"" + file->last_used_.toStr() + "\"" +
+				",\"openTime\":\"" + file->open_time_.toStr()+ "\""+
+				",\"readCount\":" + to_string(file->readCount) +
+				",\"writeCount\":" + to_string(file->writeCount) +
+				",\"readBytes\":" + to_string(file->readBytes) +
+				",\"writeBytes\":" + to_string(file->readBytes) +
+				"}";
 		}
 		rlt += "]";
 	}
@@ -6727,7 +6694,7 @@ bool TDB::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCo
 	return false;
 }
 
-string TDB::saveDEFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, string& type)
+string TDB::saveToDeFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, string& type)
 {
 	string deFilePath = "";
 
@@ -7008,7 +6975,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			string dataListPath;
 			string deListFolderPath = getPath_dataFolder(tag, stTime);
 			dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
-			saveDeToFile(dataListPath, yymDe);
+			saveToDeListFile(dataListPath, yymDe);
 
 			yyjson_mut_doc_free(mdoc);
 			yyjson_doc_free(doc);
@@ -7024,7 +6991,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			string dataListPath;
 			string deListFolderPath = getPath_dataFolder(tag, stTime);
 			dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
-			saveDeToFile(dataListPath, mut_root);
+			saveToDeListFile(dataListPath, mut_root);
 
 			yyjson_mut_doc_free(mut_doc);
 		}
@@ -8234,22 +8201,22 @@ T_FILE_MANAGER::T_FILE_MANAGER() {
 	cleaner_.store(true);
 	std::thread([this]() {
 		while (cleaner_.load()) {
-			std::this_thread::sleep_for(std::chrono::seconds(T_FILE::dbFileCtxTTL));
+			int sleeped = 0;
+			while (sleeped < T_FILE::dbFileCtxTTL) {
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+				sleeped++;
+			}
 			std::lock_guard<std::mutex> lock(pool_mutex_);
 			auto now = std::chrono::steady_clock::now();
-			for (auto it = locks_.begin(); it != locks_.end();) {
+			for (auto it = mapFiles_.begin(); it != mapFiles_.end();) {
 				// in pool_mutex_ ,keep ref_count_ check thread safe
 				if (it->second->ref_count_ == 0 && it->second->last_used_.getTimePassSecond() > T_FILE::dbFileCtxTTL) {
 					if (it->second->fp != nullptr) {
-#ifdef _WIN32
-						CloseHandle(it->second->fp);
-#else
 						fclose((FILE*)it->second->fp);
-#endif
 						it->second->fp = nullptr;
 					}
 					delete it->second;
-					it = locks_.erase(it);
+					it = mapFiles_.erase(it);
 				}
 				else {
 					++it;
@@ -8264,19 +8231,20 @@ T_FILE_MANAGER::~T_FILE_MANAGER() {
 
 T_FILE* T_FILE_MANAGER::getFile(const std::string& path) {
 	std::lock_guard<std::mutex> lock(pool_mutex_);
-	auto it = locks_.find(path);
-	T_FILE* pl = nullptr;
-	if (it == locks_.end()) {
-		pl = new T_FILE(path);
-		locks_[path] = pl;
+	auto it = mapFiles_.find(path);
+	T_FILE* tFile = nullptr;
+	if (it == mapFiles_.end()) {
+		tFile = new T_FILE(path);
+		mapFiles_[path] = tFile;
 	}
 	else {
-		pl = it->second;
+		tFile = it->second;
 	}
 
 
-	if (pl->fp == nullptr) {
+	if (tFile->fp == nullptr) {
 		DB_FS::createFolderOfPath(path);
+		FILE* f = nullptr;
 #ifdef WIN_FILE_OPT
 		wstring filename = DB_STR::utf8_to_utf16(path);
 		//pl->fp = _wfopen(filename.c_str(), L"rb+");
@@ -8295,26 +8263,40 @@ T_FILE* T_FILE_MANAGER::getFile(const std::string& path) {
 		}
 #elif defined _WIN32
 		wstring wpath = DB_STR::utf8_to_utf16(path);
-		FILE* f = (FILE*) pl->fp;
-		_wfopen_s(&f, wpath.c_str(), L"rb+");
-		if(f)
-			pl->fp = f;
+		f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);// read,write at any offset
+		if(!f)
+			_wfopen_s(&f, wpath.c_str(), L"wb+");
+		if (f) {
+			fclose(f);
+			f = nullptr;
+			f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);
+		}
 #else
-		pl->fp = fopen(path.c_str(), "rb+");
+		f = fopen(path.c_str(), "rb+");
+		if (!f)
+			f = fopen(path.c_str(), "wb+");
+		if (f) {
+			fclose(f);
+			f = nullptr;
+			fopen(path.c_str(), "rb+");
+		}
 #endif
+		if (f) {
+			tFile->open_time_.setNow();
+			tFile->fp = f;
+		}
 	}
 
-	pl->last_used_.setNow();
-	pl->ref_count_++; // cleaner thread can not check ref_count because pool_mutex_, so in using lock will not be deleted
-	return pl;
+	tFile->last_used_.setNow();
+	return tFile;
 }
 
 bool T_FILE_MANAGER::delete_file(const std::string& path) {
 	std::lock_guard<std::mutex> lockG(pool_mutex_);
-	auto it = locks_.find(path);
+	auto it = mapFiles_.find(path);
 	bool ret = false;
 	bool deleted = false;
-	if (it != locks_.end())
+	if (it != mapFiles_.end())
 	{
 		if (T_FILE::enableLock) {
 			it->second->mutex_.lock();
@@ -8402,10 +8384,10 @@ T_FILE_LOCK_GUARD::~T_FILE_LOCK_GUARD() {
 	}
 	if (!T_FILE::m_bEnableFileHandleBuffer) {
 		if (file->fp != nullptr) {
-#ifdef _WIN32
-			CloseHandle(context_->fp);
+#ifdef WIN_FILE_OPT
+			CloseHandle(file->fp);
 #else
-			fclose((FILE*)context_->fp);
+			fclose((FILE*)file->fp);
 #endif
 			file->fp = nullptr;
 		}
@@ -8413,7 +8395,7 @@ T_FILE_LOCK_GUARD::~T_FILE_LOCK_GUARD() {
 	tFileMgr.release_ref(*file);
 }
 
-bool T_FILE::writeFile(const char* p, int len)
+bool T_FILE::write(const char* p, int len)
 {
 	if (fp)
 	{
@@ -8463,9 +8445,14 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 		SetEndOfFile(fp);
 		return result;
 #else
-		FILE* fp = (FILE*)fp;
-		fseek(fp, offset, SEEK_SET);
-		fwrite(p, 1, len, (FILE*)fp);
+		FILE* f = (FILE*)fp;
+		fseek(f, offset, SEEK_SET);
+		fwrite(p, 1, len, f);
+		//fflush write data to os kernel buffer,but maybe not write to disk immediatly
+		//kernel data can be shared by another process 
+		//so notepad can be used to check if data is writed
+		//kernel buffer here can increase db writing performance
+		fflush(f);  
 		return true;
 #endif
 	}
@@ -8473,7 +8460,7 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 	return false;
 }
 
-bool T_FILE::appendFile(char* p, int len)
+bool T_FILE::append(const char* p, int len)
 {
 #ifdef WIN_FILE_OPT
 	HANDLE hFile = fp;
@@ -8482,18 +8469,15 @@ bool T_FILE::appendFile(char* p, int len)
 	ReadFile(hFile, p, len, &bytesRead, NULL);
 	return true;
 #else  
-	FILE* fp = (FILE*)fp;
-	long len = ftell(fp);
-	if (len > 0) {
-		fseek(fp, 0, SEEK_END);
-	}
-	fwrite(p, 1, len, fp);
+	FILE* f = (FILE*)fp;
+	fseek(f, 0, SEEK_END);
+	fwrite(p, 1, len, f);
 	return true;
 #endif
 	return false;
 }
 
-bool T_FILE::readFile(char* p,int offset,int len)
+bool T_FILE::read(char* p,int offset,int len)
 {
 #ifdef WIN_FILE_OPT
 	HANDLE hFile = fp;
@@ -8502,15 +8486,9 @@ bool T_FILE::readFile(char* p,int offset,int len)
 	ReadFile(hFile,p,len, &bytesRead, NULL);
 	return true;
 #else  
-	FILE* fp = (FILE*)fp;
-	long len = ftell(fp);
-	if (len > 0) {
-		data.resize(len);
-		char* pdata = (char*)data.data();
-
-		fseek(fp, 0, SEEK_SET);
-		fread(pdata, 1, len, fp);
-	}
+	FILE* f = (FILE*)fp;
+	fseek(f, 0, SEEK_SET);
+	fread(p, 1, len, f);
 	return true;
 #endif
 
@@ -8529,17 +8507,17 @@ bool T_FILE::clearFile()
 	return true;
 }
 
-long T_FILE::getFileSize()
+size_t T_FILE::getFileSize()
 {
 #ifdef WIN_FILE_OPT
 	HANDLE hFile = fp;
 	LARGE_INTEGER fileSize;
 	GetFileSizeEx(hFile, &fileSize);
-	return (long)fileSize.QuadPart;
+	return (size_t)fileSize.QuadPart;
 #else  // Linux/Unix
-	FILE* fp = (FILE*)fp;
-	fseek(fp, 0L, SEEK_END);
-	long len = ftell(fp);
+	FILE* f = (FILE*)fp;
+	fseek(f, 0L, SEEK_END);
+	long len = ftell(f);
 	return len;
 #endif
 }

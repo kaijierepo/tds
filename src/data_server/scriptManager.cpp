@@ -2,14 +2,142 @@
 #include "scriptEngine.h"
 #include "scriptFunc.h"
 #include "logger.h"
+#include <iostream>
 
 #ifdef TDS
 #include "ioSrv.h"
 #endif
 
-#include "tdb.h"
+
+#if (defined(_MSVC_LANG) && _MSVC_LANG < 201703L) || (!defined(_MSVC_LANG) && defined(__cplusplus) && __cplusplus < 201703L)
+#include <experimental/filesystem>
+namespace stdfs = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace stdfs = std::filesystem;
+#endif
 
 ScriptManager scriptManager;
+
+static wstring utf8_to_utf16(string instr) //utf-8-->ansi
+{
+	wstring str;
+#ifdef _WIN32
+	size_t MAX_STRSIZE = instr.length() * 2 + 2;
+	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+	memset(wcharstr, 0, MAX_STRSIZE);
+	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+	str = wcharstr;
+	delete[] wcharstr;
+
+#else
+
+#endif
+	return str;
+}
+
+static bool createFolderOfPath(string strFile) {
+	size_t iDotPos = strFile.rfind('.');
+	size_t iSlashPos = strFile.rfind('/');
+	if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
+		strFile = strFile.substr(0, iSlashPos);
+	}
+
+#ifdef _WIN32
+	return stdfs::create_directories(utf8_to_utf16(strFile));
+#else
+	stdfs::path p = strFile;
+	return stdfs::create_directories(p);
+#endif
+}
+
+static bool readFile(string path, string& data)
+{
+	FILE* fp = nullptr;
+#ifdef _WIN32
+	_wfopen_s(&fp, utf8_to_utf16(path).c_str(), L"rb");
+#else
+	fp = fopen(path.c_str(), "rb");
+#endif
+	if (fp)
+	{
+		fseek(fp, 0, SEEK_END);
+		long len = ftell(fp);
+		data.resize(len);
+		fseek(fp, 0, SEEK_SET);
+		fread(data.data(), 1, len, fp);
+		fclose(fp);
+		return true;
+	}
+	return false;
+}
+
+static bool writeFile(string path, char* data, size_t len)
+{
+	createFolderOfPath(path);
+
+	FILE* fp = nullptr;
+#ifdef _WIN32
+	wstring wpath = utf8_to_utf16(path);
+	_wfopen_s(&fp, wpath.c_str(), L"wb");
+#else
+	fp = fopen(path.c_str(), "wb");
+#endif
+	if (fp)
+	{
+		fwrite(data, 1, len, fp);
+		fclose(fp);
+		return true;
+	}
+	else
+	{
+#ifdef _WIN32
+		string info = str::format("writeFile,path=%s,len=%d", path.c_str(), len);
+		DWORD errCode = GetLastError();
+		printf("[error]%d", errCode);
+#endif
+	}
+	return false;
+}
+
+static bool renameFile(const std::string& oldPath, const std::string& newPath) {
+	try {
+		stdfs::rename(oldPath, newPath);
+		return true;
+	}
+	catch (const std::exception& e) {
+		std::cerr << "rename fail: " << e.what() << std::endl;
+		return false;
+	}
+}
+
+static bool deleteDir(const std::string& dirPath) {
+#ifdef _WIN32
+	stdfs::path path = utf8_to_utf16(dirPath);
+#else
+	stdfs::path path = dirPath;
+#endif
+	try {
+		if (!stdfs::exists(path)) {
+			std::cout << "delete dir fail,dir not exist: " << path << std::endl;
+			return true;  
+		}
+
+		if (!stdfs::is_directory(path)) {
+			std::cout << "delete dir fail,not a directory: " << path << std::endl;
+			return false;
+		}
+
+		std::uintmax_t count = stdfs::remove_all(path);
+		std::cout << "file count " << count << "deleted" << std::endl;
+		return count > 0;
+	}
+	catch (const stdfs::filesystem_error& e) {
+		std::cerr << "fs error: " << e.what()
+			<< " error code: " << e.code() << std::endl;
+		return false;
+	}
+}
 
 void scriptManager_logImp(string log, ScriptEngine* pEngine, bool logToHost) {
 	pEngine->m_vecOutput.push_back(log);
@@ -41,7 +169,7 @@ bool ScriptManager::loadScriptList() {
 	unique_lock<mutex> lock(m_csScripts);
 	m_mapScripts.clear();
 	string sScriptList;
-	if (DB_FS::readFile(m_confPath + "/scripts/list.json", sScriptList)) {
+	if (readFile(m_confPath + "/scripts/list.json", sScriptList)) {
 		yyjson_doc* doc = yyjson_read(sScriptList.c_str(), sScriptList.size(), 0);
 		yyjson_val* root = yyjson_doc_get_root(doc);
 
@@ -330,12 +458,12 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 	if (si.folderPath != "") {
 		string sMockjs;
-		if (DB_FS::readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
+		if (readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
 			si.envVarScript = sMockjs;
 			se.m_envVarScriptLine = static_cast<int>(std::count(sMockjs.begin(), sMockjs.end(), '\n')) + 1;
 		}
 		string sDebugParams;
-		if (DB_FS::readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
+		if (readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
 			yyjson_doc* d = yyjson_read(sDebugParams.c_str(), sDebugParams.size(), 0);
 			yyjson_val* r = yyjson_doc_get_root(d);
 			yyjson_val* yy_dev = yyjson_obj_get(r, "dev");
@@ -349,7 +477,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 			}
 		}
 		else {
-			LOG("DB_FS::readFile debug.json is failed");
+			LOG("readFile debug.json is failed");
 		}
 	}
 	else {
@@ -505,8 +633,8 @@ bool ScriptManager::rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, 
 	}
 
 	SCRIPT_INFO& si = m_mapScripts[name];
-	string strPath = DB_STR::utf8_to_gb(m_confPath + "/scripts/" + name);
-	DB_FS::deleteDirectory(strPath);
+	string strPath = m_confPath + "/scripts/" + name;
+	deleteDir(strPath);
 
 	m_mapScripts.erase(name);
 	saveScriptList("", m_mapScripts);
@@ -530,12 +658,12 @@ bool ScriptManager::rpc_getScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 	string s;
 	json j;
-	if (DB_FS::readFile(path1, s)) {
+	if (readFile(path1, s)) {
 		j["code"] = s;
 	}
 
 	string s1;
-	if (DB_FS::readFile(path2, s1)) {
+	if (readFile(path2, s1)) {
 		j["envVarCode"] = s1;
 	}
 
@@ -571,11 +699,11 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		}
 
 		bool success = false;
-		string oldPath = DB_STR::utf8_to_gb(m_confPath + "/scripts/" + oldName);
-		string newPath = DB_STR::utf8_to_gb(m_confPath + "/scripts/" + name);
+		string oldPath = m_confPath + "/scripts/" + oldName;
+		string newPath = m_confPath + "/scripts/" + name;
 
 		SCRIPT_INFO& si = m_mapScripts[oldName];
-		success = DB_FS::rename(oldPath, newPath);
+		success = renameFile(oldPath.c_str(), newPath.c_str());
 
 		if (!success) {
 			json jError = "rename failed";
@@ -747,8 +875,8 @@ void ScriptManager::saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl
 	char* s = yyjson_mut_write(mutDoc, YYJSON_WRITE_PRETTY, &len);
 	if (s) {
 		string str = s;
-		DB_FS::createFolderOfPath(path);
-		DB_FS::writeFile(path, (char*)str.c_str(), str.length());
+		createFolderOfPath(path);
+		writeFile(path, (char*)str.c_str(), str.length());
 
 		free(s);
 	}

@@ -186,7 +186,7 @@ static inline int ctz64(uint64_t a)
     if (_BitScanForward64(&index, a))
         return (int)index;
     else
-        return 64; // 如果a为0，返回64
+        return 64; // if a == 0 return 64
 }
 #else
 static inline int ctz64(uint64_t a)
@@ -220,7 +220,7 @@ static inline int clz64(uint64_t a)
     if (_BitScanReverse64(&index, a))
         return 63 - (int)index;
     else
-        return 64; // 如果a为0，返回64
+        return 64; // if a == 0 return 64
 }
 #else
 static inline int clz64(uint64_t a)

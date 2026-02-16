@@ -41,10 +41,6 @@ SOFTWARE.
 #include <functional>
 #include <thread>
 using namespace std;
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 
 class TDB;
 /*
@@ -505,12 +501,12 @@ public:
 	static bool m_bEnableFileDataBuffer;
 	static int dbFileCtxTTL;
 
-	bool writeFile(const char* p, int len);
+	bool write(const char* p, int len);
 	bool writeAt(const char* p, int len, int offset);
-	bool appendFile(char* p, int len);
-	bool readFile(char* p,int offset, int len);
+	bool append(const char* p, int len);
+	bool read(char* p,int offset, int len);
 	bool clearFile();
-	long getFileSize();
+	size_t getFileSize();
 
 	std::mutex mutex_;
 	DB_TIME last_used_;
@@ -546,7 +542,7 @@ public:
 	void release_ref(T_FILE& lock);
 
 	std::mutex pool_mutex_; //keep locks_ thread safe, keep clean and getLock thread safe
-	std::unordered_map<std::string, T_FILE*> locks_;
+	std::unordered_map<std::string, T_FILE*> mapFiles_;
 	std::atomic<bool> cleaner_{ false };
 };
 
@@ -1007,6 +1003,7 @@ public:
 	int dhmsSpan2Seconds(string timeSpan);
 	//insert
 	void InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal);
+	bool doFileUpgrade(T_FILE* file);
 	//select
 	bool Select_Step_selectTags(DE_SELECTOR& deSel, SELECT_RLT& rlt);
 	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
@@ -1014,12 +1011,9 @@ public:
 	bool Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDataSet, vector<DATA_SET*>& outputDataSet);
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
-	bool saveDeToFile(const string& dataListPath, yyjson_mut_val* yymDe);
-	bool saveDeToFile(const string& dataListPath, string sDe);
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt,SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, vector<yyjson_mut_val*>& vecRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
-	string getDeFilesFolder(string& deListFolder, DB_TIME& time);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string>> aggrKeyType, string groupKey,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
 	//double doAggrOneGroup_increase(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
@@ -1035,8 +1029,10 @@ public:
 
 	void getDeTime(yyjson_mut_val* yyTime, string& deTime);
 
-	//bool updateJsonObj(json& jOld, json& jNew);
-	string saveDEFile(yyjson_val* yyvFileInfo, string path,DB_TIME dbTime,string& type);
+	//file save operation
+	bool saveToDeListFile(const string& dataListPath, yyjson_mut_val* yymDe);
+	bool saveToDeListFile(const string& dataListPath, string sDe);
+	string saveToDeFile(yyjson_val* yyvFileInfo, string path,DB_TIME dbTime,string& type);
 
 	//path management
 	string getPath_dbFile(string strTag, string time, string deType = "");
@@ -1047,6 +1043,7 @@ public:
 	string getPath_deFile(string strTag, DB_TIME stTime);
 	string getPath_dbRoot();
 	string getName_deFile(string tag, DB_TIME time);
+	string getDeFilesFolder(string& deListFolder, DB_TIME& time);
 
 	string parseSuffix(string deFileUrl);
 	static bool fileExist(string pszFileName);
