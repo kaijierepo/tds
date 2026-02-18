@@ -504,6 +504,7 @@ public:
 	bool writeAt(const char* p, int len, int offset);
 	bool append(const char* p, int len);
 	bool read(char* p,int offset, int len);
+	bool read(string& data);
 	bool clearFile();
 	size_t getFileSize();
 
@@ -884,15 +885,6 @@ struct FILE_BUFF {
 	}
 };
 
-class FS_BUFF {
-public:
-	std::mutex m_csFsb;
-	std::map<string,FILE_BUFF*> m_mapFsBuff;
-
-	bool readFile(string path, string& data);
-	bool writeFile(string path, unsigned char* data, size_t len);
-};
-
 inline string JSON_STR_VAL(const string& s) {
 	return "\"" + s + "\"";
 }
@@ -915,7 +907,6 @@ public:
 	bool setBufferTTL(string bufferTTL);
 	bool m_enableDB = true;
 	DB_FMT m_dbFmt;
-	FS_BUFF m_FsBuff;
 	int m_bufferTTL;
 	DB_TIME_UNIT m_timeUnit;
 	bool m_bAutoUpgrade;
@@ -941,7 +932,6 @@ public:
 	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
 	void rpc_db_saveImage(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
-	void rpc_db_getBufferStatus(string& rlt, string& err);
 	void rpc_db_setConf(string& sParams, string& rlt, string& err);
 
 	//table db function

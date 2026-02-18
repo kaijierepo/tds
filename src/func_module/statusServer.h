@@ -55,12 +55,10 @@ public:
 
         try
         {
-	        // 打开查询句柄
 	        if (PdhOpenQuery(NULL, NULL, &queryHandle) != ERROR_SUCCESS) {
 	            throw std::runtime_error("Failed to open PDH query");
 	        }
 	
-	        //  
 	        char processName[MAX_PATH];
 	        GetModuleFileNameA(NULL, processName, MAX_PATH);
 	        std::string name = std::string(processName);
@@ -73,7 +71,6 @@ public:
 	        counterPath = "\\Process(" + name + ")\\IO Data Bytes/sec";
 	        auto ret = PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &ioDataCounter);
 	        if (ret != ERROR_SUCCESS) {
-	            // 如果失败，尝试带进程ID的路径
 	            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Data Bytes/sec";
 	            ret = PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &ioDataCounter);
 	            if (ret != ERROR_SUCCESS) {
@@ -97,7 +94,6 @@ public:
 	            }
 	        }
 	
-	        // 初始收集数据
 	        PdhCollectQueryData(queryHandle);
         }
         catch (...)

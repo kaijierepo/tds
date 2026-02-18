@@ -726,7 +726,7 @@ namespace DB_FS {
 					list.push_back(fi);
 
 					if (recursive) {
-						getFolderList(list, DB_STR::gb_to_utf8(i.path().string()), recursive);
+						getFolderList(list, DB_STR::utf16_to_utf8(i.path().wstring()), recursive);
 					}
 				}
 			}
@@ -742,8 +742,8 @@ namespace DB_FS {
 			wstring wstrFolder = DB_STR::utf8_to_utf16(strFolder);
 			for (auto& i : stdfs::directory_iterator(wstrFolder)) {
 				FILE_INFO fi;
-				fi.path = DB_STR::gb_to_utf8(i.path().string());
-				fi.name = DB_STR::gb_to_utf8(i.path().filename().string());
+				fi.path = DB_STR::utf16_to_utf8(i.path().wstring());
+				fi.name = DB_STR::utf16_to_utf8(i.path().filename().wstring());
 				if (exclude != nullptr) {
 					bool excluded = false;
 					for (int i = 0; i < exclude->size(); i++) {
@@ -761,7 +761,7 @@ namespace DB_FS {
 
 				if (stdfs::is_directory(i.path())) {
 					if (recursive) {
-						getFileList(list, DB_STR::gb_to_utf8(i.path().string()), recursive, suffix, exclude);
+						getFileList(list, DB_STR::utf16_to_utf8(i.path().wstring()), recursive, suffix, exclude);
 					}
 				}
 				else {
@@ -6410,19 +6410,6 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_getBufferStatus(string& rlt, string& err) {
-	m_FsBuff.m_csFsb.lock();
-	size_t fileCount = m_FsBuff.m_mapFsBuff.size();
-	size_t bufferSize = 0;
-	for (auto& iter : m_FsBuff.m_mapFsBuff) {
-		bufferSize += iter.second->data.length();
-	}
-	rlt = DB_STR::format("{\"fileCount\":%d,\"bufferSize\":%d,\"bufferTTL\":%d}", fileCount, bufferSize, m_bufferTTL);
-	m_FsBuff.m_csFsb.unlock();
-	return;
-}
-
-
 void TDB::rpc_db_setConf(string& sParams, string& rlt, string& err) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
@@ -8000,7 +7987,11 @@ bool DB_FILE::loadFile() {
 ymd = time.toYMD();
 path = pOwnerDB->getPath_dbFile(tag, time, deType);
 
-DB_FS::readFile(path, data);
+T_FILE* tFile = tFileMgr.getFile(path);
+T_FILE_LOCK_GUARD g(tFile);
+
+data = "";
+tFile->read(data);
 
 if (data == "") {
 	return false;
@@ -8029,39 +8020,6 @@ if (err.code != YYJSON_READ_SUCCESS) {
 root = yyjson_doc_get_root(doc);
 return true;
 }
-
-bool FS_BUFF::readFile(string path, string& data)
-{
-	m_csFsb.lock();
-	std::map<string, FILE_BUFF*>::iterator iter = m_mapFsBuff.find(path);
-	if (iter != m_mapFsBuff.end()) {
-		data = iter->second->data;
-		FILE_BUFF* fb = iter->second;
-		fb->lastActive.setNow();
-		m_csFsb.unlock();
-		return true;
-	}
-	m_csFsb.unlock();
-
-	bool bRet = DB_FS::readFile(path, data);
-	if (bRet) {
-		m_csFsb.lock();
-		FILE_BUFF* fb = new FILE_BUFF();
-		fb->data = data;
-		fb->lastActive.setNow();
-		m_mapFsBuff[path] = fb;
-		m_csFsb.unlock();
-	}
-
-	return bRet;
-}
-
-bool FS_BUFF::writeFile(string path, unsigned char* data, size_t len)
-{
-	return false;
-}
-
-
 
 bool IsLeapYear(int wYear)
 {
@@ -8393,6 +8351,24 @@ bool T_FILE::read(char* p,int offset,int len)
 #endif
 }
 
+bool T_FILE::read(string& data)
+{
+	size_t len = getFileSize();
+	data.resize(len);
+#ifdef _WIN32
+	HANDLE hFile = fp;
+	DWORD bytesRead;
+	SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+	ReadFile(hFile, data.data(), len, &bytesRead, NULL);
+	return true;
+#else  
+	FILE* f = (FILE*)fp;
+	fseek(f, 0, SEEK_SET);
+	fread(data.data(), 1, len, f);
+	return true;
+#endif
+}
+
 bool T_FILE::clearFile()
 {
 #ifdef _WIN32
@@ -8415,7 +8391,7 @@ size_t T_FILE::getFileSize()
 #else  // Linux/Unix
 	FILE* f = (FILE*)fp;
 	fseek(f, 0L, SEEK_END);
-	long len = ftell(f);
+	size_t len = ftell(f);
 	return len;
 #endif
 }

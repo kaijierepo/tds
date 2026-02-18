@@ -954,9 +954,6 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 				rpcResp.error = jErr.dump();
 			}
 		}
-		else if (method == "db.getBufferStatus") {
-			db.rpc_db_getBufferStatus(rpcResp.result, rpcResp.error);
-		}
 		else if (method == "db.saveImage") {
 			string s = params.dump();
 			processJson(s); // 老版本deepvision输出json转为新格式

@@ -8,20 +8,20 @@
 
 class CUSTOM_PDU_TRANSACTION {
 public:
-	TIME reqTime; //ÇëÇó·¢³öÊ±¼ä
+	TIME reqTime; //è¯·æ±‚å‘å‡ºæ—¶é—´
 	vector<uint8_t> req;
 	vector<uint8_t> resp;
 	string req_adu;
 	string resp_adu;
 	mutex m_csResp;
-	semaphore m_respSignal;  //ÊÕµ½ÏìÓ¦µÄĞÅºÅ
+	semaphore m_respSignal;  //æ”¶åˆ°å“åº”çš„ä¿¡å·
 	bool m_bGetResp;
 
-	void setReq(vector<uint8_t> pkt) { //req²»ÓÃ¼ÓËø£¬ÒòÎªdoTransactionº¯Êı²»ÄÜ²¢·¢µ÷ÓÃ
+	void setReq(vector<uint8_t> pkt) { //reqä¸ç”¨åŠ é”ï¼Œå› ä¸ºdoTransactionå‡½æ•°ä¸èƒ½å¹¶å‘è°ƒç”¨
 		req = pkt;
 	}
 
-	void setResp(vector<uint8_t> pkt) { //ÇëÇóÏß³Ì ºÍ »Øµ÷Ïß³Ì²¢·¢µ÷ÓÃ
+	void setResp(vector<uint8_t> pkt) { //è¯·æ±‚çº¿ç¨‹ å’Œ å›è°ƒçº¿ç¨‹å¹¶å‘è°ƒç”¨
 		unique_lock<mutex> lock(m_csResp);
 		m_bGetResp = true;
 		resp = pkt;
