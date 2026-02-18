@@ -25,8 +25,222 @@
 #define GetLastError() errno
 #endif
 
-#include "tds.h"
+#if (defined(_MSVC_LANG) && _MSVC_LANG < 201703L) || (!defined(_MSVC_LANG) && defined(__cplusplus) && __cplusplus < 201703L)
+#include <experimental/filesystem>
+namespace stdfs = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace stdfs = std::filesystem;
+#endif
+
 #include "tdb.h"
+#include "tds.h"
+
+static std::wstring utf8_to_utf16(const string& u8str) {
+    const char* utf8_str = u8str.c_str();
+    size_t length = u8str.length();
+    if (!utf8_str || length == 0) {
+        return std::wstring();
+    }
+
+    // 预分配足够的空间（最坏情况：每个ASCII字符对应1个wchar_t）
+    std::wstring result;
+    result.reserve(length);
+
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(utf8_str);
+    const uint8_t* end = data + length;
+
+    while (data < end) {
+        uint8_t c = *data;
+
+        if (c < 0x80) {
+            // 单字节UTF-8 (0-0x7F)
+            result.push_back(static_cast<wchar_t>(c));
+            data++;
+        }
+        else if ((c & 0xE0) == 0xC0) {
+            // 双字节UTF-8 (0x80-0x7FF)
+            if (data + 1 >= end) {
+                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 2-byte sequence");
+            }
+
+            uint32_t code_point = ((c & 0x1F) << 6) | (data[1] & 0x3F);
+            result.push_back(static_cast<wchar_t>(code_point));
+            data += 2;
+        }
+        else if ((c & 0xF0) == 0xE0) {
+            // 三字节UTF-8 (0x800-0xFFFF)
+            if (data + 2 >= end) {
+                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 3-byte sequence");
+            }
+
+            uint32_t code_point = ((c & 0x0F) << 12) |
+                ((data[1] & 0x3F) << 6) |
+                (data[2] & 0x3F);
+            result.push_back(static_cast<wchar_t>(code_point));
+            data += 3;
+        }
+        else if ((c & 0xF8) == 0xF0) {
+            // 四字节UTF-8 (0x10000-0x10FFFF)，需要UTF-16代理对
+            if (data + 3 >= end) {
+                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 4-byte sequence");
+            }
+
+            uint32_t code_point = ((c & 0x07) << 18) |
+                ((data[1] & 0x3F) << 12) |
+                ((data[2] & 0x3F) << 6) |
+                (data[3] & 0x3F);
+
+            // 转换为UTF-16代理对
+            code_point -= 0x10000;
+            wchar_t high_surrogate = static_cast<wchar_t>((code_point >> 10) + 0xD800);
+            wchar_t low_surrogate = static_cast<wchar_t>((code_point & 0x3FF) + 0xDC00);
+
+            result.push_back(high_surrogate);
+            result.push_back(low_surrogate);
+            data += 4;
+        }
+        else {
+            throw std::runtime_error("Invalid UTF-8 sequence: invalid leading byte");
+        }
+    }
+
+    // 调整容量以释放多余空间
+    result.shrink_to_fit();
+    return result;
+}
+
+static std::string utf16_to_utf8(const wstring& u16str) {
+    const wchar_t* utf16_str = u16str.c_str();
+    size_t length = u16str.length();
+    if (!utf16_str || length == 0) {
+        return std::string();
+    }
+
+    // 预分配足够的空间（最坏情况：每个UTF-16代码单元对应3字节）
+    std::string result;
+    result.reserve(length * 3);
+
+    const wchar_t* data = utf16_str;
+    const wchar_t* end = data + length;
+
+    while (data < end) {
+        uint32_t code_unit = static_cast<uint32_t>(*data);
+
+        if (code_unit < 0xD800 || code_unit > 0xDFFF) {
+            // 不是代理对，直接处理
+            if (code_unit < 0x80) {
+                // 单字节UTF-8
+                result.push_back(static_cast<char>(code_unit));
+            }
+            else if (code_unit < 0x800) {
+                // 双字节UTF-8
+                result.push_back(static_cast<char>(0xC0 | (code_unit >> 6)));
+                result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
+            }
+            else {
+                // 三字节UTF-8
+                result.push_back(static_cast<char>(0xE0 | (code_unit >> 12)));
+                result.push_back(static_cast<char>(0x80 | ((code_unit >> 6) & 0x3F)));
+                result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
+            }
+            data++;
+        }
+        else {
+            // 处理代理对
+            if (code_unit > 0xDBFF || data + 1 >= end) {
+                throw std::runtime_error("Invalid UTF-16 sequence: invalid surrogate pair");
+            }
+
+            uint32_t high_surrogate = code_unit;
+            uint32_t low_surrogate = static_cast<uint32_t>(*(data + 1));
+
+            if (low_surrogate < 0xDC00 || low_surrogate > 0xDFFF) {
+                throw std::runtime_error("Invalid UTF-16 sequence: invalid low surrogate");
+            }
+
+            // 计算实际代码点
+            uint32_t code_point = ((high_surrogate - 0xD800) << 10) +
+                (low_surrogate - 0xDC00) + 0x10000;
+
+            // 四字节UTF-8
+            result.push_back(static_cast<char>(0xF0 | (code_point >> 18)));
+            result.push_back(static_cast<char>(0x80 | ((code_point >> 12) & 0x3F)));
+            result.push_back(static_cast<char>(0x80 | ((code_point >> 6) & 0x3F)));
+            result.push_back(static_cast<char>(0x80 | (code_point & 0x3F)));
+
+            data += 2;
+        }
+    }
+
+    // 调整容量以释放多余空间
+    result.shrink_to_fit();
+    return result;
+}
+
+static bool createFolderOfPath(string strFile) {
+    size_t iDotPos = strFile.rfind('.');
+    size_t iSlashPos = strFile.rfind('/');
+    if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
+        strFile = strFile.substr(0, iSlashPos);
+    }
+
+#ifdef _WIN32
+    return stdfs::create_directories(utf8_to_utf16(strFile));
+#else
+    stdfs::path p = strFile;
+    return stdfs::create_directories(p);
+#endif
+}
+
+static bool readFile(string path, string& data)
+{
+    FILE* fp = nullptr;
+#ifdef _WIN32
+    _wfopen_s(&fp, utf8_to_utf16(path).c_str(), L"rb");
+#else
+    fp = fopen(path.c_str(), "rb");
+#endif
+    if (fp)
+    {
+        fseek(fp, 0, SEEK_END);
+        long len = ftell(fp);
+        data.resize(len);
+        fseek(fp, 0, SEEK_SET);
+        fread(data.data(), 1, len, fp);
+        fclose(fp);
+        return true;
+    }
+    return false;
+}
+
+static bool writeFile(string path, const char* data, size_t len)
+{
+    createFolderOfPath(path);
+
+    FILE* fp = nullptr;
+#ifdef _WIN32
+    wstring wpath = utf8_to_utf16(path);
+    _wfopen_s(&fp, wpath.c_str(), L"wb");
+#else
+    fp = fopen(path.c_str(), "wb");
+#endif
+    if (fp)
+    {
+        fwrite(data, 1, len, fp);
+        fclose(fp);
+        return true;
+    }
+    else
+    {
+#ifdef _WIN32
+        DWORD errCode = GetLastError();
+        printf("writeFile,path=%s,[error]%d", path.c_str(), errCode);
+#endif
+    }
+    return false;
+}
+
 
 namespace tJSEngine {
     int parseStopBits(string s) {
@@ -185,6 +399,15 @@ static void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data) 
     }
 }
 #endif
+
+/**
+ * API 响应统一结构：{ success, result?, error? }
+ * 优点：
+ * 1. 显式状态：用 success 布尔值直接标记成功/失败，逻辑直观无歧义；
+ * 2. 互斥结果：成功时仅含 result（操作型为 "OK"，数据型为业务数据），失败时仅含 error（结构化错误：code/message/details）；
+ * 3. 覆盖全场景：兼容操作型（执行动作）、数据型（返回信息）、混合类型（动作+数据）及空结果；
+ * 4. 错误透明：结构化 error 支持精准调试与分类处理，避免字符串/ null 歧义。
+ */
 
 extern "C" {
 	static JSValue qjs_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -378,9 +601,13 @@ extern "C" {
                     );
                 }
 
-                TIME tStart;
-                tStart.setNow();
-                while (!data.done && TIME::calcTimePassSecond(tStart) < 10.0) {
+                time_t tStart = time(nullptr);
+                while (1) {
+                    if (data.done)
+                        break;
+                    time_t tNow = time(nullptr);
+                    if (tNow - tStart > 10)
+                        break;
                     mg_mgr_poll(&mgr, 100);
                 }
             }
@@ -404,7 +631,7 @@ extern "C" {
         if (argc > 0) {
             int milli = 0;
             JS_ToInt32(ctx, &milli, argv[0]);
-            TIME::sleepMilli(milli);
+            std::this_thread::sleep_for(std::chrono::milliseconds(milli));
         }
         return JS_NULL;
     }
@@ -453,6 +680,9 @@ extern "C" {
     static JSValue qjs_toStr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         json jTime;
         jsValToJsonVal(ctx, this_val, jTime);
+
+        //提取JSValue当中的时间字段
+
 
         TIME t;
         t.wYear = jTime["year"].get<int>();
@@ -1070,123 +1300,91 @@ extern "C" {
     }
 
     static JSValue qjs_db_insert(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        json jArgs = engineArrayToJson(ctx, argv, argc);
         ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
-
-        if (jArgs.size() == 1) {
-            json params = jArgs[0];
-            if (params.is_object()) {
-                if (params.contains("table")) {
-                    if (!params.contains("tableType")) {
+        string ret = "{\"success\":";
+        string err, rlt, dbQi;
+        if (argc == 1) {
+            JSValue params = argv[0];
+            JSValue json_str_val = JS_JSONStringify(ctx, params, JS_UNDEFINED, JS_UNDEFINED);
+            if (JS_IsException(json_str_val)) {
+                return JS_NULL;
+            }
+            const char* json_str = JS_ToCString(ctx, json_str_val);
+            if (!json_str) {
+                JS_FreeValue(ctx, json_str_val);
+                return JS_NULL;
+            }
+            string sParams = json_str;
+            JS_FreeValue(ctx, json_str_val);
+            if (JS_IsObject(params)) {
+                if (sParams.find("table")!=string::npos) {
+                    if (sParams.find("tableType") == string::npos) {
                         return JS_NULL;
                     }
-
-                    string err, rlt, dbQi;
-                    string sParams = params.dump();
-
                     yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
                     yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-
                     db.rpc_db_table_insert(yyv_params, rlt, err, dbQi, "", "zh");
                     yyjson_doc_free(doc);
-
-                    json jRlt;
-                    if (!rlt.empty()) {
-                        jRlt = json::parse(rlt);
-                    }
-
-                    json jErr;
-                    if (!err.empty()) {
-                        jErr = json::parse(err);
-                    }
-
-                    if (jRlt != nullptr) {
-                        JSValue jsVal;
-                        jsonValToJsVal(jRlt, ctx, jsVal);
-
-                        return jsVal;
-                    }
-                    else {
-                        int errCode = jErr["code"].get<int>();
-                        std::string errMsg = jErr["message"].get<std::string>();
-                        std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
-
-                        pEngine->m_vecOutput.push_back(errInfo);
-                        LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
-                            errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
-                    }
                 }
                 else {
-                    string err, rlt, dbQi;
-                    string sParams = params.dump();
                     db.rpc_db_insert(sParams, rlt, err, dbQi, "", "zh");
-
-                    json jRlt;
-                    if (!rlt.empty()) {
-                        jRlt = json::parse(rlt);
-                    }
-
-                    json jErr;
-                    if (!err.empty()) {
-                        jErr = json::parse(err);
-                    }
-
-                    if (jRlt != nullptr) {
-                        JSValue jsVal;
-                        jsonValToJsVal(jRlt, ctx, jsVal);
-
-                        return jsVal;
-                    }
-                    else {
-                        int errCode = jErr["code"].get<int>();
-                        std::string errMsg = jErr["message"].get<std::string>();
-                        std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
-
-                        pEngine->m_vecOutput.push_back(errInfo);
-                        LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
-                            errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
-                    }
                 }
             }
-        }
-        else if (jArgs.size() == 3) {
-            json params;
-            params["tag"] = jArgs[0];
-            params["time"] = jArgs[1];
-            params["val"] = jArgs[2];
-
-            string err, rlt, dbQi;
-            string sParams = params.dump();
-            db.rpc_db_insert(sParams, rlt, err, dbQi, "", "zh");
-
-            json jRlt;
-            if (!rlt.empty()) {
-                jRlt = json::parse(rlt);
-            }
-
-            json jErr;
-            if (!err.empty()) {
-                jErr = json::parse(err);
-            }
-
-            if (jRlt != nullptr) {
-                JSValue jsVal;
-                jsonValToJsVal(jRlt, ctx, jsVal);
-                return jsVal;
-            }
             else {
-                int errCode = jErr["code"].get<int>();
-
-                std::string errMsg = jErr["message"].get<std::string>();
-                std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
-
-                pEngine->m_vecOutput.push_back(errInfo);
-                LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
-                    errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+                err = "\"missing params\"";
             }
         }
+        else if (argc >= 2) {
+            JSValue jsTag = argv[0];
+            JSValue jsVal = argv[1];
+            const char* s = JS_ToCString(ctx, jsTag);
+            string tag = s ? s : "";
+            JS_FreeCString(ctx, s);
+            JSValue json_str_val = JS_JSONStringify(ctx, jsVal, JS_UNDEFINED, JS_UNDEFINED);
+            if (JS_IsException(json_str_val)) {
+                return JS_NULL;
+            }
+            s = JS_ToCString(ctx, json_str_val);
+            if (!s) {
+                JS_FreeValue(ctx, json_str_val);
+                return JS_NULL;
+            }
+            string val_jstr = s;
+            string time;
+            if (argc >= 3) {
+                JSValue jsTime = argv[2];
+                s = JS_ToCString(ctx, jsTag);
+                time = s ? s : "";
+                JS_FreeCString(ctx, s);
+            }
+            string sParams = "{\"tag\":\"" + tag + "\"," +
+                "\"val\":" + val_jstr;
+            if (time != "")
+                sParams += ",\"time\":\"" + time + "\"";
+            sParams += "}";
+            db.rpc_db_insert(sParams, rlt, err, dbQi, "", "zh");
+        }
 
-        return JS_NULL;
+        ret += (rlt != "" ? "true" : "false");
+        if (rlt != "") {
+            ret += ",\"result\":" + rlt;
+        }
+        else {
+            ret += ",\"error\":" + err;
+        }
+        ret += "}";
+        JSValue js_val = JS_ParseJSON(ctx, ret.data(), ret.length(), "<yyjson>");
+        if (JS_IsException(js_val)) {
+            JSValue exception = JS_GetException(ctx);
+            const char* error_msg = JS_ToCString(ctx, exception);
+            printf("File:%s,Line:%d,JSON Parse Error: %s\n",__FILE__,__LINE__,ret.c_str());
+            JS_FreeCString(ctx, error_msg);
+            JS_FreeValue(ctx, exception);
+            JS_FreeValue(ctx, js_val);
+            return JS_NULL;
+        }
+        
+        return js_val;
     }
 
     static JSValue qjs_db_delete(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -1276,9 +1474,9 @@ extern "C" {
                 string sData = data.get<string>();
 
                 string aPath = ScriptEngine::ConfFolder + "/" + rPath;
-                DB_FS::createFolderOfPath(aPath);
+                createFolderOfPath(aPath);
 
-                bool bRet = DB_FS::writeFile(aPath, sData);
+                bool bRet = writeFile(aPath, sData.c_str(),sData.length());
                 if (bRet) {
                     g_mapConfFile[rPath] = sData;
                 }
@@ -1298,7 +1496,7 @@ extern "C" {
                 string sData;
 
                 sPath = ScriptEngine::ConfFolder + "/" + sPath;
-                bool bRet = DB_FS::readFile(sPath, sData);
+                bool bRet = readFile(sPath, sData);
                 if (bRet) {
                     return JS_NewString(ctx, sData.c_str());
                 }
@@ -1427,149 +1625,6 @@ bool is_integer(double x) {
 mutex g_mutexScriptFileBuff;
 map<string, string> g_mapScriptFileBuff;
 
-static std::wstring utf8_to_utf16(const string& u8str) {
-    const char* utf8_str = u8str.c_str();
-    size_t length = u8str.length();
-    if (!utf8_str || length == 0) {
-        return std::wstring();
-    }
-
-    // 预分配足够的空间（最坏情况：每个ASCII字符对应1个wchar_t）
-    std::wstring result;
-    result.reserve(length);
-
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(utf8_str);
-    const uint8_t* end = data + length;
-
-    while (data < end) {
-        uint8_t c = *data;
-
-        if (c < 0x80) {
-            // 单字节UTF-8 (0-0x7F)
-            result.push_back(static_cast<wchar_t>(c));
-            data++;
-        }
-        else if ((c & 0xE0) == 0xC0) {
-            // 双字节UTF-8 (0x80-0x7FF)
-            if (data + 1 >= end) {
-                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 2-byte sequence");
-            }
-
-            uint32_t code_point = ((c & 0x1F) << 6) | (data[1] & 0x3F);
-            result.push_back(static_cast<wchar_t>(code_point));
-            data += 2;
-        }
-        else if ((c & 0xF0) == 0xE0) {
-            // 三字节UTF-8 (0x800-0xFFFF)
-            if (data + 2 >= end) {
-                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 3-byte sequence");
-            }
-
-            uint32_t code_point = ((c & 0x0F) << 12) |
-                ((data[1] & 0x3F) << 6) |
-                (data[2] & 0x3F);
-            result.push_back(static_cast<wchar_t>(code_point));
-            data += 3;
-        }
-        else if ((c & 0xF8) == 0xF0) {
-            // 四字节UTF-8 (0x10000-0x10FFFF)，需要UTF-16代理对
-            if (data + 3 >= end) {
-                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 4-byte sequence");
-            }
-
-            uint32_t code_point = ((c & 0x07) << 18) |
-                ((data[1] & 0x3F) << 12) |
-                ((data[2] & 0x3F) << 6) |
-                (data[3] & 0x3F);
-
-            // 转换为UTF-16代理对
-            code_point -= 0x10000;
-            wchar_t high_surrogate = static_cast<wchar_t>((code_point >> 10) + 0xD800);
-            wchar_t low_surrogate = static_cast<wchar_t>((code_point & 0x3FF) + 0xDC00);
-
-            result.push_back(high_surrogate);
-            result.push_back(low_surrogate);
-            data += 4;
-        }
-        else {
-            throw std::runtime_error("Invalid UTF-8 sequence: invalid leading byte");
-        }
-    }
-
-    // 调整容量以释放多余空间
-    result.shrink_to_fit();
-    return result;
-}
-
-static std::string utf16_to_utf8(const wstring& u16str) {
-    const wchar_t* utf16_str = u16str.c_str();
-    size_t length = u16str.length();
-    if (!utf16_str || length == 0) {
-        return std::string();
-    }
-
-    // 预分配足够的空间（最坏情况：每个UTF-16代码单元对应3字节）
-    std::string result;
-    result.reserve(length * 3);
-
-    const wchar_t* data = utf16_str;
-    const wchar_t* end = data + length;
-
-    while (data < end) {
-        uint32_t code_unit = static_cast<uint32_t>(*data);
-
-        if (code_unit < 0xD800 || code_unit > 0xDFFF) {
-            // 不是代理对，直接处理
-            if (code_unit < 0x80) {
-                // 单字节UTF-8
-                result.push_back(static_cast<char>(code_unit));
-            }
-            else if (code_unit < 0x800) {
-                // 双字节UTF-8
-                result.push_back(static_cast<char>(0xC0 | (code_unit >> 6)));
-                result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
-            }
-            else {
-                // 三字节UTF-8
-                result.push_back(static_cast<char>(0xE0 | (code_unit >> 12)));
-                result.push_back(static_cast<char>(0x80 | ((code_unit >> 6) & 0x3F)));
-                result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
-            }
-            data++;
-        }
-        else {
-            // 处理代理对
-            if (code_unit > 0xDBFF || data + 1 >= end) {
-                throw std::runtime_error("Invalid UTF-16 sequence: invalid surrogate pair");
-            }
-
-            uint32_t high_surrogate = code_unit;
-            uint32_t low_surrogate = static_cast<uint32_t>(*(data + 1));
-
-            if (low_surrogate < 0xDC00 || low_surrogate > 0xDFFF) {
-                throw std::runtime_error("Invalid UTF-16 sequence: invalid low surrogate");
-            }
-
-            // 计算实际代码点
-            uint32_t code_point = ((high_surrogate - 0xD800) << 10) +
-                (low_surrogate - 0xDC00) + 0x10000;
-
-            // 四字节UTF-8
-            result.push_back(static_cast<char>(0xF0 | (code_point >> 18)));
-            result.push_back(static_cast<char>(0x80 | ((code_point >> 12) & 0x3F)));
-            result.push_back(static_cast<char>(0x80 | ((code_point >> 6) & 0x3F)));
-            result.push_back(static_cast<char>(0x80 | (code_point & 0x3F)));
-
-            data += 2;
-        }
-    }
-
-    // 调整容量以释放多余空间
-    result.shrink_to_fit();
-    return result;
-}
-
-
 void thread_reloadFile(string filePath) {
     if (filePath.empty()) {
         return;
@@ -1579,7 +1634,7 @@ void thread_reloadFile(string filePath) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     string file_data;
-    if (DB_FS::readFile(filePath, file_data)) {
+    if (readFile(filePath, file_data)) {
         g_mutexScriptFileBuff.lock();
         g_mapScriptFileBuff[filePath] = file_data;
         g_mutexScriptFileBuff.unlock();
@@ -1753,7 +1808,7 @@ bool loadScriptFile(string path, string& script) {
         return true;
     }
     else {
-        if (!DB_FS::readFile(path, script)) {
+        if (!readFile(path, script)) {
             g_mapScriptFileBuff.erase(path);
             return false;
         }

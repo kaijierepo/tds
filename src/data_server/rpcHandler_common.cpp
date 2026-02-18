@@ -1,10 +1,335 @@
 ﻿#include "rpcHandler_common.h"
-#include "tdb.h"
 #include "base64.h"
 #include <fstream>
+#include <sstream>
+#if (defined(_MSVC_LANG) && _MSVC_LANG < 201703L) || (!defined(_MSVC_LANG) && defined(__cplusplus) && __cplusplus < 201703L)
+#include <experimental/filesystem>
+namespace stdfs = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace stdfs = std::filesystem;
+#endif
 
 RpcHandler_common rpcHandler_common;
 map<string, string> g_mapConfFile;
+
+static std::wstring utf8_to_utf16(const string& u8str) {
+	const char* utf8_str = u8str.c_str();
+	size_t length = u8str.length();
+	if (!utf8_str || length == 0) {
+		return std::wstring();
+	}
+
+	// 预分配足够的空间（最坏情况：每个ASCII字符对应1个wchar_t）
+	std::wstring result;
+	result.reserve(length);
+
+	const uint8_t* data = reinterpret_cast<const uint8_t*>(utf8_str);
+	const uint8_t* end = data + length;
+
+	while (data < end) {
+		uint8_t c = *data;
+
+		if (c < 0x80) {
+			// 单字节UTF-8 (0-0x7F)
+			result.push_back(static_cast<wchar_t>(c));
+			data++;
+		}
+		else if ((c & 0xE0) == 0xC0) {
+			// 双字节UTF-8 (0x80-0x7FF)
+			if (data + 1 >= end) {
+				throw std::runtime_error("Invalid UTF-8 sequence: incomplete 2-byte sequence");
+			}
+
+			uint32_t code_point = ((c & 0x1F) << 6) | (data[1] & 0x3F);
+			result.push_back(static_cast<wchar_t>(code_point));
+			data += 2;
+		}
+		else if ((c & 0xF0) == 0xE0) {
+			// 三字节UTF-8 (0x800-0xFFFF)
+			if (data + 2 >= end) {
+				throw std::runtime_error("Invalid UTF-8 sequence: incomplete 3-byte sequence");
+			}
+
+			uint32_t code_point = ((c & 0x0F) << 12) |
+				((data[1] & 0x3F) << 6) |
+				(data[2] & 0x3F);
+			result.push_back(static_cast<wchar_t>(code_point));
+			data += 3;
+		}
+		else if ((c & 0xF8) == 0xF0) {
+			// 四字节UTF-8 (0x10000-0x10FFFF)，需要UTF-16代理对
+			if (data + 3 >= end) {
+				throw std::runtime_error("Invalid UTF-8 sequence: incomplete 4-byte sequence");
+			}
+
+			uint32_t code_point = ((c & 0x07) << 18) |
+				((data[1] & 0x3F) << 12) |
+				((data[2] & 0x3F) << 6) |
+				(data[3] & 0x3F);
+
+			// 转换为UTF-16代理对
+			code_point -= 0x10000;
+			wchar_t high_surrogate = static_cast<wchar_t>((code_point >> 10) + 0xD800);
+			wchar_t low_surrogate = static_cast<wchar_t>((code_point & 0x3FF) + 0xDC00);
+
+			result.push_back(high_surrogate);
+			result.push_back(low_surrogate);
+			data += 4;
+		}
+		else {
+			throw std::runtime_error("Invalid UTF-8 sequence: invalid leading byte");
+		}
+	}
+
+	// 调整容量以释放多余空间
+	result.shrink_to_fit();
+	return result;
+}
+
+static std::string utf16_to_utf8(const wstring& u16str) {
+	const wchar_t* utf16_str = u16str.c_str();
+	size_t length = u16str.length();
+	if (!utf16_str || length == 0) {
+		return std::string();
+	}
+
+	// 预分配足够的空间（最坏情况：每个UTF-16代码单元对应3字节）
+	std::string result;
+	result.reserve(length * 3);
+
+	const wchar_t* data = utf16_str;
+	const wchar_t* end = data + length;
+
+	while (data < end) {
+		uint32_t code_unit = static_cast<uint32_t>(*data);
+
+		if (code_unit < 0xD800 || code_unit > 0xDFFF) {
+			// 不是代理对，直接处理
+			if (code_unit < 0x80) {
+				// 单字节UTF-8
+				result.push_back(static_cast<char>(code_unit));
+			}
+			else if (code_unit < 0x800) {
+				// 双字节UTF-8
+				result.push_back(static_cast<char>(0xC0 | (code_unit >> 6)));
+				result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
+			}
+			else {
+				// 三字节UTF-8
+				result.push_back(static_cast<char>(0xE0 | (code_unit >> 12)));
+				result.push_back(static_cast<char>(0x80 | ((code_unit >> 6) & 0x3F)));
+				result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
+			}
+			data++;
+		}
+		else {
+			// 处理代理对
+			if (code_unit > 0xDBFF || data + 1 >= end) {
+				throw std::runtime_error("Invalid UTF-16 sequence: invalid surrogate pair");
+			}
+
+			uint32_t high_surrogate = code_unit;
+			uint32_t low_surrogate = static_cast<uint32_t>(*(data + 1));
+
+			if (low_surrogate < 0xDC00 || low_surrogate > 0xDFFF) {
+				throw std::runtime_error("Invalid UTF-16 sequence: invalid low surrogate");
+			}
+
+			// 计算实际代码点
+			uint32_t code_point = ((high_surrogate - 0xD800) << 10) +
+				(low_surrogate - 0xDC00) + 0x10000;
+
+			// 四字节UTF-8
+			result.push_back(static_cast<char>(0xF0 | (code_point >> 18)));
+			result.push_back(static_cast<char>(0x80 | ((code_point >> 12) & 0x3F)));
+			result.push_back(static_cast<char>(0x80 | ((code_point >> 6) & 0x3F)));
+			result.push_back(static_cast<char>(0x80 | (code_point & 0x3F)));
+
+			data += 2;
+		}
+	}
+
+	// 调整容量以释放多余空间
+	result.shrink_to_fit();
+	return result;
+}
+
+static bool createFolderOfPath(string strFile) {
+	size_t iDotPos = strFile.rfind('.');
+	size_t iSlashPos = strFile.rfind('/');
+	if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
+		strFile = strFile.substr(0, iSlashPos);
+	}
+
+#ifdef _WIN32
+	return stdfs::create_directories(utf8_to_utf16(strFile));
+#else
+	stdfs::path p = strFile;
+	return stdfs::create_directories(p);
+#endif
+}
+
+static bool readFile(string path, string& data)
+{
+	FILE* fp = nullptr;
+#ifdef _WIN32
+	_wfopen_s(&fp, utf8_to_utf16(path).c_str(), L"rb");
+#else
+	fp = fopen(path.c_str(), "rb");
+#endif
+	if (fp)
+	{
+		fseek(fp, 0, SEEK_END);
+		long len = ftell(fp);
+		data.resize(len);
+		fseek(fp, 0, SEEK_SET);
+		fread(data.data(), 1, len, fp);
+		fclose(fp);
+		return true;
+	}
+	return false;
+}
+
+static bool writeFile(string path, const char* data, size_t len)
+{
+	createFolderOfPath(path);
+
+	FILE* fp = nullptr;
+#ifdef _WIN32
+	wstring wpath = utf8_to_utf16(path);
+	_wfopen_s(&fp, wpath.c_str(), L"wb");
+#else
+	fp = fopen(path.c_str(), "wb");
+#endif
+	if (fp)
+	{
+		fwrite(data, 1, len, fp);
+		fclose(fp);
+		return true;
+	}
+	else
+	{
+		printf("fopen fail,path=%s", path.c_str());
+	}
+	return false;
+}
+
+struct FS_FILE_INFO {
+	string modifyTime;
+	string createTime;
+	size_t len;
+	string accessTime;
+	string name;
+	string path;
+	string folderPath;
+};
+
+void getFolderList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = false) {
+	try
+	{
+		wstring wstrFolder = utf8_to_utf16(strFolder);
+		for (auto& i : stdfs::directory_iterator(wstrFolder)) {
+			if (stdfs::is_directory(i.path())) {
+				FS_FILE_INFO fi;
+				fi.path = utf16_to_utf8(i.path().wstring());
+				size_t pos = fi.path.rfind("/");
+				fi.folderPath = fi.path.substr(0, pos);
+				fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
+
+				for (auto& entry : stdfs::recursive_directory_iterator(i.path())) {
+					if (stdfs::is_regular_file(entry.path())) {
+						fi.len += stdfs::file_size(entry.path());
+					}
+				}
+
+				auto ftime = stdfs::last_write_time(i.path());
+				// 将 file_time_type 转换为 system_clock::time_point
+				auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+					ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
+				);
+				auto ti = std::chrono::system_clock::to_time_t(sctp);
+				std::stringstream ss;
+				ss << std::put_time(std::localtime(&ti), "%Y-%m-%d %H:%M:%S");
+				fi.modifyTime = ss.str();
+
+				list.push_back(fi);
+
+				if (recursive) {
+					getFolderList(list, utf16_to_utf8(i.path().wstring()), recursive);
+				}
+			}
+		}
+	}
+	catch (exception&) {
+	}
+}
+
+
+void getFileList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = false, string suffix = "*", vector<string>* exclude = nullptr) {
+	try
+	{
+		wstring wstrFolder = utf8_to_utf16(strFolder);
+		for (auto& i : stdfs::directory_iterator(wstrFolder)) {
+			FS_FILE_INFO fi;
+			fi.path = utf16_to_utf8(i.path().wstring());
+			fi.name = utf16_to_utf8(i.path().filename().wstring());
+			if (exclude != nullptr) {
+				bool excluded = false;
+				for (int i = 0; i < exclude->size(); i++) {
+					string ep = exclude->at(i);
+					if (fi.name == ep) {
+						excluded = true;
+						break;
+					}
+				}
+
+				if (excluded) {
+					continue;
+				}
+			}
+
+			if (stdfs::is_directory(i.path())) {
+				if (recursive) {
+					getFileList(list, utf16_to_utf8(i.path().wstring()), recursive, suffix, exclude);
+				}
+			}
+			else {
+				//std::filesystem::file_time_type ft = i.last_write_time();
+				//std::time_t tt = decltype(ft)::clock::to_time_t();
+				if (suffix != "*" && fi.path.find(suffix) == string::npos)
+					continue;
+				size_t pos = fi.path.rfind("/");
+				fi.folderPath = fi.path.substr(0, pos);
+				fi.len = stdfs::file_size(i.path());
+				auto ftime = stdfs::last_write_time(i.path());
+				// 将 file_time_type 转换为 system_clock::time_point
+				auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+					ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
+				);
+				auto ti = std::chrono::system_clock::to_time_t(sctp);
+				std::stringstream ss;
+				ss << std::put_time(std::localtime(&ti), "%Y-%m-%d %H:%M:%S");
+				fi.modifyTime = ss.str();
+				list.push_back(fi);
+			}
+		}
+	}
+	catch (exception&) {
+	}
+}
+
+
+void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
+{
+	vector<FS_FILE_INFO> filist;
+	getFileList(filist, strFolder, recursive);
+	for (int i = 0; i < filist.size(); i++) {
+		FS_FILE_INFO& fi = filist[i];
+		list.push_back(fi.path);
+	}
+}
+
 
 bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	bool handled = true;
@@ -33,18 +358,17 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 
 		if (method == "fs.readFile") {
 			if (params["type"] != nullptr && params["type"].get<string>() == "binary") {
-				char* p = NULL; int len = 0;
-				if (DB_FS::readFile(params["path"].get<string>(), p, len)) {
-				}
+
 			}
 			else {
 				string s;
-				if (DB_FS::readFile(path, s)) {
+				if (readFile(path, s)) {
 					json j = s;
 					rpcResp.result = j.dump();
 				}
 				else {
-					if (!TDB::fileExist(params["path"])) {
+					string path = params["path"];
+					if (!stdfs::exists(path)) {
 						rpcResp.error = makeRPCError(OS_fileNotExist, "file not exist");
 					}
 					else {
@@ -54,15 +378,22 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 			}
 		}
 		else if (method == "fs.deleteFile") {
-			if (DB_FS::deleteFile(path)) {
-				rpcResp.result = "\"ok\"";
+			try {
+				if (stdfs::exists(path)) {
+					bool success = stdfs::remove(path);
+					rpcResp.result = "\"ok\"";
+				}
+				else {
+					rpcResp.error = makeRPCError(TEC_FAIL, "file not exist");
+				}
 			}
-			else {
-				rpcResp.error = makeRPCError(TEC_FAIL, "fail");
+			catch (const stdfs::filesystem_error& e) {
+				string s = e.what();
+				rpcResp.error += "文件系统错误:" + s;
 			}
 		}
 		else if (method == "fs.writeFile") {
-			DB_FS::createFolderOfPath(path);
+			createFolderOfPath(path);
 			if (params["data"] != nullptr) {
 				string d = params["data"].get<string>();
 
@@ -75,7 +406,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 					unsigned char* out = new unsigned char[d.length()];
 					int len = base64_decode(d.c_str(), (int)d.length(), out);
 
-					if (DB_FS::writeFile(path, (char*)out, len)) {
+					if (writeFile(path, (char*)out, len)) {
 						rpcResp.result = "\"ok\"";
 					}
 					else {
@@ -85,7 +416,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 					delete[] out;
 				}
 				else {
-					if (DB_FS::writeFile(path, d)) {
+					if (writeFile(path, d.c_str(),d.length())) {
 						rpcResp.result = "\"ok\"";
 					}
 					else {
@@ -107,26 +438,26 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 			}
 
 			vector<string> fl;
-			DB_FS::getFileList(fl, path, includeFolder, recursive);
+			getFileList(fl, path, includeFolder, recursive);
 
 			json j = fl;
 			rpcResp.result = j.dump();
 		}
 		else if (method == "fs.exploreFolder") {
-			vector<DB_FS::FILE_INFO> fileList;
-			vector<DB_FS::FILE_INFO> folderList;
+			vector<FS_FILE_INFO> fileList;
+			vector<FS_FILE_INFO> folderList;
 
 			if (path == "") {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "specify path");
 				return true;
 			}
 
-			DB_FS::getFileList(fileList, path);
-			DB_FS::getFolderList(folderList, path);
+			getFileList(fileList, path);
+			getFolderList(folderList, path);
 
 			json infoList = json::array();
 			for (int i = 0; i < folderList.size(); i++) {
-				DB_FS::FILE_INFO& fi = folderList[i];
+				FS_FILE_INFO& fi = folderList[i];
 
 				json j;
 				j["name"] = fi.name;
@@ -138,7 +469,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 			}
 
 			for (int i = 0; i < fileList.size(); i++) {
-				DB_FS::FILE_INFO& fi = fileList[i];
+				FS_FILE_INFO& fi = fileList[i];
 
 				json j;
 				j["name"] = fi.name;
@@ -198,8 +529,7 @@ void RpcHandler_common::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION
 		string conf = "";
 		p = m_confPath + "/" + p;
 
-		DB_FS::normalizationPath(p);
-		DB_FS::readFile(p, conf);
+		readFile(p, conf);
 
 		json j;
 		j["path"] = p;
@@ -232,7 +562,7 @@ void RpcHandler_common::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION
 	if (rPath != "") {
 		string conf = params["data"].get<string>();
 		path = m_confPath + "/" + rPath;
-		DB_FS::createFolderOfPath(path);
+		createFolderOfPath(path);
 
 		if (encode == "base64") {
 			//移除Data URI scheme中的前缀 
@@ -245,7 +575,7 @@ void RpcHandler_common::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION
 
 			std::string image_data = base64_decode(conf);
 #ifdef _WIN32
-			wstring wpath = DB_STR::gb_to_utf16(path);
+			wstring wpath = utf8_to_utf16(path);
 			// Write the binary data to a file
 			std::ofstream image_file(wpath, std::ios::out | std::ios::binary);
 #else
@@ -259,7 +589,7 @@ void RpcHandler_common::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION
 			resp.result = RPC_OK;
 		}
 		else {
-			bool bRet = DB_FS::writeFile(path, conf);
+			bool bRet = writeFile(path, conf.c_str(),conf.length());
 			if (bRet) {
 				g_mapConfFile[rPath] = conf; //更新内存中的配置文件]
 			}

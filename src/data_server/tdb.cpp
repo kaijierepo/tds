@@ -45,6 +45,7 @@ SOFTWARE.
 #include <windows.h>
 #include <fcntl.h>
 #include <io.h>
+#include <stdio.h>
 #else
 #include <unistd.h>
 #include <stdio.h>
@@ -52,10 +53,10 @@ SOFTWARE.
 
 #if (defined(_MSVC_LANG) && _MSVC_LANG < 201703L) || (!defined(_MSVC_LANG) && defined(__cplusplus) && __cplusplus < 201703L)
 #include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+namespace stdfs = std::experimental::filesystem;
 #else
 #include <filesystem>
-namespace fs = std::filesystem;
+namespace stdfs = std::filesystem;
 #endif
 
 
@@ -527,125 +528,39 @@ namespace DB_TAG {
 
 namespace DB_FS {
 	bool readFile(string path, string& data) {
-		T_FILE* tFile = tFileMgr.getFile(path);
-		T_FILE_LOCK_GUARD g(tFile);
-
-		if (T_FILE::m_bEnableFileDataBuffer /*&& isDataList()*/) {
-			//pOwnerDB->m_FsBuff.readFile(path, data);
-			return true;
-		}
-
-		if (tFile->fp) {
+		FILE* fp = nullptr;
 #ifdef _WIN32
-			LARGE_INTEGER fileSize;
-			fileSize.QuadPart = 0;
-			if (!GetFileSizeEx(tFile->fp, &fileSize))
-				return false;
-			int len = (int)fileSize.QuadPart;
-			data.resize(len);
-			char* pdata = (char*)data.data();
-
-			LARGE_INTEGER li;
-			li.QuadPart = 0;
-			SetFilePointerEx(tFile->fp, li, NULL, FILE_BEGIN);
-			DWORD bytesRead = 0;
-			// read file content
-			BOOL result = ReadFile(tFile->fp, pdata, len, &bytesRead, NULL);
-			if (!result || bytesRead != static_cast<DWORD>(len)) {
-				data.clear();
-				len = 0;
-				return false;
-			}
+		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"rb");
 #else
-			FILE* fp = (FILE*)tFile->fp;
+		fp = fopen(path.c_str(), "rb");
+#endif
+		if (fp)
+		{
 			fseek(fp, 0, SEEK_END);
-
 			long len = ftell(fp);
-			if (len > 0) {
-				data.resize(len);
-				char* pdata = (char*)data.data();
-
-				fseek(fp, 0, SEEK_SET);
-				fread(pdata, 1, len, fp);
-			}
-#endif
-			return true;
-		}
-		return false;
-	}
-
-	bool readFile(string path, char*& pData, int& len)
-	{
-		T_FILE* tFile = tFileMgr.getFile(path);
-		T_FILE_LOCK_GUARD g(tFile);
-		if (tFile->fp) {
-#ifdef _WIN32
-			LARGE_INTEGER fileSize;
-			fileSize.QuadPart = 0;
-			if (!GetFileSizeEx(tFile->fp, &fileSize))
-				return false;
-			len = (int)fileSize.QuadPart;
-			pData = new char[len];
-			LARGE_INTEGER li;
-			li.QuadPart = 0;
-			SetFilePointerEx(tFile->fp, li, NULL, FILE_BEGIN);
-
-			// read file content
-			DWORD bytesRead = 0;
-			BOOL result = ReadFile(tFile->fp, pData, len, &bytesRead, NULL);
-			if (!result || bytesRead != static_cast<DWORD>(len)) {
-				delete[] pData;
-				pData = nullptr;
-				len = 0;
-				return false;
-			}
-#else
-			FILE* fp = (FILE*)tFile->fp;
-			fseek(fp, 0, SEEK_END);
-			len = ftell(fp);
-			pData = new char[len];
+			data.resize(len);
 			fseek(fp, 0, SEEK_SET);
-			fread(pData, 1, len, fp);
-			//fclose(fp);
-#endif
+			fread(data.data(), 1, len, fp);
+			fclose(fp);
 			return true;
 		}
 		return false;
 	}
 
-	//do not use a file path without a suffix
-	//filesystem::path use wstring utf16 ,compatible with windows and linux
-	void createFolderOfPath(string strFile)
+	bool createFolderOfPath(string strFile)
 	{
-		strFile = replaceStr(strFile, "\\", "/");
-		strFile = replaceStr(strFile, "////", "/");
-		strFile = replaceStr(strFile, "///", "/");
-		strFile = replaceStr(strFile, "//", "/");
-
 		size_t iDotPos = strFile.rfind('.');
 		size_t iSlashPos = strFile.rfind('/');
-		if (iDotPos != string::npos && iDotPos > iSlashPos)//is a file
-		{
+		if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
 			strFile = strFile.substr(0, iSlashPos);
 		}
+
 #ifdef _WIN32
-		//filesystem::create_directories(utf8_to_utf16(strFile));
-		int iStartPos = 0;
-		while (1)
-		{
-			size_t iSlash = strFile.find('/', iStartPos);
-			if (iSlash == string::npos) { break; }
-
-			string strFolder = strFile.substr(0, iSlash);
-			CreateDirectoryW(DB_STR::utf8_to_utf16(strFolder).c_str(), NULL);
-
-			if (iSlash + 1 == strFile.length())//last char is /
-				break;
-			iStartPos = iSlash + 1;
-		}
-		CreateDirectoryW(DB_STR::utf8_to_utf16(strFile).c_str(), NULL);
+		stdfs::path p = DB_STR::utf8_to_utf16(strFile);
+		return stdfs::create_directories(p);
 #else
-		std::filesystem::create_directories(strFile);
+		stdfs::path p = strFile;
+		return stdfs::create_directories(p);
 #endif
 	}
 	bool writeFile(string path, char* data, size_t len)
@@ -685,104 +600,61 @@ namespace DB_FS {
 	}
 	bool appendWrite(string path, char* data, size_t len)
 	{
-		T_FILE* tFile = tFileMgr.getFile(path);
-		T_FILE_LOCK_GUARD g(tFile);
+		createFolderOfPath(path);
 
-		if (tFile->fp)
+		FILE* fp = nullptr;
+#ifdef _WIN32
+		wstring wpath = DB_STR::utf8_to_utf16(path);
+		_wfopen_s(&fp, wpath.c_str(), L"ab+");
+#else
+		fp = fopen(path.c_str(), "ab+");
+#endif
+		if (fp)
+		{
+			fwrite(data, 1, len, fp);
+			fclose(fp);
+			return true;
+		}
+		else
 		{
 #ifdef _WIN32
-			LARGE_INTEGER li;
-			li.QuadPart = 0;
-			SetFilePointerEx(tFile->fp, li, NULL, FILE_END);
-
-			// write data
-			DWORD bytesWritten;
-			BOOL result = WriteFile(tFile->fp, data, len, &bytesWritten, NULL);
-			return result;
-#else
-			fseek(fp, 0, SEEK_END);
-			fwrite(data, 1, len, (FILE*)tFile->fp);
-			return true;
+			DWORD errCode = GetLastError();
+			printf("[error]File:%s,Line:%d,errorCode:%d",__FILE__,__LINE__, errCode);
 #endif
 		}
 		return false;
 	}
 	bool deleteFile(string path) {
-		return tFileMgr.delete_file(path);
-//#ifdef _WIN32
-//		std::wstring filePath = DB_STR::utf8_to_utf16(path);
-//
-//		if (DeleteFileW(filePath.c_str())) {
-//			return true;
-//		}
-//		else {
-//			return false;
-//		}
-//#else
-//		return std::filesystem::remove(DB_STR::utf8_to_utf16(path));
-//#endif
-
-	}
-
-	//delete children(include subdirs and files, not include dirPath itself
-	void DeleteDirectoryContents(const std::string& dirPath) {
-#ifdef _WIN32
-		WIN32_FIND_DATA findFileData;
-		HANDLE hFind;
-
-		std::string searchPath = dirPath + "\\*";
-		hFind = FindFirstFile(searchPath.c_str(), &findFileData);
-		if (hFind == INVALID_HANDLE_VALUE) {
-			std::cerr << "FindFirstFile failed: " << GetLastError() << std::endl;
-			return;
-		}
-
-		do {
-			const std::string fileName = findFileData.cFileName;
-
-			// escape  "." , ".."
-			if (fileName != "." && fileName != "..") {
-				std::string fullPath = dirPath + "\\" + fileName;
-
-				if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-					// delete subdirs
-					DeleteDirectoryContents(fullPath);
-					// delete empty dirs
-					RemoveDirectory(fullPath.c_str());
-				}
-				else {
-					// delete file
-					if (DeleteFile(fullPath.c_str())) {
-						std::cout << "Deleted file: " << fullPath << std::endl;
-					}
-					else {
-						std::cerr << "Failed to delete file: " << fullPath << ". Error: " << GetLastError() << std::endl;
-					}
-				}
-			}
-		} while (FindNextFile(hFind, &findFileData) != 0);
-
-		FindClose(hFind);
-#else
-		//linux
-		return;
-#endif
+		return std::filesystem::remove(DB_STR::utf8_to_utf16(path));
 	}
 
 	//delete dir_path(include itself) and children(include subdirs and files)
-	void deleteDirectory(string& dirPath) {
+	bool deleteDir(string& dirPath) {
 #ifdef _WIN32
-		DeleteDirectoryContents(dirPath);
-		if (RemoveDirectory(dirPath.c_str())) {
-			std::cout << "Deleted directory: " << dirPath << std::endl;
-		}
-		else {
-			std::cerr << "Failed to delete directory: " << dirPath << ". Error: " << GetLastError() << std::endl;
-		}
+		stdfs::path path = DB_STR::utf8_to_utf16(dirPath);
 #else
-		//linux
-		return;
+		stdfs::path path = dirPath;
 #endif
+		try {
+			if (!stdfs::exists(path)) {
+				std::cout << "delete dir fail,dir not exist: " << path << std::endl;
+				return true;
+			}
+
+			if (!stdfs::is_directory(path)) {
+				std::cout << "delete dir fail,not a directory: " << path << std::endl;
+				return false;
+			}
+
+			std::uintmax_t count = stdfs::remove_all(path); //remove recursive
+			std::cout << "file count " << count << "deleted" << std::endl;
+			return count > 0;
+		}
+		catch (const stdfs::filesystem_error& e) {
+			std::cerr << "fs error: " << e.what()
+				<< " error code: " << e.code() << std::endl;
+			return false;
+		}
 	}
 
 	bool copyFile(const std::string& src, const std::string& dest) {
@@ -823,26 +695,25 @@ namespace DB_FS {
 	}
 
 	void getFolderList(vector<DB_FS::FILE_INFO>& list, string strFolder, bool recursive) {
-#ifndef _WINXP
 		try
 		{
 			wstring wstrFolder = DB_STR::utf8_to_utf16(strFolder);
-			for (auto& i : fs::directory_iterator(wstrFolder)) {
-				if (fs::is_directory(i.path())) {
+			for (auto& i : stdfs::directory_iterator(wstrFolder)) {
+				if (stdfs::is_directory(i.path())) {
 					FILE_INFO fi;
-					fi.path = DB_STR::gb_to_utf8(i.path().string());
+					fi.path = DB_STR::utf16_to_utf8(i.path().wstring());
 					fi.path = replaceStr(fi.path, "\\", "/");
 					size_t pos = fi.path.rfind("/");
 					fi.folderPath = fi.path.substr(0, pos);
 					fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
 
-					for (auto& entry : fs::recursive_directory_iterator(i.path())) {
-						if (fs::is_regular_file(entry.path())) {
-							fi.len += fs::file_size(entry.path());
+					for (auto& entry : stdfs::recursive_directory_iterator(i.path())) {
+						if (stdfs::is_regular_file(entry.path())) {
+							fi.len += stdfs::file_size(entry.path());
 						}
 					}
 
-					auto ftime = fs::last_write_time(i.path());
+					auto ftime = stdfs::last_write_time(i.path());
 					// 将 file_time_type 转换为 system_clock::time_point
 					auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
 						ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
@@ -862,17 +733,14 @@ namespace DB_FS {
 		}
 		catch (exception&) {
 		}
-#else
-#endif
 	}
 
 
 	void getFileList(vector<DB_FS::FILE_INFO>& list, string strFolder, bool recursive, string suffix, vector<string>* exclude) {
-#ifndef _WINXP
 		try
 		{
 			wstring wstrFolder = DB_STR::utf8_to_utf16(strFolder);
-			for (auto& i : fs::directory_iterator(wstrFolder)) {
+			for (auto& i : stdfs::directory_iterator(wstrFolder)) {
 				FILE_INFO fi;
 				fi.path = DB_STR::gb_to_utf8(i.path().string());
 				fi.name = DB_STR::gb_to_utf8(i.path().filename().string());
@@ -891,7 +759,7 @@ namespace DB_FS {
 					}
 				}
 
-				if (fs::is_directory(i.path())) {
+				if (stdfs::is_directory(i.path())) {
 					if (recursive) {
 						getFileList(list, DB_STR::gb_to_utf8(i.path().string()), recursive, suffix, exclude);
 					}
@@ -904,8 +772,8 @@ namespace DB_FS {
 						continue;
 					size_t pos = fi.path.rfind("/");
 					fi.folderPath = fi.path.substr(0, pos);
-					fi.len = fs::file_size(i.path());
-					auto ftime = fs::last_write_time(i.path());
+					fi.len = stdfs::file_size(i.path());
+					auto ftime = stdfs::last_write_time(i.path());
 					// 将 file_time_type 转换为 system_clock::time_point
 					auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
 						ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
@@ -920,8 +788,6 @@ namespace DB_FS {
 		}
 		catch (exception&) {
 		}
-#else
-#endif
 	}
 
 
@@ -1162,7 +1028,7 @@ TDB::TDB()
 	m_isGbk = false;
 	m_timeUnit = BY_DAY;
 	m_bAutoUpgrade = true;
-	m_bufferTTL = 3 * 3600;
+	m_bufferTTL = 3 * 3600; 
 }
 
 string TDB::getPath_deFile(string strTag, DB_TIME stTime)
@@ -1421,10 +1287,10 @@ string TDB::getDeFilesFolder(string& deListFolder, DB_TIME& time) {
 }
 //1. Store data element files (curves, JSON) or data element related files (images) 2. Store data element index files or data element list files
 //1.存数据元文件(曲线、json)或存数据元相关文件(图片) 2.存数据元索引文件或数据元列表文件
-void TDB::Insert(string strTag, string& sDe, DB_TIME* time)
+bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 {
 	if (!m_enableDB)
-		return;
+		return false;
 
 	DB_TIME stTime;
 	if (time) {
@@ -1511,10 +1377,12 @@ void TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 		}
 	}
 
-	saveToDeListFile(dataListPath, yymDe);
+	bool ret = saveToDeListFile(dataListPath, yymDe);
 
 	yyjson_mut_doc_free(mdoc);
 	yyjson_doc_free(doc);
+
+	return ret;
 }
 
 struct DE_TEMP {
@@ -1523,12 +1391,12 @@ struct DE_TEMP {
 
 };
 
-void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
+bool TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 {
 	string folderPath = getPath_dataFolder(strTag, stTime);
 	string dlPath = folderPath + "/" + m_dbFmt.deListName;
 	string sDe = "{\n\"time\":\"" + stTime.toStr() + "\",\n\"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}";
-	saveToDeListFile(dlPath, sDe);
+	return saveToDeListFile(dlPath, sDe);
 }
 
 bool TDB::doFileUpgrade(T_FILE* file) {
@@ -1617,6 +1485,7 @@ bool TDB::saveToDeListFile(const string& dataListPath, string sDe) {
 		if (!tFile->writeAt(sDe.c_str(), sDe.length(), 0))
 		{
 			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), sDe.c_str());
+			return false;
 		}
 	}
 	else
@@ -1625,6 +1494,7 @@ bool TDB::saveToDeListFile(const string& dataListPath, string sDe) {
 		if (!tFile->writeAt(sDe.c_str(), sDe.length(), tFile->getFileSize() - 1))
 		{
 			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), sDe.c_str());
+			return false;
 		}
 	}
 
@@ -4092,7 +3962,7 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	return true;
 }
 
-void TDB::Insert(string strTag, int iVal, DB_TIME* stTime)
+bool TDB::Insert(string strTag, int iVal, DB_TIME* stTime)
 {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
@@ -4102,10 +3972,10 @@ void TDB::Insert(string strTag, int iVal, DB_TIME* stTime)
 		dbt.setNow();
 	}
 	string s = to_string(iVal);
-	InsertValJsonStr(strTag, dbt, s);
+	return InsertValJsonStr(strTag, dbt, s);
 }
 
-void TDB::Insert(string strTag, long long iVal, DB_TIME* stTime)
+bool TDB::Insert(string strTag, long long iVal, DB_TIME* stTime)
 {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
@@ -4115,10 +3985,10 @@ void TDB::Insert(string strTag, long long iVal, DB_TIME* stTime)
 		dbt.setNow();
 	}
 	string s = to_string(iVal);
-	InsertValJsonStr(strTag, dbt, s);
+	return InsertValJsonStr(strTag, dbt, s);
 }
 
-void TDB::Insert(string strTag, bool bVal, DB_TIME* stTime) {
+bool TDB::Insert(string strTag, bool bVal, DB_TIME* stTime) {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
 		dbt = *stTime;
@@ -4127,10 +3997,10 @@ void TDB::Insert(string strTag, bool bVal, DB_TIME* stTime) {
 		dbt.setNow();
 	}
 	string s = bVal ? "true" : "false";
-	InsertValJsonStr(strTag, dbt, s);
+	return InsertValJsonStr(strTag, dbt, s);
 }
 
-void TDB::Insert(string strTag, double dbVal, DB_TIME* stTime)
+bool TDB::Insert(string strTag, double dbVal, DB_TIME* stTime)
 {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
@@ -4140,12 +4010,12 @@ void TDB::Insert(string strTag, double dbVal, DB_TIME* stTime)
 		dbt.setNow();
 	}
 	string s = to_string(dbVal);
-	InsertValJsonStr(strTag, dbt, s);
+	return InsertValJsonStr(strTag, dbt, s);
 }
 
-void TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time) {
+bool TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time) {
 	if (!m_enableDB)
-		return;
+		return false;
 	DB_TIME stTime;
 	if (time) {
 		stTime = *time;
@@ -4179,6 +4049,8 @@ void TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time)
 
 	yyjson_mut_doc_free(mdoc);
 	yyjson_doc_free(doc);
+
+	return true;
 }
 
 bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result) {
@@ -5044,6 +4916,9 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 {
 	bool handled = true;
 	if (method == "db.getFileCtx" || method == "db.getFileContext") {
+		int total = 0;
+		int open = 0;
+		int close = 0;
 		std::lock_guard<std::mutex> lock(tFileMgr.pool_mutex_);
 		rlt += "[";
 		for (auto it = tFileMgr.mapFiles_.begin(); it != tFileMgr.mapFiles_.end();it++) {
@@ -5061,8 +4936,16 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 				",\"readBytes\":" + to_string(file->readBytes) +
 				",\"writeBytes\":" + to_string(file->readBytes) +
 				"}";
+			total++;
+			if (file->fp) {
+				open++;
+			}
+			else {
+				close++;
+			}
 		}
 		rlt += "]";
+		queryInfo = JSON_STR_VAL("total:" + to_string(total) + ",open:" + to_string(open) + ",close:" + to_string(close));
 	}
 	else if (method == "db.getConf") {
 		yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
@@ -5767,15 +5650,18 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 		yyjson_mut_doc_free(mut_doc);
 
 		yyjson_val* yyv_db = yyjson_obj_get(params, "db");
-
+		bool success = false;
 		if (yyjson_is_str(yyv_db)) {
 			string dbName = yyjson_get_str(yyv_db);
 			TDB* tdb = db.getChildDB(dbName);
-			tdb->Insert(tag, sDe, &tNow);
+			success = tdb->Insert(tag, sDe, &tNow);
 		}
 		else
-			Insert(tag, sDe, &tNow);
-		rlt = "\"ok\"";
+			success = Insert(tag, sDe, &tNow);
+		if(success)
+			rlt = "\"ok\"";
+		else
+			err = "\"fail\"";
 	}
 }
 
@@ -5949,22 +5835,22 @@ yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
 	return new_doc;
 }
 
-void TDB::Insert(string strTag, DB_TIME stTime, int& iVal)
+bool TDB::Insert(string strTag, DB_TIME stTime, int& iVal)
 {
 	string s = formatStr("%d", iVal);
-	InsertValJsonStr(strTag, stTime, s);
+	return InsertValJsonStr(strTag, stTime, s);
 }
 
-void TDB::Insert(string strTag, DB_TIME stTime, long long iVal)
+bool TDB::Insert(string strTag, DB_TIME stTime, long long iVal)
 {
 	string s = formatStr("%d", iVal);
-	InsertValJsonStr(strTag, stTime, s);
+	return InsertValJsonStr(strTag, stTime, s);
 }
 
-void TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
+bool TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
 {
 	string s = formatStr("%f", dbVal);
-	InsertValJsonStr(strTag, stTime, s);
+	return InsertValJsonStr(strTag, stTime, s);
 }
 void TDB::rpc_db_merge(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
@@ -6381,8 +6267,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	if (vecToBeUpdatedFile.size() > 0) {
 		//refresh the entire files dir  or one file ,  update the file urls
 		if (theDir != "") {
-			theDir = DB_STR::utf8_to_gb(theDir);
-			DB_FS::deleteDirectory(theDir);
+			DB_FS::deleteDir(theDir);
 			for (auto one : vecToBeUpdatedFile) {
 				string p;
 				if (yyjson_is_str(one.yyFileToUpdate))
@@ -6413,8 +6298,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	}
 	else {
 		if (bEmptyAry) {
-			theDir = DB_STR::utf8_to_gb(theDir);
-			DB_FS::deleteDirectory(theDir);
+			DB_FS::deleteDir(theDir);
 		}
 	}
 
@@ -6663,9 +6547,8 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 			else {
 				strPath = strPath + "/" + stTime.toStampFull() + "/";
 			}
-
-			strPath = DB_STR::utf8_to_gb(strPath);
-			DB_FS::deleteDirectory(strPath);
+;
+			DB_FS::deleteDir(strPath);
 		}
 	}
 
@@ -8244,24 +8127,27 @@ T_FILE* T_FILE_MANAGER::getFile(const std::string& path) {
 
 	if (tFile->fp == nullptr) {
 		DB_FS::createFolderOfPath(path);
-		FILE* f = nullptr;
-#ifdef WIN_FILE_OPT
+#ifdef _WIN32
 		wstring filename = DB_STR::utf8_to_utf16(path);
 		//pl->fp = _wfopen(filename.c_str(), L"rb+");
-		pl->fp = CreateFileW(
+		tFile->fp = CreateFileW(
 			filename.c_str(),
 			GENERIC_READ | GENERIC_WRITE,
-			FILE_SHARE_READ,  // 
+			FILE_SHARE_READ | FILE_SHARE_WRITE,  // 
 			NULL,
 			OPEN_ALWAYS,  // if file not exist   , create it
 			FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS,
 			NULL
 		);
 
-		if (pl->fp == INVALID_HANDLE_VALUE) {
-			pl->fp = nullptr;
+		if (tFile->fp == INVALID_HANDLE_VALUE) {
+			tFile->fp = nullptr;
 		}
-#elif defined _WIN32
+		else {
+			tFile->open_time_.setNow();
+		}
+#elif defined WIN_CFILE
+		FILE* f = nullptr;
 		wstring wpath = DB_STR::utf8_to_utf16(path);
 		f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);// read,write at any offset
 		if(!f)
@@ -8271,7 +8157,12 @@ T_FILE* T_FILE_MANAGER::getFile(const std::string& path) {
 			f = nullptr;
 			f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);
 		}
+		if (f) {
+			tFile->open_time_.setNow();
+			tFile->fp = f;
+		}
 #else
+		FILE* f = nullptr;
 		f = fopen(path.c_str(), "rb+");
 		if (!f)
 			f = fopen(path.c_str(), "wb+");
@@ -8280,11 +8171,12 @@ T_FILE* T_FILE_MANAGER::getFile(const std::string& path) {
 			f = nullptr;
 			fopen(path.c_str(), "rb+");
 		}
-#endif
 		if (f) {
 			tFile->open_time_.setNow();
 			tFile->fp = f;
 		}
+#endif
+
 	}
 
 	tFile->last_used_.setNow();
@@ -8306,9 +8198,7 @@ bool T_FILE_MANAGER::delete_file(const std::string& path) {
 #ifdef _WIN32
 			CloseHandle(it->second->fp);
 			std::wstring filePath = DB_STR::utf8_to_utf16(path);
-
 			ret = DeleteFileW(filePath.c_str());
-
 #else
 			fclose((FILE*)it->second->fp);
 			ret = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
@@ -8326,9 +8216,7 @@ bool T_FILE_MANAGER::delete_file(const std::string& path) {
 	{
 #ifdef _WIN32
 		std::wstring filePath = DB_STR::utf8_to_utf16(path);
-
 		ret = DeleteFileW(filePath.c_str());
-
 #else
 		ret = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
 #endif
@@ -8384,7 +8272,7 @@ T_FILE_LOCK_GUARD::~T_FILE_LOCK_GUARD() {
 	}
 	if (!T_FILE::m_bEnableFileHandleBuffer) {
 		if (file->fp != nullptr) {
-#ifdef WIN_FILE_OPT
+#ifdef _WIN32
 			CloseHandle(file->fp);
 #else
 			fclose((FILE*)file->fp);
@@ -8399,14 +8287,14 @@ bool T_FILE::write(const char* p, int len)
 {
 	if (fp)
 	{
-#ifdef WIN_FILE_OPT
+#ifdef _WIN32
 		LARGE_INTEGER li;
 		li.QuadPart = 0;
 		SetFilePointerEx(fp, li, NULL, FILE_BEGIN);
 
 		// write data
 		DWORD bytesWritten;
-		BOOL result = WriteFile(fp, p, len, &bytesWritten, NULL);
+		bool result = WriteFile(fp, p, len, &bytesWritten, NULL)?true:false;
 
 		SetEndOfFile(fp);
 		return result;
@@ -8433,7 +8321,7 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 {
 	if (fp)
 	{
-#ifdef WIN_FILE_OPT
+#ifdef _WIN32
 		LARGE_INTEGER li;
 		li.QuadPart = offset;
 		SetFilePointerEx(fp, li, NULL, FILE_BEGIN);
@@ -8441,6 +8329,10 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 		// write data
 		DWORD bytesWritten;
 		BOOL result = WriteFile(fp, p, len, &bytesWritten, NULL);
+
+		//do not execute flushFileBuffer,data is already in kernal buffer
+		//can be shared read by another process,such as notepad++ for debug purpose
+		//FlushFileBuffers(fp);
 
 		SetEndOfFile(fp);
 		return result;
@@ -8462,11 +8354,19 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 
 bool T_FILE::append(const char* p, int len)
 {
-#ifdef WIN_FILE_OPT
+#ifdef _WIN32
 	HANDLE hFile = fp;
 	DWORD bytesRead;
-	SetFilePointer(hFile, offset, NULL, FILE_BEGIN);
-	ReadFile(hFile, p, len, &bytesRead, NULL);
+	LARGE_INTEGER liDistanceToMove = { 0 };
+	LARGE_INTEGER liNewFilePointer;
+	BOOL success = SetFilePointerEx(
+		hFile,
+		liDistanceToMove,
+		&liNewFilePointer,
+		FILE_END
+	);
+	DWORD bytesWritten;
+	BOOL result = WriteFile(fp, p, len, &bytesWritten, NULL);
 	return true;
 #else  
 	FILE* f = (FILE*)fp;
@@ -8479,7 +8379,7 @@ bool T_FILE::append(const char* p, int len)
 
 bool T_FILE::read(char* p,int offset,int len)
 {
-#ifdef WIN_FILE_OPT
+#ifdef _WIN32
 	HANDLE hFile = fp;
 	DWORD bytesRead;
 	SetFilePointer(hFile, offset, NULL, FILE_BEGIN);
@@ -8491,13 +8391,11 @@ bool T_FILE::read(char* p,int offset,int len)
 	fread(p, 1, len, f);
 	return true;
 #endif
-
-	return false;
 }
 
 bool T_FILE::clearFile()
 {
-#ifdef WIN_FILE_OPT
+#ifdef _WIN32
 	HANDLE hFile = fp;
 	SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
 	SetEndOfFile(hFile);
@@ -8509,7 +8407,7 @@ bool T_FILE::clearFile()
 
 size_t T_FILE::getFileSize()
 {
-#ifdef WIN_FILE_OPT
+#ifdef _WIN32
 	HANDLE hFile = fp;
 	LARGE_INTEGER fileSize;
 	GetFileSizeEx(hFile, &fileSize);

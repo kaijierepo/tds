@@ -247,8 +247,7 @@ namespace DB_STR {
 
 namespace DB_FS {
 	bool readFile(string path, string& data);
-	bool readFile(string path, char*& pData, int& len);
-	void createFolderOfPath(string strFile);
+	bool createFolderOfPath(string strFile);
 	bool writeFile(string path, char* data, size_t len);
 	bool writeFile(string path, unsigned char* data, size_t len);
 	bool writeFile(string path, string& data);
@@ -962,19 +961,19 @@ public:
 
 	// db.insert functions
 	// insert basic val type
-	void Insert(string strTag, DB_TIME stTime, double& dbVal);
-	void Insert(string strTag, DB_TIME stTime, int& iVal);
-	void Insert(string strTag, DB_TIME stTime, long long iVal);
-	void Insert(string strTag, bool bVal, DB_TIME* stTime=nullptr);
-	void Insert(string strTag, double dbVal, DB_TIME* stTime = nullptr);
-	void Insert(string strTag, int iVal, DB_TIME* stTime = nullptr);
-	void Insert(string strTag, long long iVal, DB_TIME* stTime = nullptr);
+	bool Insert(string strTag, DB_TIME stTime, double& dbVal);
+	bool Insert(string strTag, DB_TIME stTime, int& iVal);
+	bool Insert(string strTag, DB_TIME stTime, long long iVal);
+	bool Insert(string strTag, bool bVal, DB_TIME* stTime=nullptr);
+	bool Insert(string strTag, double dbVal, DB_TIME* stTime = nullptr);
+	bool Insert(string strTag, int iVal, DB_TIME* stTime = nullptr);
+	bool Insert(string strTag, long long iVal, DB_TIME* stTime = nullptr);
 
 	// insert complex data type
 	// custom data element in json format
-	void Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr ); 
+	bool Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr );
 	// curve type internal data type of tds, save to file  123000.curve.json in the same path with db.json(datalist file)
-	void Insert(string strTag, string& sDeIdx,string& sDeCurve, DB_TIME* stTime = nullptr);
+	bool Insert(string strTag, string& sDeIdx,string& sDeCurve, DB_TIME* stTime = nullptr);
 
 
 	//db.update functions
@@ -1002,7 +1001,7 @@ public:
 	bool parseDESelector(const string& sParams, DE_SELECTOR& deSelector, string& err);
 	int dhmsSpan2Seconds(string timeSpan);
 	//insert
-	void InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal);
+	bool InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal);
 	bool doFileUpgrade(T_FILE* file);
 	//select
 	bool Select_Step_selectTags(DE_SELECTOR& deSel, SELECT_RLT& rlt);
