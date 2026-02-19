@@ -518,7 +518,7 @@ public:
 	std::atomic<int> ref_count_{ 0 };
 	void* fp;
 	string path;
-	string data;
+	string dataBuf;
 
 	T_FILE(const string& p) {
 		path = p;

@@ -690,7 +690,7 @@ bool TDS_imp::run(string cmdline) {
 		::db.m_currentPath   = tds->conf->currentPath;
 		::db.m_enableDB = tds->conf->getInt("enableDB", 1) == 1 ? true : false;
 		T_FILE::m_bEnableFileHandleBuffer = tds->conf->getInt("enableFileHandleBuffer", 1) == 1 ? true : false;
-		T_FILE::m_bEnableFileDataBuffer = tds->conf->getInt("enableFileDataBuffer", 1) == 1 ? true : false;
+		T_FILE::m_bEnableFileDataBuffer = tds->conf->getInt("enableFileDataBuffer", 0) == 1 ? true : false;
 		T_FILE::dbFileCtxTTL = tds->conf->getInt("dbFileCtxTTL", 5 * 60);
 	}
 		

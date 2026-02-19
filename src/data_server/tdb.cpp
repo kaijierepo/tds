@@ -1463,22 +1463,6 @@ bool TDB::saveToDeListFile(const string& dataListPath, string sDe) {
 	T_FILE_LOCK_GUARD g(tFile);
 	doFileUpgrade(tFile);
 
-	if (T_FILE::m_bEnableFileDataBuffer) {
-		bool bAppend = false;
-		string& fileData = tFile->data;  // can be an empty file ,length is 0
-
-		if (fileData.size() > 0) {
-			fileData.resize(fileData.size() - 1);
-			fileData += ",";
-			fileData += sDe;
-			fileData += "]";
-		}
-		else {
-			fileData = sDe;
-			fileData = "[" + fileData + "]";
-		}
-	}
-
 	if (tFile->getFileSize() == 0) //first de to save
 	{
 		sDe = "[" + sDe + "]";
@@ -4919,6 +4903,7 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 		int total = 0;
 		int open = 0;
 		int close = 0;
+		size_t bufDataSize = 0;
 		std::lock_guard<std::mutex> lock(tFileMgr.pool_mutex_);
 		rlt += "[";
 		for (auto it = tFileMgr.mapFiles_.begin(); it != tFileMgr.mapFiles_.end();it++) {
@@ -4934,7 +4919,7 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 				",\"readCount\":" + to_string(file->readCount) +
 				",\"writeCount\":" + to_string(file->writeCount) +
 				",\"readBytes\":" + to_string(file->readBytes) +
-				",\"writeBytes\":" + to_string(file->readBytes) +
+				",\"writeBytes\":" + to_string(file->writeBytes) +
 				"}";
 			total++;
 			if (file->fp) {
@@ -4943,9 +4928,19 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 			else {
 				close++;
 			}
+			bufDataSize += file->dataBuf.size();
 		}
 		rlt += "]";
-		queryInfo = JSON_STR_VAL("total:" + to_string(total) + ",open:" + to_string(open) + ",close:" + to_string(close));
+		queryInfo = JSON_STR_VAL(
+			"total:" + to_string(total) + 
+			",open:" + to_string(open) + 
+			",close:" + to_string(close) +
+			",ttl:" + to_string(T_FILE::dbFileCtxTTL) + 
+			",enableLock:" + to_string(T_FILE::enableLock ?1:0) +
+			",enableHandleBuf:" + to_string(T_FILE::m_bEnableFileHandleBuffer ? 1 : 0) +
+			",enableDataBuf:" + to_string(T_FILE::m_bEnableFileDataBuffer ? 1 : 0) +
+			",dataBufSize:" + to_string(bufDataSize)
+		);
 	}
 	else if (method == "db.getConf") {
 		yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
@@ -8245,6 +8240,7 @@ bool T_FILE::write(const char* p, int len)
 {
 	if (fp)
 	{
+		bool ret = false;
 #ifdef _WIN32
 		LARGE_INTEGER li;
 		li.QuadPart = 0;
@@ -8252,10 +8248,9 @@ bool T_FILE::write(const char* p, int len)
 
 		// write data
 		DWORD bytesWritten;
-		bool result = WriteFile(fp, p, len, &bytesWritten, NULL)?true:false;
+		ret = WriteFile(fp, p, len, &bytesWritten, NULL)?true:false;
 
 		SetEndOfFile(fp);
-		return result;
 #else
 		FILE* f = (FILE*)fp;
 		fp = nullptr;
@@ -8268,8 +8263,15 @@ bool T_FILE::write(const char* p, int len)
 #endif
 		fwrite(p, 1, len, (FILE*)f);
 		fclose(f);
-		return true;
+		ret = true;
 #endif
+		writeCount++;
+		writeBytes += len;
+		if (ret && T_FILE::m_bEnableFileDataBuffer) {
+			dataBuf.resize(len);
+			memcpy(dataBuf.data(), p, len);
+		}
+		return ret;
 	}
 
 	return false;
@@ -8279,6 +8281,7 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 {
 	if (fp)
 	{
+		bool ret = false;
 #ifdef _WIN32
 		LARGE_INTEGER li;
 		li.QuadPart = offset;
@@ -8286,14 +8289,13 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 
 		// write data
 		DWORD bytesWritten;
-		BOOL result = WriteFile(fp, p, len, &bytesWritten, NULL);
+		ret = WriteFile(fp, p, len, &bytesWritten, NULL)?true:false;
 
 		//do not execute flushFileBuffer,data is already in kernal buffer
 		//can be shared read by another process,such as notepad++ for debug purpose
 		//FlushFileBuffers(fp);
 
 		SetEndOfFile(fp);
-		return result;
 #else
 		FILE* f = (FILE*)fp;
 		fseek(f, offset, SEEK_SET);
@@ -8303,8 +8305,16 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 		//so notepad can be used to check if data is writed
 		//kernel buffer here can increase db writing performance
 		fflush(f);  
-		return true;
+		ret = true;
 #endif
+		writeCount++;
+		writeBytes += len;
+
+		if (ret && T_FILE::m_bEnableFileDataBuffer) {
+			dataBuf.resize(offset + len);
+			memcpy(dataBuf.data() + offset, p, len);
+		}
+		return ret;
 	}
 
 	return false;
@@ -8312,6 +8322,8 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 
 bool T_FILE::append(const char* p, int len)
 {
+	bool ret = false;
+
 #ifdef _WIN32
 	HANDLE hFile = fp;
 	DWORD bytesRead;
@@ -8324,49 +8336,71 @@ bool T_FILE::append(const char* p, int len)
 		FILE_END
 	);
 	DWORD bytesWritten;
-	BOOL result = WriteFile(fp, p, len, &bytesWritten, NULL);
-	return true;
+	ret = WriteFile(fp, p, len, &bytesWritten, NULL)?true:false;
 #else  
 	FILE* f = (FILE*)fp;
 	fseek(f, 0, SEEK_END);
 	fwrite(p, 1, len, f);
-	return true;
+	ret = true;
 #endif
-	return false;
+
+	if (ret && T_FILE::m_bEnableFileDataBuffer) {
+		dataBuf.resize(dataBuf.size() + len);
+		memcpy(dataBuf.data() + dataBuf.size(), p, len);
+	}
+	return ret;
 }
 
 bool T_FILE::read(char* p,int offset,int len)
 {
+	if (T_FILE::m_bEnableFileDataBuffer) {
+		if (offset + len > dataBuf.size())
+			return false;
+		memcpy(p, dataBuf.data() + offset, len);
+		return true;
+	}
+
+	bool ret = false;
 #ifdef _WIN32
 	HANDLE hFile = fp;
 	DWORD bytesRead;
 	SetFilePointer(hFile, offset, NULL, FILE_BEGIN);
-	ReadFile(hFile,p,len, &bytesRead, NULL);
-	return true;
+	ret = ReadFile(hFile,p,len, &bytesRead, NULL)?true:false;
 #else  
 	FILE* f = (FILE*)fp;
 	fseek(f, 0, SEEK_SET);
 	fread(p, 1, len, f);
-	return true;
+	ret = true;
 #endif
+	readCount++;
+	readBytes += len;
+	return ret;
 }
 
 bool T_FILE::read(string& data)
 {
+	if (T_FILE::m_bEnableFileDataBuffer) {
+		data = dataBuf;
+		return true;
+	}
+
 	size_t len = getFileSize();
 	data.resize(len);
+	bool ret = false;
 #ifdef _WIN32
 	HANDLE hFile = fp;
 	DWORD bytesRead;
 	SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-	ReadFile(hFile, data.data(), len, &bytesRead, NULL);
-	return true;
+	ret = ReadFile(hFile, data.data(), len, &bytesRead, NULL)?true:false;
 #else  
 	FILE* f = (FILE*)fp;
 	fseek(f, 0, SEEK_SET);
 	fread(data.data(), 1, len, f);
-	return true;
+	ret = true;
 #endif
+	readCount++;
+	readBytes += len;
+	return ret;
 }
 
 bool T_FILE::clearFile()
