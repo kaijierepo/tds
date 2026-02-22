@@ -65,7 +65,7 @@ static bool readFile(string path, string& data)
 		long len = ftell(fp);
 		data.resize(len);
 		fseek(fp, 0, SEEK_SET);
-		fread(data.data(), 1, len, fp);
+		fread((void*)data.data(), 1, len, fp);
 		fclose(fp);
 		return true;
 	}

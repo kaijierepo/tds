@@ -540,7 +540,7 @@ namespace DB_FS {
 			long len = ftell(fp);
 			data.resize(len);
 			fseek(fp, 0, SEEK_SET);
-			fread(data.data(), 1, len, fp);
+			fread((void*)data.data(), 1, len, fp);
 			fclose(fp);
 			return true;
 		}
@@ -625,7 +625,7 @@ namespace DB_FS {
 		return false;
 	}
 	bool deleteFile(string path) {
-		return std::filesystem::remove(DB_STR::utf8_to_utf16(path));
+		return stdfs::remove(DB_STR::utf8_to_utf16(path));
 	}
 
 	//delete dir_path(include itself) and children(include subdirs and files)
@@ -1027,8 +1027,7 @@ TDB::TDB()
 	m_getTagsByTagSelector = nullptr;
 	m_isGbk = false;
 	m_timeUnit = BY_DAY;
-	m_bAutoUpgrade = true;
-	m_bufferTTL = 3 * 3600; 
+	m_bAutoUpgrade = true; 
 }
 
 string TDB::getPath_deFile(string strTag, DB_TIME stTime)
@@ -4955,10 +4954,8 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 		yyjson_mut_doc_free(mdoc);
 	}
 	else if (method == "db.setConf") {
-		yyjson_val* yyv = yyjson_obj_get(params, "dbFileCtxTTL");
-		if (yyv) {
-			T_FILE::dbFileCtxTTL = yyjson_get_int(yyv);
-		}
+		string rlt, err;
+		rpc_db_setConf(params, rlt, err);
 		rlt = DB_OK;
 	}
 	else if (method.find("db.") != string::npos) {
@@ -6405,15 +6402,11 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_setConf(string& sParams, string& rlt, string& err) {
-	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
-	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-
-	yyjson_val* yyv_buffer_ttl = yyjson_obj_get(yyv_params, "bufferTTL");
-	if (yyv_buffer_ttl) {
-		m_bufferTTL = yyjson_get_int(yyv_buffer_ttl);
+void TDB::rpc_db_setConf(yyjson_val* params, string& rlt, string& err) {
+	yyjson_val* yyv = yyjson_obj_get(params, "dbFileCtxTTL");
+	if (yyv) {
+		T_FILE::dbFileCtxTTL = yyjson_get_int(yyv);
 	}
-	yyjson_doc_free(doc);
 }
 
 void TDB::rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
@@ -6654,15 +6647,6 @@ bool TDB::Open_gbk(string strDBUrl, fp_getTagsByTagSelector f, string name)
 	strDBUrl = DB_STR::gb_to_utf8(strDBUrl);
 	m_isGbk = true;
 	return Open(strDBUrl, f, name);
-}
-
-bool TDB::setBufferTTL(string bufferTTL)
-{
-	int timeLen = TIME_OPT::timeLen2seconds(bufferTTL);
-	if (timeLen != 0) {
-		m_bufferTTL = timeLen;
-	}
-	return false;
 }
 
 bool TDB::parseDESelector(const string& sParams, DE_SELECTOR& deSelector, string& err)
@@ -8048,7 +8032,11 @@ T_FILE_MANAGER::T_FILE_MANAGER() {
 				// in pool_mutex_ ,keep ref_count_ check thread safe
 				if (it->second->ref_count_ == 0 && it->second->last_used_.getTimePassSecond() > T_FILE::dbFileCtxTTL) {
 					if (it->second->fp != nullptr) {
+#ifdef _WIN32
+						CloseHandle(it->second->fp);
+#else
 						fclose((FILE*)it->second->fp);
+#endif
 						it->second->fp = nullptr;
 					}
 					delete it->second;
@@ -8269,7 +8257,7 @@ bool T_FILE::write(const char* p, int len)
 		writeBytes += len;
 		if (ret && T_FILE::m_bEnableFileDataBuffer) {
 			dataBuf.resize(len);
-			memcpy(dataBuf.data(), p, len);
+			memcpy((void*)dataBuf.data(), p, len);
 		}
 		return ret;
 	}
@@ -8312,7 +8300,7 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 
 		if (ret && T_FILE::m_bEnableFileDataBuffer) {
 			dataBuf.resize(offset + len);
-			memcpy(dataBuf.data() + offset, p, len);
+			memcpy((void*)(dataBuf.data() + offset), p, len);
 		}
 		return ret;
 	}
@@ -8346,7 +8334,7 @@ bool T_FILE::append(const char* p, int len)
 
 	if (ret && T_FILE::m_bEnableFileDataBuffer) {
 		dataBuf.resize(dataBuf.size() + len);
-		memcpy(dataBuf.data() + dataBuf.size(), p, len);
+		memcpy((void*)(dataBuf.data() + dataBuf.size()), p, len);
 	}
 	return ret;
 }
@@ -8391,7 +8379,7 @@ bool T_FILE::read(string& data)
 	HANDLE hFile = fp;
 	DWORD bytesRead;
 	SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-	ret = ReadFile(hFile, data.data(), len, &bytesRead, NULL)?true:false;
+	ret = ReadFile(hFile, (LPVOID)data.data(), len, &bytesRead, NULL)?true:false;
 #else  
 	FILE* f = (FILE*)fp;
 	fseek(f, 0, SEEK_SET);

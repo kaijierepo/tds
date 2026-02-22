@@ -907,7 +907,6 @@ public:
 	bool setBufferTTL(string bufferTTL);
 	bool m_enableDB = true;
 	DB_FMT m_dbFmt;
-	int m_bufferTTL;
 	DB_TIME_UNIT m_timeUnit;
 	bool m_bAutoUpgrade;
 
@@ -932,7 +931,7 @@ public:
 	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
 	void rpc_db_saveImage(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
-	void rpc_db_setConf(string& sParams, string& rlt, string& err);
+	void rpc_db_setConf(yyjson_val* params, string& rlt, string& err);
 
 	//table db function
 	void rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language);

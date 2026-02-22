@@ -184,7 +184,7 @@ static bool readFile(string path, string& data)
 		long len = ftell(fp);
 		data.resize(len);
 		fseek(fp, 0, SEEK_SET);
-		fread(data.data(), 1, len, fp);
+		fread((void*)data.data(), 1, len, fp);
 		fclose(fp);
 		return true;
 	}
@@ -225,7 +225,30 @@ struct FS_FILE_INFO {
 	string folderPath;
 };
 
-void getFolderList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = false) {
+static string fileTimeToString(stdfs::file_time_type ftime) {
+	std::chrono::system_clock::time_point sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+		ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
+	);
+	time_t iUnix = std::chrono::system_clock::to_time_t(sctp);
+	tm time_tm;
+#ifdef _WIN32
+	localtime_s(&time_tm, &iUnix);
+#else
+	localtime_r(&iUnix, &time_tm);  //for thread safty linux recommends localtime_r,windows recommends localtime_s
+#endif
+	int iYear = time_tm.tm_year + 1900;
+	int iMonth = time_tm.tm_mon + 1;
+	int iDay = time_tm.tm_mday;
+	int iHour = time_tm.tm_hour;
+	int iMin = time_tm.tm_min;
+	int iSec = time_tm.tm_sec;
+	char sTime[50] = { 0 };
+	sprintf_s(sTime, "%04d-%02d-%02d %02d:%02d:%02d", iYear, iMonth, iDay, iHour, iMin, iSec);
+	return sTime;
+}
+
+
+static void getFolderList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = false) {
 	try
 	{
 		wstring wstrFolder = utf8_to_utf16(strFolder);
@@ -243,15 +266,8 @@ void getFolderList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive 
 					}
 				}
 
-				auto ftime = stdfs::last_write_time(i.path());
-				// 将 file_time_type 转换为 system_clock::time_point
-				auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-					ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
-				);
-				auto ti = std::chrono::system_clock::to_time_t(sctp);
-				std::stringstream ss;
-				ss << std::put_time(std::localtime(&ti), "%Y-%m-%d %H:%M:%S");
-				fi.modifyTime = ss.str();
+				stdfs::file_time_type ftime = stdfs::last_write_time(i.path());
+				fi.modifyTime = fileTimeToString(ftime);
 
 				list.push_back(fi);
 
@@ -302,15 +318,8 @@ void getFileList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = 
 				size_t pos = fi.path.rfind("/");
 				fi.folderPath = fi.path.substr(0, pos);
 				fi.len = stdfs::file_size(i.path());
-				auto ftime = stdfs::last_write_time(i.path());
-				// 将 file_time_type 转换为 system_clock::time_point
-				auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
-					ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
-				);
-				auto ti = std::chrono::system_clock::to_time_t(sctp);
-				std::stringstream ss;
-				ss << std::put_time(std::localtime(&ti), "%Y-%m-%d %H:%M:%S");
-				fi.modifyTime = ss.str();
+				stdfs::file_time_type ftime = stdfs::last_write_time(i.path());
+				fi.modifyTime = fileTimeToString(ftime);
 				list.push_back(fi);
 			}
 		}
