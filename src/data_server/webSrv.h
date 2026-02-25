@@ -96,3 +96,6 @@ extern bool delBlackList(string type, string ip);
 extern bool setBlackList(string type, json listVal);
 extern bool getBlackList(string type, json& listVal);
 
+typedef bool (*fn_http_handler)(mg_http_message* hm, struct mg_connection* c);
+extern std::map<string,fn_http_handler> g_mapHttpHandler;
+

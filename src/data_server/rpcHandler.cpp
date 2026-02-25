@@ -28,6 +28,7 @@
 #include "rpcHandler_common.h"
 #include "mqttSrv.h"
 #include "video/rtspRelay.h"
+#include "rsa_verify.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -969,10 +970,6 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 				vlmAlarmCheck(s);
 			}
-		}
-		else if (method == "db.setConf") {
-			string s = params.dump();
-			db.rpc_db_setConf(s, rpcResp.result, rpcResp.error);
 		}
 		else if (!params.contains("time")) {
 			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : time");
@@ -2735,6 +2732,34 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		}
 
 		rpcResp.result = RPC_OK;
+	}
+	else if (method == "verifySignature") {
+		string signStr = params["signStr"];
+		string signature = params["signature"];
+		string publicKey = 
+			"-----BEGIN PUBLIC KEY-----\n"
+			"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3Sc9JJ926Qk035DOPZ7C\n"
+			"zgXd57RyEcZGJzGuGGr93+b85SFcmAYTli643Y0xfJ8wTPiHYoSFeckzQtWcmYso\n"
+			"hCSleMMVul/70ZBATY1esO7mhYqPemmREDTIHobDeQcrer4Lsjeoet2f4Ttf8+Rt\n"
+			"rAmtv9rO9AUTuy4o2e8XKxRD51bYiLVQsiZBBmRKkcrp+Sy7UyFD3CdEmAg6dyeS\n"
+			"w2l8PvWaFhtUdVRzbqeld3NTKOVefvUYJPtEfrXyk7yhTNPgBTk6fzwDhZqIZriH\n"
+			"a0+Qo1EjeD64Guha7TV+/mG50Uun+57snNbNEvdceo3lksH7Vi+6QUIU05Dq/VXl\n"
+			"cQIDAQAB\n"
+			"-----END PUBLIC KEY-----";
+	
+		rsa2048_public_key_t pKey;
+		rsa_verify_result_t rlt = rsa2048_load_public_key_from_string(&pKey, publicKey.c_str());
+		if (rlt != RSA_VERIFY_SUCCESS) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, getVerifyRltInfo(rlt));
+			return true;
+		}
+		rlt = rsa2048_verify_signature_base64(&pKey, (uint8_t*)signStr.data(), signStr.length(), signature.c_str());
+		if (rlt != RSA_VERIFY_SUCCESS) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, getVerifyRltInfo(rlt));
+			return true;
+		}
+		rpcResp.result = "\"ok\"";
+		return true;
 	}
 	else if (method == "time2unix") {   //跨国项目，测试时间造成的一些问题
 		string st = params["time"];

@@ -2,6 +2,8 @@
 #include "ioSrv.h"
 #include <string>
 #include <ctime>
+#include "webSrv.h"
+#include <sstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -9,6 +11,52 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
+
+
+string get_hid_v1(){
+    if(fs::fileExist("/etc/tds/mid.txt")){
+        string mid;
+        fs::readFile("/etc/tds/mid.txt", mid);
+        return mid;
+     }
+     else {
+        auto now = std::chrono::high_resolution_clock::now();
+        auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            now.time_since_epoch()).count();
+        
+        std::stringstream thread_id_ss;
+        thread_id_ss << std::this_thread::get_id();
+        size_t thread_id_num = 0;
+        thread_id_ss >> thread_id_num;  
+        
+        string mid = "mid_v1_" + std::to_string(nanoseconds) + std::to_string(thread_id_num);
+         fs::writeFile("/etc/tds/mid.txt", mid);
+         return mid;
+    }
+}
+
+bool licence_handler(mg_http_message* hm, struct mg_connection* c){
+    if (mg_http_match_uri(hm, "/licence/mid/v1")) //hardware id v1
+    {
+        string mid = get_hid_v1();
+        string contentLen = to_string(mid.size());
+
+        string resHeader =
+            "HTTP/1.1 200 OK\r\n"
+            "Access-Control-Allow-Origin:*\r\n"  //允许所有源，也可以指定请求中的源
+            "Access-Control-Allow-Private-Network: true\r\n" //CORS-RFC1918 允许私有网络请求
+            "Content-Length:" + contentLen + "\r\n\r\n";
+
+        mg_send(c, resHeader.c_str(), resHeader.size());
+        mg_send(c, mid.c_str(), mid.size());
+        c->is_resp = 0;
+        return true;
+    }
+    else if (mg_http_match_uri(hm, "/licence/mid/v2")) {
+        return true;
+    }
+    return false;
+}
 
 time_t getFileCreationTime(const std::string& filepath) {
 #ifdef _WIN32
@@ -72,19 +120,18 @@ std::string encrypt(const std::string& input) {
 }
 
 struct LicenceInfo {
-    string io;
-    string video;
+    string info;
     string id;
-    string code;
+    string key;
     LicenceInfo() {
     }
 
     string toStr() {
-        return "io=" + io + "\nvideo=" + video + "\nid=" + id + "\ncode=" + code;
+        return "info=" + info  + "\nmid=" + id + "\nkey=" + key;
     }
 
     string generateCode() {
-        string src = io + video + id + "tds666";
+        string src = info + id + "tds666";
         return encrypt(src);
     }
 };
@@ -120,17 +167,14 @@ LicenceInfo readLicence() {
         vector<string> kv;
         str::split(kv, s, "=");
         if (kv.size() == 2) {
-            if (kv[0] == "io") {
-                li.io = kv[1];
+            if (kv[0] == "info") {
+                li.info = kv[1];
             }
-            else if (kv[0] == "video") {
-                li.video = kv[1];
-            }
-            else if (kv[0] == "id") {
+            else if (kv[0] == "mid") {
                 li.id = kv[1];
             }
-            else if (kv[0] == "code") {
-                li.code = kv[1];
+            else if (kv[0] == "key") {
+                li.key = kv[1];
             }
         }
     }
@@ -148,15 +192,18 @@ public:
         if (!valid) {
             ioSrv.m_bEnableAcq = false;
         }
+
+        g_mapHttpHandler["/licence/*"] = licence_handler;
     }
 
     bool isValid() { 
         string validCode = m_info.generateCode();
-        string code = m_info.code;
+        string code = m_info.key;
         return validCode == code;
     }
 
     LicenceInfo m_info;
 };
+
 
 Licence l;

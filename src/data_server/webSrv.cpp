@@ -32,6 +32,8 @@ string fmsDir;
 string topoDir;
 string dbDir;
 
+std::map<string,fn_http_handler> g_mapHttpHandler;
+
 // http请求黑名单： apiserver和ioserver
 std::map<string, string> apiBlackList; // apiIP des
 std::shared_mutex g_csApiBlackList;  //注意避免共享锁可能锁两次的问题
@@ -1203,6 +1205,12 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		}
 		else if (mg_http_match_uri(hm, "/zlmhook/*")) {
 			pWs->handle_zlmhook(hm, c);
+		}
+		else if (mg_http_match_uri(hm, "/licence/*") || mg_http_match_uri(hm, "/licence/*/*")) {
+			 auto it = g_mapHttpHandler.find("/licence/*");
+			 if (it != g_mapHttpHandler.end()) {
+				 it->second(hm, c);
+			 }
 		}
 		else if (mg_http_match_uri(hm, "/rpc/*"))  // path after rpc is method name,use url param to hold rpc params
 		{

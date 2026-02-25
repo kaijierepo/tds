@@ -8188,7 +8188,7 @@ void T_FILE_MANAGER::release_ref(T_FILE& tFile) {
 #ifdef _WIN32
 					CloseHandle(tFile.fp);
 #else
-					fclose((FILE*)lock.fp);
+					fclose((FILE*)tFile.fp);
 #endif
 				}
 				tFile.fp = nullptr;

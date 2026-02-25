@@ -243,7 +243,7 @@ static string fileTimeToString(stdfs::file_time_type ftime) {
 	int iMin = time_tm.tm_min;
 	int iSec = time_tm.tm_sec;
 	char sTime[50] = { 0 };
-	sprintf_s(sTime, "%04d-%02d-%02d %02d:%02d:%02d", iYear, iMonth, iDay, iHour, iMin, iSec);
+	sprintf(sTime, "%04d-%02d-%02d %02d:%02d:%02d", iYear, iMonth, iDay, iHour, iMin, iSec);
 	return sTime;
 }
 
