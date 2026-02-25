@@ -247,6 +247,16 @@
     <ClCompile Include="..\src\video\rtspRelay.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\func_module\licence.cpp" />
+    <ClCompile Include="..\src\common\bignum.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\rsa.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\rsa_verify.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -515,6 +525,18 @@
     <ClInclude Include="..\src\CDataSimu.h" />
     <ClInclude Include="..\src\video\rtspRelay.h">
       <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\bignum.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\rsa.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\rsa_verify.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="test.h">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -407,7 +407,7 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>../unitybuild/preBuild.bat</Command>
+      <Command>../build/preBuild.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'">
@@ -593,6 +593,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\CDataSimu.cpp" />
     <ClCompile Include="..\src\common\base64.c" />
+    <ClCompile Include="..\src\common\bignum.c" />
     <ClCompile Include="..\src\common\common.cpp" />
     <ClCompile Include="..\src\common\dtwrecoge.cpp" />
     <ClCompile Include="..\src\common\kvIni.cpp" />
@@ -600,6 +601,8 @@
     <ClCompile Include="..\src\common\md5.cpp" />
     <ClCompile Include="..\src\common\memDiag.cpp" />
     <ClCompile Include="..\src\common\miniz.c" />
+    <ClCompile Include="..\src\common\rsa.c" />
+    <ClCompile Include="..\src\common\rsa_verify.cpp" />
     <ClCompile Include="..\src\common\secure.cpp" />
     <ClCompile Include="..\src\common\sha1.cpp" />
     <ClCompile Include="..\src\common\sha256.cpp" />
@@ -628,6 +631,7 @@
     <ClCompile Include="..\src\func_module\csvTable.cpp" />
     <ClCompile Include="..\src\func_module\dumpCatch.cpp" />
     <ClCompile Include="..\src\func_module\fileUploadSrv.cpp" />
+    <ClCompile Include="..\src\func_module\licence.cpp" />
     <ClCompile Include="..\src\func_module\logServer.cpp" />
     <ClCompile Include="..\src\func_module\statusServer.cpp" />
     <ClCompile Include="..\src\func_module\taskServer.cpp" />
@@ -675,6 +679,7 @@
   <ItemGroup>
     <ClInclude Include="..\src\CDataSimu.h" />
     <ClInclude Include="..\src\common\base64.h" />
+    <ClInclude Include="..\src\common\bignum.h" />
     <ClInclude Include="..\src\common\common.h" />
     <ClInclude Include="..\src\common\DTW.hpp" />
     <ClInclude Include="..\src\common\dtwrecoge.h" />
@@ -686,6 +691,8 @@
     <ClInclude Include="..\src\common\md5.h" />
     <ClInclude Include="..\src\common\memDiag.h" />
     <ClInclude Include="..\src\common\miniz.h" />
+    <ClInclude Include="..\src\common\rsa.h" />
+    <ClInclude Include="..\src\common\rsa_verify.h" />
     <ClInclude Include="..\src\common\secure.h" />
     <ClInclude Include="..\src\common\sha1.h" />
     <ClInclude Include="..\src\common\sha256.h" />
@@ -766,6 +773,7 @@
     <ClInclude Include="..\src\script\unicode_gen_def.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\video\rtspRelay.h" />
+    <ClInclude Include="test.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />
