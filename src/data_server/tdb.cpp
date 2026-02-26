@@ -565,7 +565,8 @@ namespace DB_FS {
 	}
 	bool writeFile(string path, char* data, size_t len)
 	{
-		createFolderOfPath(path);
+		if(!TDB::fileExist(path))
+			createFolderOfPath(path);
 
 		FILE* fp = nullptr;
 #ifdef _WIN32
@@ -6967,6 +6968,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 		return false;
 	}
 }
+
 
 TDB* TDB::getChildDB(string dbName) {
 	map<string, TDB*>::iterator iter = m_childDB.find(dbName);
