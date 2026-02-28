@@ -123,6 +123,7 @@ echo "开始增量编译..."
 compile_c_if_needed ./common/base64.c ./common/base64.o
 compile_c_if_needed ./common/miniz.c ./common/miniz.o
 compile_c_if_needed ./common/yyjson.c ./common/yyjson.o
+compile_c_if_needed ./common/bignum.c ./common/bignum.o
 compile_c_if_needed ./common/rsa.c ./common/rsa.o
 compile_c_if_needed ./mongoose/mongoose.c ./mongoose/mongoose.o
 compile_c_if_needed ./script/unicode_data.c ./script/unicode_data.o
@@ -211,6 +212,7 @@ obj_files="\
 ./common/base64.o \
 ./common/miniz.o \
 ./common/yyjson.o \
+./common/bignum.o \
 ./common/rsa.o \
 ./mongoose/mongoose.o \
 ./script/unicode_data.o \
