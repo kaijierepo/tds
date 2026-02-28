@@ -551,6 +551,8 @@ namespace DB_FS {
 	{
 		size_t iDotPos = strFile.rfind('.');
 		size_t iSlashPos = strFile.rfind('/');
+		if (iSlashPos == std::string::npos)
+			iSlashPos = strFile.rfind("\\");
 		if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
 			strFile = strFile.substr(0, iSlashPos);
 		}
