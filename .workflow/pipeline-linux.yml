@@ -20,7 +20,7 @@ stages:
         gccVersion: '9.4'
         commands:
           - '# 更新源并安装基础编译工具 + krb5开发库'
-          - apt-get update && apt-get install -y gcc g++ make cmake libkrb5-dev libssl-dev
+          - apt-get update && apt-get install -y gcc g++ make cmake libkrb5-dev file
           - '# 进入脚本所在目录（仓库根目录为工作目录）'
           - cd build
           - '# 执行编译脚本'
