@@ -28,7 +28,7 @@ stages:
         artifacts:
           - name: BUILD_ARTIFACT
             path:
-              - ./bin
+              - ./out/tds
         caches: []
         notify: []
         strategy:
