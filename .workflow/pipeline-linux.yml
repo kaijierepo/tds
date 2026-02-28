@@ -1,0 +1,33 @@
+version: '1.0'
+name: pipeline-linux
+displayName: pipeline-linux
+triggers:
+  trigger: auto
+  push:
+    branches:
+      prefix:
+        - ''
+stages:
+  - name: stage-84e2f7a5
+    displayName: Linux_x86_64编译
+    strategy: naturally
+    trigger: auto
+    executor: []
+    steps:
+      - step: build@gcc
+        name: build_gcc
+        displayName: GCC 构建
+        gccVersion: '9.4'
+        commands:
+          - '# 进入脚本所在目录（仓库根目录为工作目录）'
+          - cd build
+          - '# 执行编译脚本'
+          - ./build_x86_64.sh
+        artifacts:
+          - name: BUILD_ARTIFACT
+            path:
+              - ./bin
+        caches: []
+        notify: []
+        strategy:
+          retry: '0'
