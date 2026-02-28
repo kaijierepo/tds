@@ -123,6 +123,7 @@ echo "开始增量编译..."
 compile_c_if_needed ./common/base64.c ./common/base64.o
 compile_c_if_needed ./common/miniz.c ./common/miniz.o
 compile_c_if_needed ./common/yyjson.c ./common/yyjson.o
+compile_c_if_needed ./common/rsa.c ./common/rsa.o
 compile_c_if_needed ./mongoose/mongoose.c ./mongoose/mongoose.o
 compile_c_if_needed ./script/unicode_data.c ./script/unicode_data.o
 compile_c_if_needed ./script/cutils.c ./script/cutils.o
@@ -152,6 +153,7 @@ compile_cpp_if_needed ./common/stream2pkt.cpp ./common/stream2pkt.o
 compile_cpp_if_needed ./common/tcpClt.cpp ./common/tcpClt.o
 compile_cpp_if_needed ./common/tcpSrv.cpp ./common/tcpSrv.o
 compile_cpp_if_needed ./common/udpSrv.cpp ./common/udpSrv.o
+compile_cpp_if_needed ./common/rsa_verify.cpp ./common/rsa_verify.o
 compile_cpp_if_needed ./data_server/as_interface.cpp ./data_server/as_interface.o
 compile_cpp_if_needed ./data_server/mp.cpp ./data_server/mp.o
 compile_cpp_if_needed ./data_server/mqttSrv.cpp ./data_server/mqttSrv.o
@@ -209,6 +211,7 @@ obj_files="\
 ./common/base64.o \
 ./common/miniz.o \
 ./common/yyjson.o \
+./common/rsa.o \
 ./mongoose/mongoose.o \
 ./script/unicode_data.o \
 ./script/cutils.o \
@@ -236,6 +239,7 @@ obj_files="\
 ./common/tcpClt.o \
 ./common/tcpSrv.o \
 ./common/udpSrv.o \
+./common/rsa_verify.o \
 ./data_server/as_interface.o \
 ./data_server/mp.o \
 ./data_server/mqttSrv.o \
