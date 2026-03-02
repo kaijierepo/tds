@@ -247,6 +247,7 @@ namespace DB_STR {
 
 namespace DB_FS {
 	bool readFile(string path, string& data);
+	bool readFileW(string path, string& data);
 	bool createFolderOfPath(string strFile);
 	bool writeFile(string path, char* data, size_t len);
 	bool writeFile(string path, unsigned char* data, size_t len);
