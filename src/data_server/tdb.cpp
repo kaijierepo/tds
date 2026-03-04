@@ -1525,7 +1525,7 @@ bool TDB::saveToDeListFile(const string& dataListPath, string sDe) {
 	if (!m_enableDB)
 		return false;
 
-	T_FILE* tFile = tFileMgr.getFile(dataListPath);
+	T_FILE* tFile = tFileMgr.getFile(dataListPath,true);
 	if (tFile->fp == nullptr) {
 		return false;
 	}
