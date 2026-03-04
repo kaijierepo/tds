@@ -860,12 +860,12 @@ namespace DB_FS {
 	bool fileExist(string pszFileName)
 	{
 #ifdef _WIN32
-		std::filesystem::path filePath = DB_STR::utf8_to_utf16(pszFileName);
+		stdfs::path filePath = DB_STR::utf8_to_utf16(pszFileName);
 #else
 		std::filesystem::path filePath = pszFileName;
 #endif
 
-		if (std::filesystem::exists(filePath)) {
+		if (stdfs::exists(filePath)) {
 			return true;
 		}
 
