@@ -8477,8 +8477,12 @@ size_t T_FILE::getFileSize()
 #ifdef _WIN32
 	HANDLE hFile = fp;
 	LARGE_INTEGER fileSize;
-	GetFileSizeEx(hFile, &fileSize);
-	return (size_t)fileSize.QuadPart;
+	if (GetFileSizeEx(hFile, &fileSize))
+		return (size_t)fileSize.QuadPart;
+	else
+	{
+		return 0;
+	}
 #else  // Linux/Unix
 	FILE* f = (FILE*)fp;
 	fseek(f, 0L, SEEK_END);
