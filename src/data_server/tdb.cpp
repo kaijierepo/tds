@@ -8268,7 +8268,7 @@ T_FILE_LOCK_GUARD::~T_FILE_LOCK_GUARD() {
 	if (T_FILE::enableLock) {
 		file->mutex_.unlock();
 	}
-	if (!T_FILE::m_bEnableFileHandleBuffer) {
+	if (!T_FILE::m_bEnableFileHandleBuffer || !file->m_bWriteActive) {
 		if (file->fp != nullptr) {
 #ifdef _WIN32
 			CloseHandle(file->fp);
@@ -8359,6 +8359,7 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 			dataBuf.resize(offset + len);
 			memcpy((void*)(dataBuf.data() + offset), p, len);
 		}
+		m_bWriteActive = true;
 		return ret;
 	}
 
