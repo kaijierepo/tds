@@ -528,12 +528,53 @@ namespace DB_TAG {
 
 namespace DB_FS {
 	bool readFile(string path, string& data) {
-		FILE* fp = nullptr;
+		
 #ifdef _WIN32
-		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"rb");
+		//_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"rb");
+		wstring wpath = DB_STR::utf8_to_utf16(path);
+
+		HANDLE hFile = CreateFileW(
+			wpath.c_str(),
+			GENERIC_READ,
+			FILE_SHARE_READ,
+			NULL,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL,
+			NULL
+		);
+
+		if (hFile == INVALID_HANDLE_VALUE) {
+			return false;
+		}
+
+		LARGE_INTEGER fileSize;
+		if (!GetFileSizeEx(hFile, &fileSize)) {
+			CloseHandle(hFile);
+			return false;
+		}
+
+		if (fileSize.QuadPart > MAXDWORD) {
+			CloseHandle(hFile);
+			return false;
+		}
+
+		DWORD bytesToRead = static_cast<DWORD>(fileSize.QuadPart);
+		DWORD bytesRead = 0;
+
+		data.resize(bytesToRead);
+
+		if (!ReadFile(hFile, &data[0], bytesToRead, &bytesRead, NULL) ||
+			bytesRead != bytesToRead) {
+			CloseHandle(hFile);
+			return false;
+		}
+
+		CloseHandle(hFile);
+		return true;
 #else
+		FILE* fp = nullptr;
 		fp = fopen(path.c_str(), "rb");
-#endif
+
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -544,60 +585,9 @@ namespace DB_FS {
 			fclose(fp);
 			return true;
 		}
+#endif
+
 		return false;
-	}
-
-	bool readFileW(string path, string& data) {
-
-		wstring wFilePath = DB_STR::utf8_to_utf16(path);
-		HANDLE hFile = CreateFileW(
-			wFilePath.c_str(),
-			GENERIC_READ,            // 我们只读
-			FILE_SHARE_READ | FILE_SHARE_WRITE, // 允许其他人读写
-			NULL,
-			OPEN_EXISTING,
-			FILE_ATTRIBUTE_NORMAL,
-			NULL
-		);
-
-		if (hFile == INVALID_HANDLE_VALUE) {
-			// 如果这里失败，那绝对不是锁的问题，而是路径真的错了
-			DWORD err = GetLastError();
-			printf("CreateFileW 失败，错误码: %d\n", err);
-			return false;
-		}
-
-		// 2. 获取文件大小
-		LARGE_INTEGER size;
-		if (!GetFileSizeEx(hFile, &size)) {
-			CloseHandle(hFile);
-			return false;
-		}
-
-		// 3. 读取文件内容到内存
-		// 为了安全，分配 size + 1，并手动补 '\0'
-		DWORD bytesRead;
-		char* buf = (char*)malloc((size_t)size.QuadPart + 1);
-
-		if (buf == NULL) {
-			CloseHandle(hFile);
-			return false;
-		}
-
-		if (!ReadFile(hFile, buf, (DWORD)size.QuadPart, &bytesRead, NULL)) {
-			free(buf);
-			CloseHandle(hFile);
-			return false;
-		}
-
-		// 确保以 null 结尾，yyjson 要求
-		buf[bytesRead] = '\0';
-
-		data = buf;
-		free(buf);
-		// 4. 关闭句柄
-		CloseHandle(hFile);
-		return true;
 	}
 
 	bool createFolderOfPath(string strFile)
