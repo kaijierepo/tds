@@ -8279,14 +8279,17 @@ T_FILE_LOCK_GUARD::~T_FILE_LOCK_GUARD() {
 	if (T_FILE::enableLock) {
 		file->mutex_.unlock();
 	}
-	if (!T_FILE::m_bEnableFileHandleBuffer || !file->m_bWriteActive) {
-		if (file->fp != nullptr) {
+	if (!T_FILE::m_bEnableFileHandleBuffer) {
+		if (!file->m_bWriteActive)
+		{
+			if (file->fp != nullptr) {
 #ifdef _WIN32
-			CloseHandle(file->fp);
+				CloseHandle(file->fp);
 #else
-			fclose((FILE*)file->fp);
+				fclose((FILE*)file->fp);
 #endif
-			file->fp = nullptr;
+				file->fp = nullptr;
+			}
 		}
 	}
 	tFileMgr.release_ref(*file);
@@ -8346,6 +8349,7 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 		// write data
 		DWORD bytesWritten;
 		ret = WriteFile(fp, p, len, &bytesWritten, NULL)?true:false;
+
 
 		//do not execute flushFileBuffer,data is already in kernal buffer
 		//can be shared read by another process,such as notepad++ for debug purpose
