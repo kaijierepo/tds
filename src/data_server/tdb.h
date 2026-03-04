@@ -539,7 +539,7 @@ public:
 	T_FILE_MANAGER();
 	~T_FILE_MANAGER();
 
-	T_FILE* getFile(const std::string& path);
+	T_FILE* getFile(const std::string& path,bool createIfNotExist = false);
 	bool delete_file(const std::string& path);
 	void add_ref(T_FILE& tFile);
 	void release_ref(T_FILE& lock);
