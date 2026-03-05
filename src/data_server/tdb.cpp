@@ -5574,7 +5574,7 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		data = "[]";
 
 	yyjson_read_err yy_err = { 0 };
-	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
+	//yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
 	yyjson_doc* yy_doc = yyjson_read_opts(
 		(char*)data.data(),
 		data.length(),
@@ -5586,7 +5586,8 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		err = JSON_STR_VAL("wrong table format,json parse error");
 		return;
 	}
-	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
+	auto yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
+	yyjson_doc_free(yy_doc);
 	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
 	yyjson_mut_val* yy_selected = yyjson_mut_arr(yy_mdoc);
 
@@ -5608,6 +5609,7 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
         char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 		if (!p) {
 			err = JSON_STR_VAL("generate tdb row id fail");
+			yyjson_mut_doc_free(yy_mdoc);
 			return;
 		}
 		if (!TDB::fileExist(path)) {
@@ -5648,7 +5650,6 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 
 	queryInfo = JSON_STR_VAL("total row " + to_string(totalRow) +  ",selected " + to_string(selectedRow));
 
-	yyjson_doc_free(yy_doc);
 	yyjson_mut_doc_free(yy_mdoc);
 }
 
