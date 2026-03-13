@@ -8094,7 +8094,7 @@ T_FILE_MANAGER::T_FILE_MANAGER() {
 			for (auto it = mapFiles_.begin(); it != mapFiles_.end();) {
 				// in pool_mutex_ ,keep ref_count_ check thread safe
 				if (it->second->ref_count_ == 0 && it->second->last_used_.getTimePassSecond() > T_FILE::dbFileCtxTTL) {
-					if (it->second->fp != nullptr) {
+					if (it->second->fp != nullptr && !it->second->m_bWriteActive.load()) {
 #ifdef _WIN32
 						CloseHandle(it->second->fp);
 #else
@@ -8252,7 +8252,7 @@ void T_FILE_MANAGER::release_ref(T_FILE& tFile) {
 			{
 				std::lock_guard<std::mutex> lockG(pool_mutex_);
 
-				if (tFile.fp != nullptr && tFile.ref_count_ == 0 && !tFile.m_bWriteActive)
+				if (tFile.fp != nullptr && tFile.ref_count_ == 0 && !tFile.m_bWriteActive.load())
 				{
 #ifdef _WIN32
 					CloseHandle(tFile.fp);
@@ -8280,19 +8280,19 @@ T_FILE_LOCK_GUARD::~T_FILE_LOCK_GUARD() {
 	if (T_FILE::enableLock) {
 		file->mutex_.unlock();
 	}
-	if (!T_FILE::m_bEnableFileHandleBuffer) {
-		if (!file->m_bWriteActive)
-		{
-			if (file->fp != nullptr) {
-#ifdef _WIN32
-				CloseHandle(file->fp);
-#else
-				fclose((FILE*)file->fp);
-#endif
-				file->fp = nullptr;
-			}
-		}
-	}
+//	if (!T_FILE::m_bEnableFileHandleBuffer) {
+//		if (!file->m_bWriteActive)
+//		{
+//			if (file->fp != nullptr) {
+//#ifdef _WIN32
+//				CloseHandle(file->fp);
+//#else
+//				fclose((FILE*)file->fp);
+//#endif
+//				file->fp = nullptr;
+//			}
+//		}
+//	}
 	tFileMgr.release_ref(*file);
 }
 
@@ -8342,6 +8342,7 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 	if (fp)
 	{
 		bool ret = false;
+		m_bWriteActive.store(true);
 #ifdef _WIN32
 		LARGE_INTEGER li;
 		li.QuadPart = offset;
@@ -8374,7 +8375,7 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 			dataBuf.resize(offset + len);
 			memcpy((void*)(dataBuf.data() + offset), p, len);
 		}
-		m_bWriteActive = true;
+		m_bWriteActive.store(false);
 		return ret;
 	}
 

@@ -508,7 +508,7 @@ public:
 	bool clearFile();
 	size_t getFileSize();
 
-	bool m_bWriteActive;  //only write active file need file handle buffer
+	std::atomic<bool> m_bWriteActive;  //only write active file need file handle buffer
 	std::mutex mutex_;
 	DB_TIME last_used_;
 	DB_TIME open_time_;
@@ -522,7 +522,7 @@ public:
 	string dataBuf;
 
 	T_FILE(const string& p) {
-		m_bWriteActive = false;
+		m_bWriteActive.store(false);
 		path = p;
 		fp = nullptr;
 		last_used_.setNow();
