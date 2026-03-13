@@ -8354,9 +8354,8 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 
 		//do not execute flushFileBuffer,data is already in kernal buffer
 		//can be shared read by another process,such as notepad++ for debug purpose
-		//FlushFileBuffers(fp);
-
-		SetEndOfFile(fp);
+		//FlushFileBuffers(fp);	
+		//SetEndOfFile(fp);
 #else
 		FILE* f = (FILE*)fp;
 		fseek(f, offset, SEEK_SET);
