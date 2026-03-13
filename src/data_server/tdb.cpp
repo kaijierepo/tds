@@ -8252,7 +8252,7 @@ void T_FILE_MANAGER::release_ref(T_FILE& tFile) {
 			{
 				std::lock_guard<std::mutex> lockG(pool_mutex_);
 
-				if (tFile.fp != nullptr)
+				if (tFile.fp != nullptr && tFile.ref_count_ == 0 && !tFile.m_bWriteActive)
 				{
 #ifdef _WIN32
 					CloseHandle(tFile.fp);
