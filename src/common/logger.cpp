@@ -65,7 +65,7 @@ void LOG(const char* pszFmt, ...) {
 
 	{
 		int nLength = _vscprintf_cross_log(pszFmt, args);
-		nLength += 1;  //上面返回的长度是包含\0，这里加上
+		nLength += 1; 
 
 		std::vector<char> vectorChars(nLength);
 		vsnprintf(vectorChars.data(), nLength, pszFmt, args);
@@ -89,13 +89,11 @@ void LOG_C(char* info) {
 static std::string getAppDir() {
 #ifdef _WIN32
 	char buffer[MAX_PATH] = { 0 };
-	// 获取当前进程的可执行文件完整路径
 	if (GetModuleFileNameA(NULL, buffer, MAX_PATH) == 0) {
 		return "";
 	}
 
 	std::string path(buffer);
-	// Windows路径使用反斜杠或正斜杠作为分隔符
 	size_t last_slash = path.find_last_of("\\/");
 	if (last_slash != std::string::npos) {
 		return path.substr(0, last_slash);
@@ -109,25 +107,22 @@ static std::string getAppDir() {
 	buffer[len] = '\0';
 
 	std::string path(buffer);
-	// Linux/macOS使用正斜杠作为分隔符
 	size_t last_slash = path.find_last_of('/');
 	if (last_slash != std::string::npos) {
 		return path.substr(0, last_slash);
 	}
 #endif
-	return ""; // 如果没有找到路径分隔符
+	return ""; 
 }
 
 static std::string getAppName() {
 #ifdef _WIN32
 	char buffer[MAX_PATH] = { 0 };
-	// 获取当前进程的可执行文件完整路径
 	if (GetModuleFileNameA(NULL, buffer, MAX_PATH) == 0) {
 		return "";
 	}
 
 	std::string path(buffer);
-	// Windows路径使用反斜杠或正斜杠作为分隔符
 	size_t last_slash = path.find_last_of("\\/");
 	if (last_slash != std::string::npos) {
 		path = path.substr(last_slash + 1);
@@ -138,7 +133,7 @@ static std::string getAppName() {
 		return path.substr(0, pos);
 	}
 	else {
-		return path; // 没有点，返回原字符串
+		return path; 
 	}
 #else
 	char buffer[PATH_MAX];
@@ -149,7 +144,6 @@ static std::string getAppName() {
 	buffer[len] = '\0';
 
 	std::string path(buffer);
-	// Linux/macOS使用正斜杠作为分隔符
 	size_t last_slash = path.find_last_of('/');
 	if (last_slash != std::string::npos) {
 		path = path.substr(last_slash + 1);
@@ -160,7 +154,7 @@ static std::string getAppName() {
 		return path.substr(0, pos);
 	}
 	else {
-		return path; // 没有点，返回原字符串
+		return path; 
 	}
 #endif
 }
@@ -231,7 +225,7 @@ Clogger::Clogger()
 	string appDir = getAppDir();
 	string appName = getAppName();
 
-	// getAppDir 和 getAppName 获取的中文路径编码格式为gb，需要先转化为utf8
+	// getAppDir  getAppName returns gb
 	m_strLogDir = gb_to_utf8(appDir + "/log_" + appName);
 }
 
@@ -289,9 +283,9 @@ LOG_LEVEL Clogger::getLogLevel(string& info)
 
 void Clogger::setConsoleTextColor(LOG_LEVEL ll) {
 #ifdef WINDOWS
-	//使用cout输出，不要使用printf输出，printf会将某些格式进行解析，例如下面字符串
-	//R"([IO设备透传]client->dev q 11 i0;c0;x63;n0;r0;q1;p0;w0;s0;m0;a5;tbodazl/624378949537178/lastdp;u{""""data"""":[{""""name"""":""""%N%"""",""""value"""":%V%}]};dupdata)";
-	//使用printf输出会导致奔溃 ，应该print将 %N% 作为某种特殊字符处理了
+	//use cout not printf,printf will parse some format,such as string below
+	//R"([IO]client->dev q 11 i0;c0;x63;n0;r0;q1;p0;w0;s0;m0;a5;tbodazl/624378949537178/lastdp;u{""""data"""":[{""""name"""":""""%N%"""",""""value"""":%V%}]};dupdata)";
+	//printf caused crash, print doing something special with %N% 
 	HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (ll == LOG_LEVEL::LL_ERROR)
 	{
@@ -318,32 +312,25 @@ void Clogger::setConsoleTextColor(LOG_LEVEL ll) {
 
 
 static void getTimeInfo(struct tm& timeinfo,string& timestamp) {
-
-	// 获取当前时间
 	auto now = std::chrono::system_clock::now();
 	auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
 	auto duration = now_ms.time_since_epoch();
 
-	// 转换为time_t
 	std::time_t t = std::chrono::system_clock::to_time_t(now_ms);
 
-	// 时间结构
 #if defined(_WIN32)
 	localtime_s(&timeinfo, &t);
 #else
 	localtime_r(&t, &timeinfo);
 #endif
 
-	// 直接格式化到缓冲区
 	constexpr size_t buf_size = 24;
 	std::array<char, buf_size> buf;
 
-	// 格式化日期和时间
 	size_t len = std::strftime(buf.data(), buf_size,
 		"%Y%m%d %H:%M:%S",
 		&timeinfo);
 
-	// 添加毫秒
 	auto ms = duration.count() % 1000;
 	std::snprintf(buf.data() + len, 5, ".%03lld", ms);
 
@@ -426,10 +413,8 @@ string Clogger::logInternal(string info, bool writeToFile)
 	string timeStamp;
 	getTimeInfo(stNow,timeStamp);
 
-	//命令行和文件中的日志用gb2312编码
 	string logline = timeStamp + " " + info;
 
-	//logLevel用户控制本地命令行界面和日志文件当中是否记录。weblog监视统一全部推送
 	if (ll < logLevel) {
 		return logline;
 	}
@@ -449,7 +434,7 @@ string Clogger::logInternal(string info, bool writeToFile)
 		//create log path
 		std::lock_guard<mutex> lockGuard(m_lock);
 	
-		//程序调试过程中，可能经常有删除整个日志文件夹，然后运行一会看下日志这样的操作。因此每次都尝试创建文件夹
+		//when debugging ,maybe all log dir is deleted, then wait new log file generate, try create folder each time
 		createFolderOfPath(m_strLogDir);
 
 		//save to log file

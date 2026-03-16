@@ -14,6 +14,11 @@ enum LOG_LEVEL {
 	LL_NONE = 4
 };
 
+namespace LOG_CODEC {
+	const string gb2312 = "gb2312";
+	const string utf8 = "utf8";
+}
+
 typedef void (*fp_logOutputCallback)(string text);
 
 class Clogger
@@ -29,12 +34,12 @@ public:
 
 	void setConsoleTextColor(LOG_LEVEL ll);
 
-	string logInternal(string info, bool writeToFile = true); //bForceWrite为true,忽略级别过滤，直接输出
+	string logInternal(string info, bool writeToFile = true); //is bForceWrite == true,ignore level
 
 	void log(string info,bool writeToFile = true);
-
+	string m_logCodec = LOG_CODEC::utf8; 
 	bool dirCreated;
-	bool m_bSaveToFile; //工具模式下仅输出到命令行
+	bool m_bSaveToFile; //save to console mode is supported
 	bool m_bEnable;
 
 	mutex m_lock;
