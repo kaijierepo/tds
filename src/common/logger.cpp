@@ -420,14 +420,17 @@ string Clogger::logInternal(string info, bool writeToFile)
 	}
 
 #ifdef _WIN32
-	info = utf8_to_gb(logline);
+	//use gb2312 log in windows
+	if (m_InterfaceCodec == LOG_CODEC::utf8) {
+		logline = utf8_to_gb(logline);
+	}
 #else
-	info = logline;
+	//use utf8 log in linux
 #endif
 
 	setConsoleTextColor(ll);
 
-	cout << info;
+	cout << logline;
 	printf("\r\n");
 
 	if (writeToFile && m_strLogDir!="" && m_bEnable) {
@@ -440,8 +443,8 @@ string Clogger::logInternal(string info, bool writeToFile)
 		//save to log file
 		string strFile = timeStamp.substr(0,8);
 		strFile = m_strLogDir + "/" + strFile + ".log";
-		info += "\r\n";
-		appendFile(strFile,(char*)info.c_str(),info.size());
+		logline += "\r\n";
+		appendFile(strFile,(char*)logline.c_str(), logline.size());
 	}
 
 	return logline;

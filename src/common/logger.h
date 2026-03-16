@@ -37,7 +37,7 @@ public:
 	string logInternal(string info, bool writeToFile = true); //is bForceWrite == true,ignore level
 
 	void log(string info,bool writeToFile = true);
-	string m_logCodec = LOG_CODEC::utf8; 
+	string m_InterfaceCodec = LOG_CODEC::utf8;  // codec for function interface
 	bool dirCreated;
 	bool m_bSaveToFile; //save to console mode is supported
 	bool m_bEnable;
