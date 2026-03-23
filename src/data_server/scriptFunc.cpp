@@ -12,6 +12,7 @@
 #include <cstdint>
 #include "mp.h"
 #include "mqttSrv.h"
+#include "tAlmSrv.h"
 
 
 
@@ -694,6 +695,36 @@ static JSValue qjs_mqttPublish(JSContext* ctx, JSValueConst this_val, int argc, 
     return JS_NULL;
 }
 
+static JSValue qjs_addAlarm(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    if (argc >= 1) {
+        yyjson_doc* doc = nullptr;
+        qjsVal_to_yyVal(ctx, argv[0], doc);
+		yyjson_val* yyv_root = yyjson_doc_get_root(doc);
+        yyjson_val* yyv_params = yyjson_obj_get(yyv_root, "params");
+        if (yyv_params) {
+            ALARM_INFO ai;
+            ai.fromJson(yyv_params);
+			almSrv.Add(ai);
+        }
+    }
+    return JS_NULL;
+}
+
+static JSValue qjs_updateAlarm(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    if (argc >= 1) {
+        yyjson_doc* doc = nullptr;
+        qjsVal_to_yyVal(ctx, argv[0], doc);
+        yyjson_val* yyv_root = yyjson_doc_get_root(doc);
+        yyjson_val* yyv_params = yyjson_obj_get(yyv_root, "params");
+        if (yyv_params) {
+            ALARM_INFO ai;
+            ai.fromJson(yyv_params);
+            almSrv.Update(ai);
+        }
+    }
+    return JS_NULL;
+}
+
 void initTdsFunc(JSContext* ctx, void* pDev) {
     JSValue global = JS_GetGlobalObject(ctx);
 
@@ -706,6 +737,8 @@ void initTdsFunc(JSContext* ctx, void* pDev) {
     JS_SetPropertyStr(ctx, global, "sum", JS_NewCFunction(ctx, qjs_sum, "sum", 3));
     JS_SetPropertyStr(ctx, global, "avg", JS_NewCFunction(ctx, qjs_avg, "avg", 3));
     JS_SetPropertyStr(ctx, global, "mqttPub", JS_NewCFunction(ctx, qjs_mqttPublish, "mqttPub", 2));
+    JS_SetPropertyStr(ctx, global, "addAlarm", JS_NewCFunction(ctx, qjs_addAlarm, "addAlarm", 1));
+    JS_SetPropertyStr(ctx, global, "updateAlarm", JS_NewCFunction(ctx, qjs_addAlarm, "updateAlarm", 1));
 
     if (pDev) {
         JSValue dev = JS_NewObject(ctx);

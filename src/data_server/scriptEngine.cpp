@@ -346,17 +346,20 @@ JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_mut_val* val) {
 yyjson_val* qjsVal_to_yyVal(JSContext* ctx, JSValueConst js_val, yyjson_doc*& doc) {
     JSValue json_str_val = JS_JSONStringify(ctx, js_val, JS_UNDEFINED, JS_UNDEFINED);
     if (JS_IsException(json_str_val)) {
-        return NULL; 
+        return nullptr;
     }
 
     const char* json_str = JS_ToCString(ctx, json_str_val);
     if (!json_str) {
         JS_FreeValue(ctx, json_str_val);
-        return NULL;
+        return nullptr;
     }
 
     yyjson_read_err err;
     doc = yyjson_read((char*)json_str, strlen(json_str),0);
+    if (doc == nullptr)
+        return nullptr;
+
     yyjson_val* yyVal = yyjson_doc_get_root(doc);
  
     JS_FreeCString(ctx, json_str);
