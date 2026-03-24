@@ -67,6 +67,9 @@ struct DB_TIME {
 	DB_TIME() {
 		memset(this, 0, sizeof(DB_TIME));
 	}
+	DB_TIME(const string& sTime) {
+		fromStr(sTime);
+	}
 	DB_TIME(unsigned short year, unsigned short month, unsigned short day, unsigned short hour, unsigned short minute, unsigned short second, unsigned short millisecond)
 	{
 		wYear = year;
@@ -105,12 +108,9 @@ struct DB_TIME {
 	bool operator==(const DB_TIME& right) const {
 		return 0 == memcmp(this, &right,sizeof(DB_TIME));
 	}
-	// 判断是否为闰年
 	bool isLeapYear() const {
 		return (wYear % 4 == 0 && wYear % 100 != 0) || (wYear % 400 == 0);
 	}
-
-	// 获取某个月的最大天数
 	unsigned short getMaxDayOfMonth() const {
 		static const unsigned short daysInMonth[] = {
 			31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
@@ -122,35 +122,26 @@ struct DB_TIME {
 	}
 	DB_TIME& operator+=(const DB_TIME& right)
 	{
-		// 毫秒
 		wMilliseconds += right.wMilliseconds;
 		if (wMilliseconds >= 1000) {
 			wMilliseconds -= 1000;
 			wSecond += 1;
 		}
-
-		// 秒
 		wSecond += right.wSecond;
 		if (wSecond >= 60) {
 			wSecond -= 60;
 			wMinute += 1;
 		}
-
-		// 分钟
 		wMinute += right.wMinute;
 		if (wMinute >= 60) {
 			wMinute -= 60;
 			wHour += 1;
 		}
-
-		// 小时
 		wHour += right.wHour;
 		if (wHour >= 24) {
 			wHour -= 24;
 			wDay += 1;
 		}
-
-		// 天
 		wDay += right.wDay;
 		while (wDay > getMaxDayOfMonth()) {
 			wDay -= getMaxDayOfMonth();
@@ -160,20 +151,12 @@ struct DB_TIME {
 				wYear += 1;
 			}
 		}
-
-		// 月
 		wMonth += right.wMonth;
 		if (wMonth > 12) {
 			wMonth -= 12;
 			wYear += 1;
 		}
-
-		// 年
 		wYear += right.wYear;
-
-		// 星期（可选，根据需求计算）
-		// 这里假设 wDayOfWeek 不需要更新
-
 		return *this;
 	}
 
@@ -222,6 +205,11 @@ struct DB_TIME {
 			return true;
 		}
 		return false;
+	}
+
+	DB_TIME& operator=(const string& sTime) {
+		this->fromStr(sTime);
+		return *this;
 	}
 };
 
@@ -460,7 +448,7 @@ struct DB_FILE {
 	string deType;
 	TDB* pOwnerDB;
 
-	bool loadFile();
+	bool loadFile(bool useTFile = true);
 
 	bool isDataList();  //datalist file, curve index file ,not curve file. only data list is buffered in tdb
 
@@ -499,6 +487,7 @@ public:
 	static bool m_bEnableFileHandleBuffer;
 	static bool m_bEnableFileDataBuffer;
 	static int dbFileCtxTTL;
+	static std::mutex poolLock; //keep locks_ thread safe, keep clean and getLock thread safe
 
 	bool write(const char* p, int len);
 	bool writeAt(const char* p, int len, int offset);
@@ -507,9 +496,20 @@ public:
 	bool read(string& data);
 	bool clearFile();
 	size_t getFileSize();
+	void add_ref() {
+		ref_count_++;
+	}
 
-	std::atomic<bool> m_bWriteActive;  //only write active file need file handle buffer
-	std::mutex mutex_;
+	bool isHandleBufferDisabled();
+	void release_ref();
+
+	//only write active file need file handle buffer
+	//write active does not mean file is writing,if file is writed after program start,writeActive will be set to true
+	//so data list file of today is write active,because new data acquired will be written to today's file
+	//data list before today is not write active,for histoy query only,does not need file handle buffer
+	//file handle buffer is specificly used for writing performance improvement
+	std::atomic<bool> m_bWriteActive; 
+	std::mutex fileLock_;
 	DB_TIME last_used_;
 	DB_TIME open_time_;
 	long writeCount;
@@ -517,7 +517,7 @@ public:
 	long writeBytes;
 	long readBytes;
 	std::atomic<int> ref_count_{ 0 };
-	void* fp;
+	atomic<void*> fp;
 	string path;
 	string dataBuf;
 
@@ -540,18 +540,17 @@ public:
 
 	T_FILE* getFile(const std::string& path,bool createIfNotExist = false);
 	bool delete_file(const std::string& path);
-	void add_ref(T_FILE& tFile);
-	void release_ref(T_FILE& lock);
 
-	std::mutex pool_mutex_; //keep locks_ thread safe, keep clean and getLock thread safe
 	std::unordered_map<std::string, T_FILE*> mapFiles_;
 	std::atomic<bool> cleaner_{ false };
 };
 
-struct T_FILE_LOCK_GUARD {
-	T_FILE* file;
+class T_FILE_LOCK_GUARD {
+public:
 	T_FILE_LOCK_GUARD(T_FILE* tf);
 	~T_FILE_LOCK_GUARD();
+private:
+	T_FILE* file; //T_FILE_LOCK_GUARD is always used as a local variable in one thread,so it is thread safe
 };
 
 //as the data after aggregate, only time and items are valid
@@ -876,6 +875,7 @@ enum DB_TIME_UNIT {
 };
 
 typedef void (*fp_getTagsByTagSelector)(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt);
+typedef void (*fp_dbLog)(string& str);
 
 struct FILE_BUFF {
 	DB_TIME lastActive;
@@ -906,7 +906,6 @@ public:
 //interface
 	bool Open(string strDBUrl, fp_getTagsByTagSelector f = nullptr,string name="");
 	bool Open_gbk(string strDBUrl, fp_getTagsByTagSelector f = nullptr, string name = "");
-	bool setBufferTTL(string bufferTTL);
 	bool m_enableDB = true;
 	DB_FMT m_dbFmt;
 	DB_TIME_UNIT m_timeUnit;
@@ -951,10 +950,11 @@ public:
 	bool tableSelect(string tableName, vector<string>& match, string& rlt, string& err);
 
 	// db.insert functions
-	// insert basic val type
+	// insert basic val type,use reference ,avoid force conversion
 	bool Insert(string strTag, DB_TIME stTime, double& dbVal);
 	bool Insert(string strTag, DB_TIME stTime, int& iVal);
-	bool Insert(string strTag, DB_TIME stTime, long long iVal);
+	bool Insert(string strTag, DB_TIME stTime, long long& iVal);
+	bool Insert(string strTag, DB_TIME stTime, float& fVal);
 	bool Insert(string strTag, bool bVal, DB_TIME* stTime=nullptr);
 	bool Insert(string strTag, double dbVal, DB_TIME* stTime = nullptr);
 	bool Insert(string strTag, int iVal, DB_TIME* stTime = nullptr);
@@ -1044,6 +1044,7 @@ public:
 	bool m_isGbk;
 	string m_confPath;
 	string m_currentPath;
+	fp_dbLog m_fpDBLog;
 };
 unsigned int
 tdb_base64_encode(const unsigned char* in, unsigned int inlen, char* out);

@@ -62,6 +62,7 @@ namespace stdfs = std::filesystem;
 
 TDB db;
 T_FILE_MANAGER tFileMgr;
+std::mutex T_FILE::poolLock;
 bool T_FILE::enableLock = true;
 bool T_FILE::m_bEnableFileHandleBuffer = false;
 bool T_FILE::m_bEnableFileDataBuffer = false;
@@ -536,7 +537,7 @@ namespace DB_FS {
 		HANDLE hFile = CreateFileW(
 			wpath.c_str(),
 			GENERIC_READ,
-			FILE_SHARE_READ,
+			FILE_SHARE_READ | FILE_SHARE_WRITE,
 			NULL,
 			OPEN_EXISTING,
 			FILE_ATTRIBUTE_NORMAL,
@@ -544,6 +545,11 @@ namespace DB_FS {
 		);
 
 		if (hFile == INVALID_HANDLE_VALUE) {
+			DWORD dwError = GetLastError();
+			if (db.m_fpDBLog) {
+				string info = DB_STR::format("readFile failed,path=%s,errorCode=%d", path.c_str(), dwError);
+				db.m_fpDBLog(info);
+			}
 			return false;
 		}
 
@@ -1089,6 +1095,7 @@ TDB::TDB()
 	m_isGbk = false;
 	m_timeUnit = BY_DAY;
 	m_bAutoUpgrade = true; 
+	m_fpDBLog = nullptr;
 }
 
 string TDB::getPath_deFile(string strTag, DB_TIME stTime)
@@ -3159,7 +3166,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 						dbtime.fromStr(time);
 						DB_FILE dbfile(dbtime, tag, this);
 						dbfile.deType = "curve";
-						if (dbfile.loadFile())
+						if (dbfile.loadFile(false))
 						{
 							yyjson_val* yyv_curve = dbfile.root;
 							yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
@@ -4964,7 +4971,7 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 		int open = 0;
 		int close = 0;
 		size_t bufDataSize = 0;
-		std::lock_guard<std::mutex> lock(tFileMgr.pool_mutex_);
+		std::lock_guard<std::mutex> lock(T_FILE::poolLock);
 		rlt += "[";
 		for (auto it = tFileMgr.mapFiles_.begin(); it != tFileMgr.mapFiles_.end();it++) {
 			T_FILE* file = it->second;
@@ -5895,7 +5902,7 @@ bool TDB::Insert(string strTag, DB_TIME stTime, int& iVal)
 	return InsertValJsonStr(strTag, stTime, s);
 }
 
-bool TDB::Insert(string strTag, DB_TIME stTime, long long iVal)
+bool TDB::Insert(string strTag, DB_TIME stTime, long long& iVal)
 {
 	string s = formatStr("%d", iVal);
 	return InsertValJsonStr(strTag, stTime, s);
@@ -5906,6 +5913,13 @@ bool TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
 	string s = formatStr("%f", dbVal);
 	return InsertValJsonStr(strTag, stTime, s);
 }
+
+bool TDB::Insert(string strTag, DB_TIME stTime, float& fVal)
+{
+	string s = formatStr("%f", fVal);
+	return InsertValJsonStr(strTag, stTime, s);
+}
+
 void TDB::rpc_db_merge(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
@@ -8023,17 +8037,22 @@ bool DB_FILE::isDataList() {
 	return false;
 }
 
-bool DB_FILE::loadFile() {
+bool DB_FILE::loadFile(bool useTFile) {
 	//time.fromUnixTime(ttTime);
 
 ymd = time.toYMD();
 path = pOwnerDB->getPath_dbFile(tag, time, deType);
 
-T_FILE* tFile = tFileMgr.getFile(path);
-T_FILE_LOCK_GUARD g(tFile);
+if (useTFile) {
+	T_FILE* tFile = tFileMgr.getFile(path);
+	T_FILE_LOCK_GUARD g(tFile);
+	data = "";
+	tFile->read(data);
+}
+else {
+	DB_FS::readFile(path, data);
+}
 
-data = "";
-tFile->read(data);
 
 if (data == "") {
 	return false;
@@ -8089,12 +8108,12 @@ T_FILE_MANAGER::T_FILE_MANAGER() {
 				std::this_thread::sleep_for(std::chrono::seconds(1));
 				sleeped++;
 			}
-			std::lock_guard<std::mutex> lock(pool_mutex_);
+			std::lock_guard<std::mutex> lock(T_FILE::poolLock);
 			auto now = std::chrono::steady_clock::now();
 			for (auto it = mapFiles_.begin(); it != mapFiles_.end();) {
 				// in pool_mutex_ ,keep ref_count_ check thread safe
 				if (it->second->ref_count_ == 0 && it->second->last_used_.getTimePassSecond() > T_FILE::dbFileCtxTTL) {
-					if (it->second->fp != nullptr && !it->second->m_bWriteActive.load()) {
+					if (it->second->fp != nullptr) {
 #ifdef _WIN32
 						CloseHandle(it->second->fp);
 #else
@@ -8117,91 +8136,96 @@ T_FILE_MANAGER::~T_FILE_MANAGER() {
 }
 
 T_FILE* T_FILE_MANAGER::getFile(const std::string& path, bool createIfNotExist) {
-	std::lock_guard<std::mutex> lock(pool_mutex_);
-	auto it = mapFiles_.find(path);
+	//get file from pool,protected by pool lock
 	T_FILE* tFile = nullptr;
-	if (it == mapFiles_.end()) {
-		tFile = new T_FILE(path);
-		mapFiles_[path] = tFile;
-	}
-	else {
-		tFile = it->second;
-	}
-
-
-	if (tFile->fp == nullptr) {
-		bool exist = DB_FS::fileExist(path);	
-		if (exist ||
-			(!exist && createIfNotExist)) {
-
-			if (!exist) {
-				DB_FS::createFolderOfPath(path);
-			}
-#ifdef _WIN32
-			wstring filename = DB_STR::utf8_to_utf16(path);
-			//pl->fp = _wfopen(filename.c_str(), L"rb+");
-			tFile->fp = CreateFileW(
-				filename.c_str(),
-				GENERIC_READ | GENERIC_WRITE,
-				FILE_SHARE_READ | FILE_SHARE_WRITE,  // 
-				NULL,
-				OPEN_ALWAYS,  // if file not exist   , create it
-				FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS,
-				NULL
-			);
-
-			if (tFile->fp == INVALID_HANDLE_VALUE) {
-				tFile->fp = nullptr;
-			}
-			else {
-				tFile->open_time_.setNow();
-			}
-#elif defined WIN_CFILE
-			FILE* f = nullptr;
-			wstring wpath = DB_STR::utf8_to_utf16(path);
-			f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);// read,write at any offset
-			if (!f)
-				_wfopen_s(&f, wpath.c_str(), L"wb+");
-			if (f) {
-				fclose(f);
-				f = nullptr;
-				f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);
-			}
-			if (f) {
-				tFile->open_time_.setNow();
-				tFile->fp = f;
-			}
-#else
-			FILE* f = nullptr;
-			f = fopen(path.c_str(), "rb+");
-			if (!f)
-				f = fopen(path.c_str(), "wb+");
-			if (f) {
-				fclose(f);
-				f = nullptr;
-				fopen(path.c_str(), "rb+");
-			}
-			if (f) {
-				tFile->open_time_.setNow();
-				tFile->fp = f;
-			}
-#endif
+	{
+		std::lock_guard<std::mutex> lock(T_FILE::poolLock);
+		auto it = mapFiles_.find(path);
+		if (it == mapFiles_.end()) {
+			tFile = new T_FILE(path);
+			mapFiles_[path] = tFile;
+		}
+		else {
+			tFile = it->second;
 		}
 	}
+	//file init, protectd by file lock
+	{
+		T_FILE_LOCK_GUARD g(tFile);
+		if (tFile->fp == nullptr) {
+			bool exist = DB_FS::fileExist(path);
+			if (exist ||
+				(!exist && createIfNotExist)) {
 
-	tFile->last_used_.setNow();
+				if (!exist) {
+					DB_FS::createFolderOfPath(path);
+				}
+#ifdef _WIN32
+				wstring filename = DB_STR::utf8_to_utf16(path);
+				//pl->fp = _wfopen(filename.c_str(), L"rb+");
+				tFile->fp = CreateFileW(
+					filename.c_str(),
+					GENERIC_READ | GENERIC_WRITE,
+					FILE_SHARE_READ | FILE_SHARE_WRITE,  // 
+					NULL,
+					OPEN_ALWAYS,  // if file not exist   , create it
+					FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS,
+					NULL
+				);
+
+				if (tFile->fp == INVALID_HANDLE_VALUE) {
+					tFile->fp = nullptr;
+				}
+				else {
+					tFile->open_time_.setNow();
+				}
+#elif defined WIN_CFILE
+				FILE* f = nullptr;
+				wstring wpath = DB_STR::utf8_to_utf16(path);
+				f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);// read,write at any offset
+				if (!f)
+					_wfopen_s(&f, wpath.c_str(), L"wb+");
+				if (f) {
+					fclose(f);
+					f = nullptr;
+					f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);
+				}
+				if (f) {
+					tFile->open_time_.setNow();
+					tFile->fp = f;
+				}
+#else
+				FILE* f = nullptr;
+				f = fopen(path.c_str(), "rb+");
+				if (!f)
+					f = fopen(path.c_str(), "wb+");
+				if (f) {
+					fclose(f);
+					f = nullptr;
+					fopen(path.c_str(), "rb+");
+				}
+				if (f) {
+					tFile->open_time_.setNow();
+					tFile->fp = f;
+				}
+#endif
+			}
+		}
+		tFile->last_used_.setNow();
+	}
+	
 	return tFile;
 }
 
 bool T_FILE_MANAGER::delete_file(const std::string& path) {
-	std::lock_guard<std::mutex> lockG(pool_mutex_);
+	std::lock_guard<std::mutex> lockG(T_FILE::poolLock);
 	auto it = mapFiles_.find(path);
 	bool ret = false;
 	bool deleted = false;
 	if (it != mapFiles_.end())
 	{
 		if (T_FILE::enableLock) {
-			it->second->mutex_.lock();
+			it->second->fileLock_.lock();
 		}
 		if (it->second->fp != nullptr)
 		{
@@ -8218,7 +8242,7 @@ bool T_FILE_MANAGER::delete_file(const std::string& path) {
 		it->second->fp = nullptr;
 
 		if (T_FILE::enableLock) {
-			it->second->mutex_.unlock();
+			it->second->fileLock_.unlock();
 		}
 	}
 
@@ -8235,65 +8259,33 @@ bool T_FILE_MANAGER::delete_file(const std::string& path) {
 }
 
 
-void T_FILE_MANAGER::add_ref(T_FILE& tFile) {
-	tFile.ref_count_++;
-}
-
-void T_FILE_MANAGER::release_ref(T_FILE& tFile) {
-	//do not need to lock pool_mutex_,not thread safe ref_count option.
-	//release_lock is called ,then clean thread try to check ref_count,do not clean,then ref_count--
-	//not using lock will not be cleaned, do not cause problem;clean in using lock causes problem
-	tFile.ref_count_--;
-	if (tFile.ref_count_ == 0) //if exclude list match,then clean
-	{
-		for (const auto& it : T_FILE::m_vctExcludeFilter)
-		{
-			if (tFile.path.find(it) != std::string::npos)
-			{
-				std::lock_guard<std::mutex> lockG(pool_mutex_);
-
-				if (tFile.fp != nullptr && tFile.ref_count_ == 0 && !tFile.m_bWriteActive.load())
-				{
-#ifdef _WIN32
-					CloseHandle(tFile.fp);
-#else
-					fclose((FILE*)tFile.fp);
-#endif
-				}
-				tFile.fp = nullptr;
-				break;
-			}
-		}
-	}
-}
-
-
 T_FILE_LOCK_GUARD::T_FILE_LOCK_GUARD(T_FILE* ptf) {
-	file = ptf;
-	tFileMgr.add_ref(*ptf);
 	if (T_FILE::enableLock) {
-		file->mutex_.lock();
+		ptf->fileLock_.lock();
 	}
+	//all members of this->file must be modified after lock
+	file = ptf;
+	file->add_ref();
 }
 
 T_FILE_LOCK_GUARD::~T_FILE_LOCK_GUARD() {
-	if (T_FILE::enableLock) {
-		file->mutex_.unlock();
+	if (!T_FILE::m_bEnableFileHandleBuffer ||
+		!file->m_bWriteActive ||
+		file->isHandleBufferDisabled()) {
+			if (file->fp != nullptr) {
+#ifdef _WIN32
+				CloseHandle(file->fp);
+#else
+				fclose((FILE*)file->fp);
+#endif
+				file->fp = nullptr;
+			}
 	}
-//	if (!T_FILE::m_bEnableFileHandleBuffer) {
-//		if (!file->m_bWriteActive)
-//		{
-//			if (file->fp != nullptr) {
-//#ifdef _WIN32
-//				CloseHandle(file->fp);
-//#else
-//				fclose((FILE*)file->fp);
-//#endif
-//				file->fp = nullptr;
-//			}
-//		}
-//	}
-	tFileMgr.release_ref(*file);
+	file->release_ref();
+	//all members of this->file must be modified before unlock
+	if (T_FILE::enableLock) {
+		file->fileLock_.unlock();
+	}
 }
 
 bool T_FILE::write(const char* p, int len)
@@ -8375,7 +8367,6 @@ bool T_FILE::writeAt(const char* p, int len, int offset)
 			dataBuf.resize(offset + len);
 			memcpy((void*)(dataBuf.data() + offset), p, len);
 		}
-		m_bWriteActive.store(false);
 		return ret;
 	}
 
@@ -8494,4 +8485,19 @@ size_t T_FILE::getFileSize()
 	size_t len = ftell(f);
 	return len;
 #endif
+}
+
+bool T_FILE::isHandleBufferDisabled() {
+	for (const auto& it : T_FILE::m_vctExcludeFilter) //m_vctExcludeFilter is multi thread protected by file lock
+	{
+		if (path.find(it) != std::string::npos)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void T_FILE::release_ref(){
+	ref_count_--;
 }
