@@ -8151,7 +8151,7 @@ T_FILE* T_FILE_MANAGER::getFile(const std::string& path, bool createIfNotExist) 
 	}
 	//file init, protectd by file lock
 	{
-		T_FILE_LOCK_GUARD g(tFile);
+		tFile->fileLock_.lock();
 		if (tFile->fp == nullptr) {
 			bool exist = DB_FS::fileExist(path);
 			if (exist ||
@@ -8212,6 +8212,7 @@ T_FILE* T_FILE_MANAGER::getFile(const std::string& path, bool createIfNotExist) 
 			}
 		}
 		tFile->last_used_.setNow();
+		tFile->fileLock_.unlock();
 	}
 	
 	return tFile;
