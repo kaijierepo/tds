@@ -489,6 +489,7 @@ public:
 	static int dbFileCtxTTL;
 	static std::mutex poolLock; //keep locks_ thread safe, keep clean and getLock thread safe
 
+	bool open();
 	bool write(const char* p, int len);
 	bool writeAt(const char* p, int len, int offset);
 	bool append(const char* p, int len);
@@ -509,6 +510,7 @@ public:
 	//data list before today is not write active,for histoy query only,does not need file handle buffer
 	//file handle buffer is specificly used for writing performance improvement
 	std::atomic<bool> m_bWriteActive; 
+	std::atomic<bool> m_bCreateIfNotExist;
 	std::mutex fileLock_;
 	DB_TIME last_used_;
 	DB_TIME open_time_;
@@ -522,6 +524,7 @@ public:
 	string dataBuf;
 
 	T_FILE(const string& p) {
+		m_bCreateIfNotExist = true;
 		m_bWriteActive.store(false);
 		path = p;
 		fp = nullptr;

@@ -1523,11 +1523,11 @@ bool TDB::saveToDeListFile(const string& dataListPath, string sDe) {
 		return false;
 
 	T_FILE* tFile = tFileMgr.getFile(dataListPath,true);
+	T_FILE_LOCK_GUARD g(tFile);
+
 	if (tFile->fp == nullptr) {
 		return false;
 	}
-
-	T_FILE_LOCK_GUARD g(tFile);
 	doFileUpgrade(tFile);
 
 	if (tFile->getFileSize() == 0) //first de to save
@@ -8138,83 +8138,16 @@ T_FILE_MANAGER::~T_FILE_MANAGER() {
 T_FILE* T_FILE_MANAGER::getFile(const std::string& path, bool createIfNotExist) {
 	//get file from pool,protected by pool lock
 	T_FILE* tFile = nullptr;
-	{
-		std::lock_guard<std::mutex> lock(T_FILE::poolLock);
-		auto it = mapFiles_.find(path);
-		if (it == mapFiles_.end()) {
-			tFile = new T_FILE(path);
-			mapFiles_[path] = tFile;
-		}
-		else {
-			tFile = it->second;
-		}
+	std::lock_guard<std::mutex> lock(T_FILE::poolLock);
+	auto it = mapFiles_.find(path);
+	if (it == mapFiles_.end()) {
+		tFile = new T_FILE(path);
+		tFile->m_bCreateIfNotExist = createIfNotExist;
+		mapFiles_[path] = tFile;
 	}
-	//file init, protectd by file lock
-	{
-		tFile->fileLock_.lock();
-		if (tFile->fp == nullptr) {
-			bool exist = DB_FS::fileExist(path);
-			if (exist ||
-				(!exist && createIfNotExist)) {
-
-				if (!exist) {
-					DB_FS::createFolderOfPath(path);
-				}
-#ifdef _WIN32
-				wstring filename = DB_STR::utf8_to_utf16(path);
-				//pl->fp = _wfopen(filename.c_str(), L"rb+");
-				tFile->fp = CreateFileW(
-					filename.c_str(),
-					GENERIC_READ | GENERIC_WRITE,
-					FILE_SHARE_READ | FILE_SHARE_WRITE,  // 
-					NULL,
-					OPEN_ALWAYS,  // if file not exist   , create it
-					FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS,
-					NULL
-				);
-
-				if (tFile->fp == INVALID_HANDLE_VALUE) {
-					tFile->fp = nullptr;
-				}
-				else {
-					tFile->open_time_.setNow();
-				}
-#elif defined WIN_CFILE
-				FILE* f = nullptr;
-				wstring wpath = DB_STR::utf8_to_utf16(path);
-				f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);// read,write at any offset
-				if (!f)
-					_wfopen_s(&f, wpath.c_str(), L"wb+");
-				if (f) {
-					fclose(f);
-					f = nullptr;
-					f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);
-				}
-				if (f) {
-					tFile->open_time_.setNow();
-					tFile->fp = f;
-				}
-#else
-				FILE* f = nullptr;
-				f = fopen(path.c_str(), "rb+");
-				if (!f)
-					f = fopen(path.c_str(), "wb+");
-				if (f) {
-					fclose(f);
-					f = nullptr;
-					fopen(path.c_str(), "rb+");
-				}
-				if (f) {
-					tFile->open_time_.setNow();
-					tFile->fp = f;
-				}
-#endif
-			}
-		}
-		tFile->last_used_.setNow();
-		tFile->fileLock_.unlock();
+	else {
+		tFile = it->second;
 	}
-	
 	return tFile;
 }
 
@@ -8266,6 +8199,7 @@ T_FILE_LOCK_GUARD::T_FILE_LOCK_GUARD(T_FILE* ptf) {
 	}
 	//all members of this->file must be modified after lock
 	file = ptf;
+	file->open();
 	file->add_ref();
 }
 
@@ -8287,6 +8221,69 @@ T_FILE_LOCK_GUARD::~T_FILE_LOCK_GUARD() {
 	if (T_FILE::enableLock) {
 		file->fileLock_.unlock();
 	}
+}
+
+bool T_FILE::open() {
+	if (fp == nullptr) {
+		bool exist = DB_FS::fileExist(path);
+		if (exist ||
+			(!exist && m_bCreateIfNotExist)) {
+
+			if (!exist) {
+				DB_FS::createFolderOfPath(path);
+			}
+#ifdef _WIN32
+			wstring filename = DB_STR::utf8_to_utf16(path);
+			fp = CreateFileW(
+				filename.c_str(),
+				GENERIC_READ | GENERIC_WRITE,
+				FILE_SHARE_READ | FILE_SHARE_WRITE,  // 
+				NULL,
+				OPEN_ALWAYS,  // if file not exist   , create it
+				FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS,
+				NULL
+			);
+
+			if (fp == INVALID_HANDLE_VALUE) {
+				fp = nullptr;
+			}
+			else {
+				open_time_.setNow();
+			}
+#elif defined WIN_CFILE
+			FILE* f = nullptr;
+			wstring wpath = DB_STR::utf8_to_utf16(path);
+			f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);// read,write at any offset
+			if (!f)
+				_wfopen_s(&f, wpath.c_str(), L"wb+");
+			if (f) {
+				fclose(f);
+				f = nullptr;
+				f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);
+			}
+			if (f) {
+				tFile->open_time_.setNow();
+				tFile->fp = f;
+			}
+#else
+			FILE* f = nullptr;
+			f = fopen(path.c_str(), "rb+");
+			if (!f)
+				f = fopen(path.c_str(), "wb+");
+			if (f) {
+				fclose(f);
+				f = nullptr;
+				fopen(path.c_str(), "rb+");
+			}
+			if (f) {
+				tFile->open_time_.setNow();
+				tFile->fp = f;
+			}
+#endif
+		}
+	}
+	last_used_.setNow();
+	return fp != nullptr;
 }
 
 bool T_FILE::write(const char* p, int len)
