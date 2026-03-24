@@ -229,14 +229,13 @@ void StatusServer::cycleAcq_srvStatus() {
 				
 				for (auto& iter : m_netStatus) {
 					string portId = str::format("port_%d_send", iter.first);
-					ssdb->Insert(portId, dbt, iter.second->send);
+					ssdb->Insert(portId, iter.second->send.load(), &dbt);
 					iter.second->send = 0;
 					portId = str::format("port_%d_recv", iter.first);
-					ssdb->Insert(portId, dbt, iter.second->recv);
+					ssdb->Insert(portId, iter.second->recv.load(), &dbt);
 					iter.second->recv = 0;
 				}
-
-				ssdb->Insert("webReqCount", dbt, m_srvStatus.webReqCount);
+				ssdb->Insert("webReqCount", m_srvStatus.webReqCount.load(), &dbt);
 				m_srvStatus.webReqCount = 0;
 			}
 		}

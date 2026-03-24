@@ -2349,7 +2349,7 @@ void ioDev::setOffline(bool setByPing/* = false*/,string reasonDesc) {
 			if (dbOS) {
 				DB_TIME dbt;
 				dbt.setNow();
-				dbOS->Insert(m_strTagBind, dbt, false);
+				dbOS->Insert(m_strTagBind, false, &dbt);
 			}
 		}
 
