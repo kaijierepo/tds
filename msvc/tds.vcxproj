@@ -631,7 +631,6 @@
     <ClCompile Include="..\src\func_module\csvTable.cpp" />
     <ClCompile Include="..\src\func_module\dumpCatch.cpp" />
     <ClCompile Include="..\src\func_module\fileUploadSrv.cpp" />
-    <ClCompile Include="..\src\func_module\licence.cpp" />
     <ClCompile Include="..\src\func_module\logServer.cpp" />
     <ClCompile Include="..\src\func_module\statusServer.cpp" />
     <ClCompile Include="..\src\func_module\taskServer.cpp" />

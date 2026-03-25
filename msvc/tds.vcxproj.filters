@@ -247,7 +247,6 @@
     <ClCompile Include="..\src\video\rtspRelay.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\func_module\licence.cpp" />
     <ClCompile Include="..\src\common\bignum.c">
       <Filter>common</Filter>
     </ClCompile>
