@@ -61,13 +61,9 @@ namespace stdfs = std::filesystem;
 
 
 TDB db;
-T_FILE_MANAGER tFileMgr;
-std::mutex T_FILE::poolLock;
-bool T_FILE::enableLock = true;
-bool T_FILE::m_bEnableFileHandleBuffer = false;
-bool T_FILE::m_bEnableFileDataBuffer = false;
-int T_FILE::dbFileCtxTTL = 5 * 60;
-std::vector<std::string> T_FILE::m_vctExcludeFilter;
+
+bool DB_LOCK_GUARD::enable = true;
+int DB_LOCK_POOL::lockTTL = 30 * 60;
 
 #include <random>
 #include <cstdio>
@@ -529,69 +525,53 @@ namespace DB_TAG {
 
 namespace DB_FS {
 	bool readFile(string path, string& data) {
-		
-#ifdef _WIN32
-		//_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"rb");
-		wstring wpath = DB_STR::utf8_to_utf16(path);
-
-		HANDLE hFile = CreateFileW(
-			wpath.c_str(),
-			GENERIC_READ,
-			FILE_SHARE_READ | FILE_SHARE_WRITE,
-			NULL,
-			OPEN_EXISTING,
-			FILE_ATTRIBUTE_NORMAL,
-			NULL
-		);
-
-		if (hFile == INVALID_HANDLE_VALUE) {
-			DWORD dwError = GetLastError();
-			if (db.m_fpDBLog) {
-				string info = DB_STR::format("readFile failed,path=%s,errorCode=%d", path.c_str(), dwError);
-				db.m_fpDBLog(info);
-			}
-			return false;
-		}
-
-		LARGE_INTEGER fileSize;
-		if (!GetFileSizeEx(hFile, &fileSize)) {
-			CloseHandle(hFile);
-			return false;
-		}
-
-		if (fileSize.QuadPart > MAXDWORD) {
-			CloseHandle(hFile);
-			return false;
-		}
-
-		DWORD bytesToRead = static_cast<DWORD>(fileSize.QuadPart);
-		DWORD bytesRead = 0;
-
-		data.resize(bytesToRead);
-
-		if (!ReadFile(hFile, &data[0], bytesToRead, &bytesRead, NULL) ||
-			bytesRead != bytesToRead) {
-			CloseHandle(hFile);
-			return false;
-		}
-
-		CloseHandle(hFile);
-		return true;
-#else
 		FILE* fp = nullptr;
-		fp = fopen(path.c_str(), "rb");
+		wstring wPath = DB_STR::utf8_to_utf16(path);
+		DB_LOCK_GUARD dbLock(path);
 
-		if (fp)
-		{
+#ifdef _WIN32
+		_wfopen_s(&fp, wPath.c_str(), L"rb");
+#else
+		fp = fopen(path.c_str(), "rb");
+#endif
+
+		if (fp) {
 			fseek(fp, 0, SEEK_END);
+
 			long len = ftell(fp);
-			data.resize(len);
-			fseek(fp, 0, SEEK_SET);
-			fread((void*)data.data(), 1, len, fp);
+			if (len > 0) {
+				data.resize(len);
+				char* pdata = (char*)data.data();
+
+				fseek(fp, 0, SEEK_SET);
+				fread(pdata, 1, len, fp);
+			}
+
 			fclose(fp);
 			return true;
 		}
+		return false;
+	}
+
+	bool readFile(string path, char*& pData, int& len)
+	{
+		FILE* fp = nullptr;
+		DB_LOCK_GUARD dbLock(path);
+#ifdef _WIN32
+		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"rb");
+#else
+		fp = fopen(path.c_str(), "rb");
 #endif
+		if (fp)
+		{
+			fseek(fp, 0, SEEK_END);
+			len = ftell(fp);
+			pData = new char[len];
+			fseek(fp, 0, SEEK_SET);
+			fread(pData, 1, len, fp);
+			fclose(fp);
+			return true;
+		}
 
 		return false;
 	}
@@ -620,6 +600,7 @@ namespace DB_FS {
 			createFolderOfPath(path);
 
 		FILE* fp = nullptr;
+		DB_LOCK_GUARD dbLock(path);
 #ifdef _WIN32
 		wstring wpath = DB_STR::utf8_to_utf16(path);
 		_wfopen_s(&fp, wpath.c_str(), L"wb");
@@ -655,14 +636,15 @@ namespace DB_FS {
 		createFolderOfPath(path);
 
 		FILE* fp = nullptr;
+		DB_LOCK_GUARD dbLock(path);
 #ifdef _WIN32
-		wstring wpath = DB_STR::utf8_to_utf16(path);
-		_wfopen_s(&fp, wpath.c_str(), L"ab+");
+		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"a");
 #else
-		fp = fopen(path.c_str(), "ab+");
+		fp = fopen(path.c_str(), "wb");
 #endif
 		if (fp)
 		{
+			fseek(fp, 0, SEEK_END);
 			fwrite(data, 1, len, fp);
 			fclose(fp);
 			return true;
@@ -680,33 +662,65 @@ namespace DB_FS {
 		return stdfs::remove(DB_STR::utf8_to_utf16(path));
 	}
 
-	//delete dir_path(include itself) and children(include subdirs and files)
-	bool deleteDir(string& dirPath) {
+	//delete children(include subdirs and files, not include dirPath itself
+	void DeleteDirectoryContents(const std::string& dirPath) {
 #ifdef _WIN32
-		stdfs::path path = DB_STR::utf8_to_utf16(dirPath);
+		WIN32_FIND_DATA findFileData;
+		HANDLE hFind;
+
+		std::string searchPath = dirPath + "\\*";
+		hFind = FindFirstFile(searchPath.c_str(), &findFileData);
+		if (hFind == INVALID_HANDLE_VALUE) {
+			std::cerr << "FindFirstFile failed: " << GetLastError() << std::endl;
+			return;
+		}
+
+		do {
+			const std::string fileName = findFileData.cFileName;
+
+			// escape  "." , ".."
+			if (fileName != "." && fileName != "..") {
+				std::string fullPath = dirPath + "\\" + fileName;
+
+				if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+					// delete subdirs
+					DeleteDirectoryContents(fullPath);
+					// delete empty dirs
+					RemoveDirectory(fullPath.c_str());
+				}
+				else {
+					// delete file
+					if (DeleteFile(fullPath.c_str())) {
+						std::cout << "Deleted file: " << fullPath << std::endl;
+					}
+					else {
+						std::cerr << "Failed to delete file: " << fullPath << ". Error: " << GetLastError() << std::endl;
+					}
+				}
+			}
+		} while (FindNextFile(hFind, &findFileData) != 0);
+
+		FindClose(hFind);
 #else
-		stdfs::path path = dirPath;
+		//linux
+		return;
 #endif
-		try {
-			if (!stdfs::exists(path)) {
-				std::cout << "delete dir fail,dir not exist: " << path << std::endl;
-				return true;
-			}
+	}
 
-			if (!stdfs::is_directory(path)) {
-				std::cout << "delete dir fail,not a directory: " << path << std::endl;
-				return false;
-			}
-
-			std::uintmax_t count = stdfs::remove_all(path); //remove recursive
-			std::cout << "file count " << count << "deleted" << std::endl;
-			return count > 0;
+	//delete dir_path(include itself) and children(include subdirs and files)
+	void deleteDirectory(string& dirPath) {
+#ifdef _WIN32
+		DeleteDirectoryContents(dirPath);
+		if (RemoveDirectory(dirPath.c_str())) {
+			std::cout << "Deleted directory: " << dirPath << std::endl;
 		}
-		catch (const stdfs::filesystem_error& e) {
-			std::cerr << "fs error: " << e.what()
-				<< " error code: " << e.code() << std::endl;
-			return false;
+		else {
+			std::cerr << "Failed to delete directory: " << dirPath << ". Error: " << GetLastError() << std::endl;
 		}
+#else
+		//linux
+		return;
+#endif
 	}
 
 	bool copyFile(const std::string& src, const std::string& dest) {
@@ -1089,13 +1103,43 @@ bool shouldErase(const std::pair<string, FILE_BUFF*>& pair) {
 	return false;
 }
 
+void bufferManageThread(TDB* p) {
+	DB_TIME lastCheck;
+	lastCheck.setNow();
+	while (1) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		if (TIME_OPT::calcTimePassSecond(lastCheck) < p->m_bufferTTL / 2) {
+			continue;
+		}
+
+		if (p->m_bEnableFsBuff) {
+			p->m_FsBuff.m_csFsb.lock();
+			std::map<string, FILE_BUFF*> mapTmp;
+			for (auto& iter : p->m_FsBuff.m_mapFsBuff) {
+				int bufferredTime = TIME_OPT::calcTimePassSecond(iter.second->lastActive);
+				if (bufferredTime < p->m_bufferTTL) {
+					mapTmp.insert(iter);
+				}
+				else {
+					delete iter.second;
+				}
+			}
+			p->m_FsBuff.m_mapFsBuff = mapTmp;
+			p->m_FsBuff.m_csFsb.unlock();
+		}
+	}
+}
+
 TDB::TDB()
 {
 	m_getTagsByTagSelector = nullptr;
 	m_isGbk = false;
 	m_timeUnit = BY_DAY;
-	m_bAutoUpgrade = true; 
-	m_fpDBLog = nullptr;
+	m_bEnableFsBuff = false;
+	m_bAutoUpgrade = true;
+	m_bufferTTL = 3 * 3600;
+	thread t(bufferManageThread, this);
+	t.detach();
 }
 
 string TDB::getPath_deFile(string strTag, DB_TIME stTime)
@@ -1398,7 +1442,7 @@ bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 			size_t max = 0;
 			yyjson_val* item;
 			yyjson_arr_foreach(yyv_file, idx, max, item) {
-				string url = saveToDeFile(item, deFilesFolder, stTime, fileType);
+				string url = saveDEFile(item, deFilesFolder, stTime, fileType);
 				url = url.substr(m_path.length(), url.length() - m_path.length());
 				fileUrl.push_back(url);
 			}
@@ -1406,7 +1450,7 @@ bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 		//save to a de file in the same folder as deList file
 		else if (yyjson_is_obj(yyv_file)) {
 			//Data element files: curves, various custom JSON (such as inspection records), data element related files: images
-			saveToDeFile(yyv_file, deListFolderPath, stTime, fileType);
+			saveDEFile(yyv_file, deListFolderPath, stTime, fileType);
 		}
 	}
 
@@ -1444,12 +1488,12 @@ bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 		}
 	}
 
-	bool ret = saveToDeListFile(dataListPath, yymDe);
+	saveDeToDataListFile(dataListPath, yymDe);
 
 	yyjson_mut_doc_free(mdoc);
 	yyjson_doc_free(doc);
 
-	return ret;
+	return true;
 }
 
 struct DE_TEMP {
@@ -1458,94 +1502,107 @@ struct DE_TEMP {
 
 };
 
-bool TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
-{
-	string folderPath = getPath_dataFolder(strTag, stTime);
-	string dlPath = folderPath + "/" + m_dbFmt.deListName;
-	string sDe = "{\n\"time\":\"" + stTime.toStr() + "\",\n\"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}";
-	return saveToDeListFile(dlPath, sDe);
-}
+bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
+	if (m_bEnableFsBuff) {
+		bool bAppend = false;
+		m_FsBuff.m_csFsb.lock();
+		std::map<string, FILE_BUFF*>::iterator iter = m_FsBuff.m_mapFsBuff.find(dataListPath);
+		if (iter != m_FsBuff.m_mapFsBuff.end()) {
+			string& fileData = iter->second->data;  // can be an empty file ,length is 0
 
-bool TDB::doFileUpgrade(T_FILE* file) {
-	// auto upgrade compatible format to standard format
-	size_t len = file->getFileSize();
-	if (len > 0 && m_bAutoUpgrade) {
-		// check first character is '{'
-		char c = 0;
-		file->read(&c, 0, 1);
+			string strDe;
 
-		if (c == '{') {
-			// read all data
-			char* p = (char*)malloc(len + 1);
-			file->read(p, 0, len);
-			p[len] = 0;
+			size_t len = 0;
+			char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+			if (pDe) {
+				strDe = pDe;
+				free(pDe);
+			}
 
-			// parse JSON
-			yyjson_doc* doc = yyjson_read(p, len, 0);
-			free(p);
-			bool bConvertOld = false;
-
-			if (doc) {
-				// convert
-				yyjson_mut_doc* new_doc = convertJsonFormat(doc);
-
-				// out
-				if (new_doc) {
-					size_t json_len = 0;
-					char* json_str = yyjson_mut_write(new_doc, YYJSON_WRITE_PRETTY, &json_len);
-					if (json_str) {
-						file->write(json_str, (int)(json_len - 1));
-						free(json_str);
-					}
-					yyjson_mut_doc_free(new_doc);
-				}
-				yyjson_doc_free(doc);
+			if (fileData.size() > 0) {
+				fileData.resize(fileData.size() - 1);
+				fileData += ",";
+				fileData += strDe;
+				fileData += "]";
+			}
+			else {
+				fileData = strDe;
+				fileData = "[" + fileData + "]";
 			}
 		}
+		m_FsBuff.m_csFsb.unlock();
 	}
-	return true;
-}
 
 
-bool TDB::saveToDeListFile(const string& dataListPath, yyjson_mut_val* yymDe) {
-	string sDe;
-	char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, nullptr);
-	if (pDe) {
-		sDe = pDe;
-		free(pDe);
-	}
-	
-	return saveToDeListFile(dataListPath, sDe);
-}
-
-bool TDB::saveToDeListFile(const string& dataListPath, string sDe) {
-	if (!m_enableDB)
-		return false;
-
-	T_FILE* tFile = tFileMgr.getFile(dataListPath,true);
-	T_FILE_LOCK_GUARD g(tFile);
-
-	if (tFile->fp == nullptr) {
-		return false;
-	}
-	doFileUpgrade(tFile);
-
-	if (tFile->getFileSize() == 0) //first de to save
+	if (!fileExist(dataListPath.c_str())) //first de to save
 	{
-		sDe = "[" + sDe + "]";
-		if (!tFile->writeAt(sDe.c_str(), sDe.length(), 0))
+		DB_FS::createFolderOfPath(dataListPath);
+
+		string fileData;
+
+		size_t len = 0;
+		char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+		if (pDe) {
+			fileData = pDe;
+			free(pDe);
+		}
+
+		fileData = "[" + fileData + "]";
+		if (!DB_FS::writeFile(dataListPath, (unsigned char*)fileData.c_str(), fileData.length()))
 		{
-			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), sDe.c_str());
-			return false;
+			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), fileData.c_str());
 		}
 	}
 	else
 	{
-		sDe = "," + sDe + "]";
-		if (!tFile->writeAt(sDe.c_str(), sDe.length(), tFile->getFileSize() - 1))
+		DB_LOCK_GUARD dbLock(dataListPath);
+#ifdef _WIN32
+		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dataListPath).c_str(), L"rb+");
+#else
+		//FILE* fp = fopen(dlPath.c_str(), "rb+");
+		FILE* fp = fopen(dataListPath.c_str(), "rb+");
+#endif
+
+		if (fp)
 		{
-			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), sDe.c_str());
-			return false;
+			fseek(fp, 0L, SEEK_END);
+			long len = ftell(fp);
+
+			if (len > 0)
+			{
+				fseek(fp, len - 1, SEEK_SET);
+
+				std::string d = ",";
+
+				string str;
+
+				size_t len = 0;
+				char* s = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+				if (s) {
+					str = s;
+					free(s);
+				}
+
+				d += str;
+				d += "]";
+
+				fwrite(d.c_str(), 1, d.length(), fp);
+			}
+			else
+			{
+				string fileData;
+
+				size_t len = 0;
+				char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+				if (pDe) {
+					fileData = pDe;
+					free(pDe);
+				}
+
+				fileData = "[" + fileData + "]";
+				fwrite(fileData.c_str(), 1, fileData.length(), fp);
+			}
+			fclose(fp);
 		}
 	}
 
@@ -3166,7 +3223,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 						dbtime.fromStr(time);
 						DB_FILE dbfile(dbtime, tag, this);
 						dbfile.deType = "curve";
-						if (dbfile.loadFile(false))
+						if (dbfile.loadFile())
 						{
 							yyjson_val* yyv_curve = dbfile.root;
 							yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
@@ -4096,7 +4153,7 @@ bool TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time)
 
 	string dataListPath;
 	dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
-	saveToDeListFile(dataListPath, yymDe);
+	saveDeToDataListFile(dataListPath, yymDe);
 
 	yyjson_mut_doc_free(mdoc);
 	yyjson_doc_free(doc);
@@ -4966,64 +5023,35 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language)
 {
 	bool handled = true;
-	if (method == "db.getFileCtx" || method == "db.getFileContext") {
-		int total = 0;
-		int open = 0;
-		int close = 0;
-		size_t bufDataSize = 0;
-		std::lock_guard<std::mutex> lock(T_FILE::poolLock);
+	if (method == "db.getLock") {
+		DB_LOCK_POOL& lp = DB_LOCK_POOL::instance();
+		std::lock_guard<std::mutex> lock(lp.pool_mutex_);
 		rlt += "[";
-		for (auto it = tFileMgr.mapFiles_.begin(); it != tFileMgr.mapFiles_.end();it++) {
-			T_FILE* file = it->second;
+		for (auto it = lp.locks_.begin(); it != lp.locks_.end();it++) {
 			if (rlt != "[") {
 				rlt += ",";
 			}
-			rlt += "{\"path\":\"" + file->path + "\"" +
-				",\"isOpen\":" + (file->fp!=nullptr?"true":"false") +
-				",\"refCount\":" + to_string(file->ref_count_) + 
-				",\"lastUse\":\"" + file->last_used_.toStr() + "\"" +
-				",\"openTime\":\"" + file->open_time_.toStr()+ "\""+
-				",\"readCount\":" + to_string(file->readCount) +
-				",\"writeCount\":" + to_string(file->writeCount) +
-				",\"readBytes\":" + to_string(file->readBytes) +
-				",\"writeBytes\":" + to_string(file->writeBytes) +
-				"}";
-			total++;
-			if (file->fp) {
-				open++;
-			}
-			else {
-				close++;
-			}
-			bufDataSize += file->dataBuf.size();
+			rlt += "{\"path\":\"" + it->first + "\",\"refCount\":" + to_string(it->second.ref_count_) + ",\"lastUse\":\"" + it->second.last_used_.toStr() + "\"}";
 		}
 		rlt += "]";
-		queryInfo = JSON_STR_VAL(
-			"total:" + to_string(total) + 
-			",open:" + to_string(open) + 
-			",close:" + to_string(close) +
-			",ttl:" + to_string(T_FILE::dbFileCtxTTL) + 
-			",enableLock:" + to_string(T_FILE::enableLock ?1:0) +
-			",enableHandleBuf:" + to_string(T_FILE::m_bEnableFileHandleBuffer ? 1 : 0) +
-			",enableDataBuf:" + to_string(T_FILE::m_bEnableFileDataBuffer ? 1 : 0) +
-			",dataBufSize:" + to_string(bufDataSize)
-		);
 	}
 	else if (method == "db.getConf") {
 		yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
 		yyjson_mut_val* yyv_conf = yyjson_mut_obj(mdoc);
-		yyjson_mut_obj_add_val(mdoc, yyv_conf, "dbFileCtxTTL", yyjson_mut_int(mdoc, T_FILE::dbFileCtxTTL));
+		yyjson_mut_obj_add_val(mdoc, yyv_conf, "lockTTL", yyjson_mut_int(mdoc,DB_LOCK_POOL::lockTTL));
 		yyjson_mut_obj_add_val(mdoc, yyv_conf, "dataPath", yyjson_mut_str(mdoc, db.m_path.c_str()));
         yyjson_mut_obj_add_val(mdoc, yyv_conf, "confPath", yyjson_mut_str(mdoc, db.m_confPath.c_str()));
-        yyjson_mut_obj_add_val(mdoc, yyv_conf, "enableFileLock", yyjson_mut_bool(mdoc, T_FILE::enableLock));
+        yyjson_mut_obj_add_val(mdoc, yyv_conf, "enableFileLock", yyjson_mut_bool(mdoc, DB_LOCK_GUARD::enable));
 		char* p = yyjson_mut_val_write(yyv_conf,0,nullptr);
 		rlt = p;
 		free(p);
 		yyjson_mut_doc_free(mdoc);
 	}
 	else if (method == "db.setConf") {
-		string rlt, err;
-		rpc_db_setConf(params, rlt, err);
+		yyjson_val* yyv = yyjson_obj_get(params, "lockTTL");
+		if (yyv) {
+			DB_LOCK_POOL::lockTTL = yyjson_get_int(yyv);
+		}
 		rlt = DB_OK;
 	}
 	else if (method.find("db.") != string::npos) {
@@ -5902,6 +5930,121 @@ bool TDB::Insert(string strTag, DB_TIME stTime, int& iVal)
 	return InsertValJsonStr(strTag, stTime, s);
 }
 
+bool TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
+{
+	if (!m_enableDB)
+		return false;
+	string folderPath = getPath_dataFolder(strTag, stTime);
+	string dlPath = folderPath + "/" + m_dbFmt.deListName;
+	if (!folderExist(folderPath))
+		DB_FS::createFolderOfPath(folderPath.c_str());
+
+
+
+	if (m_bEnableFsBuff) {
+		bool bAppend = false;
+		m_FsBuff.m_csFsb.lock();
+		std::map<string, FILE_BUFF*>::iterator iter = m_FsBuff.m_mapFsBuff.find(dlPath);
+		if (iter != m_FsBuff.m_mapFsBuff.end()) {
+			string& fileData = iter->second->data;  // can be an empty file ,length is 0
+			if (fileData.size() > 0) {
+				fileData.resize(fileData.size() - 1);
+				fileData += ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";;
+			}
+			else {
+				fileData = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
+			}
+		}
+		m_FsBuff.m_csFsb.unlock();
+	}
+
+	bool bAppend = false;
+	if (fileExist(dlPath))
+	{
+		string appendData = ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";
+		DB_LOCK_GUARD dbLock(dlPath);
+#ifdef _WIN32
+		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
+#else
+		FILE* fp = fopen(dlPath.c_str(), "rb+");
+#endif
+		if (fp)
+		{
+			fseek(fp, 0L, SEEK_END);
+			long len = ftell(fp);
+
+			//auto  upgrade compatiable format to standard format
+			if (len > 0 && m_bAutoUpgrade) {
+				//check first charactor is '{'
+				fseek(fp, 0L, SEEK_SET);
+				char c;
+				fread(&c, 1, 1, fp);
+				if (c == '{')
+				{
+					//read all data
+					char* p = (char*)malloc(len + 1);
+					fread(p + 1, 1, len - 1, fp);
+					p[0] = c;
+					p[len] = 0;
+#ifdef _WIN32
+					_chsize_s(_fileno(fp), 0);
+#else
+					ftruncate(fileno(fp), 0);
+#endif
+					fseek(fp, 0L, SEEK_SET);
+					
+					// parse JSON
+					yyjson_doc* doc = yyjson_read(p, len, 0);
+					free(p);
+					bool bConvertOld = false;
+					if (doc)
+					{
+						// convert
+						yyjson_mut_doc* new_doc = convertJsonFormat(doc);
+
+						// out
+						if (new_doc) {
+							size_t json_len = 0;
+							char* json_str = yyjson_mut_write(new_doc, YYJSON_WRITE_PRETTY, &json_len);
+							if (json_str) {
+								fwrite(json_str, 1, json_len - 1, fp);
+								bConvertOld = true;
+								free(json_str);
+							}
+
+							yyjson_mut_doc_free(new_doc);
+						}
+
+						yyjson_doc_free(doc);
+					}
+					if (!bConvertOld)
+						fwrite("[", 1, 1, fp);
+					fwrite(appendData.c_str(), 1, appendData.length(), fp);
+					bAppend = true; // end write
+					len = 0; // end write
+				}
+			}
+
+
+			if (len > 0)
+			{
+				fseek(fp, len - 1, SEEK_SET);  //overwrite last ] charactor
+				fwrite(appendData.c_str(), 1, appendData.length(), fp);
+				bAppend = true;
+			}
+			fclose(fp);
+		}
+	}
+	if (!bAppend) {
+		string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
+		if (!DB_FS::writeFile(dlPath, (unsigned char*)s.c_str(), s.length()))
+		{
+			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s.c_str());
+		}
+	}
+	return true;
+}
+
 bool TDB::Insert(string strTag, DB_TIME stTime, long long& iVal)
 {
 	string s = formatStr("%d", iVal);
@@ -6335,7 +6478,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	if (vecToBeUpdatedFile.size() > 0) {
 		//refresh the entire files dir  or one file ,  update the file urls
 		if (theDir != "") {
-			DB_FS::deleteDir(theDir);
+			DB_FS::deleteDirectory(theDir);
 			for (auto one : vecToBeUpdatedFile) {
 				string p;
 				if (yyjson_is_str(one.yyFileToUpdate))
@@ -6366,7 +6509,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	}
 	else {
 		if (bEmptyAry) {
-			DB_FS::deleteDir(theDir);
+			DB_FS::deleteDirectory(theDir);
 		}
 	}
 
@@ -6478,11 +6621,28 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_setConf(yyjson_val* params, string& rlt, string& err) {
-	yyjson_val* yyv = yyjson_obj_get(params, "dbFileCtxTTL");
-	if (yyv) {
-		T_FILE::dbFileCtxTTL = yyjson_get_int(yyv);
+void TDB::rpc_db_getBufferStatus(string& rlt, string& err) {
+	m_FsBuff.m_csFsb.lock();
+	size_t fileCount = m_FsBuff.m_mapFsBuff.size();
+	size_t bufferSize = 0;
+	for (auto& iter : m_FsBuff.m_mapFsBuff) {
+		bufferSize += iter.second->data.length();
 	}
+	rlt = DB_STR::format("{\"fileCount\":%d,\"bufferSize\":%d,\"bufferTTL\":%d}", fileCount, bufferSize, m_bufferTTL);
+	m_FsBuff.m_csFsb.unlock();
+	return;
+}
+
+
+void TDB::rpc_db_setConf(string& sParams, string& rlt, string& err) {
+	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+
+	yyjson_val* yyv_buffer_ttl = yyjson_obj_get(yyv_params, "bufferTTL");
+	if (yyv_buffer_ttl) {
+		m_bufferTTL = yyjson_get_int(yyv_buffer_ttl);
+	}
+	yyjson_doc_free(doc);
 }
 
 void TDB::rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
@@ -6599,7 +6759,7 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 				strPath = strPath + "/" + stTime.toStampFull() + "/";
 			}
 ;
-			DB_FS::deleteDir(strPath);
+			DB_FS::deleteDirectory(strPath);
 		}
 	}
 
@@ -6628,7 +6788,7 @@ bool TDB::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCo
 	return false;
 }
 
-string TDB::saveToDeFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, string& type)
+string TDB::saveDEFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, string& type)
 {
 	string deFilePath = "";
 
@@ -6723,6 +6883,15 @@ bool TDB::Open_gbk(string strDBUrl, fp_getTagsByTagSelector f, string name)
 	strDBUrl = DB_STR::gb_to_utf8(strDBUrl);
 	m_isGbk = true;
 	return Open(strDBUrl, f, name);
+}
+
+bool TDB::setBufferTTL(string bufferTTL)
+{
+	int timeLen = TIME_OPT::timeLen2seconds(bufferTTL);
+	if (timeLen != 0) {
+		m_bufferTTL = timeLen;
+	}
+	return false;
 }
 
 bool TDB::parseDESelector(const string& sParams, DE_SELECTOR& deSelector, string& err)
@@ -6900,7 +7069,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			string dataListPath;
 			string deListFolderPath = getPath_dataFolder(tag, stTime);
 			dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
-			saveToDeListFile(dataListPath, yymDe);
+			saveDeToDataListFile(dataListPath, yymDe);
 
 			yyjson_mut_doc_free(mdoc);
 			yyjson_doc_free(doc);
@@ -6916,7 +7085,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			string dataListPath;
 			string deListFolderPath = getPath_dataFolder(tag, stTime);
 			dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
-			saveToDeListFile(dataListPath, mut_root);
+			saveDeToDataListFile(dataListPath, mut_root);
 
 			yyjson_mut_doc_free(mut_doc);
 		}
@@ -8037,21 +8206,18 @@ bool DB_FILE::isDataList() {
 	return false;
 }
 
-bool DB_FILE::loadFile(bool useTFile) {
+bool DB_FILE::loadFile() {
 	//time.fromUnixTime(ttTime);
 
-ymd = time.toYMD();
-path = pOwnerDB->getPath_dbFile(tag, time, deType);
+	ymd = time.toYMD();
+	path = pOwnerDB->getPath_dbFile(tag, time, deType);
 
-if (useTFile) {
-	T_FILE* tFile = tFileMgr.getFile(path);
-	T_FILE_LOCK_GUARD g(tFile);
-	data = "";
-	tFile->read(data);
-}
-else {
-	DB_FS::readFile(path, data);
-}
+	if (pOwnerDB->m_bEnableFsBuff && isDataList()) {
+		pOwnerDB->m_FsBuff.readFile(path, data);
+	}
+	else {
+		DB_FS::readFile(path, data);
+	}
 
 
 if (data == "") {
@@ -8082,6 +8248,39 @@ root = yyjson_doc_get_root(doc);
 return true;
 }
 
+bool FS_BUFF::readFile(string path, string& data)
+{
+	m_csFsb.lock();
+	std::map<string, FILE_BUFF*>::iterator iter = m_mapFsBuff.find(path);
+	if (iter != m_mapFsBuff.end()) {
+		data = iter->second->data;
+		FILE_BUFF* fb = iter->second;
+		fb->lastActive.setNow();
+		m_csFsb.unlock();
+		return true;
+	}
+	m_csFsb.unlock();
+
+	bool bRet = DB_FS::readFile(path, data);
+	if (bRet) {
+		m_csFsb.lock();
+		FILE_BUFF* fb = new FILE_BUFF();
+		fb->data = data;
+		fb->lastActive.setNow();
+		m_mapFsBuff[path] = fb;
+		m_csFsb.unlock();
+	}
+
+	return bRet;
+}
+
+bool FS_BUFF::writeFile(string path, unsigned char* data, size_t len)
+{
+	return false;
+}
+
+
+
 bool IsLeapYear(int wYear)
 {
 	return ((wYear % 4) == 0) && ((wYear % 100) != 0) || ((wYear % 400) == 0);
@@ -8096,406 +8295,4 @@ int DaysInAMonth(int wYear, int wMonth)
 		return MonthDays[wMonth - 1];
 	else
 		return MonthDays[wMonth + 12 - 1];
-}
-
-
-T_FILE_MANAGER::T_FILE_MANAGER() {
-	cleaner_.store(true);
-	std::thread([this]() {
-		while (cleaner_.load()) {
-			int sleeped = 0;
-			while (sleeped < T_FILE::dbFileCtxTTL) {
-				std::this_thread::sleep_for(std::chrono::seconds(1));
-				sleeped++;
-			}
-			std::lock_guard<std::mutex> lock(T_FILE::poolLock);
-			auto now = std::chrono::steady_clock::now();
-			for (auto it = mapFiles_.begin(); it != mapFiles_.end();) {
-				// in pool_mutex_ ,keep ref_count_ check thread safe
-				if (it->second->ref_count_ == 0 && it->second->last_used_.getTimePassSecond() > T_FILE::dbFileCtxTTL) {
-					if (it->second->fp != nullptr) {
-#ifdef _WIN32
-						CloseHandle(it->second->fp);
-#else
-						fclose((FILE*)it->second->fp);
-#endif
-						it->second->fp = nullptr;
-					}
-					delete it->second;
-					it = mapFiles_.erase(it);
-				}
-				else {
-					++it;
-				}
-			}
-		}
-		}).detach();
-}
-T_FILE_MANAGER::~T_FILE_MANAGER() {
-	cleaner_.store(false);
-}
-
-T_FILE* T_FILE_MANAGER::getFile(const std::string& path, bool createIfNotExist) {
-	//get file from pool,protected by pool lock
-	T_FILE* tFile = nullptr;
-	std::lock_guard<std::mutex> lock(T_FILE::poolLock);
-	auto it = mapFiles_.find(path);
-	if (it == mapFiles_.end()) {
-		tFile = new T_FILE(path);
-		tFile->m_bCreateIfNotExist = createIfNotExist;
-		mapFiles_[path] = tFile;
-	}
-	else {
-		tFile = it->second;
-	}
-	return tFile;
-}
-
-bool T_FILE_MANAGER::delete_file(const std::string& path) {
-	std::lock_guard<std::mutex> lockG(T_FILE::poolLock);
-	auto it = mapFiles_.find(path);
-	bool ret = false;
-	bool deleted = false;
-	if (it != mapFiles_.end())
-	{
-		if (T_FILE::enableLock) {
-			it->second->fileLock_.lock();
-		}
-		if (it->second->fp != nullptr)
-		{
-#ifdef _WIN32
-			CloseHandle(it->second->fp);
-			std::wstring filePath = DB_STR::utf8_to_utf16(path);
-			ret = DeleteFileW(filePath.c_str());
-#else
-			fclose((FILE*)it->second->fp);
-			ret = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
-#endif
-			deleted = true;
-		}
-		it->second->fp = nullptr;
-
-		if (T_FILE::enableLock) {
-			it->second->fileLock_.unlock();
-		}
-	}
-
-	if (!deleted)
-	{
-#ifdef _WIN32
-		std::wstring filePath = DB_STR::utf8_to_utf16(path);
-		ret = DeleteFileW(filePath.c_str());
-#else
-		ret = std::filesystem::remove(DB_STR::utf8_to_utf16(path));
-#endif
-	}
-	return ret;
-}
-
-
-T_FILE_LOCK_GUARD::T_FILE_LOCK_GUARD(T_FILE* ptf) {
-	if (T_FILE::enableLock) {
-		ptf->fileLock_.lock();
-	}
-	//all members of this->file must be modified after lock
-	file = ptf;
-	file->open();
-	file->add_ref();
-}
-
-T_FILE_LOCK_GUARD::~T_FILE_LOCK_GUARD() {
-	if (!T_FILE::m_bEnableFileHandleBuffer ||
-		!file->m_bWriteActive ||
-		file->isHandleBufferDisabled()) {
-			if (file->fp != nullptr) {
-#ifdef _WIN32
-				CloseHandle(file->fp);
-#else
-				fclose((FILE*)file->fp);
-#endif
-				file->fp = nullptr;
-			}
-	}
-	file->release_ref();
-	//all members of this->file must be modified before unlock
-	if (T_FILE::enableLock) {
-		file->fileLock_.unlock();
-	}
-}
-
-bool T_FILE::open() {
-	if (fp == nullptr) {
-		bool exist = DB_FS::fileExist(path);
-		if (exist ||
-			(!exist && m_bCreateIfNotExist)) {
-
-			if (!exist) {
-				DB_FS::createFolderOfPath(path);
-			}
-#ifdef _WIN32
-			wstring filename = DB_STR::utf8_to_utf16(path);
-			fp = CreateFileW(
-				filename.c_str(),
-				GENERIC_READ | GENERIC_WRITE,
-				FILE_SHARE_READ | FILE_SHARE_WRITE,  // 
-				NULL,
-				OPEN_ALWAYS,  // if file not exist   , create it
-				FILE_ATTRIBUTE_NORMAL | FILE_FLAG_RANDOM_ACCESS,
-				NULL
-			);
-
-			if (fp == INVALID_HANDLE_VALUE) {
-				fp = nullptr;
-			}
-			else {
-				open_time_.setNow();
-			}
-#elif defined WIN_CFILE
-			FILE* f = nullptr;
-			wstring wpath = DB_STR::utf8_to_utf16(path);
-			f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);// read,write at any offset
-			if (!f)
-				_wfopen_s(&f, wpath.c_str(), L"wb+");
-			if (f) {
-				fclose(f);
-				f = nullptr;
-				f = _wfsopen(wpath.c_str(), L"rb+", _SH_DENYNO);
-			}
-			if (f) {
-				tFile->open_time_.setNow();
-				tFile->fp = f;
-			}
-#else
-			FILE* f = nullptr;
-			f = fopen(path.c_str(), "rb+");
-			if (!f)
-				f = fopen(path.c_str(), "wb+");
-			if (f) {
-				fclose(f);
-				f = nullptr;
-				fopen(path.c_str(), "rb+");
-			}
-			if (f) {
-				tFile->open_time_.setNow();
-				tFile->fp = f;
-			}
-#endif
-		}
-	}
-	last_used_.setNow();
-	return fp != nullptr;
-}
-
-bool T_FILE::write(const char* p, int len)
-{
-	if (fp)
-	{
-		bool ret = false;
-#ifdef _WIN32
-		LARGE_INTEGER li;
-		li.QuadPart = 0;
-		SetFilePointerEx(fp, li, NULL, FILE_BEGIN);
-
-		// write data
-		DWORD bytesWritten;
-		ret = WriteFile(fp, p, len, &bytesWritten, NULL)?true:false;
-
-		SetEndOfFile(fp);
-#else
-		FILE* f = (FILE*)fp;
-		fp = nullptr;
-		fclose(f);
-		wstring wpath = DB_STR::utf8_to_utf16(path);
-#ifdef _WIN32
-		_wfopen_s(&f, wpath.c_str(), L"w");
-#else
-		f = fopen(path.c_str(), "w");
-#endif
-		fwrite(p, 1, len, (FILE*)f);
-		fclose(f);
-		ret = true;
-#endif
-		writeCount++;
-		writeBytes += len;
-		if (ret && T_FILE::m_bEnableFileDataBuffer) {
-			dataBuf.resize(len);
-			memcpy((void*)dataBuf.data(), p, len);
-		}
-		return ret;
-	}
-
-	return false;
-}
-
-bool T_FILE::writeAt(const char* p, int len, int offset)
-{
-	if (fp)
-	{
-		bool ret = false;
-		m_bWriteActive.store(true);
-#ifdef _WIN32
-		LARGE_INTEGER li;
-		li.QuadPart = offset;
-		SetFilePointerEx(fp, li, NULL, FILE_BEGIN);
-
-		// write data
-		DWORD bytesWritten;
-		ret = WriteFile(fp, p, len, &bytesWritten, NULL)?true:false;
-
-
-		//do not execute flushFileBuffer,data is already in kernal buffer
-		//can be shared read by another process,such as notepad++ for debug purpose
-		//FlushFileBuffers(fp);	
-		//SetEndOfFile(fp);
-#else
-		FILE* f = (FILE*)fp;
-		fseek(f, offset, SEEK_SET);
-		fwrite(p, 1, len, f);
-		//fflush write data to os kernel buffer,but maybe not write to disk immediatly
-		//kernel data can be shared by another process 
-		//so notepad can be used to check if data is writed
-		//kernel buffer here can increase db writing performance
-		fflush(f);  
-		ret = true;
-#endif
-		writeCount++;
-		writeBytes += len;
-
-		if (ret && T_FILE::m_bEnableFileDataBuffer) {
-			dataBuf.resize(offset + len);
-			memcpy((void*)(dataBuf.data() + offset), p, len);
-		}
-		return ret;
-	}
-
-	return false;
-}
-
-bool T_FILE::append(const char* p, int len)
-{
-	bool ret = false;
-
-#ifdef _WIN32
-	HANDLE hFile = fp;
-	DWORD bytesRead;
-	LARGE_INTEGER liDistanceToMove = { 0 };
-	LARGE_INTEGER liNewFilePointer;
-	BOOL success = SetFilePointerEx(
-		hFile,
-		liDistanceToMove,
-		&liNewFilePointer,
-		FILE_END
-	);
-	DWORD bytesWritten;
-	ret = WriteFile(fp, p, len, &bytesWritten, NULL)?true:false;
-#else  
-	FILE* f = (FILE*)fp;
-	fseek(f, 0, SEEK_END);
-	fwrite(p, 1, len, f);
-	ret = true;
-#endif
-
-	if (ret && T_FILE::m_bEnableFileDataBuffer) {
-		dataBuf.resize(dataBuf.size() + len);
-		memcpy((void*)(dataBuf.data() + dataBuf.size()), p, len);
-	}
-	return ret;
-}
-
-bool T_FILE::read(char* p,int offset,int len)
-{
-	if (T_FILE::m_bEnableFileDataBuffer) {
-		if (offset + len > dataBuf.size())
-			return false;
-		memcpy(p, dataBuf.data() + offset, len);
-		return true;
-	}
-
-	bool ret = false;
-#ifdef _WIN32
-	HANDLE hFile = fp;
-	DWORD bytesRead;
-	SetFilePointer(hFile, offset, NULL, FILE_BEGIN);
-	ret = ReadFile(hFile,p,len, &bytesRead, NULL)?true:false;
-#else  
-	FILE* f = (FILE*)fp;
-	fseek(f, 0, SEEK_SET);
-	fread(p, 1, len, f);
-	ret = true;
-#endif
-	readCount++;
-	readBytes += len;
-	return ret;
-}
-
-bool T_FILE::read(string& data)
-{
-	if (T_FILE::m_bEnableFileDataBuffer) {
-		data = dataBuf;
-		return true;
-	}
-
-	size_t len = getFileSize();
-	data.resize(len);
-	bool ret = false;
-#ifdef _WIN32
-	HANDLE hFile = fp;
-	DWORD bytesRead;
-	SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-	ret = ReadFile(hFile, (LPVOID)data.data(), len, &bytesRead, NULL)?true:false;
-#else  
-	FILE* f = (FILE*)fp;
-	fseek(f, 0, SEEK_SET);
-	fread(data.data(), 1, len, f);
-	ret = true;
-#endif
-	readCount++;
-	readBytes += len;
-	return ret;
-}
-
-bool T_FILE::clearFile()
-{
-#ifdef _WIN32
-	HANDLE hFile = fp;
-	SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-	SetEndOfFile(hFile);
-#else  // Linux/Unix
-
-#endif
-	return true;
-}
-
-size_t T_FILE::getFileSize()
-{
-#ifdef _WIN32
-	HANDLE hFile = fp;
-	LARGE_INTEGER fileSize;
-	if (GetFileSizeEx(hFile, &fileSize))
-		return (size_t)fileSize.QuadPart;
-	else
-	{
-		return 0;
-	}
-#else  // Linux/Unix
-	FILE* f = (FILE*)fp;
-	fseek(f, 0L, SEEK_END);
-	size_t len = ftell(f);
-	return len;
-#endif
-}
-
-bool T_FILE::isHandleBufferDisabled() {
-	for (const auto& it : T_FILE::m_vctExcludeFilter) //m_vctExcludeFilter is multi thread protected by file lock
-	{
-		if (path.find(it) != std::string::npos)
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-void T_FILE::release_ref(){
-	ref_count_--;
 }

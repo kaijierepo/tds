@@ -448,7 +448,7 @@ struct DB_FILE {
 	string deType;
 	TDB* pOwnerDB;
 
-	bool loadFile(bool useTFile = true);
+	bool loadFile();
 
 	bool isDataList();  //datalist file, curve index file ,not curve file. only data list is buffered in tdb
 
@@ -480,80 +480,88 @@ struct DB_FILE {
 #include <unordered_map>
 #include <atomic>
 
-class T_FILE {
+class DB_LOCK {
 public:
-	static bool enableLock;
-	static std::vector<std::string> m_vctExcludeFilter;
-	static bool m_bEnableFileHandleBuffer;
-	static bool m_bEnableFileDataBuffer;
-	static int dbFileCtxTTL;
-	static std::mutex poolLock; //keep locks_ thread safe, keep clean and getLock thread safe
-
-	bool open();
-	bool write(const char* p, int len);
-	bool writeAt(const char* p, int len, int offset);
-	bool append(const char* p, int len);
-	bool read(char* p,int offset, int len);
-	bool read(string& data);
-	bool clearFile();
-	size_t getFileSize();
-	void add_ref() {
-		ref_count_++;
-	}
-
-	bool isHandleBufferDisabled();
-	void release_ref();
-
-	//only write active file need file handle buffer
-	//write active does not mean file is writing,if file is writed after program start,writeActive will be set to true
-	//so data list file of today is write active,because new data acquired will be written to today's file
-	//data list before today is not write active,for histoy query only,does not need file handle buffer
-	//file handle buffer is specificly used for writing performance improvement
-	std::atomic<bool> m_bWriteActive; 
-	std::atomic<bool> m_bCreateIfNotExist;
-	std::mutex fileLock_;
+	std::mutex mutex_;
 	DB_TIME last_used_;
-	DB_TIME open_time_;
-	long writeCount;
-	long readCount;
-	long writeBytes;
-	long readBytes;
 	std::atomic<int> ref_count_{ 0 };
-	atomic<void*> fp;
-	string path;
-	string dataBuf;
 
-	T_FILE(const string& p) {
-		m_bCreateIfNotExist = true;
-		m_bWriteActive.store(false);
-		path = p;
-		fp = nullptr;
+	DB_LOCK() {
 		last_used_.setNow();
-		writeCount = 0;
-		readCount = 0;
-		writeBytes = 0;
-		readBytes = 0;
 	}
 };
 
-class T_FILE_MANAGER {
+class DB_LOCK_POOL {
 public:
-	T_FILE_MANAGER();
-	~T_FILE_MANAGER();
+	static DB_LOCK_POOL& instance() {
+		static DB_LOCK_POOL pool;
+		return pool;
+	}
 
-	T_FILE* getFile(const std::string& path,bool createIfNotExist = false);
-	bool delete_file(const std::string& path);
+	static int lockTTL;
 
-	std::unordered_map<std::string, T_FILE*> mapFiles_;
+	DB_LOCK& get_lock(const std::string& path) {
+		std::lock_guard<std::mutex> lock(pool_mutex_); 
+		auto& entry = locks_[path];
+		entry.last_used_.setNow();
+		entry.ref_count_++; // cleaner thread can not check ref_count because pool_mutex_, so in using lock will not be deleted
+		return entry;
+	}
+
+	void release_lock(DB_LOCK& lock) {
+		//do not need to lock pool_mutex_,not thread safe ref_count option.
+		//release_lock is called ,then clean thread try to check ref_count,do not clean,then ref_count--
+		//not using lock will not be cleaned, do not cause problem;clean in using lock causes problem
+		lock.ref_count_--;
+	}
+
+	DB_LOCK_POOL() {
+		cleaner_.store(true);
+		std::thread([this]() {
+			while (cleaner_.load()) {
+				std::this_thread::sleep_for(std::chrono::seconds(DB_LOCK_POOL::lockTTL));
+				std::lock_guard<std::mutex> lock(pool_mutex_);
+				auto now = std::chrono::steady_clock::now();
+				for (auto it = locks_.begin(); it != locks_.end();) {
+					// in pool_mutex_ ,keep ref_count_ check thread safe
+					if (it->second.ref_count_ == 0 && it->second.last_used_.getTimePassSecond() > DB_LOCK_POOL::lockTTL) {
+						it = locks_.erase(it);
+					}
+					else {
+						++it;
+					}
+				}
+			}
+			}).detach();
+	}
+
+	~DB_LOCK_POOL() {
+		cleaner_.store(false);
+	}
+
+	std::mutex pool_mutex_; //keep locks_ thread safe, keep clean and getLock thread safe
+	std::unordered_map<std::string, DB_LOCK> locks_;
 	std::atomic<bool> cleaner_{ false };
 };
 
-class T_FILE_LOCK_GUARD {
-public:
-	T_FILE_LOCK_GUARD(T_FILE* tf);
-	~T_FILE_LOCK_GUARD();
-private:
-	T_FILE* file; //T_FILE_LOCK_GUARD is always used as a local variable in one thread,so it is thread safe
+struct DB_LOCK_GUARD {
+	DB_LOCK* lock_;
+
+	static bool enable;
+
+	DB_LOCK_GUARD(const std::string& path) {
+		if (DB_LOCK_GUARD::enable) {
+			lock_ = &DB_LOCK_POOL::instance().get_lock(path);
+			lock_->mutex_.lock();
+		}
+	}
+
+	~DB_LOCK_GUARD() {
+		if (DB_LOCK_GUARD::enable) {
+			lock_->mutex_.unlock();
+			DB_LOCK_POOL::instance().release_lock(*lock_);
+		}
+	}
 };
 
 //as the data after aggregate, only time and items are valid
@@ -890,6 +898,15 @@ struct FILE_BUFF {
 	}
 };
 
+class FS_BUFF {
+public:
+	std::mutex m_csFsb;
+	std::map<string,FILE_BUFF*> m_mapFsBuff;
+
+	bool readFile(string path, string& data);
+	bool writeFile(string path, unsigned char* data, size_t len);
+};
+
 inline string JSON_STR_VAL(const string& s) {
 	return "\"" + s + "\"";
 }
@@ -909,8 +926,12 @@ public:
 //interface
 	bool Open(string strDBUrl, fp_getTagsByTagSelector f = nullptr,string name="");
 	bool Open_gbk(string strDBUrl, fp_getTagsByTagSelector f = nullptr, string name = "");
+	bool setBufferTTL(string bufferTTL);
 	bool m_enableDB = true;
 	DB_FMT m_dbFmt;
+	bool m_bEnableFsBuff;
+	FS_BUFF m_FsBuff;
+	int m_bufferTTL;
 	DB_TIME_UNIT m_timeUnit;
 	bool m_bAutoUpgrade;
 
@@ -935,7 +956,8 @@ public:
 	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
 	void rpc_db_saveImage(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
-	void rpc_db_setConf(yyjson_val* params, string& rlt, string& err);
+	void rpc_db_getBufferStatus(string& rlt, string& err);
+	void rpc_db_setConf(string& sParams, string& rlt, string& err);
 
 	//table db function
 	void rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language);
@@ -996,7 +1018,6 @@ public:
 	int dhmsSpan2Seconds(string timeSpan);
 	//insert
 	bool InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal);
-	bool doFileUpgrade(T_FILE* file);
 	//select
 	bool Select_Step_selectTags(DE_SELECTOR& deSel, SELECT_RLT& rlt);
 	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
@@ -1004,6 +1025,7 @@ public:
 	bool Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDataSet, vector<DATA_SET*>& outputDataSet);
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe);
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt,SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, vector<yyjson_mut_val*>& vecRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
@@ -1023,9 +1045,9 @@ public:
 	void getDeTime(yyjson_mut_val* yyTime, string& deTime);
 
 	//file save operation
-	bool saveToDeListFile(const string& dataListPath, yyjson_mut_val* yymDe);
-	bool saveToDeListFile(const string& dataListPath, string sDe);
-	string saveToDeFile(yyjson_val* yyvFileInfo, string path,DB_TIME dbTime,string& type);
+	//bool saveToDeListFile(const string& dataListPath, yyjson_mut_val* yymDe);
+	//bool saveToDeListFile(const string& dataListPath, string sDe);
+	string saveDEFile(yyjson_val* yyvFileInfo, string path,DB_TIME dbTime,string& type);
 
 	//path management
 	string getPath_dbFile(string strTag, string time, string deType = "");
