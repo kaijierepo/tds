@@ -14,7 +14,7 @@
 #include "scriptManager.h"
 #endif
 
-string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser,pic_url,acqType,objStatus";
+std::string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser,pic_url,acqType,objStatus";
 
 almServer almSrv;
 
@@ -22,7 +22,7 @@ almServer almSrv;
 namespace tAlm {
 	
 
-	wstring utf8_to_utf16(string instr) //utf-8-->ansi
+	wstring utf8_to_utf16(std::string instr) //utf-8-->ansi
 	{
 		wstring str;
 #ifdef _WIN32
@@ -37,9 +37,9 @@ namespace tAlm {
 #endif
 		return str;
 	}
-	string gb_to_utf8(string instr) //ansi-->utf-8
+	std::string gb_to_utf8(std::string instr) //ansi-->utf-8
 	{
-		string str;
+		std::string str;
 #ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -57,7 +57,7 @@ namespace tAlm {
 		//size_t outlen = 2 * inlen;
 
 		//// duanqn: The iconv function in Linux requires non-const char *
-		//// So we need to copy the source string
+		//// So we need to copy the source std::string
 		//char* inbuf = (char*)malloc(inlen);
 		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
 		//							// so we use another pointer to keep the address
@@ -82,7 +82,7 @@ namespace tAlm {
 		return str;
 	}
 
-	bool appendFile(string path, char* data, size_t len)
+	bool appendFile(std::string path, char* data, size_t len)
 	{
 		FILE* fp = nullptr;
 #ifdef _WIN32
@@ -177,7 +177,7 @@ void parse_csv_lines(const char* s, std::vector<LINE_VAL>& lines) {
 	}
 }
 
-void escape_double_quotes(const std::string& input,string& output) {
+void escape_double_quotes(const std::string& input,std::string& output) {
 	// 首先计算需要替换的双引号数量
 	size_t quote_count = 0;
 	for (char c : input) {
@@ -206,7 +206,7 @@ void escape_double_quotes(const std::string& input,string& output) {
 	}
 }
 
-void unescape_double_quotes(const std::string& input, string& output) {
+void unescape_double_quotes(const std::string& input, std::string& output) {
 	// 清空输出字符串
 	output.clear();
 	// 预留足够空间，避免频繁扩容（最坏情况是不做任何替换，和输入一样长）
@@ -243,7 +243,7 @@ void unescape_double_quotes(const std::string& input, string& output) {
 
 
 namespace tAlm {
-	string GetDir(string strIn)
+	std::string GetDir(std::string strIn)
 	{
 #ifdef _WIN32
 		std::string& str = strIn;
@@ -258,7 +258,7 @@ namespace tAlm {
 #endif
 	}
 
-	void CreateDirectoryPlus_old(string str)
+	void CreateDirectoryPlus_old(std::string str)
 	{
 #ifdef _WIN32
 		if (str.empty()) return;
@@ -276,7 +276,7 @@ namespace tAlm {
 #endif
 	}
 
-	string fixPath(string path) {
+	std::string fixPath(std::string path) {
 		path = str::replace(path, "\\", "/");
 		path = str::replace(path, "////", "/");
 		path = str::replace(path, "///", "/");
@@ -285,7 +285,7 @@ namespace tAlm {
 	}
 
 
-	void createFolderOfPath(string strFile)
+	void createFolderOfPath(std::string strFile)
 	{
 		strFile = str::replace(strFile, "\\", "/");
 		strFile = str::replace(strFile, "////", "/");
@@ -294,7 +294,7 @@ namespace tAlm {
 
 		size_t iDotPos = strFile.rfind('.');
 		size_t iSlashPos = strFile.rfind('/');
-		if (iDotPos != string::npos && iDotPos > iSlashPos)//is a file
+		if (iDotPos != std::string::npos && iDotPos > iSlashPos)//is a file
 		{
 			strFile = strFile.substr(0, iSlashPos);
 		}
@@ -304,9 +304,9 @@ namespace tAlm {
 		while (1)
 		{
 			int iSlash = strFile.find('/', iStartPos);
-			if (iSlash == string::npos) { break; }
+			if (iSlash == std::string::npos) { break; }
 
-			string strFolder = strFile.substr(0, iSlash);
+			std::string strFolder = strFile.substr(0, iSlash);
 			CreateDirectoryW(tAlm::utf8_to_utf16(strFolder).c_str(), NULL);
 
 			if (iSlash + 1 == strFile.length())//last char is /
@@ -320,7 +320,7 @@ namespace tAlm {
 	}
 
 
-	bool readFile(string path, char*& pData, int& len)
+	bool readFile(std::string path, char*& pData, int& len)
 	{
 		FILE* fp = nullptr;
 		#ifdef _WIN32
@@ -340,14 +340,14 @@ namespace tAlm {
 		}
 		return false;
 	}
-	bool readFile(string path, unsigned char*& pData, int& len)
+	bool readFile(std::string path, unsigned char*& pData, int& len)
 	{
 		char* p = nullptr;
 		bool bRet = readFile(path, p, len);
 		pData = (unsigned char*)p;
 		return bRet;
 	}
-	bool readFile(string path, string& data)
+	bool readFile(std::string path, std::string& data)
 	{
 		FILE* fp = nullptr;
 		#ifdef _WIN32
@@ -371,7 +371,7 @@ namespace tAlm {
 		return false;
 	}
 
-	bool writeFile(string path, char* data, size_t len)
+	bool writeFile(std::string path, char* data, size_t len)
 	{
 		createFolderOfPath(path);
 
@@ -390,24 +390,24 @@ namespace tAlm {
 		}
 		else
 		{
-			string err = TDS_LAST_ERROR();
+			std::string err = TDS_LAST_ERROR();
 			err = str::utf8_to_gb(err);
 			printf("[error]%s", err.c_str());
 		}
 		return false;
 	}
 
-	bool writeFile(string path, unsigned char* data, size_t len)
+	bool writeFile(std::string path, unsigned char* data, size_t len)
 	{
 		return writeFile(path, (char*)data, len);
 	}
 
-	bool writeFile(string path, string& data)
+	bool writeFile(std::string path, std::string& data)
 	{
 		return writeFile(path, (char*)data.c_str(), data.length());
 	}
 
-	bool fileExist(string pszFileName)
+	bool fileExist(std::string pszFileName)
 	{
 #ifdef _WIN32
 		wstring filePath = tAlm::utf8_to_utf16(pszFileName);
@@ -425,8 +425,8 @@ namespace tAlm {
 	}
 }
 
-bool loadAlmDBFile(string strFile, vector<ALARM_INFO*>& almList) {
-	string strDBData;
+bool loadAlmDBFile(std::string strFile, std::vector<ALARM_INFO*>& almList) {
+	std::string strDBData;
 	tAlm::readFile(strFile, strDBData);
 	//strDBData = as_charCodec::gb_to_utf8(strDBData); //default utf8 file
 	std::vector<LINE_VAL> recLines;
@@ -434,11 +434,11 @@ bool loadAlmDBFile(string strFile, vector<ALARM_INFO*>& almList) {
 
 	LINE_PARSER lineParser;
 	if (recLines.size() >= 1) {
-		string tableHeader(recLines[0].p, recLines[0].len);
-		vector<string> colNames;
+		std::string tableHeader(recLines[0].p, recLines[0].len);
+		std::vector<std::string> colNames;
 		str::split(colNames, tableHeader, ",");
 		for (int i = 0; i < colNames.size(); i++) {
-			string name = colNames[i];
+			std::string name = colNames[i];
 			lineParser.m_colNameToColIdx[name] = i;
 		}
 	}
@@ -470,7 +470,7 @@ almServer::~almServer(void)
 {
 }
 
-void almServer::init(const string dbPath, AsInitParam& asInitParam) {
+void almServer::init(const std::string dbPath, AsInitParam& asInitParam) {
 	m_initParam = asInitParam;
 
 	m_dbPath = dbPath;
@@ -478,13 +478,13 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam) {
 
 	tableCurrent.SetAlarmSrv(this);
 
-	string currFilePath = m_dbPath + "/current.csv";
+	std::string currFilePath = m_dbPath + "/current.csv";
 	tableCurrent.loadFile(currFilePath);
 
 	tableCurrent.initUnAckUnRecover();
 
-	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
-	string s;
+	std::string abpConf = m_dbPath + "/alarmBlockingPlan.json";
+	std::string s;
 	tAlm::readFile(abpConf, s);
 
 	if (s != "") {
@@ -496,7 +496,7 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam) {
 }
 
 bool almServer::isRecover(ALARM_INFO& key) {
-	string almKey = key.getKeyUnrecover();
+	std::string almKey = key.getKeyUnrecover();
 	lock_guard<mutex> lock(tableCurrent.m_csTable);
 	auto iter = tableCurrent.unRecoverList.find(almKey);
 	if (iter != tableCurrent.unRecoverList.end())
@@ -506,7 +506,7 @@ bool almServer::isRecover(ALARM_INFO& key) {
 	return true;
 }
 
-bool almServer::isRecover(const string& tag, const string& type, const string& acqType, const string& objStatus) {
+bool almServer::isRecover(const std::string& tag, const std::string& type, const std::string& acqType, const std::string& objStatus) {
 	ALARM_INFO ai;
 	ai.tag = tag;
 	ai.type = type;
@@ -520,7 +520,7 @@ bool almServer::isActive(ALARM_INFO& key) {
 	return !isRecover(key);
 }
 
-bool almServer::isActive(const string& tag, const string& type, const string& acqType, const string& objStatus)
+bool almServer::isActive(const std::string& tag, const std::string& type, const std::string& acqType, const std::string& objStatus)
 {	
 	return !isRecover(tag,type, acqType, objStatus);
 }
@@ -562,13 +562,13 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 		m_initParam.func_rpcHand_notify("onAlarmAdd", j);
 
 	//sms send
-	//string msg = "报警类型:" + ai.typeLabel + "; ";
+	//std::string msg = "报警类型:" + ai.typeLabel + "; ";
 	//msg += "报警对象:" + ai.tag + "; ";
 	//msg += "报警时间:" + ai.time + "; ";
 
 	/*
-	vector<USER_INFO> relateUsers = userMng.getRelateUsers(ai.tag);
-	string pl, pnl;
+	std::vector<USER_INFO> relateUsers = userMng.getRelateUsers(ai.tag);
+	std::string pl, pnl;
 
 	for (int i = 0; i < relateUsers.size(); i++)
 	{
@@ -600,7 +600,7 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 }
 
 
-int almServer::getCallCount(std::chrono::steady_clock::duration duration, vector<std::chrono::steady_clock::time_point>& latestCall) {
+int almServer::getCallCount(std::chrono::steady_clock::duration duration, std::vector<std::chrono::steady_clock::time_point>& latestCall) {
 	auto now = std::chrono::steady_clock::now();
 	auto cutoff = now - duration;
 
@@ -615,11 +615,11 @@ int almServer::getCallCount(std::chrono::steady_clock::duration duration, vector
 	return std::distance(it, latestCall.end());
 }
 
-int almServer::getLastMinuteCalls(vector<std::chrono::steady_clock::time_point>& latestCall) {
+int almServer::getLastMinuteCalls(std::vector<std::chrono::steady_clock::time_point>& latestCall) {
 	return getCallCount(std::chrono::minutes(1),latestCall);
 }
 
-int almServer::getLastHourCalls(vector<std::chrono::steady_clock::time_point>& latestCall) {
+int almServer::getLastHourCalls(std::vector<std::chrono::steady_clock::time_point>& latestCall) {
 	return getCallCount(std::chrono::hours(1), latestCall);
 }
 
@@ -659,7 +659,7 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 			se.runScript(si,si.lastRunInfo);
 			scriptManager.setRunInfo(m_scriptBeforeUpdateAlarm, si.lastRunInfo);
 			if (si.lastRunInfo.runSuccess) {
-				string s = se.m_globalObj["AlarmInfo"].dump();
+				std::string s = se.m_globalObj["AlarmInfo"].dump();
 				newStatus.fromJsonStr(s);
 			}
 		}
@@ -685,13 +685,13 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 
 	//the time attr of a status record is always the newest occuring event
 	//time attr is not needed to specify a status record 
-	string keyUnrecover = newStatus.getKeyUnrecover();
+	std::string keyUnrecover = newStatus.getKeyUnrecover();
 
 	//deal status change
 	bool bTagAlarmStatusChanged = false; 
 	bool bNeedRecover = false;
 	bool bNeedAdd = false;
-	string curLevel;
+	std::string curLevel;
 	ALARM_INFO curStatus;
 	tableCurrent.m_csTable.lock();
 	auto iter = tableCurrent.unRecoverList.find(keyUnrecover);
@@ -721,7 +721,7 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 	//recover alarm in history table
 	if (bNeedRecover) {
 		almTable* pTableHist = getHistTable(curStatus.time);
-		string almKeyHist = curStatus.getKey();
+		std::string almKeyHist = curStatus.getKey();
 		pTableHist->m_csTable.lock();
 		auto iterHist = pTableHist->buff.find(almKeyHist);
 		if (iterHist != pTableHist->buff.end())
@@ -779,9 +779,9 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 	m_lastUpdateCallTimeCostAvg = (float)total / (float)m_latestUpdateCallTimeCost.size();
 }
 
-void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
+void almTable::freeBuff(map<std::string, ALARM_INFO*>& mapAlarm)
 {
-	map<string, ALARM_INFO*>::iterator i = mapAlarm.begin();
+	map<std::string, ALARM_INFO*>::iterator i = mapAlarm.begin();
 	for (; i != mapAlarm.end(); i++)
 	{
 		delete i->second;
@@ -789,7 +789,7 @@ void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 	mapAlarm.clear();
 }
 
-string almServer::getAlarmTypeLabel(string type)
+std::string almServer::getAlarmTypeLabel(std::string type)
 {
 	if (type == ALARM_TYPE::overHighLimit) {
 		return "超高限";
@@ -804,7 +804,7 @@ bool almServer::queryCurentAlarm(ALARM_INFO newStatus, ALARM_INFO& lastStatus)
 {
 	bool bFind = false;
 	if (newStatus.needRecover) {
-		string alarmKeyStr = newStatus.getKeyUnrecover();
+		std::string alarmKeyStr = newStatus.getKeyUnrecover();
 		tableCurrent.m_csTable.lock();
 		auto iter = tableCurrent.unRecoverList.find(alarmKeyStr);
 		if (iter != tableCurrent.unRecoverList.end()) {
@@ -820,12 +820,12 @@ bool almServer::queryCurentAlarm(ALARM_INFO newStatus, ALARM_INFO& lastStatus)
 void almServer::Add(ALARM_INFO ai, bool bNotify)
 {
 	g_asynCallWorker.enqueue([ai, bNotify] {
-		string err;
+		std::string err;
 		almSrv.AddSync(ai, err, bNotify);
 		});
 }
 
-void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
+void almServer::AddSync(ALARM_INFO ai, std::string& err, bool bNotify)
 {
 	if (m_blockingPlan.isBlocking()) {
 		err = "blocked by blocking plan";
@@ -833,7 +833,7 @@ void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
 	}
 
 	//测试位号，方便现场数据测试，但不让他产生报警
-	if (ai.tag.find("[test]") != string::npos) {
+	if (ai.tag.find("[test]") != std::string::npos) {
 		return;
 	}
 
@@ -854,7 +854,7 @@ void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
 
 	bool bNeedAdd = false;
 	if (ai.needRecover) {
-		string alarmKeyStr = ai.getKeyUnrecover();
+		std::string alarmKeyStr = ai.getKeyUnrecover();
 		tableCurrent.m_csTable.lock();
 		auto iter = tableCurrent.unRecoverList.find(alarmKeyStr);
 		if (iter == tableCurrent.unRecoverList.end()) {
@@ -910,7 +910,7 @@ void almServer::rpc_addAlarm(yyjson_val* yyv_params, RPC_RESP& resp, bool bUpdat
 		notify = yyjson_get_bool(yyv_notify);
 	}
 
-	string err;
+	std::string err;
 	AddSync(ai, err, notify);
 	if (err == "") {
 		resp.result = ai.toJsonStr(this);
@@ -924,8 +924,8 @@ void almServer::rpc_addAlarm(yyjson_val* yyv_params, RPC_RESP& resp, bool bUpdat
 void almServer::rpc_recoverAlarm(json j, RPC_RESP& resp)
 {
 	if (j.contains("rootTag")) {
-		string rootTag = j["rootTag"];
-		string tag = j["tag"];
+		std::string rootTag = j["rootTag"];
+		std::string tag = j["tag"];
 		j["tag"] = TAG::addRoot(tag, rootTag);
 	}
 
@@ -959,8 +959,8 @@ void almServer::rpc_updateStatus(json jAlm, RPC_RESP& resp, bool bSync)
 		}
 
 		if (j.contains("rootTag")) {
-			string rootTag = j["rootTag"];
-			string tag = j["tag"];
+			std::string rootTag = j["rootTag"];
+			std::string tag = j["tag"];
 			j["tag"] = TAG::addRoot(tag, rootTag);
 		}
 
@@ -1023,7 +1023,7 @@ bool almServer::canRemoveFromCurrent(ALARM_INFO& ai) {
 //基于  tag+ time+ type 匹配记录 
 void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	if (!params.contains("time")) {
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定time字段");
+		std::string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定time字段");
 		resp.error = error;
 		return;
 	}
@@ -1036,23 +1036,23 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	else
 	{
 		if (!params.contains("tag")) {
-			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定tag字段");
+			std::string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定tag字段");
 			resp.error = error;
 			return;
 		}
 
 		if (!params.contains("type")) {
-			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定type字段");
+			std::string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定type字段");
 			resp.error = error;
 			return;
 		}
 
 		if (params.contains("tag")) {
-			string rootTag;
+			std::string rootTag;
 			if (params.contains("rootTag")) {
 				rootTag = params["rootTag"];
 			}
-			string tag = params["tag"];
+			std::string tag = params["tag"];
 			tag = TAG::addRoot(tag, rootTag);
 
 			//用户位号转系统位号
@@ -1063,8 +1063,8 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		queryKey.type = params["type"];
 	}
 
-	string user = session.user;
-	string info;
+	std::string user = session.user;
+	std::string info;
 	if (params.contains("ackInfo"))
 		info = params["ackInfo"];
 
@@ -1072,9 +1072,9 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	if (params.contains("acqtype")) queryKey.acqType = params["acqtype"];
 	if (params.contains("objstatus")) queryKey.objStatus = params["objstatus"];
 	TIME t; t.setNow();
-	string ackTime = t.toStr(true);
+	std::string ackTime = t.toStr(true);
 	ALARM_INFO ai;
-	string almKey;
+	std::string almKey;
 	{
 		lock_guard<mutex> lock(tableCurrent.m_csTable);
 
@@ -1105,7 +1105,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 			tableCurrent.unAckList.erase(iter);
 		}
 		else {
-			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "alarm not found in unack list");
+			std::string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "alarm not found in unack list");
 			resp.error = error;
 			return;
 		}
@@ -1124,7 +1124,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 			pTableHist->saveFile();
 		}
 		else {
-			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "alarm not found in history");
+			std::string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "alarm not found in history");
 			resp.error = error;
 			return;
 		}
@@ -1150,9 +1150,9 @@ void almServer::rpc_getAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSI
 void almServer::rpc_setAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSION session)
 {
 	m_blockingPlan.fromJson(params);
-	string s = params.dump();
+	std::string s = params.dump();
 
-	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
+	std::string abpConf = m_dbPath + "/alarmBlockingPlan.json";
 	tAlm::createFolderOfPath(abpConf);
 	tAlm::writeFile(abpConf, s);
 
@@ -1168,14 +1168,14 @@ void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION sess
 		return;
 	}
 
-	string srcMode = params["src"];
-	string desMode = params["des"];
+	std::string srcMode = params["src"];
+	std::string desMode = params["des"];
 	if (srcMode == "" && desMode == "") {
 		json jErr = "srcMode and desMode must be specified";
 		resp.error = jErr.dump();
 	}
 
-	vector<string> timeKey;
+	std::vector<std::string> timeKey;
 	DB_FILE_MODE  dfm_srcMode;
 	if (srcMode == "monthly") {
 		getDBFileTimeKey_monthly(almSel, timeKey);
@@ -1193,15 +1193,15 @@ void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION sess
 		dfm_desMode = DB_FILE_MODE::ONE_FILE_PER_DAY;
 	}
 
-	vector<ALARM_INFO*> almList;
+	std::vector<ALARM_INFO*> almList;
 	for (auto& time : timeKey) {
-		string path = getFilePath(time, ALM_TABLE_TYPE::HISTORY_TABLE, dfm_srcMode);
+		std::string path = getFilePath(time, ALM_TABLE_TYPE::HISTORY_TABLE, dfm_srcMode);
 		loadAlmDBFile(path, almList);
 	}
 
-	map<string, vector<ALARM_INFO*>> desFileData;
+	map<std::string, std::vector<ALARM_INFO*>> desFileData;
 	for (auto& ai : almList) {
-		string tk;
+		std::string tk;
 		if (desMode == "monthly") {
 			tk = ai->time.substr(0, 7);
 		}
@@ -1211,7 +1211,7 @@ void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION sess
 		
 		auto iter = desFileData.find(tk);
 		if (iter == desFileData.end()) {
-			vector<ALARM_INFO*> vec;
+			std::vector<ALARM_INFO*> vec;
 			desFileData[tk] = vec;
 		}
 		iter = desFileData.find(tk);
@@ -1219,8 +1219,8 @@ void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION sess
 	}
 
 	for (auto& fileData : desFileData) {
-		string path = getFilePath(fileData.first, ALM_TABLE_TYPE::HISTORY_TABLE, dfm_desMode);
-		string data = ALM_TABLE_HEAD_LINE + "\r\n";
+		std::string path = getFilePath(fileData.first, ALM_TABLE_TYPE::HISTORY_TABLE, dfm_desMode);
+		std::string data = ALM_TABLE_HEAD_LINE + "\r\n";
 		for (auto& almInfo : fileData.second) {
 			data += almInfo->toCSVLine();
 		}
@@ -1236,7 +1236,7 @@ void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION sess
 int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	//int nRet = -1;
 	//if (params.contains("uuid") == false && (params.contains("tag") == false)) {
-	//	string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
+	//	std::string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
 	//	resp.error = error;
 	//	return nRet;
 	//}
@@ -1246,11 +1246,11 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	//	return nRet;
 	//}
 	//if (params.contains("tag")) {
-	//	string rootTag;
+	//	std::string rootTag;
 	//	if (params.contains("rootTag")) {
 	//		rootTag = params["rootTag"];
 	//	}
-	//	string tag = params["tag"];
+	//	std::string tag = params["tag"];
 	//	tag = TAG::addRoot(tag, rootTag);
 
 	//	//用户位号转系统位号
@@ -1261,8 +1261,8 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	//ALARM_INFO ai;
 	//if (tableCurrent.query(params, ai))
 	//{
-	//	string user = session.user;
-	//	string info;
+	//	std::string user = session.user;
+	//	std::string info;
 	//	if (params.contains("ackInfo"))
 	//		info = params["ackInfo"];
 	//	if (info == "通过") {
@@ -1282,7 +1282,7 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	//}
 	//else
 	//{
-	//	string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+	//	std::string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
 	//	resp.error = error;
 	//	return nRet;
 	//}
@@ -1292,8 +1292,8 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	//almTable* pTableHist = getHistTable(ai.time);
 	//if (pTableHist->query(params, ai))
 	//{
-	//	string user = session.user;
-	//	string info;
+	//	std::string user = session.user;
+	//	std::string info;
 	//	if (params.contains("ackInfo"))
 	//		info = params["ackInfo"];
 
@@ -1332,7 +1332,7 @@ void almServer::rpc_getCurrent(json params, RPC_RESP& resp, RPC_SESSION session)
 		return;
 	}
 
-	vector<ALARM_INFO*> vecAlarm;
+	std::vector<ALARM_INFO*> vecAlarm;
 	for (auto i = tableCurrent.buff.rbegin(); i != tableCurrent.buff.rend();i++) {
 		if (isSelected(i->second, almSel)) {
 			vecAlarm.push_back(i->second);
@@ -1354,14 +1354,14 @@ void almServer::rpc_getUnack(json params, RPC_RESP& resp, RPC_SESSION session)
 }
 
 
-bool matchTag(string pattern, const string& src)
+bool matchTag(std::string pattern, const std::string& src)
 {
-	if (pattern.find("*") == string::npos) {
+	if (pattern.find("*") == std::string::npos) {
 		if (pattern == src)
 			return true;
 	}
 	else {
-		string& strReg = pattern;
+		std::string& strReg = pattern;
 		strReg = str::replace(strReg, ".", "\\.");
 		strReg = str::replace(strReg, "*", ".*");
 		std::regex reg(strReg);
@@ -1373,14 +1373,14 @@ bool matchTag(string pattern, const string& src)
 }
 
 //src和pattern相等 或 *匹配
-bool generalMatch(string pattern, const string& src)
+bool generalMatch(std::string pattern, const std::string& src)
 {
-	if (pattern.find("*") == string::npos) {
+	if (pattern.find("*") == std::string::npos) {
 		if (pattern == src)
 			return true;
 	}
 	else {
-		string& strReg = pattern;
+		std::string& strReg = pattern;
 		strReg = str::replace(strReg, "*", ".*");
 		std::regex reg(strReg);
 		if (std::regex_match(src, reg) == true) {
@@ -1395,16 +1395,16 @@ bool almServer::parseAlmSelector(json& params, RPC_SESSION& session,ALM_SELECTOR
 	almSel.org = session.org;
 
 	//root tag  to system tag
-	string rootTag = "";
+	std::string rootTag = "";
 	if (params["rootTag"].is_string()) {
-		rootTag = params["rootTag"].get<string>();
+		rootTag = params["rootTag"].get<std::string>();
 	}
 	rootTag = TAG::addRoot(rootTag, session.org);
 	params["rootTag"] = rootTag;
 	if (!params.contains("tag")) {
 		params["tag"] = "*";
 	}
-	string sSel,error;
+	std::string sSel,error;
 	sSel = params.dump();
 	db.parseDESelector(sSel, almSel, error);
 	if (error != "") {
@@ -1415,13 +1415,13 @@ bool almServer::parseAlmSelector(json& params, RPC_SESSION& session,ALM_SELECTOR
 
 	//keyword search
 	if (params["keyword"].is_string()) {
-		vector<string> kwtemp;
-		string kw = params["keyword"];
+		std::vector<std::string> kwtemp;
+		std::string kw = params["keyword"];
 		kw = str::trim(kw);
 		if (kw != "") {
 			str::split(kwtemp, kw, " ");
 			for (auto& i : kwtemp) {
-				string s = str::trim(i);
+				std::string s = str::trim(i);
 				if (s != "") {
 					almSel.keywords.push_back(s);
 				}
@@ -1440,12 +1440,12 @@ bool almServer::parseAlmSelector(json& params, RPC_SESSION& session,ALM_SELECTOR
 		if (params["type"].is_array()) {
 			for (int i = 0; i < params["type"].size(); i++) {
 				if (params["type"][i].is_string()) {
-					almSel.type.push_back(params["type"][i].get<string>());
+					almSel.type.push_back(params["type"][i].get<std::string>());
 				}
 			}
 		}
 		else if (params["type"].is_string()) {
-			str::split(almSel.type, params["type"].get<string>(), ",");
+			str::split(almSel.type, params["type"].get<std::string>(), ",");
 		}
 	}
 
@@ -1454,13 +1454,13 @@ bool almServer::parseAlmSelector(json& params, RPC_SESSION& session,ALM_SELECTOR
 		if (params["level"].is_array()) {
 			for (int i = 0; i < params["level"].size(); i++) {
 				if (params["level"][i].is_string()) {
-					almSel.level.push_back(params["level"][i].get<string>());
+					almSel.level.push_back(params["level"][i].get<std::string>());
 				}
 			}
 		}
 		else if (params["level"].is_string()) {
-			vector<string> vecLevel;
-			str::split(vecLevel, params["level"].get<string>(), ",");
+			std::vector<std::string> vecLevel;
+			str::split(vecLevel, params["level"].get<std::string>(), ",");
 			almSel.level = vecLevel;
 		}
 	}
@@ -1482,7 +1482,7 @@ bool almServer::parseAlmSelector(json& params, RPC_SESSION& session,ALM_SELECTOR
 	return true;
 }
 
-void almServer::getDBFileTimeKey_monthly(ALM_SELECTOR& almSel, vector<string>& timeKey) {
+void almServer::getDBFileTimeKey_monthly(ALM_SELECTOR& almSel, std::vector<std::string>& timeKey) {
 	int startYear = almSel.timeSel.atomSelList[0].stStart.wYear;
 	int startYearStartMonth = almSel.timeSel.atomSelList[0].stStart.wMonth;
 	int endYear = almSel.timeSel.atomSelList[0].stEnd.wYear;
@@ -1497,13 +1497,13 @@ void almServer::getDBFileTimeKey_monthly(ALM_SELECTOR& almSel, vector<string>& t
 			endMonth = endYearEndMonth;
 
 		for (int iMonth = endMonth; iMonth >= startMonth; iMonth--) {
-			string time = str::format("%04d-%02d", iYear, iMonth);
+			std::string time = str::format("%04d-%02d", iYear, iMonth);
 			timeKey.push_back(time);
 		}
 	}
 }
 
-void almServer::getDBFileTimeKey_daily(ALM_SELECTOR& almSel, vector<string>& timeKey) {
+void almServer::getDBFileTimeKey_daily(ALM_SELECTOR& almSel, std::vector<std::string>& timeKey) {
 	time_t startDate = almSel.timeSel.atomSelList[0].stStart.toUnixTime();
 	time_t endDate = almSel.timeSel.atomSelList[0].stEnd.toUnixTime();
 	time_t loadDate = endDate;
@@ -1511,12 +1511,12 @@ void almServer::getDBFileTimeKey_daily(ALM_SELECTOR& almSel, vector<string>& tim
 	{
 		DB_TIME t;
 		t.fromUnixTime(loadDate);
-		string time = str::format("%04d-%02d-%02d", t.wYear, t.wMonth, t.wDay);
+		std::string time = str::format("%04d-%02d-%02d", t.wYear, t.wMonth, t.wDay);
 		timeKey.push_back(time);
 	}
 }
 
-void almServer::getDBFileTimeKey(ALM_SELECTOR& almSel, vector<string>& timeKey) {
+void almServer::getDBFileTimeKey(ALM_SELECTOR& almSel, std::vector<std::string>& timeKey) {
 	if (m_dbFileMode == ONE_FILE_PER_MONTH) {
 		getDBFileTimeKey_monthly(almSel, timeKey);
 	}
@@ -1533,32 +1533,32 @@ bool almServer::isSelected(ALARM_INFO* ai, ALM_SELECTOR& almSel) {
 	}
 
 	if (almSel.keywords.size() > 0) {
-		vector<bool> matchRlt;
+		std::vector<bool> matchRlt;
 		for (int i = 0; i < almSel.keywords.size(); i++) {
-			string& kw = almSel.keywords[i];
+			std::string& kw = almSel.keywords[i];
 			bool match = false;
-			if (ai->tag.find(kw) != string::npos) {
+			if (ai->tag.find(kw) != std::string::npos) {
 				match = true;
 			}
-			else if (ai->time.find(kw) != string::npos) {
+			else if (ai->time.find(kw) != std::string::npos) {
 				match = true;
 			}
-			else if (ai->type.find(kw) != string::npos) {
+			else if (ai->type.find(kw) != std::string::npos) {
 				match = true;
 			}
-			else if (ai->acqType.find(kw) != string::npos) {
+			else if (ai->acqType.find(kw) != std::string::npos) {
 				match = true;
 			}
-			else if (ai->objStatus.find(kw) != string::npos) {
+			else if (ai->objStatus.find(kw) != std::string::npos) {
 				match = true;
 			}
-			else if (ai->level.find(kw) != string::npos) {
+			else if (ai->level.find(kw) != std::string::npos) {
 				match = true;
 			}
-			else if (ai->desc.find(kw) != string::npos) {
+			else if (ai->desc.find(kw) != std::string::npos) {
 				match = true;
 			}
-			else if (ai->detail.find(kw) != string::npos) {
+			else if (ai->detail.find(kw) != std::string::npos) {
 				match = true;
 			}
 			matchRlt.push_back(match);
@@ -1626,8 +1626,8 @@ bool almServer::isSelected(ALARM_INFO* ai, ALM_SELECTOR& almSel) {
 	return true;
 }
 
-void almServer::loadHistAlarm(vector<ALARM_INFO*>& almList,ALM_SELECTOR& almSel,RPC_SESSION session) {
-	vector<string> timeKey;
+void almServer::loadHistAlarm(std::vector<ALARM_INFO*>& almList,ALM_SELECTOR& almSel,RPC_SESSION session) {
+	std::vector<std::string> timeKey;
 	getDBFileTimeKey(almSel, timeKey);
 
 	for(auto& time:timeKey){
@@ -1640,7 +1640,7 @@ void almServer::loadHistAlarm(vector<ALARM_INFO*>& almList,ALM_SELECTOR& almSel,
 		}
 	}
 }
-void  almServer::getPagedDateSet(vector<ALARM_INFO*> almList,ALM_SELECTOR& almSel, string& dataSet) {
+void  almServer::getPagedDateSet(std::vector<ALARM_INFO*> almList,ALM_SELECTOR& almSel, std::string& dataSet) {
 	//return page 1 if pageNo no specified
 	if (almSel.pageSize > 0)
 	{
@@ -1721,7 +1721,7 @@ void almServer::rpc_getHistory(json params, RPC_RESP& resp, RPC_SESSION session)
 	ALM_SELECTOR almSel;
 	parseAlmSelector(params, session, almSel);
 
-	vector<ALARM_INFO*> almList;
+	std::vector<ALARM_INFO*> almList;
 	loadHistAlarm(almList, almSel, session);
 
 	getPagedDateSet(almList, almSel, resp.result);
@@ -1739,35 +1739,35 @@ bool almServer::CompareTime(TIME& time1, TIME& time2) {
 	}
 }
 
-void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
+void almTable::saveFile(std::string strFile, map<std::string, ALARM_INFO*>& memData)
 {
-	string data = ALM_TABLE_HEAD_LINE + "\r\n";
-	map<string, ALARM_INFO*>::iterator i;
+	std::string data = ALM_TABLE_HEAD_LINE + "\r\n";
+	map<std::string, ALARM_INFO*>::iterator i;
 	for (i = memData.begin(); i != memData.end(); i++)
 	{
 		ALARM_INFO& ai = *i->second;
-		string str = ai.toCSVLine();
+		std::string str = ai.toCSVLine();
 		data += str;
 	}
 	tAlm::createFolderOfPath(strFile);
 	tAlm::writeFile(strFile, data);
 }
 
-void almTable::appendFile(string strFile, ALARM_INFO* pNew)
+void almTable::appendFile(std::string strFile, ALARM_INFO* pNew)
 {
-	string line = pNew->toCSVLine();
+	std::string line = pNew->toCSVLine();
 	tAlm::appendFile(strFile, (char*)line.c_str(),line.size());
 }
 
-string almServer::getFilePath(int y, int m,int day, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode) {
-	string p;
+std::string almServer::getFilePath(int y, int m,int day, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode) {
+	std::string p;
 	if (fileMode == ONE_FILE_PER_MONTH)
 	{
-		string strYM = str::format("%04d%02d", y, m);
+		std::string strYM = str::format("%04d%02d", y, m);
 		p = m_dbPath + "/history_" + strYM + ".csv";
 	}
 	else if (fileMode == ONE_FILE_PER_DAY) {
-		string s = str::format("%04d%02d/%02d", y, m,day);
+		std::string s = str::format("%04d%02d/%02d", y, m,day);
 		p = m_dbPath + "/" + s + ".csv";
 	}
 	else
@@ -1777,7 +1777,7 @@ string almServer::getFilePath(int y, int m,int day, ALM_TABLE_TYPE tableType, DB
 	return p;
 }
 
-string almServer::getFilePath(string time, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode) {
+std::string almServer::getFilePath(std::string time, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode) {
 	if (tableType == CURRENT_TABLE || time == "")
 		return m_dbPath + "/current.csv";
 	else if (time != "")
@@ -1795,7 +1795,7 @@ string almServer::getFilePath(string time, ALM_TABLE_TYPE tableType, DB_FILE_MOD
 	}
 }
 
-void almTable::loadFile(string strFile)
+void almTable::loadFile(std::string strFile)
 {
 	//already loaded
 	if (buffFilePath == strFile)
@@ -1807,12 +1807,12 @@ void almTable::loadFile(string strFile)
 
 	//init db file when not exist
 	if (!tAlm::fileExist(strFile)) {
-		string data = ALM_TABLE_HEAD_LINE + "\r\n";
+		std::string data = ALM_TABLE_HEAD_LINE + "\r\n";
 		tAlm::writeFile(strFile, data);
 	}
 	//load db file
 	else {
-		string strDBData;
+		std::string strDBData;
 		bool ret = tAlm::readFile(strFile, strDBData);
 #ifdef _WIN32
 		if (!ret) {
@@ -1827,9 +1827,9 @@ void almTable::loadFile(string strFile)
 		bool bReWrite = false;
 		LINE_PARSER& lineParser = m_lineParser;
 		if (recLines.size() >= 1) {
-			string tableHeader1(recLines[0].p, recLines[0].len);
-			string tableHeader= ALM_TABLE_HEAD_LINE;
-			vector<string> colNames, colNames1;
+			std::string tableHeader1(recLines[0].p, recLines[0].len);
+			std::string tableHeader= ALM_TABLE_HEAD_LINE;
+			std::vector<std::string> colNames, colNames1;
 			str::split(colNames, tableHeader, ",");
 			str::split(colNames1, tableHeader1, ",");
 			if (colNames.size() != colNames1.size())
@@ -1837,7 +1837,7 @@ void almTable::loadFile(string strFile)
 				bReWrite = true;
 			}
 			for (int i = 0; i < colNames.size(); i++) {
-				string name = colNames[i];
+				std::string name = colNames[i];
 				lineParser.m_colNameToColIdx[name] = i;
 			}
 		}
@@ -1868,7 +1868,7 @@ void almTable::saveFile()
 void ALARM_INFO::fromJson(yyjson_val* params) {
 	yyjson_val* v = yyjson_obj_get(params, "rootTag");
 
-	string rootTag;
+	std::string rootTag;
 	if (v) {
 		rootTag = yyjson_get_str(v);
 	}
@@ -1950,7 +1950,7 @@ void ALARM_INFO::fromJson(yyjson_val* params) {
 	}
 }
 
-json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
+json ALARM_INFO::toJson(almServer* almSrv, std::string rootTag)
 {
 	ALARM_INFO* info = this;
 	json j;
@@ -1960,7 +1960,7 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 		j["tag"] = info->tag;
 	}
 	else {
-		string tag = info->tag;
+		std::string tag = info->tag;
 		tag = str::trimPrefix(tag, rootTag + ".");
 		j["tag"] = tag;
 	}
@@ -1998,7 +1998,7 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	return j;
 }
 
-void ALARM_INFO::toJson(almServer* almSrv, string rootTag,yyjson_mut_val*& jVal,yyjson_mut_doc* doc)
+void ALARM_INFO::toJson(almServer* almSrv, std::string rootTag,yyjson_mut_val*& jVal,yyjson_mut_doc* doc)
 {
 	ALARM_INFO* info = this;
 	jVal = yyjson_mut_obj(doc);
@@ -2008,7 +2008,7 @@ void ALARM_INFO::toJson(almServer* almSrv, string rootTag,yyjson_mut_val*& jVal,
 		yyjson_mut_obj_add_strcpy(doc, jVal, "tag", info->tag.c_str());
 	}
 	else {
-		string tag = info->tag;
+		std::string tag = info->tag;
 		tag = str::trimPrefix(tag, rootTag + ".");
 		yyjson_mut_obj_add_strcpy(doc, jVal, "tag", tag.c_str());
 	}
@@ -2033,8 +2033,8 @@ void ALARM_INFO::toJson(almServer* almSrv, string rootTag,yyjson_mut_val*& jVal,
 	yyjson_mut_obj_add_bool(doc, jVal, "multiUnack", info->multiUnack);
 }
 
-int LINE_PARSER::getColIdxByColName(string colName) {
-	map<string, int>::iterator iter = m_colNameToColIdx.find(colName);
+int LINE_PARSER::getColIdxByColName(std::string colName) {
+	map<std::string, int>::iterator iter = m_colNameToColIdx.find(colName);
 	if (iter != m_colNameToColIdx.end()) {
 		int idx = m_colNameToColIdx[colName];
 		return idx;
@@ -2138,16 +2138,16 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai) {
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.acqType.assign(cv->p, cv->len); }loadIdx++;
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.objStatus.assign(cv->p, cv->len); }loadIdx++;
 
-	string descTmp = ai.desc;
+	std::string descTmp = ai.desc;
 	unescape_double_quotes(descTmp, ai.desc);
-	string detailTmp = ai.detail;
+	std::string detailTmp = ai.detail;
 	unescape_double_quotes(detailTmp, ai.detail);
 }
 
-string ALARM_INFO::toCSVLine()
+std::string ALARM_INFO::toCSVLine()
 {
 	ALARM_INFO& info = *this;
-	string str;
+	std::string str;
 	str.reserve(1000 + info.desc.size()*2 + info.detail.size()*2);
 	//core info
 	str += "\"\""; str += ",";//uuid为空
@@ -2156,9 +2156,9 @@ string ALARM_INFO::toCSVLine()
 	str += info.type; str += ",";
 	str += info.level; str += ",";
 
-	string descTmp;
+	std::string descTmp;
 	escape_double_quotes(info.desc, descTmp);
-	string detailTmp;
+	std::string detailTmp;
 	escape_double_quotes(info.detail, detailTmp);
 
 	str += "\"" + descTmp + "\""; str += ",";
@@ -2188,13 +2188,13 @@ string ALARM_INFO::toCSVLine()
 	return str;
 }
 
-string ALARM_INFO::toJsonStr(almServer* almSrv, string rootTag)
+std::string ALARM_INFO::toJsonStr(almServer* almSrv, std::string rootTag)
 {
 	json j = toJson(almSrv, rootTag);
 	return j.dump(2);
 }
 
-void ALARM_INFO::fromJsonStr(const string& s)
+void ALARM_INFO::fromJsonStr(const std::string& s)
 {
 	yyjson_doc* doc = yyjson_read(s.c_str(),s.size(),0);
 	if (doc) {
@@ -2204,17 +2204,17 @@ void ALARM_INFO::fromJsonStr(const string& s)
 	yyjson_doc_free(doc);
 }
 
-void almServer::ClearMap(map<string, ALARM_INFO*>& inMap)
+void almServer::ClearMap(map<std::string, ALARM_INFO*>& inMap)
 {
-	for (map<string, ALARM_INFO*>::iterator it = inMap.begin(); it != inMap.end(); it++) {
+	for (map<std::string, ALARM_INFO*>::iterator it = inMap.begin(); it != inMap.end(); it++) {
 		if (it->second) delete it->second;
 	}
 	inMap.clear();
 }
 
-almTable* almServer::getHistTable(string time)
+almTable* almServer::getHistTable(std::string time)
 {
-	string histTableName;
+	std::string histTableName;
 	if (m_dbFileMode == DB_FILE_MODE::ONE_FILE_PER_MONTH) {
 		histTableName = time.substr(0, 7);
 	}
@@ -2227,7 +2227,7 @@ almTable* almServer::getHistTable(string time)
 
 	
 	std::unique_lock<mutex> lock(m_csTableHistList);
-	map<string, almTable*>::iterator iter = tableHist.find(histTableName);
+	map<std::string, almTable*>::iterator iter = tableHist.find(histTableName);
 	if (iter == tableHist.end()) {
 		almTable* p = new almTable();
 		p->dbFileMode = m_dbFileMode;
@@ -2249,18 +2249,18 @@ void almTable::add(ALARM_INFO ai)
 	if (ai.uuid.empty()) ai.uuid = ai.getKey();
 
 	*pNew = ai;
-	string almKey = ai.getKey();
+	std::string almKey = ai.getKey();
 	buff[almKey] = pNew;
 	if (m_tableType == ALM_TABLE_TYPE::CURRENT_TABLE) {
 		if(ai.needRecover){
-			string unrecoverKey = ai.getKeyUnrecover();
+			std::string unrecoverKey = ai.getKeyUnrecover();
 			unRecoverList[unrecoverKey] = pNew;
 		}
 		if (ai.needAck) {
 			unAckList[almKey] = pNew;
 
 			if (!ai.needRecover && unAckListSizeLimit > 0) {
-				map<string, ALARM_INFO*> tmpList;
+				map<std::string, ALARM_INFO*> tmpList;
 
 				for (auto it = unAckList.begin(); it != unAckList.end(); ++it) {
 					const std::string& key = it->first;
@@ -2358,12 +2358,12 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 	if (querier.contains("user"))
 	{
 		aq.filter_user = true;
-		aq.user = querier["user"].get<string>();
+		aq.user = querier["user"].get<std::string>();
 	}
 	if (querier.contains("rootTag"))
 	{
 		aq.filter_rootTag = true;
-		aq.rootTag = querier["rootTag"].get<string>();
+		aq.rootTag = querier["rootTag"].get<std::string>();
 	}
 
 	if (querier.contains("tag")) {
@@ -2371,14 +2371,14 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 		if (querier["tag"].is_array()) {
 			for (int i = 0; i < querier["tag"].size(); i++) {
 				if (querier["tag"][i].is_string()) {
-					aq.vecTag.push_back(querier["tag"][i].get<string>());
+					aq.vecTag.push_back(querier["tag"][i].get<std::string>());
 				}
 				else
 					assert(false);
 			}
 		}
 		else if (querier["tag"].is_string()) {
-			aq.vecTag.push_back(querier["tag"].get<string>());
+			aq.vecTag.push_back(querier["tag"].get<std::string>());
 		}
 		else {
 			assert(false);
@@ -2388,7 +2388,7 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 	{
 		aq.filter_time = true;
 		if (querier["time"].is_string())
-			aq.time = querier["time"].get<string>();
+			aq.time = querier["time"].get<std::string>();
 		else
 			assert(false);
 	}
@@ -2398,14 +2398,14 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 		if (querier["type"].is_array()) {
 			for (int i = 0; i < querier["type"].size(); i++) {
 				if (querier["type"][i].is_string()) {
-					aq.vecType.push_back(querier["type"][i].get<string>());
+					aq.vecType.push_back(querier["type"][i].get<std::string>());
 				}
 				else
 					assert(false);
 			}
 		}
 		else if (querier["type"].is_string()) {
-			str::split(aq.vecType, querier["type"].get<string>(), ",");
+			str::split(aq.vecType, querier["type"].get<std::string>(), ",");
 		}
 		else {
 			assert(false);
@@ -2417,14 +2417,14 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 		if (querier["level"].is_array()) {
 			for (int i = 0; i < querier["level"].size(); i++) {
 				if (querier["level"][i].is_string()) {
-					aq.vecLevel.push_back(querier["level"][i].get<string>());
+					aq.vecLevel.push_back(querier["level"][i].get<std::string>());
 				}
 				else
 					assert(false);
 			}
 		}
 		else if (querier["level"].is_string()) {
-			aq.vecLevel.push_back(querier["level"].get<string>());
+			aq.vecLevel.push_back(querier["level"].get<std::string>());
 		}
 		else {
 			assert(false);
@@ -2450,14 +2450,14 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 	{
 		aq.ascendingSort = true;
 		if (querier["a-sort"].is_string())
-			aq.sortKey = querier["a-sort"].get<string>();
+			aq.sortKey = querier["a-sort"].get<std::string>();
 		else aq.sortKey = "time";
 	}
 	else if (querier.contains("d-sort"))
 	{
 		aq.ascendingSort = false;
 		if (querier["d-sort"].is_string())
-			aq.sortKey = querier["d-sort"].get<string>();
+			aq.sortKey = querier["d-sort"].get<std::string>();
 		else aq.sortKey = "time";
 	}
 	else
@@ -2468,10 +2468,10 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 	return aq;
 }
 
-//vector<ALARM_INFO*> almTable::query(json querier)
+//std::vector<ALARM_INFO*> almTable::query(json querier)
 //{
 //	std::unique_lock<shared_mutex> lock(m_csTable);
-//	vector<ALARM_INFO*> dataSet;
+//	std::vector<ALARM_INFO*> dataSet;
 //	loadFile(m_pAlmSrv->getFilePath("",m_tableType,dbFileMode));
 //	ALARM_QUERY aq = parseQuerier(querier);
 //
@@ -2480,7 +2480,7 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 //		ts.init(aq.time);
 //	}
 //	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
-//	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
+//	for (map<std::string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
 //		//if (aq.filter_user && !userMng.checkTagPermission(aq.user, it->second->tag))
 //			//continue;
 //		if (aq.filter_user) {
@@ -2493,14 +2493,14 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 //
 //		ALARM_INFO* pAi = it->second;
 //
-//		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == string::npos)
+//		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == std::string::npos)
 //			continue;
 //
 //		//记录里存的绝对tag。 单独的tag是相对于roottag的。
 //		if (aq.filter_tag) {
 //			bool bMatch = false;
 //			for (const auto& oneTag : aq.vecTag) {
-//				string zong_tag = oneTag;
+//				std::string zong_tag = oneTag;
 //				if (aq.rootTag != "") {
 //					zong_tag = aq.rootTag + "." + oneTag;
 //				}
@@ -2575,7 +2575,7 @@ void almTable::SetAlarmSrv(almServer* pSrv)
 }
 
 
-bool almServer::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
+bool almServer::handleRpc(std::string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	bool bHandled = true;
 	if (method == "getAlarmCurrent")
@@ -2609,7 +2609,7 @@ bool almServer::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SE
 	else if (method == "getAlm")
 	{
 		if (params.contains("status")) {
-			string status = params["status"].get<string>();
+			std::string status = params["status"].get<std::string>();
 			if (status == "unRecover") {
 				rpc_getUnRecover(params, rpcResp, session);
 			}
@@ -2635,7 +2635,7 @@ bool almServer::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SE
 	//** 数据生成系列 以下接口都会修改报警数据
 	else if (method == "addAlarm")
 	{
-		string s = params.dump();
+		std::string s = params.dump();
 		yyjson_doc* doc = yyjson_read(s.c_str(), s.size(), 0);
 		yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 		rpc_addAlarm(yyv_params, rpcResp);

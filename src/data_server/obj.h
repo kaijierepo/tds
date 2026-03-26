@@ -53,9 +53,9 @@ struct OBJ_QUERIER {
 	bool getChild;
 	bool getMp;
 	bool dataSaveMp;
-	string rootTag;  //查询该根位号下的位号，并且返回的位号除去该根位号
-	string leafType;
-	string leafLevel;
+	std::string rootTag;  //查询该根位号下的位号，并且返回的位号除去该根位号
+	std::string leafType;
+	std::string leafLevel;
 	bool flatten;  //是否将多层级的树形子节点压缩为只有一个层级的列表。
 
 	//指定对象中返回的数据
@@ -69,8 +69,8 @@ struct OBJ_QUERIER {
 	bool getUnit; //值描述信息是否需要带单位
 	bool getTag;
 
-	string match; //对象信息的自定义条件匹配
-	string language;
+	std::string match; //对象信息的自定义条件匹配
+	std::string language;
 
 	OBJ* pRoot;
 
@@ -95,17 +95,17 @@ struct OBJ_QUERIER {
 
 
 struct SCHEDULE_TASK {
-	string name;
-	string type;   // runScript or output
+	std::string name;
+	std::string type;   // runScript or output
 	Date dateStart;
 	Date dateEnd;
-	string outputTag;
-	string outputVal;
+	std::string outputTag;
+	std::string outputVal;
 	HMS time;
 	bool week[7];
 	TIME lastExecuteTime;
-	string script;
-	string mode; // weeklyRepeat, dailyRepeat, cutsomTimeRepeat, onlyOnce
+	std::string script;
+	std::string mode; // weeklyRepeat, dailyRepeat, cutsomTimeRepeat, onlyOnce
 
 	//run time 
 	bool lastHmsReach;
@@ -118,7 +118,7 @@ struct SCHEDULE_TASK {
 		lastHmsReach = true;
 	}
 
-	string getTypeDesc() {
+	std::string getTypeDesc() {
 		if (type == "output") {
 			return "控制输出,位号=" + outputTag + ",值=" + outputVal;
 		}
@@ -127,8 +127,8 @@ struct SCHEDULE_TASK {
 		}
 	}
 
-	string toDescStr() {
-		string s = "";
+	std::string toDescStr() {
+		std::string s = "";
 		if (mode == "weeklyRepeat") {
 			s = str::format("任务名称:%s,类型:%s,调度模式:%s,%d%d%d%d%d%d%d,%s",
 				name.c_str(),
@@ -158,11 +158,11 @@ struct SCHEDULE_TASK {
 			name = j["name"];
 		}
 		if (j["dateStart"].is_string()) {
-			string s = j["dateStart"];
+			std::string s = j["dateStart"];
 			dateStart.fromStr(s); 
 		}
 		if (j["dateEnd"].is_string()) {
-			string s = j["dateEnd"];
+			std::string s = j["dateEnd"];
 			dateEnd.fromStr(s);
 		}
 		if (j["type"].is_string()) {
@@ -172,7 +172,7 @@ struct SCHEDULE_TASK {
 			script = j["script"];
 		}
 		if (j["outputTag"].is_string()) {
-			outputTag = j["outputTag"].get<string>();
+			outputTag = j["outputTag"].get<std::string>();
 		}
 		if (j["outputVal"]!= nullptr) {
 			outputVal = j["outputVal"];
@@ -181,7 +181,7 @@ struct SCHEDULE_TASK {
 			mode = j["mode"];
 			if (mode == "weeklyRepeat") {
         if (j["time"].is_string()) {
-          string s = j["time"];
+          std::string s = j["time"];
           time.fromStr(s);
         }
         if (j["week"].is_array()) {
@@ -246,7 +246,7 @@ struct SCHEDULE_TASK {
 			if (mode == "weeklyRepeat") {
 				v = yyjson_obj_get(conf, "time");
 				if (v) {
-					string s = yyjson_get_str(v);
+					std::string s = yyjson_get_str(v);
 					time.fromStr(s);
 				}
 				yyjson_val* jWeek = yyjson_obj_get(conf, "week");
@@ -324,7 +324,7 @@ struct SCHEDULE_TASK {
 };
 
 struct OBJ_STATIS {
-	string customType;
+	std::string customType;
 	int count;
 	int online;
 	int offline;
@@ -372,7 +372,7 @@ struct MAP_CONF {
 	double center[2];
 	double pitch;
 	double rotation;
-	string viewMode; //3D 2D
+	std::string viewMode; //3D 2D
 	double zoom;
 
 	MAP_CONF() {
@@ -418,7 +418,7 @@ public:
 
 	//static
 	static bool m_bDefaultOnline;
-	static void treeStatus2ListStatus(json& tree, json& list, json& onlineStatus, string tag);
+	static void treeStatus2ListStatus(json& tree, json& list, json& onlineStatus, std::string tag);
 
 	//function
 	void loadTask(json& jTask);
@@ -428,8 +428,8 @@ public:
 	virtual bool loadStatus(yyjson_val* status);
 	virtual bool saveStatus(json& statusNode);
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);
-	virtual bool toJson(YY_OBJ_VAL& yyObj, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const string& user = "admin");
-	virtual bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const string& user = "admin");
+	virtual bool toJson(YY_OBJ_VAL& yyObj, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const std::string& user = "admin");
+	virtual bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const std::string& user = "admin");
 	//virtual bool toJson(json& conf, json serializeOption);
 	//从srcTree找到与自身对应的对象，并拷贝以该对象为根节点的子树的状态
 	virtual bool loadTreeStatus(OBJ* pSrcTree);
@@ -442,79 +442,79 @@ public:
 	bool isCustomMp();
 	bool isCustomOrg();
 	bool isChildObjOfIntelliDev();
-	OBJ* createObjBranchByTag(string tag);
+	OBJ* createObjBranchByTag(std::string tag);
 	//查询接口
 	virtual json getRT();
-	void getMpList(map<string, MP*>& MPlist);
-	OBJ* queryObj(string strTag, string language = "");//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
-	MP* GetMPByTag(string strTag, string language);
-	MP* GetMPByTagPinyin(string strTag);
-	void queryObj(std::vector<OBJ*>* tagVec, string strTag, string language, string type = "", string level = "*");
-	void GetMPByTag(std::vector<MP*>* tagVec, string strTag, string language);
-	void getMpList(vector<MP*>& MPlist);
-	OBJ* GetChildObjByName(string strName);
-	MP* GetDescendantMPByName(string strName);
-	OBJ* GetDescendantObjByName(string strName);
-	bool isSelectedByIOType(const string& ioType);
+	void getMpList(map<std::string, MP*>& MPlist);
+	OBJ* queryObj(std::string strTag, std::string language = "");//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
+	MP* GetMPByTag(std::string strTag, std::string language);
+	MP* GetMPByTagPinyin(std::string strTag);
+	void queryObj(std::vector<OBJ*>* tagVec, std::string strTag, std::string language, std::string type = "", std::string level = "*");
+	void GetMPByTag(std::vector<MP*>* tagVec, std::string strTag, std::string language);
+	void getMpList(std::vector<MP*>& MPlist);
+	OBJ* GetChildObjByName(std::string strName);
+	MP* GetDescendantMPByName(std::string strName);
+	OBJ* GetDescendantObjByName(std::string strName);
+	bool isSelectedByIOType(const std::string& ioType);
 	//确认自己是否被某类型选中
-	bool isSelectedByLevel(const string& level);
-	bool isSelectedByType(const string& type);
+	bool isSelectedByLevel(const std::string& level);
+	bool isSelectedByType(const std::string& type);
 	//指定叶子节点类型，将自己作为树枝节点进行判断，确定是否返回。只要在结构上可以包含叶子节点类型的枝干节点都将被返回
-	bool isSelectedByLeafType(string leafType);
-	bool isSelectedByLeafLevel(string leafType);
+	bool isSelectedByLeafType(std::string leafType);
+	bool isSelectedByLeafLevel(std::string leafType);
 	//修改接口
 	void recursiveSetOffline();
 	void setChildMpOnline();
 	void setChildMpOffline();
 	//树管理
-	OBJ* createChildMO(string subTag, string moType);
-	void GetAllChildObj(std::vector<OBJ*>& aryMO, string type);
+	OBJ* createChildMO(std::string subTag, std::string moType);
+	void GetAllChildObj(std::vector<OBJ*>& aryMO, std::string type);
 	void GetAllChildMp(std::vector<MP*>& aryMP);
 	void GetAttriMp(std::vector<MP*>& aryMP);
-	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
-	map<string, json> getChildCustomTypeList(string level = "*");
-	void statisChildCustomMoType(map<string, json>& list);
-	string getChildObjStatis();
-	void statisChildObj(map<string, OBJ_STATIS>& rlt);
+	map<std::string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
+	map<std::string, json> getChildCustomTypeList(std::string level = "*");
+	void statisChildCustomMoType(map<std::string, json>& list);
+	std::string getChildObjStatis();
+	void statisChildObj(map<std::string, OBJ_STATIS>& rlt);
 	void statisChildMo(json& jStatis);
 	void removeMp(json& mo);
 	void clearChildren();
 	OBJ* getOwnerChildTds();
 	static OBJ_QUERIER parseQuerier(json& opt);
 	OBJ* GetRootMO();
-	OBJ* GetFatherMO(string type);//获得指定类型的父节点，或者是自身
-	OBJ* GetChildMO(string type);
+	OBJ* GetFatherMO(std::string type);//获得指定类型的父节点，或者是自身
+	OBJ* GetChildMO(std::string type);
 	OBJ* CopyMO();//复制一份与该mo相同的配置
 	virtual OBJ& operator=(OBJ& right);
 	OBJ* GetProjectMO();
 	bool hasOnlineStatus();
-	string& getName(const string& language);
-	string getTag();
-	virtual string getTag(string root, string language); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
+	std::string& getName(const std::string& language);
+	std::string getTag();
+	virtual std::string getTag(std::string root, std::string language); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
 	json getTypeTag();
-	vector<string> GetAlias();
-	vector<string> GetAllTagNamePlus();
-	virtual string getTagWithRoot();
-	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
-	void GetAllChildAlarmInfo(string& strSummary);
+	std::vector<std::string> GetAlias();
+	std::vector<std::string> GetAllTagNamePlus();
+	virtual std::string getTagWithRoot();
+	std::string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
+	void GetAllChildAlarmInfo(std::string& strSummary);
 	bool getTagsByTagSelector(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt);
-	void getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector);
-	OBJ* getObjByID(string id);
-	void getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector);
-	vector<string> getTagPartials(string strTag);
-	string getTypeLabel(string type);
-	string getUpdateTimeDesc();
+	void getObjByTagSelector(std::vector<OBJ*>& objList, TAG_SELECTOR& tagSelector);
+	OBJ* getObjByID(std::string id);
+	void getMpByTagSelector(std::vector<MP*>& mpList, TAG_SELECTOR& tagSelector);
+	std::vector<std::string> getTagPartials(std::string strTag);
+	std::string getTypeLabel(std::string type);
+	std::string getUpdateTimeDesc();
 
 	//conf
-	string m_level;
-	string m_type;  
-	map<string, string> m_mapTypeTranslate;
-	string m_groupName; //设备编组。1个自定义的字符串
-	string m_name;
-	string m_namePinyin;
-	map<string,string> m_mapNameTranslate;
-	string m_alias;
-	string m_objID;  //name可能在系统中有重名，ID不会
+	std::string m_level;
+	std::string m_type;  
+	map<std::string, std::string> m_mapTypeTranslate;
+	std::string m_groupName; //设备编组。1个自定义的字符串
+	std::string m_name;
+	std::string m_namePinyin;
+	map<std::string,std::string> m_mapNameTranslate;
+	std::string m_alias;
+	std::string m_objID;  //name可能在系统中有重名，ID不会
 	bool m_bShow;
 	double m_longitude;
 	double m_latitude;
@@ -523,28 +523,28 @@ public:
 	double m_dbLongitudeCalib;
 	double m_dbLatitudeCalib;
 	bool m_bChildTds; //是否是下级服务
-	string m_streamAccess;
-	string m_strLastModify;  //上一次配置修改时间
-	string m_comment;
+	std::string m_streamAccess;
+	std::string m_strLastModify;  //上一次配置修改时间
+	std::string m_comment;
 	bool m_bEnableIO;
 	bool m_bEnableTask;
-	vector<SCHEDULE_TASK> m_scheduleTasks;
-	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
+	std::vector<SCHEDULE_TASK> m_scheduleTasks;
+	std::string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
 	json m_customConf;
 	std::vector<OBJ*> m_childObj;
 	OBJ* m_pParentMO;
 	MAP_CONF m_mapConf;
-	string m_rootTag;
+	std::string m_rootTag;
 
 	//status
 	bool m_bOnline;
 	TIME m_stDataLastUpdate;
 	double m_longitudeDyn;
 	double m_latitudeDyn;
-	string m_status;
+	std::string m_status;
 	mutex m_mxAlarmStatus;
 	json m_jAlarmStatus;
 };
 
-OBJ* createMO(string type);
+OBJ* createMO(std::string type);
 

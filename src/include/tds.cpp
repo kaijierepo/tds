@@ -71,12 +71,12 @@ namespace str {
 		return str;
 	}
 
-	string replace(string str, const string to_replaced, const string newchars)
+	std::string replace(std::string str, const std::string to_replaced, const std::string newchars)
 	{
-		for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
+		for (std::string::size_type pos(0); pos != std::string::npos; pos += newchars.length())
 		{
 			pos = str.find(to_replaced, pos);
-			if (pos != string::npos)
+			if (pos != std::string::npos)
 				str.replace(pos, to_replaced.length(), newchars);
 			else
 				break;
@@ -100,7 +100,7 @@ namespace str {
 		return true;
 	}
 
-	bool isDigits(string s)
+	bool isDigits(std::string s)
 	{
 		for (int i = 0; i < s.length(); i++)
 		{
@@ -152,7 +152,7 @@ namespace str {
 		return nCount;
 	}
 
-	string trimPrefix(string s, string prefix)
+	std::string trimPrefix(std::string s, std::string prefix)
 	{
 		if (prefix == "")
 			return s;
@@ -172,7 +172,7 @@ namespace str {
 		return s;
 	}
 
-	string trimSuffix(string s, string suffix)
+	std::string trimSuffix(std::string s, std::string suffix)
 	{
 		if (suffix == "")
 			return s;
@@ -180,7 +180,7 @@ namespace str {
 		while (1)
 		{
 			size_t ipos = s.rfind(suffix);
-			if (ipos != string::npos && ipos + suffix.length() == s.length())
+			if (ipos != std::string::npos && ipos + suffix.length() == s.length())
 			{
 				s = s.substr(0, ipos);
 			}
@@ -192,14 +192,14 @@ namespace str {
 		return s;
 	}
 
-	string trim(std::string s, string toTrim)
+	std::string trim(std::string s, std::string toTrim)
 	{
 		s = trimPrefix(s, toTrim);
 		s = trimSuffix(s, toTrim);
 		return s;
 	}
 
-	wstring gb_to_utf16(string instr)
+	wstring gb_to_utf16(std::string instr)
 	{
 		wstring str;
 #ifdef _WIN32
@@ -214,7 +214,7 @@ namespace str {
 #endif
 		return str;
 	}
-	wstring utf8_to_utf16(string instr) //utf-8-->ansi
+	wstring utf8_to_utf16(std::string instr) //utf-8-->ansi
 	{
 		wstring str;
 #ifdef _WIN32
@@ -230,9 +230,9 @@ namespace str {
 #endif
 		return str;
 	}
-	string utf16_to_utf8(wstring instr) //utf-8-->ansi
+	std::string utf16_to_utf8(wstring instr) //utf-8-->ansi
 	{
-		string str;
+		std::string str;
 #ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 4 + 2;
 		char* charstr = new char[MAX_STRSIZE];
@@ -245,9 +245,9 @@ namespace str {
 #endif
 		return str;
 	}
-	string utf16_to_gb(wstring instr)
+	std::string utf16_to_gb(wstring instr)
 	{
-		string str;
+		std::string str;
 #ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		char* charstr = new char[MAX_STRSIZE];
@@ -260,9 +260,9 @@ namespace str {
 #endif
 		return str;
 	}
-	string utf8_to_gb(string instr) //utf-8-->ansi
+	std::string utf8_to_gb(std::string instr) //utf-8-->ansi
 	{
-		string str;
+		std::string str;
 #ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -280,7 +280,7 @@ namespace str {
 		//size_t outlen = 2*inlen;
 
 		//// duanqn: The iconv function in Linux requires non-const char *
-		//// So we need to copy the source string
+		//// So we need to copy the source std::string
 		//char* inbuf = (char*)malloc(inlen);
 		//memset(inbuf,0,inlen);
 		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
@@ -309,9 +309,9 @@ namespace str {
 #endif
 		return str;
 	}
-	string gb_to_utf8(string instr) //ansi-->utf-8
+	std::string gb_to_utf8(std::string instr) //ansi-->utf-8
 	{
-		string str;
+		std::string str;
 #ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -329,7 +329,7 @@ namespace str {
 		//size_t outlen = 2*inlen;
 
 		//// duanqn: The iconv function in Linux requires non-const char *
-		//// So we need to copy the source string
+		//// So we need to copy the source std::string
 		//char* inbuf = (char*)malloc(inlen);
 		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
 		//							// so we use another pointer to keep the address
@@ -389,7 +389,7 @@ void TIME::setNow() {
 	fromUnixTime(tt, milli);
 }
 
-string TIME::toStr(bool enableMilli)
+std::string TIME::toStr(bool enableMilli)
 {
 	if (enableMilli) {
 		return str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",wYear, wMonth, wDay,wHour, wMinute, wSecond,wMilliseconds);
@@ -399,7 +399,7 @@ string TIME::toStr(bool enableMilli)
 	}
 }
 
-void TIME::fromStr(string str) {
+void TIME::fromStr(std::string str) {
 	TIME& t = *this;
 	memset(&t, 0, sizeof(t));
 	int y, m, d, h, min, s, milli;
@@ -481,21 +481,21 @@ void TIME::fromStr(string str) {
 	}
 }
 
-string TIME::toDateStr()
+std::string TIME::toDateStr()
 {
-	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
+	std::string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
 	return s;
 }
 
-string TIME::toTimeStr()
+std::string TIME::toTimeStr()
 {
-	string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
+	std::string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
 	return s;
 }
 
-string TIME::toStampFull()
+std::string TIME::toStampFull()
 {
-	string s = str::format("%04d-%02d-%02d %02d%02d%02d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
+	std::string s = str::format("%04d-%02d-%02d %02d%02d%02d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
 	return s;
 }
 
@@ -521,19 +521,19 @@ void  TIME::fromUnixTime(time_t unixTime,int milli) {
 	wDayOfWeek = time_tm.tm_wday;
 }
 
-string TIME::toStampHMS()
+std::string TIME::toStampHMS()
 {
-	string s = str::format("%02d%02d%02d", wHour, wMinute, wSecond);
+	std::string s = str::format("%02d%02d%02d", wHour, wMinute, wSecond);
 	return s;
 }
 
-string Date::toStr()
+std::string Date::toStr()
 {
-	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
+	std::string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
 	return s;
 }
 
-void Date::fromStr(string s)
+void Date::fromStr(std::string s)
 {
 	int y, m, d;
 	sscanf(s.c_str(), "%4d-%2d-%2d", &y, &m, &d);
@@ -551,13 +551,13 @@ void HMS::setNow() {
 	wMilliseconds = t.wMilliseconds;
 }
 
-string HMS::toStr()
+std::string HMS::toStr()
 {
-	string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
+	std::string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
 	return s;
 }
 
-void HMS::fromStr(string str)
+void HMS::fromStr(std::string str)
 {
 	int h, m, s;
 	sscanf(str.c_str(), "%2d:%2d:%2d", &h, &m, &s);
@@ -566,7 +566,7 @@ void HMS::fromStr(string str)
 	wSecond = s;
 }
 
-string TAG::trimPrefix(string s, string prefix)
+std::string TAG::trimPrefix(std::string s, std::string prefix)
 {
 	if (prefix == "")
 		return s;
@@ -586,7 +586,7 @@ string TAG::trimPrefix(string s, string prefix)
 	return s;
 }
 
-string TAG::trimRoot(string tag, string root)
+std::string TAG::trimRoot(std::string tag, std::string root)
 {
 	if (root == "")
 		return tag;
@@ -596,10 +596,10 @@ string TAG::trimRoot(string tag, string root)
 	return tag;
 }
 
-string TAG::getParentTag(string tag)
+std::string TAG::getParentTag(std::string tag)
 {
 	size_t pos = tag.rfind(".");
-	if (pos == string::npos) {
+	if (pos == std::string::npos) {
 		return ""; //parent tag is rootTag
 	}
 	else if (pos >= 0) {
@@ -611,18 +611,18 @@ string TAG::getParentTag(string tag)
 	return tag;
 }
 
-string TAG::userTag2sysTag(string userTag, string userOrg)
+std::string TAG::userTag2sysTag(std::string userTag, std::string userOrg)
 {
 	return TAG::addRoot(userTag, userOrg);
 }
 
-string TAG::sysTag2userTag(string sysTag, string userOrg)
+std::string TAG::sysTag2userTag(std::string sysTag, std::string userOrg)
 {
 	return TAG::trimRoot(sysTag, userOrg);
 }
 
 
-string TAG::addRoot(string tag, string root)
+std::string TAG::addRoot(std::string tag, std::string root)
 {
 	if (root == "")
 		return tag;
@@ -671,7 +671,7 @@ int TAG::split(std::vector<std::string>& dst, const std::string& src, std::strin
 }
 
 
-size_t TAG::getMoLevel(string tag)
+size_t TAG::getMoLevel(std::string tag)
 {
 	tag = TAG::addRoot(tag, "root");
 	return std::count(tag.begin(), tag.end(), '.');
@@ -680,13 +680,13 @@ size_t TAG::getMoLevel(string tag)
 
 //tagThis当前位号
 //strTagExp相对与当前位号的相对位号表达式
-string TAG::resolveTag(string strTagExp, string tagContext)
+std::string TAG::resolveTag(std::string strTagExp, std::string tagContext)
 {
-	string tagName = strTagExp;
+	std::string tagName = strTagExp;
 
 
 	if (strTagExp.find("..") == 0) { //上一级位号
-		string tagContextParent;
+		std::string tagContextParent;
 		size_t pos = tagContext.rfind(".");
 		if (pos >= 0) {
 			tagContextParent = tagContext.substr(0, pos);
@@ -719,13 +719,13 @@ string TAG::resolveTag(string strTagExp, string tagContext)
 				break;
 			}
 		}
-		vector<string> parentNodes;
+		std::vector<std::string> parentNodes;
 		str::split(parentNodes, tagContext, ".");
 		
 		tagName = str::trimPrefix(tagName, "^");
 		tagName = str::trimPrefix(tagName, ".");
 		for (int i = 0; i < parentCount && i< parentNodes.size(); i++) {
-			string node = parentNodes[parentNodes.size() - 1 - i];
+			std::string node = parentNodes[parentNodes.size() - 1 - i];
 			tagName = TAG::addRoot(tagName, node);
 		}
 	}
@@ -737,9 +737,9 @@ string TAG::resolveTag(string strTagExp, string tagContext)
 }
 
 
-string TDS_LAST_ERROR()
+std::string TDS_LAST_ERROR()
 {
-	string szErrMsg = "";
+	std::string szErrMsg = "";
 #ifdef WINDOWS
 	DWORD dwErrCode = GetLastError(); //之前的错误代码
 
@@ -768,9 +768,9 @@ string TDS_LAST_ERROR()
 	{
 		wstring utf16msg = (LPWSTR)lpMsgBuf;
 #ifdef UTF8
-		string msg = str::utf16_to_utf8(utf16msg);
+		std::string msg = str::utf16_to_utf8(utf16msg);
 #else
-		string msg = str::utf16_to_gb(utf16msg);
+		std::string msg = str::utf16_to_gb(utf16msg);
 #endif
 		szErrMsg = str::format("Code = %u, Mean = %s", dwErrCode, msg.c_str());
 	}

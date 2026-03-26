@@ -15,11 +15,11 @@ enum LOG_LEVEL {
 };
 
 namespace LOG_CODEC {
-	const string gb2312 = "gb2312";
-	const string utf8 = "utf8";
+	const std::string gb2312 = "gb2312";
+	const std::string utf8 = "utf8";
 }
 
-typedef void (*fp_logOutputCallback)(string text);
+typedef void (*fp_logOutputCallback)(std::string text);
 
 class Clogger
 {
@@ -27,23 +27,23 @@ public:
 	Clogger();
 	void init();
 
-	LOG_LEVEL str2logLevel(string level);
+	LOG_LEVEL str2logLevel(std::string level);
 
-	void setLogLevel(string level);
-	LOG_LEVEL getLogLevel(string& info);
+	void setLogLevel(std::string level);
+	LOG_LEVEL getLogLevel(std::string& info);
 
 	void setConsoleTextColor(LOG_LEVEL ll);
 
-	string logInternal(string info, bool writeToFile = true); //is bForceWrite == true,ignore level
+	std::string logInternal(std::string info, bool writeToFile = true); //is bForceWrite == true,ignore level
 
-	void log(string info,bool writeToFile = true);
-	string m_InterfaceCodec = LOG_CODEC::utf8;  // codec for function interface
+	void log(std::string info,bool writeToFile = true);
+	std::string m_InterfaceCodec = LOG_CODEC::utf8;  // codec for function interface
 	bool dirCreated;
 	bool m_bSaveToFile; //save to console mode is supported
 	bool m_bEnable;
 
 	mutex m_lock;
-	string m_strLogDir;
+	std::string m_strLogDir;
 	LOG_LEVEL logLevel;
 
 	fp_logOutputCallback logOutput;
@@ -53,7 +53,7 @@ public:
 extern Clogger logger;
 
 void LOG(const char* pszFmt, ...);
-void LOG(string info);
+void LOG(std::string info);
 void LOG_C(char* p);
 
 int _vscprintf_cross_log(const char* format, va_list pargs);

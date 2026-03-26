@@ -12,9 +12,9 @@ enum SOCK_CONN_TYPE {
 
 struct SOCK_SESSION {
 	int sock;
-	string remoteIP;
+	std::string remoteIP;
 	int remotePort;
-	string localIP;
+	std::string localIP;
 	int localPort;
 	SOCK_CONN_TYPE type;
 	stream2pkt recvBuff;
@@ -44,13 +44,13 @@ typedef void (*sockSessionRecvCallback)(char* pData, size_t iLen, std::shared_pt
 
 
 struct SOCK_SRV_CONF {
-	string masterTdsAddrs;
-	string childTdsIP;
+	std::string masterTdsAddrs;
+	std::string childTdsIP;
 	int tcpKeepAliveSec;
 	int tcpSrvPort;
 	int udpSrvPort;
-	string tcpClientRegPkt;
-	string tcpServerRegPkt;
+	std::string tcpClientRegPkt;
+	std::string tcpServerRegPkt;
 
 	SOCK_SRV_CONF() {
 		tcpKeepAliveSec = 300;
@@ -69,7 +69,7 @@ public:
 	virtual ~tSockSrv();
 	bool sendToSockSession(std::shared_ptr<SOCK_SESSION> sockSession,unsigned char* pData, size_t len);
 	void sendToAllSessions(unsigned char* pData, size_t len, bool specialNotify = false);
-	void sendToAllSessions(string& s, bool specialNotify = false);
+	void sendToAllSessions(std::string& s, bool specialNotify = false);
 	map<int, std::shared_ptr<SOCK_SESSION>> m_sockSessions;
 	mutex m_mutexSessions;
 	sockSessionRecvCallback m_pCallback;
@@ -80,11 +80,11 @@ public:
 	//tcp client 
 	void onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
-	void onTcpCltEvent_error(tcpClt* pClt,string error) override;
-	vector<tcpClt*> m_tcpClt_ParentTds; //client as child service
+	void onTcpCltEvent_error(tcpClt* pClt,std::string error) override;
+	std::vector<tcpClt*> m_tcpClt_ParentTds; //client as child service
 	map<tcpClt*, tcpClt*> m_tcpClt_streamPusher;	//data steam pusher
 	mutex m_csTcpClt_streamPusher;
-	string m_masterTdsIP;
+	std::string m_masterTdsIP;
 	int m_masterTdsPort;
 
 	//tcp server 

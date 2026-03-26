@@ -18,24 +18,24 @@ public:
 	bool loadScriptList();
 	bool run();
 
-	void setConfPath(const string& conf);
-	string m_confPath;
+	void setConfPath(const std::string& conf);
+	std::string m_confPath;
 
 	bool m_reloadFile;
 	bool m_bRun;
 	bool hasScripts();
 	
-	std::map<string, SCRIPT_INFO> m_mapScripts;  
+	std::map<std::string, SCRIPT_INFO> m_mapScripts;  
 	std::mutex m_csScripts;
 
-	vector<SCRIPT_INFO> m_vecVarExpScripts;
+	std::vector<SCRIPT_INFO> m_vecVarExpScripts;
 	std::mutex m_csExpScripts;
 
-	bool handleRpc(string method, yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool runScript(string scriptName, string params, string& result, string& output);
-	bool runScriptFileAsyn(string scriptName,string tagThis);
-	bool getScript(string name, SCRIPT_INFO& si);
-	bool setRunInfo(string name, SCRIPT_RUN_INFO& sri);
+	bool handleRpc(std::string method, yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool runScript(std::string scriptName, std::string params, std::string& result, std::string& output);
+	bool runScriptFileAsyn(std::string scriptName,std::string tagThis);
+	bool getScript(std::string name, SCRIPT_INFO& si);
+	bool setRunInfo(std::string name, SCRIPT_RUN_INFO& sri);
 	bool rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_loadScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
@@ -47,13 +47,13 @@ public:
 	bool rpc_setScriptEnable(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_runAnalyseScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
-	void scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl, yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot);
-	void saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl, bool saveScriptData = false);
+	void scriptList2Json(std::string org, std::map<std::string, SCRIPT_INFO>& sl, yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot);
+	void saveScriptList(std::string org, std::map<std::string, SCRIPT_INFO>& sl, bool saveScriptData = false);
 
-	void updateVarExpScript(vector<SCRIPT_INFO>& varExpScripts);
+	void updateVarExpScript(std::vector<SCRIPT_INFO>& varExpScripts);
 
-	string getScriptPath(yyjson_val* params_obj, RPC_SESSION session);
-	json getScriptList(string tag);
+	std::string getScriptPath(yyjson_val* params_obj, RPC_SESSION session);
+	json getScriptList(std::string tag);
 
 	ioDev* getEvnDev(SCRIPT_INFO& si);
 
@@ -65,7 +65,7 @@ public:
 	float m_lastExpScripTimeCost;
 	TIME m_tLastExpScriptRunTime;
 
-	vector<fp_engineInitFunc> m_engineInitFuncList;
+	std::vector<fp_engineInitFunc> m_engineInitFuncList;
 };
 
 extern ScriptManager scriptManager;

@@ -88,12 +88,12 @@ std::string generate_tdb_uuid() {
 	return std::string(uuid);
 }
 
-string replaceStr(string str, const string to_replaced, const string newchars)
+std::string replaceStr(std::string str, const std::string to_replaced, const std::string newchars)
 {
-	for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
+	for (std::string::size_type pos(0); pos != std::string::npos; pos += newchars.length())
 	{
 		pos = str.find(to_replaced, pos);
-		if (pos != string::npos)
+		if (pos != std::string::npos)
 			str.replace(pos, to_replaced.length(), newchars);
 		else
 			break;
@@ -127,9 +127,9 @@ namespace DB_STR {
 		return str;
 	}
 
-	string utf16_to_utf8(wstring instr) //utf-8-->ansi
+	std::string utf16_to_utf8(wstring instr) //utf-8-->ansi
 	{
-		string str;
+		std::string str;
 #ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 4 + 2;
 		char* charstr = new char[MAX_STRSIZE];
@@ -143,7 +143,7 @@ namespace DB_STR {
 		return str;
 	}
 
-	wstring utf8_to_utf16(string instr) //utf-8-->ansi
+	wstring utf8_to_utf16(std::string instr) //utf-8-->ansi
 	{
 		wstring str;
 #ifdef _WIN32
@@ -158,9 +158,9 @@ namespace DB_STR {
 #endif
 		return str;
 	}
-	string gb_to_utf8(string instr) //ansi-->utf-8
+	std::string gb_to_utf8(std::string instr) //ansi-->utf-8
 	{
-		string str;
+		std::string str;
 #ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -178,7 +178,7 @@ namespace DB_STR {
 		//size_t outlen = 2 * inlen;
 
 		//// duanqn: The iconv function in Linux requires non-const char *
-		//// So we need to copy the source string
+		//// So we need to copy the source std::string
 		//char* inbuf = (char*)malloc(inlen);
 		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
 		//							// so we use another pointer to keep the address
@@ -203,7 +203,7 @@ namespace DB_STR {
 		return str;
 	}
 
-	bool isTime(string& s) {
+	bool isTime(std::string& s) {
 		if (s.size() > 10) {
 			char a = s[4];
 			char b = s[7];
@@ -214,9 +214,9 @@ namespace DB_STR {
 		return false;
 	}
 
-	string utf8_to_gb(string instr) //utf-8-->ansi
+	std::string utf8_to_gb(std::string instr) //utf-8-->ansi
 	{
-		string str;
+		std::string str;
 #ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -234,7 +234,7 @@ namespace DB_STR {
 		//size_t outlen = 2*inlen;
 
 		//// duanqn: The iconv function in Linux requires non-const char *
-		//// So we need to copy the source string
+		//// So we need to copy the source std::string
 		//char* inbuf = (char*)malloc(inlen);
 		//memset(inbuf,0,inlen);
 		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
@@ -264,7 +264,7 @@ namespace DB_STR {
 		return str;
 	}
 
-	wstring gb_to_utf16(string instr)
+	wstring gb_to_utf16(std::string instr)
 	{
 		wstring str;
 #ifdef _WIN32
@@ -315,12 +315,12 @@ namespace DB_STR {
 		return nCount;
 	}
 
-	string replace(string str, const string to_replaced, const string newchars)
+	std::string replace(std::string str, const std::string to_replaced, const std::string newchars)
 	{
-		for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
+		for (std::string::size_type pos(0); pos != std::string::npos; pos += newchars.length())
 		{
 			pos = str.find(to_replaced, pos);
-			if (pos != string::npos)
+			if (pos != std::string::npos)
 				str.replace(pos, to_replaced.length(), newchars);
 			else
 				break;
@@ -369,59 +369,59 @@ namespace TIME_OPT {
 		return Unix2DBTime(tt, milli);
 	}
 
-	bool isRelative(string time)
+	bool isRelative(std::string time)
 	{
-		if (time.find("d") != string::npos || time.find("h") != string::npos
-			|| time.find("m") != string::npos || time.find("s") != string::npos ||
-			time.find("D") != string::npos || time.find("H") != string::npos
-			|| time.find("M") != string::npos || time.find("S") != string::npos)
+		if (time.find("d") != std::string::npos || time.find("h") != std::string::npos
+			|| time.find("m") != std::string::npos || time.find("s") != std::string::npos ||
+			time.find("D") != std::string::npos || time.find("H") != std::string::npos
+			|| time.find("M") != std::string::npos || time.find("S") != std::string::npos)
 		{
 			return true;
 		}
 		return false;
 	}
 
-	int timeLen2seconds(string timeLen) {
+	int timeLen2seconds(std::string timeLen) {
 		//相对时间区间模式
-		string time1 = timeLen;
-		string strDay = "", strH = "", strM = "", strS = "";
+		std::string time1 = timeLen;
+		std::string strDay = "", strH = "", strM = "", strS = "";
 		int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
 		size_t pos = time1.find("y");
-		if (pos == string::npos)
+		if (pos == std::string::npos)
 			pos = time1.find("Y");
-		if (pos != string::npos) {
-			string strYear = time1.substr(0, pos);
+		if (pos != std::string::npos) {
+			std::string strYear = time1.substr(0, pos);
 			time1 = time1.erase(0, pos + 1);
 			n1 = (int)atof(strYear.c_str()) * 365 * 24 * 3600;
 		}
 		pos = time1.find("d");
-		if (pos == string::npos)
+		if (pos == std::string::npos)
 			pos = time1.find("D");
-		if (pos != string::npos) {
+		if (pos != std::string::npos) {
 			strDay = time1.substr(0, pos);
 			time1 = time1.erase(0, pos + 1);
 			n1 = (int)atof(strDay.c_str()) * 24 * 3600;
 		}
 		pos = time1.find("h");
-		if (pos == string::npos)
+		if (pos == std::string::npos)
 			pos = time1.find("H");
-		if (pos != string::npos) {
+		if (pos != std::string::npos) {
 			strH = time1.substr(0, pos);
 			time1 = time1.erase(0, pos + 1);
 			n2 = (int)atof(strH.c_str()) * 3600;
 		}
 		pos = time1.find("m");
-		if (pos == string::npos)
+		if (pos == std::string::npos)
 			pos = time1.find("M");
-		if (pos != string::npos) {
+		if (pos != std::string::npos) {
 			strM = time1.substr(0, pos);
 			time1 = time1.erase(0, pos + 1);
 			n3 = (int)atof(strM.c_str()) * 60;
 		}
 		pos = time1.find("s");
-		if (pos == string::npos)
+		if (pos == std::string::npos)
 			pos = time1.find("S");
-		if (pos != string::npos) {
+		if (pos != std::string::npos) {
 			strS = time1.substr(0, pos);
 			time1 = time1.erase(0, pos + 1);
 			n4 = (int)atof(strS.c_str());
@@ -429,9 +429,9 @@ namespace TIME_OPT {
 		return n1 + n2 + n3 + n4;
 	}
 
-	string rel2abs(string time)
+	std::string rel2abs(std::string time)
 	{
-		string strTime1 = time;
+		std::string strTime1 = time;
 		if (isRelative(time)) {
 			int timeLen = timeLen2seconds(time);
 			DB_TIME stNow;
@@ -440,8 +440,8 @@ namespace TIME_OPT {
 			time_t startTime = endTime - timeLen;
 			DB_TIME  stStart;
 			stStart.fromUnixTime(startTime);
-			string strNow = stNow.toStr(false);
-			string strStart = stStart.toStr(false);
+			std::string strNow = stNow.toStr(false);
+			std::string strStart = stStart.toStr(false);
 			time = strStart + "~" + strNow;
 		}
 		return time;
@@ -455,23 +455,23 @@ namespace TIME_OPT {
 		return st;
 	}
 
-	string st2str(DB_TIME t, bool enableMS)
+	std::string st2str(DB_TIME t, bool enableMS)
 	{
 		if (enableMS) {
-			string str = DB_STR::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
+			std::string str = DB_STR::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
 				t.wYear, t.wMonth, t.wDay,
 				t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
 			return str;
 		}
 		else {
-			string str = DB_STR::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d",
+			std::string str = DB_STR::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d",
 				t.wYear, t.wMonth, t.wDay,
 				t.wHour, t.wMinute, t.wSecond);
 			return str;
 		}
 	}
 
-	string nowStr(bool enableMS)
+	std::string nowStr(bool enableMS)
 	{
 		DB_TIME t = now();
 		return st2str(t, enableMS);
@@ -479,7 +479,7 @@ namespace TIME_OPT {
 }
 
 namespace DB_TAG {
-	string trimPrefix(string s, string prefix)
+	std::string trimPrefix(std::string s, std::string prefix)
 	{
 		if (prefix == "")
 			return s;
@@ -499,7 +499,7 @@ namespace DB_TAG {
 		return s;
 	}
 
-	string trimRoot(string tag, string root)
+	std::string trimRoot(std::string tag, std::string root)
 	{
 		if (root == "")
 			return tag;
@@ -509,7 +509,7 @@ namespace DB_TAG {
 		return tag;
 	}
 
-	string addRoot(string tag, string root)
+	std::string addRoot(std::string tag, std::string root)
 	{
 		if (root == "")
 			return tag;
@@ -524,7 +524,7 @@ namespace DB_TAG {
 
 
 namespace DB_FS {
-	bool readFile(string path, string& data) {
+	bool readFile(std::string path, std::string& data) {
 		FILE* fp = nullptr;
 		wstring wPath = DB_STR::utf8_to_utf16(path);
 		DB_LOCK_GUARD dbLock(path);
@@ -553,7 +553,7 @@ namespace DB_FS {
 		return false;
 	}
 
-	bool readFile(string path, char*& pData, int& len)
+	bool readFile(std::string path, char*& pData, int& len)
 	{
 		FILE* fp = nullptr;
 		DB_LOCK_GUARD dbLock(path);
@@ -576,13 +576,13 @@ namespace DB_FS {
 		return false;
 	}
 
-	bool createFolderOfPath(string strFile)
+	bool createFolderOfPath(std::string strFile)
 	{
 		size_t iDotPos = strFile.rfind('.');
 		size_t iSlashPos = strFile.rfind('/');
 		if (iSlashPos == std::string::npos)
 			iSlashPos = strFile.rfind("\\");
-		if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
+		if (iDotPos != std::string::npos && iDotPos > iSlashPos) {//is a file
 			strFile = strFile.substr(0, iSlashPos);
 		}
 
@@ -594,7 +594,7 @@ namespace DB_FS {
 		return stdfs::create_directories(p);
 #endif
 	}
-	bool writeFile(string path, char* data, size_t len)
+	bool writeFile(std::string path, char* data, size_t len)
 	{
 		if(!TDB::fileExist(path))
 			createFolderOfPath(path);
@@ -616,22 +616,22 @@ namespace DB_FS {
 		else
 		{
 #ifdef _WIN32
-			string info = DB_STR::format("writeFile,path=%s,len=%d", path.c_str(), len);
+			std::string info = DB_STR::format("writeFile,path=%s,len=%d", path.c_str(), len);
 			DWORD errCode = GetLastError();
 			printf("[error]%d", errCode);
 #endif
 		}
 		return false;
 	}
-	bool writeFile(string path, unsigned char* data, size_t len)
+	bool writeFile(std::string path, unsigned char* data, size_t len)
 	{
 		return writeFile(path, (char*)data, len);
 	}
-	bool writeFile(string path, string& data)
+	bool writeFile(std::string path, std::string& data)
 	{
 		return writeFile(path, (char*)data.c_str(), data.length());
 	}
-	bool appendWrite(string path, char* data, size_t len)
+	bool appendWrite(std::string path, char* data, size_t len)
 	{
 		createFolderOfPath(path);
 
@@ -658,7 +658,7 @@ namespace DB_FS {
 		}
 		return false;
 	}
-	bool deleteFile(string path) {
+	bool deleteFile(std::string path) {
 		return stdfs::remove(DB_STR::utf8_to_utf16(path));
 	}
 
@@ -708,7 +708,7 @@ namespace DB_FS {
 	}
 
 	//delete dir_path(include itself) and children(include subdirs and files)
-	void deleteDirectory(string& dirPath) {
+	void deleteDirectory(std::string& dirPath) {
 #ifdef _WIN32
 		DeleteDirectoryContents(dirPath);
 		if (RemoveDirectory(dirPath.c_str())) {
@@ -752,7 +752,7 @@ namespace DB_FS {
 		return std::rename(oldPath.c_str(), newPath.c_str()) == 0;
 	}
 
-	string normalizationPath(string& s)
+	std::string normalizationPath(std::string& s)
 	{
 		s = replaceStr(s, "\\\\", "/");
 		s = replaceStr(s, "\\", "/");
@@ -760,7 +760,7 @@ namespace DB_FS {
 		return s;
 	}
 
-	void getFolderList(vector<DB_FS::FILE_INFO>& list, string strFolder, bool recursive) {
+	void getFolderList(std::vector<DB_FS::FILE_INFO>& list, std::string strFolder, bool recursive) {
 		try
 		{
 			wstring wstrFolder = DB_STR::utf8_to_utf16(strFolder);
@@ -802,7 +802,7 @@ namespace DB_FS {
 	}
 
 
-	void getFileList(vector<DB_FS::FILE_INFO>& list, string strFolder, bool recursive, string suffix, vector<string>* exclude) {
+	void getFileList(std::vector<DB_FS::FILE_INFO>& list, std::string strFolder, bool recursive, std::string suffix, std::vector<std::string>* exclude) {
 		try
 		{
 			wstring wstrFolder = DB_STR::utf8_to_utf16(strFolder);
@@ -813,7 +813,7 @@ namespace DB_FS {
 				if (exclude != nullptr) {
 					bool excluded = false;
 					for (int i = 0; i < exclude->size(); i++) {
-						string ep = exclude->at(i);
+						std::string ep = exclude->at(i);
 						if (fi.name == ep) {
 							excluded = true;
 							break;
@@ -834,7 +834,7 @@ namespace DB_FS {
 					//std::filesystem::file_time_type ft = i.last_write_time();
 					//std::time_t tt = decltype(ft)::clock::to_time_t();
 					fi.path = replaceStr(fi.path, "\\", "/");
-					if (suffix != "*" && fi.path.find(suffix) == string::npos)
+					if (suffix != "*" && fi.path.find(suffix) == std::string::npos)
 						continue;
 					size_t pos = fi.path.rfind("/");
 					fi.folderPath = fi.path.substr(0, pos);
@@ -857,9 +857,9 @@ namespace DB_FS {
 	}
 
 
-	void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
+	void getFileList(std::vector<std::string>& list, std::string strFolder, bool includeFolder, bool recursive)
 	{
-		vector<DB_FS::FILE_INFO> filist;
+		std::vector<DB_FS::FILE_INFO> filist;
 		getFileList(filist, strFolder, recursive);
 		for (int i = 0; i < filist.size(); i++) {
 			DB_FS::FILE_INFO& fi = filist[i];
@@ -867,7 +867,7 @@ namespace DB_FS {
 		}
 	}
 
-	bool fileExist(string pszFileName)
+	bool fileExist(std::string pszFileName)
 	{
 #ifdef _WIN32
 		stdfs::path filePath = DB_STR::utf8_to_utf16(pszFileName);
@@ -1092,13 +1092,13 @@ void DBLog(const char* pszFmt, ...)
 
 	DB_TIME stNow;
 	stNow.setNow();
-	string time = formatStr("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
-	string logline = time + " " + str;
+	std::string time = formatStr("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
+	std::string logline = time + " " + str;
 	printf("%s\n", logline.c_str());
 }
 
 
-bool shouldErase(const std::pair<string, FILE_BUFF*>& pair) {
+bool shouldErase(const std::pair<std::string, FILE_BUFF*>& pair) {
 
 	return false;
 }
@@ -1114,7 +1114,7 @@ void bufferManageThread(TDB* p) {
 
 		if (p->m_bEnableFsBuff) {
 			p->m_FsBuff.m_csFsb.lock();
-			std::map<string, FILE_BUFF*> mapTmp;
+			std::map<std::string, FILE_BUFF*> mapTmp;
 			for (auto& iter : p->m_FsBuff.m_mapFsBuff) {
 				int bufferredTime = TIME_OPT::calcTimePassSecond(iter.second->lastActive);
 				if (bufferredTime < p->m_bufferTTL) {
@@ -1142,43 +1142,43 @@ TDB::TDB()
 	t.detach();
 }
 
-string TDB::getPath_deFile(string strTag, DB_TIME stTime)
+std::string TDB::getPath_deFile(std::string strTag, DB_TIME stTime)
 {
 	if (m_timeUnit == BY_DAY) {
 		strTag = replaceStr(strTag, ".", "/");
-		string strURL = formatStr("/%04d%02d/%02d/", stTime.wYear, stTime.wMonth, stTime.wDay);
+		std::string strURL = formatStr("/%04d%02d/%02d/", stTime.wYear, stTime.wMonth, stTime.wDay);
 		if (m_dbFmt.dbRootTag != "") {
-			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			std::string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
 			strURL += dbRootTag + "/";
 		}
 		strURL += strTag;
-		string timeStamp = formatStr("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
+		std::string timeStamp = formatStr("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
 		strURL += "/" + timeStamp;
 		return strURL;
 	}
 	else if (m_timeUnit == BY_MONTH) {
 		strTag = replaceStr(strTag, ".", "/");
-		string strURL = formatStr("/%04d%02d/", stTime.wYear, stTime.wMonth);
+		std::string strURL = formatStr("/%04d%02d/", stTime.wYear, stTime.wMonth);
 		if (m_dbFmt.dbRootTag != "") {
-			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			std::string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
 			strURL += dbRootTag + "/";
 		}
 		strURL += strTag;
-		string timeStamp = formatStr("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
+		std::string timeStamp = formatStr("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
 		strURL += "/" + timeStamp;
 		return strURL;
 	}
 	else if (m_timeUnit == NONE) {
 		strTag = replaceStr(strTag, ".", "/");
-		string strURL = m_path + "/" + strTag;
+		std::string strURL = m_path + "/" + strTag;
 		return strURL;
 	}
 	return "";
 }
 
-string TDB::getPath_dataFolder(string strTag, const DB_TIME& date, const string& deType) const
+std::string TDB::getPath_dataFolder(std::string strTag, const DB_TIME& date, const std::string& deType) const
 {
-	string pathType = "day";
+	std::string pathType = "day";
 	if (deType == "statisByDay" || deType == "statisDe")
 	{
 		pathType = "day";
@@ -1200,9 +1200,9 @@ string TDB::getPath_dataFolder(string strTag, const DB_TIME& date, const string&
 	{
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
-		string strURL = formatStr("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
+		std::string strURL = formatStr("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
 		if (m_dbFmt.dbRootTag != "") {
-			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			std::string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
 			strURL += dbRootTag + "/";
 		}
 		strURL += strTag;
@@ -1213,9 +1213,9 @@ string TDB::getPath_dataFolder(string strTag, const DB_TIME& date, const string&
 	{
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
-		string strURL = formatStr("/%04d%02d/", date.wYear, date.wMonth);
+		std::string strURL = formatStr("/%04d%02d/", date.wYear, date.wMonth);
 		if (m_dbFmt.dbRootTag != "") {
-			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			std::string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
 			strURL += dbRootTag + "/";
 		}
 		strURL += strTag;
@@ -1224,20 +1224,20 @@ string TDB::getPath_dataFolder(string strTag, const DB_TIME& date, const string&
 	}
 	else if (pathType == "none") {
 		strTag = replaceStr(strTag, ".", "/");
-		string strURL = m_path + "/" + strTag;
+		std::string strURL = m_path + "/" + strTag;
 		return strURL;
 	}
 	return "";
 }
 // no '/' in bengin ,and in end
-string TDB::getPath_dataFolder_NO_DB(string strTag, const DB_TIME& date) const
+std::string TDB::getPath_dataFolder_NO_DB(std::string strTag, const DB_TIME& date) const
 {
 	if (m_timeUnit == BY_DAY) {
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
-		string strURL = formatStr("%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
+		std::string strURL = formatStr("%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
 		if (m_dbFmt.dbRootTag != "") {
-			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			std::string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
 			strURL += dbRootTag + "/";
 		}
 		strURL += strTag;
@@ -1246,9 +1246,9 @@ string TDB::getPath_dataFolder_NO_DB(string strTag, const DB_TIME& date) const
 	else if (m_timeUnit == BY_MONTH) {
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
-		string strURL = formatStr("%04d%02d/", date.wYear, date.wMonth);
+		std::string strURL = formatStr("%04d%02d/", date.wYear, date.wMonth);
 		if (m_dbFmt.dbRootTag != "") {
-			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			std::string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
 			strURL += dbRootTag + "/";
 		}
 		strURL += strTag;
@@ -1256,37 +1256,37 @@ string TDB::getPath_dataFolder_NO_DB(string strTag, const DB_TIME& date) const
 	}
 	else if (m_timeUnit == NONE) {
 		strTag = replaceStr(strTag, ".", "/");
-		string strURL = strTag;
+		std::string strURL = strTag;
 		return strURL;
 	}
 	return "";
 }
 
-string TDB::getPath_dbRoot()
+std::string TDB::getPath_dbRoot()
 {
 	return m_path;
 }
 
-string TDB::getName_deFile(string tag, DB_TIME time)
+std::string TDB::getName_deFile(std::string tag, DB_TIME time)
 {
-	string timeStamp = formatStr("%02d%02d%02d", time.wHour, time.wMinute, time.wSecond);
+	std::string timeStamp = formatStr("%02d%02d%02d", time.wHour, time.wMinute, time.wSecond);
 	return timeStamp;
 }
 
 //8 illigal filename char
-string ic1 = formatStr("[%02X]", '\\');
-string ic2 = formatStr("[%02X]", ':');
-string ic3 = formatStr("[%02X]", '*');
-string ic4 = formatStr("[%02X]", '?');
-string ic5 = formatStr("[%02X]", '\"');
-string ic6 = formatStr("[%02X]", '<');
-string ic7 = formatStr("[%02X]", '>');
-string ic8 = formatStr("[%02X]", '|');
-string ic9 = formatStr("[%02X]", '/');
+std::string ic1 = formatStr("[%02X]", '\\');
+std::string ic2 = formatStr("[%02X]", ':');
+std::string ic3 = formatStr("[%02X]", '*');
+std::string ic4 = formatStr("[%02X]", '?');
+std::string ic5 = formatStr("[%02X]", '\"');
+std::string ic6 = formatStr("[%02X]", '<');
+std::string ic7 = formatStr("[%02X]", '>');
+std::string ic8 = formatStr("[%02X]", '|');
+std::string ic9 = formatStr("[%02X]", '/');
 
 //escple illigal filename char  / \ : * ? " < > |
-string TDB::changeCharForFileName(string s)  const {
-	string out;
+std::string TDB::changeCharForFileName(std::string s)  const {
+	std::string out;
 	for (int i = 0; i < s.length(); i++)
 	{
 		char c = s[i];
@@ -1335,16 +1335,16 @@ string TDB::changeCharForFileName(string s)  const {
 }
 
 //generate  or get the existted
-string TDB::getPath_dbFile(string tag, string time, string deType)
+std::string TDB::getPath_dbFile(std::string tag, std::string time, std::string deType)
 {
 	DB_TIME dbt;
 	dbt.fromStr(time);
 	return getPath_dbFile(tag, dbt, deType);
 }
 
-string TDB::getPath_dbFile(string strTag, const DB_TIME& date, string deType) const
+std::string TDB::getPath_dbFile(std::string strTag, const DB_TIME& date, std::string deType) const
 {
-	string folder = getPath_dataFolder(strTag, date, deType);
+	std::string folder = getPath_dataFolder(strTag, date, deType);
 	if (deType == "") {
 		//auto judge
 		if (fileExist((folder + "/" + m_dbFmt.deListName).c_str()))
@@ -1377,8 +1377,8 @@ string TDB::getPath_dbFile(string strTag, const DB_TIME& date, string deType) co
 	}
 }
 
-string TDB::getDeFilesFolder(string& deListFolder, DB_TIME& time) {
-	string s;
+std::string TDB::getDeFilesFolder(std::string& deListFolder, DB_TIME& time) {
+	std::string s;
 	if (m_timeUnit == DB_TIME_UNIT::BY_DAY) {
 		s = deListFolder + "/" + time.toStampHMS();
 	}
@@ -1398,7 +1398,7 @@ string TDB::getDeFilesFolder(string& deListFolder, DB_TIME& time) {
 }
 //1. Store data element files (curves, JSON) or data element related files (images) 2. Store data element index files or data element list files
 //1.存数据元文件(曲线、json)或存数据元相关文件(图片) 2.存数据元索引文件或数据元列表文件
-bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
+bool TDB::Insert(std::string strTag, std::string& sDe, DB_TIME* time)
 {
 	if (!m_enableDB)
 		return false;
@@ -1411,7 +1411,7 @@ bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 		stTime = TIME_OPT::now();
 	}
 
-	string deListFolderPath = getPath_dataFolder(strTag, stTime);
+	std::string deListFolderPath = getPath_dataFolder(strTag, stTime);
 	if (!folderExist(deListFolderPath)) {
 		DB_FS::createFolderOfPath(deListFolderPath.c_str());
 	}
@@ -1422,18 +1422,18 @@ bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 	yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
 	yyjson_mut_val* timeKey = yyjson_mut_strcpy(mdoc, "time");
 
-	string sTime = stTime.toStr(true);
+	std::string sTime = stTime.toStr(true);
 	yyjson_mut_val* timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
 	yyjson_mut_obj_put(yymDe, timeKey, timeVal);
 
 	//write file data
-	vector<string> fileUrl;
-	string fileType;
+	std::vector<std::string> fileUrl;
+	std::string fileType;
 	yyjson_val* yyv_file = yyjson_obj_get(yyDe, "file");
 	if (yyv_file) {
 		//save to a directory name as timestamp
 		if (yyjson_is_arr(yyv_file)) {
-			string deFilesFolder = getDeFilesFolder(deListFolderPath, stTime);
+			std::string deFilesFolder = getDeFilesFolder(deListFolderPath, stTime);
 			if (!folderExist(deFilesFolder)) {
 				DB_FS::createFolderOfPath(deFilesFolder.c_str());
 			}
@@ -1442,7 +1442,7 @@ bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 			size_t max = 0;
 			yyjson_val* item;
 			yyjson_arr_foreach(yyv_file, idx, max, item) {
-				string url = saveDEFile(item, deFilesFolder, stTime, fileType);
+				std::string url = saveDEFile(item, deFilesFolder, stTime, fileType);
 				url = url.substr(m_path.length(), url.length() - m_path.length());
 				fileUrl.push_back(url);
 			}
@@ -1454,7 +1454,7 @@ bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 		}
 	}
 
-	string dataListPath;
+	std::string dataListPath;
 	if (fileType == "curve")
 		dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
 	else
@@ -1472,8 +1472,8 @@ bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 			yyjson_mut_arr_foreach(yymv_dataFile, idx, max, item) {
 				yyjson_mut_obj_remove_key(item, "data");
 				//generate url when insert data,better performance than generate when select data
-				string url = fileUrl[idx];
-				string urlAbs = "/db";
+				std::string url = fileUrl[idx];
+				std::string urlAbs = "/db";
 				if (m_name != "")
 					urlAbs += "/" + m_name;
 				urlAbs += url;
@@ -1498,19 +1498,19 @@ bool TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 
 struct DE_TEMP {
 	yyjson_mut_val* de;
-	string sortVal;
+	std::string sortVal;
 
 };
 
-bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
+bool TDB::saveDeToDataListFile(std::string dataListPath, yyjson_mut_val* yymDe) {
 	if (m_bEnableFsBuff) {
 		bool bAppend = false;
 		m_FsBuff.m_csFsb.lock();
-		std::map<string, FILE_BUFF*>::iterator iter = m_FsBuff.m_mapFsBuff.find(dataListPath);
+		std::map<std::string, FILE_BUFF*>::iterator iter = m_FsBuff.m_mapFsBuff.find(dataListPath);
 		if (iter != m_FsBuff.m_mapFsBuff.end()) {
-			string& fileData = iter->second->data;  // can be an empty file ,length is 0
+			std::string& fileData = iter->second->data;  // can be an empty file ,length is 0
 
-			string strDe;
+			std::string strDe;
 
 			size_t len = 0;
 			char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
@@ -1538,7 +1538,7 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 	{
 		DB_FS::createFolderOfPath(dataListPath);
 
-		string fileData;
+		std::string fileData;
 
 		size_t len = 0;
 		char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
@@ -1574,7 +1574,7 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 
 				std::string d = ",";
 
-				string str;
+				std::string str;
 
 				size_t len = 0;
 				char* s = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
@@ -1590,7 +1590,7 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 			}
 			else
 			{
-				string fileData;
+				std::string fileData;
 
 				size_t len = 0;
 				char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
@@ -1610,9 +1610,9 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 }
 
 
-//for yyjson debug, dump json string to debug
+//for yyjson debug, dump json std::string to debug
 //copy mut_val before put in to a new mut_obj , otherwise the origin val will be changed
-string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
+std::string printfTimeSection(map<std::string, yyjson_mut_val*>* timeSection) {
 	printf("********time section dump*********\n");
 	if (timeSection == nullptr)
 		printf("null");
@@ -1654,16 +1654,16 @@ std::string yyvalDump(yyjson_val* val) {
 }
 #endif
 
-bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc) {
+bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, std::vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc) {
 	bool withTag = deSel.tagSel.getTag;
-	map<string, map<string, set<yyjson_mut_val*>>> timeSectionSeries;
+	map<std::string, map<std::string, set<yyjson_mut_val*>>> timeSectionSeries;
 
 	//generate output de
 	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++) {
 		DATA_SET& fSet = *set_list[tagIdx];
 
-		string& tagAlias = fSet.colKey;
-		string& tag = fSet.tag;
+		std::string& tagAlias = fSet.colKey;
+		std::string& tag = fSet.tag;
 
 		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
 			DE_yyjson& deyy = *fSet.m_afterAggr[j];
@@ -1711,12 +1711,12 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 
 			auto iter = timeSectionSeries.find(deyy.deTime.data());
 			if (iter == timeSectionSeries.end()) {
-				map<string, set<yyjson_mut_val*>> timeSection;
+				map<std::string, set<yyjson_mut_val*>> timeSection;
 				timeSection[tag].insert(jRecord);
 				timeSectionSeries[deyy.deTime.data()] = timeSection;
 			}
 			else {
-				map<string, set<yyjson_mut_val*>>& timeSection = iter->second;
+				map<std::string, set<yyjson_mut_val*>>& timeSection = iter->second;
 				timeSection[tag].insert(jRecord);
 			}
 
@@ -1731,14 +1731,14 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 	//time section fill,set time of the filled de
 	if (deSel.timeFill) {
 		int addDeCount = 0;
-		map<string, set<yyjson_mut_val*>>* lastSection = nullptr;
+		map<std::string, set<yyjson_mut_val*>>* lastSection = nullptr;
 
 		for (auto& iter : timeSectionSeries) {
-			map<string, set<yyjson_mut_val*>>& timeSection = iter.second;
+			map<std::string, set<yyjson_mut_val*>>& timeSection = iter.second;
 
 			for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++) {
 				DATA_SET& fSet = *set_list[tagIdx];
-				string& tag = fSet.tag;
+				std::string& tag = fSet.tag;
 
 				auto j = timeSection.find(tag);
 				if (j == timeSection.end()) { //tag does not have data in this time section,need to be filled
@@ -1758,7 +1758,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 
 								//yyjson_mut_val* jValRefRec = k->second;
 								yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, m_dbFmt.deItemKey_value.c_str());
-								yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //a copy operation must be done, do not put yyValSrc into obj, it causes error in dumped json string. may be the obj the pointer pointed is a node of a linked list,if in two obj at the same time,causes error when yyjson try to dump the linked list
+								yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //a copy operation must be done, do not put yyValSrc into obj, it causes error in dumped json std::string. may be the obj the pointer pointed is a node of a linked list,if in two obj at the same time,causes error when yyjson try to dump the linked list
 								yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, CONST_STR::val.c_str());
 								yyjson_mut_obj_put(jRecord, valKey, yyVal);
 
@@ -1784,7 +1784,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 
 	//sort de and output
 	for (auto& i : timeSectionSeries) {
-		map<string, set<yyjson_mut_val*>>& timeSection = i.second;
+		map<std::string, set<yyjson_mut_val*>>& timeSection = i.second;
 
 		for (auto& j : timeSection) {
 			SORT_FLAG sortFlag;
@@ -1823,7 +1823,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 }
 
 //only immut select use this function
-bool TDB::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
+bool TDB::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, std::vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	//generate output de
 	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++)
@@ -1839,7 +1839,7 @@ bool TDB::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>
 	return true;
 }
 
-bool TDB::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, vector<yyjson_mut_val*>& vecRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
+bool TDB::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, std::vector<DATA_SET*>& set_list, std::vector<yyjson_mut_val*>& vecRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	//generate output de
 	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++)
@@ -1856,8 +1856,8 @@ bool TDB::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>
 
 
 yyjson_val* yyjson_obj_get_recursive(yyjson_val* obj, const char* key) {
-	string recurKey = key;
-	vector<string> keyLink;
+	std::string recurKey = key;
+	std::vector<std::string> keyLink;
 	DB_STR::split(keyLink, key, ".");
 	yyjson_val* ret = nullptr;
 	for (auto& key : keyLink) {
@@ -1891,11 +1891,11 @@ struct RANGE_INCREASE {
 };
 
 //at least 2 points in one range
-map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, string& aggrKey, string groupKey, vector<yyjson_val*>& deGroup) {
-	map<string, vector<DB_TIME_RANGE>>& mapTimeSlots = deSel.mapTimeSlots;
+map<std::string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, std::string& aggrKey, std::string groupKey, std::vector<yyjson_val*>& deGroup) {
+	map<std::string, std::vector<DB_TIME_RANGE>>& mapTimeSlots = deSel.mapTimeSlots;
 
 	//order by range start time
-	map<string, double> slotIncrease;
+	map<std::string, double> slotIncrease;
 	map<DB_TIME, RANGE_INCREASE*> listTimeRange;
 	for (auto& slotIter : mapTimeSlots) {
 		slotIncrease[slotIter.first] = 0;
@@ -2010,7 +2010,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 			}
 			else if (deSel.isValTypeNumber() && yyjson_get_type(pValFirst) == YYJSON_TYPE_STR)
 			{
-				string valStr = yyjson_get_str(pValFirst);
+				std::string valStr = yyjson_get_str(pValFirst);
 				dbFirst = atof(valStr.data());
 			}
 			else {
@@ -2022,7 +2022,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 			}
 			else if (deSel.isValTypeNumber() && yyjson_get_type(pValLast) == YYJSON_TYPE_STR)
 			{
-				string valStr = yyjson_get_str(pValLast);
+				std::string valStr = yyjson_get_str(pValLast);
 				dbLast = atof(valStr.data());
 			}
 			else {
@@ -2039,7 +2039,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 	}
 
 	if (aggrKeyUndefined) {
-		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group key is " + groupKey + ",group size is " + DB_STR::format(" % d", deGroup.size());
+		std::string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group key is " + groupKey + ",group size is " + DB_STR::format(" % d", deGroup.size());
 		db_exception e;
 		e.m_error = sErr;
 		throw e;
@@ -2049,7 +2049,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 	return slotIncrease;
 }
 
-double TDB::doAggrOneGroup_sum(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup) {
+double TDB::doAggrOneGroup_sum(DE_SELECTOR& deSel, std::string& aggrKey, std::vector<yyjson_val*>& deGroup) {
 	double dbSum = 0;
 	bool aggrKeyUndefined = true;
 	for (int j = 0; j < deGroup.size(); j++) {
@@ -2066,7 +2066,7 @@ double TDB::doAggrOneGroup_sum(DE_SELECTOR& deSel, string& aggrKey, vector<yyjso
 		}
 		else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 		{
-			string valStr = yyjson_get_str(pDeSrcVal);
+			std::string valStr = yyjson_get_str(pDeSrcVal);
 			db = atof(valStr.data());
 		}
 		else {
@@ -2076,7 +2076,7 @@ double TDB::doAggrOneGroup_sum(DE_SELECTOR& deSel, string& aggrKey, vector<yyjso
 	}
 
 	if (aggrKeyUndefined) {
-		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+		std::string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
 		db_exception e;
 		e.m_error = sErr;
 		throw e;
@@ -2114,7 +2114,7 @@ struct DURATION_CALC {
 	}
 };
 
-void TDB::doAggrOneGroup_duration(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup, yyjson_mut_val*& pAggrRlt, yyjson_mut_doc* yydoc) {
+void TDB::doAggrOneGroup_duration(DE_SELECTOR& deSel, std::string& aggrKey, std::vector<yyjson_val*>& deGroup, yyjson_mut_val*& pAggrRlt, yyjson_mut_doc* yydoc) {
 	bool aggrKeyUndefined = true;
 
 	DURATION_CALC calc;
@@ -2272,7 +2272,7 @@ void TDB::doAggrOneGroup_duration(DE_SELECTOR& deSel, string& aggrKey, vector<yy
 	}
 
 	if (aggrKeyUndefined) {
-		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+		std::string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
 		db_exception e;
 		e.m_error = sErr;
 		throw e;
@@ -2281,7 +2281,7 @@ void TDB::doAggrOneGroup_duration(DE_SELECTOR& deSel, string& aggrKey, vector<yy
 	return;
 }
 
-double TDB::doAggrOneGroup_diff(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup) {
+double TDB::doAggrOneGroup_diff(DE_SELECTOR& deSel, std::string& aggrKey, std::vector<yyjson_val*>& deGroup) {
 	double dbMax = -DBL_MAX;
 	double dbMin = DBL_MAX;
 	bool aggrKeyUndefined = true;
@@ -2298,7 +2298,7 @@ double TDB::doAggrOneGroup_diff(DE_SELECTOR& deSel, string& aggrKey, vector<yyjs
 		}
 		else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 		{
-			string valStr = yyjson_get_str(pDeSrcVal);
+			std::string valStr = yyjson_get_str(pDeSrcVal);
 			db = atof(valStr.data());
 		}
 		else {
@@ -2311,19 +2311,19 @@ double TDB::doAggrOneGroup_diff(DE_SELECTOR& deSel, string& aggrKey, vector<yyjs
 	}
 
 	if (aggrKeyUndefined) {
-		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+		std::string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
 		db_exception e;
 		e.m_error = sErr;
 		throw e;
 	}
 	double dbDiff = dbMax - dbMin;
-	string sDbDiff = formatStr("%lf", dbDiff);
+	std::string sDbDiff = formatStr("%lf", dbDiff);
 	dbDiff = atof(sDbDiff.c_str());
 
 	return dbDiff;
 }
 
-double TDB::doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup) {
+double TDB::doAggrOneGroup_avg(DE_SELECTOR& deSel, std::string& aggrKey, std::vector<yyjson_val*>& deGroup) {
 	double dbTotal = 0;
 	long long count = 0;
 
@@ -2342,7 +2342,7 @@ double TDB::doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey, vector<yyjso
 		}
 		else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 		{
-			string valStr = yyjson_get_str(pDeSrcVal);
+			std::string valStr = yyjson_get_str(pDeSrcVal);
 			db = atof(valStr.data());
 		}
 		else {
@@ -2353,7 +2353,7 @@ double TDB::doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey, vector<yyjso
 		count++;
 	}
 	if (aggrKeyUndefined) {
-		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+		std::string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
 		db_exception e;
 		e.m_error = sErr;
 		throw e;
@@ -2363,7 +2363,7 @@ double TDB::doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey, vector<yyjso
 	return avg;
 }
 
-bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string>> aggrKeyType, string groupKey, vector<yyjson_val*>& deGroup, DE_yyjson& aggrRlt, yyjson_mut_doc* mut_doc)
+bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<std::string, std::vector<std::string>> aggrKeyType, std::string groupKey, std::vector<yyjson_val*>& deGroup, DE_yyjson& aggrRlt, yyjson_mut_doc* mut_doc)
 {
 	//aggrKeyType supports 2 modes.   multi keys multi aggr types mode is not supported
 	//1:  single key single aggr type
@@ -2375,12 +2375,12 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 	//if val type is basic types,aggrKeyType.size()==1, aggr "val" key
 	//if val type is json,  aggrKeyType has multiple items,each key corresponding to key of the json object. only support one level of json keys 
 	for (auto& i : aggrKeyType) {
-		string aggrKey = i.first;
+		std::string aggrKey = i.first;
 		// aggr type for this key,
 		// if only one aggr type is specified, "val" key holds the aggr result val
 		// if multiple aggr type is specified ,use aggr type as key to hold the aggr result val
-		vector<string>& aggrTypes = i.second;
-		for (string& aggrType : aggrTypes) {
+		std::vector<std::string>& aggrTypes = i.second;
+		for (std::string& aggrType : aggrTypes) {
 			yyjson_mut_val* pAggrVal = nullptr; //val after aggr
 			if (aggrType == "first") {
 				yyjson_val* pDeSrc = deGroup.at(0);
@@ -2389,7 +2389,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //output val is specified
 				{
-					string valStr = yyjson_get_str(pDeSrcVal);
+					std::string valStr = yyjson_get_str(pDeSrcVal);
 					pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
 				}
 				else {
@@ -2406,7 +2406,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
-					string valStr = yyjson_get_str(pDeSrcVal);
+					std::string valStr = yyjson_get_str(pDeSrcVal);
 					pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
 				}
 				else {
@@ -2426,7 +2426,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 				double dbFirst, dbLast = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValFirst) == YYJSON_TYPE_STR)
 				{
-					string valStr = yyjson_get_str(pDeSrcValFirst);
+					std::string valStr = yyjson_get_str(pDeSrcValFirst);
 					dbFirst = atof(valStr.data());
 				}
 				else {
@@ -2434,7 +2434,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 				}
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValLast) == YYJSON_TYPE_STR)
 				{
-					string valStr = yyjson_get_str(pDeSrcValLast);
+					std::string valStr = yyjson_get_str(pDeSrcValLast);
 					dbLast = atof(valStr.data());
 				}
 				else {
@@ -2449,7 +2449,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 					dbDiff = dbLast - dbFirst;
 				}
 				//double substraction caused loss of accuracy,use formatStr to fix this problem
-				string sDbDiff = formatStr("%lf", dbDiff);
+				std::string sDbDiff = formatStr("%lf", dbDiff);
 				dbDiff = atof(sDbDiff.c_str());
 				pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
 				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
@@ -2460,7 +2460,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
 				if (deSel.timeSel.m_dataNum > 0 && deGroup.size()>0) {
 					yyjson_val* yyv_ts = yyjson_obj_get(deGroup[0], "time");
-					string ts, te;
+					std::string ts, te;
 					if(yyv_ts)
 						ts = yyjson_get_str(yyv_ts);
 					yyjson_val* yyv_te = yyjson_obj_get(deGroup[deGroup.size() - 1], "time");
@@ -2488,7 +2488,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 					}
 					else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 					{
-						string valStr = yyjson_get_str(pDeSrcVal);
+						std::string valStr = yyjson_get_str(pDeSrcVal);
 						db = atof(valStr.data());
 					}
 					else {
@@ -2500,7 +2500,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 					}
 				}
 				if (aggrKeyUndefined) {
-					string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+					std::string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
 					db_exception e;
 					e.m_error = sErr;
 					throw e;
@@ -2528,7 +2528,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 					}
 					else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 					{
-						string valStr = yyjson_get_str(pDeSrcVal);
+						std::string valStr = yyjson_get_str(pDeSrcVal);
 						db = atof(valStr.data());
 					}
 					else {
@@ -2541,7 +2541,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 					}
 				}
 				if (aggrKeyUndefined) {
-					string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+					std::string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
 					db_exception e;
 					e.m_error = sErr;
 					throw e;
@@ -2567,7 +2567,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
 			}
 			else if (aggrType == "increase") {
-				map<string, double> aggrRltTs = doAggrOneGroup_increase_withTimeSlots(deSel, aggrKey, groupKey, deGroup);
+				map<std::string, double> aggrRltTs = doAggrOneGroup_increase_withTimeSlots(deSel, aggrKey, groupKey, deGroup);
 				pAggrVal = yyjson_mut_obj(mut_doc);
 				for (auto& iter : aggrRltTs) {
 					yyjson_mut_val* yySlotName = yyjson_mut_strcpy(mut_doc, iter.first.c_str());
@@ -2608,7 +2608,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 	return true;
 }
 
-bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
+bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, std::vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.rltDataSet;
 
@@ -2678,7 +2678,7 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 				yyjson_mut_val* key, * val;
 				yyjson_mut_obj_foreach(curRec, idx, max, key, val) {
 					if (yyjson_mut_is_null(val)) {
-						string szKey = yyjson_mut_get_str(key);
+						std::string szKey = yyjson_mut_get_str(key);
 						yyjson_mut_val* lastVal = yyjson_mut_obj_get(lastRec, szKey.data());
 						yyjson_mut_val* curKey = yyjson_mut_val_mut_copy(mut_doc, key);
 						yyjson_mut_val* curVal = yyjson_mut_val_mut_copy(mut_doc, lastVal);
@@ -2693,7 +2693,7 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 	return true;
 }
 
-void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language)
+void TDB::rpc_db_select(std::string& sParams, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language)
 {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
@@ -2727,7 +2727,7 @@ bool TDB::Select_Step_selectTags(DE_SELECTOR& deSel,SELECT_RLT& rlt) {
 	}
 	else {
 		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
-			string& exp = deSel.tagSel.exactMatchExp[i];
+			std::string& exp = deSel.tagSel.exactMatchExp[i];
 			rlt.tagSet.push_back(exp);
 			rlt.dbFileTagSet.push_back(exp);
 		}
@@ -2742,10 +2742,10 @@ bool TDB::Select_Step_selectTags(DE_SELECTOR& deSel,SELECT_RLT& rlt) {
 	return true;
 }
 
-void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
+void TDB::rpc_db_select(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
 	DE_SELECTOR deSel;
 
-	string dbName;
+	std::string dbName;
 	TDB* tdb = nullptr;
 	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
 	if (yyjson_is_str(yyv_db)) {
@@ -2785,7 +2785,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 
 	yyjson_val* yyv_timeUint = yyjson_obj_get(params, "timeUint");
 	if (yyv_timeUint && yyjson_is_str(yyv_timeUint)) {
-		string timeUnit = yyjson_get_str(yyv_timeUint);
+		std::string timeUnit = yyjson_get_str(yyv_timeUint);
 		if (timeUnit == "month") m_timeUnit = BY_MONTH;
 		else if (timeUnit == "year") m_timeUnit = BY_YEAR;
 		else if (timeUnit == "day") m_timeUnit = BY_DAY;
@@ -2815,7 +2815,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		}
 	}
 	catch (std::exception& e) {
-		string sErr = e.what();
+		std::string sErr = e.what();
 		err = JSON_STR_VAL(sErr);
 	}
 
@@ -2836,11 +2836,11 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 		deSel.timeSel.atomSelList.clear();
 
 		//get all different time point
-		map<string, string> timePointList;
+		map<std::string, std::string> timePointList;
 		for (auto& iter : idxRlt.rltDataSet) {
 			yyjson_mut_val* yyv_time = yyjson_mut_obj_get(iter.second, "time");
 
-			string time = yyjson_mut_get_str(yyv_time);
+			std::string time = yyjson_mut_get_str(yyv_time);
 			timePointList[time] = time;
 		}
 
@@ -2861,10 +2861,10 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 	if (result.tagSet.size() == 0) {
 		result.error = JSON_STR_VAL("specified tag not found");
 	}
-	const vector<string>& tagSet = result.tagSet;
+	const std::vector<std::string>& tagSet = result.tagSet;
 
 	//load file data
-	vector<TAG_FILE_SET*>& tagFileSet = result.tagFileSet;
+	std::vector<TAG_FILE_SET*>& tagFileSet = result.tagFileSet;
 	for (int i = 0; i < result.tagSet.size(); i++) {
 		TAG_FILE_SET& fSet = *(new TAG_FILE_SET());
 		fSet.tag = result.tagSet[i];
@@ -2874,10 +2874,10 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 	Select_Step_loadFile(deSel, tagFileSet, result);
 
 	//data buff in processing steps, all will be released in the end
-	vector<vector<DATA_SET*>*>& dataSetBuff = result.dataSetBuff;
+	std::vector<std::vector<DATA_SET*>*>& dataSetBuff = result.dataSetBuff;
 
 	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr;
-	string sCalcResult; //calc result dumped to string
+	std::string sCalcResult; //calc result dumped to std::string
 
 	yyjson_mut_doc* rlt_mut_doc = result.rlt_mut_doc;
 
@@ -2885,7 +2885,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 		size_t sortIdx = 0;
 		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++) {
 			TAG_FILE_SET& fSet = *tagFileSet[tagIdx];
-			string& tag = fSet.tag; // yyjson do not copy string,src string can not be release,use string& instead of a local variant
+			std::string& tag = fSet.tag; // yyjson do not copy std::string,src std::string can not be release,use std::string& instead of a local variant
 
 			for (int i = 0; i < fSet.fileList.size(); i++) {
 				DB_FILE* pdf = fSet.fileList[i];
@@ -2903,10 +2903,10 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 		}
 	}
 	else {
-		vector<DATA_SET*>* set_list;  //current processing dataset ,stores current processed result
+		std::vector<DATA_SET*>* set_list;  //current processing dataset ,stores current processed result
 
 		//orgin data set    dataSet1 
-		vector<DATA_SET*>* dataSet1 = new vector<DATA_SET*>;
+		std::vector<DATA_SET*>* dataSet1 = new std::vector<DATA_SET*>;
 
 		set_list = dataSet1;
 		dataSetBuff.push_back(dataSet1);//add to buff list when create a new dataset,will be released in the end
@@ -2927,7 +2927,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 				}
 				else {
 					size_t pos = fSet.relTag.rfind(".");
-					if (pos != string::npos) {
+					if (pos != std::string::npos) {
 						fSet.mpName = fSet.relTag.substr(pos + 1, fSet.relTag.size() - pos - 1);
 					}
 					else {
@@ -2957,7 +2957,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 
 		//do when selector after all de is selected
 		if (deSel.whenSel.tag != "") {
-			vector<DATA_SET*>* dataSet_afterWhen = new vector<DATA_SET*>;
+			std::vector<DATA_SET*>* dataSet_afterWhen = new std::vector<DATA_SET*>;
 			DATA_SET& fSet = *(new DATA_SET());
 
 			dataSet_afterWhen->push_back(&fSet);
@@ -2967,8 +2967,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 		}
 
 		//if not groupby tag, merge multiple dataset into one data set  (groupby tag is the default behavior)
-		vector<DATA_SET*>* in_set_list = set_list;
-		vector<DATA_SET*>* out_set_list = nullptr;
+		std::vector<DATA_SET*>* in_set_list = set_list;
+		std::vector<DATA_SET*>* out_set_list = nullptr;
 
 		if (!deSel.groupByTag) {
 			DATA_SET& out_set = *(new DATA_SET());
@@ -2982,7 +2982,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 					//find out time group of all tag,and merge them
 					for (auto& g : in_set.m_origDeGrouped) {
 						if (out_set.m_origDeGrouped.find(g.first) != out_set.m_origDeGrouped.end()) {
-							vector<yyjson_val*>& vec = out_set.m_origDeGrouped[g.first];
+							std::vector<yyjson_val*>& vec = out_set.m_origDeGrouped[g.first];
 							vec.insert(vec.begin(), g.second.begin(), g.second.end());
 						}
 						else {
@@ -2999,7 +2999,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 				}
 			}
 
-			out_set_list = new vector<DATA_SET*>;
+			out_set_list = new std::vector<DATA_SET*>;
 			out_set_list->push_back(&out_set);
 			dataSetBuff.push_back(out_set_list);
 		}
@@ -3021,11 +3021,11 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 				for (int i = 0; i < set_list->size(); i++)
 				{
 					DATA_SET* pSet = set_list->at(i);
-					vector<DATA_SET*> splitted_set_list;
+					std::vector<DATA_SET*> splitted_set_list;
 					splitted_set_list.push_back(pSet);
-					vector<yyjson_mut_val*> tmp;
+					std::vector<yyjson_mut_val*> tmp;
 					result.rltDataSetVecList[pSet->tag] = tmp;
-					vector<yyjson_mut_val*>& rltDataSet = result.rltDataSetVecList[pSet->tag];
+					std::vector<yyjson_mut_val*>& rltDataSet = result.rltDataSetVecList[pSet->tag];
 					Select_Step_outputRows_SingleCol(deSel, splitted_set_list, rltDataSet, result, rlt_mut_doc);
 				}
 			}
@@ -3093,10 +3093,10 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 				yyjson_mut_val* yyv_curve_de = i.second;
 
 				yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
-				string time = yyjson_mut_get_str(yyv_time);
+				std::string time = yyjson_mut_get_str(yyv_time);
 
 				yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
-				string tag = yyjson_mut_get_str(yyv_tag);
+				std::string tag = yyjson_mut_get_str(yyv_tag);
 
 				bool bDropIt = false;
 
@@ -3112,11 +3112,11 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 					}
 
 					auto name = yyjson_mut_arr_get(element, 0);
-					string strName = yyjson_mut_get_str(name);
+					std::string strName = yyjson_mut_get_str(name);
 
 					if (strName == "lastDi") {
 						auto val = yyjson_mut_arr_get(element, 2);
-						string strVal = yyjson_mut_get_str(val);
+						std::string strVal = yyjson_mut_get_str(val);
 
 						float fVal = atof(strVal.c_str());
 						if (fVal >= deSel.theLimit) {
@@ -3216,9 +3216,9 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 					{
 						yyjson_mut_val* yyv_curve_de = i.second;
 						yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
-						string time = yyjson_mut_get_str(yyv_time);
+						std::string time = yyjson_mut_get_str(yyv_time);
 						yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
-						string tag = yyjson_mut_get_str(yyv_tag);
+						std::string tag = yyjson_mut_get_str(yyv_tag);
 						DB_TIME dbtime;
 						dbtime.fromStr(time);
 						DB_FILE dbfile(dbtime, tag, this);
@@ -3254,7 +3254,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 
 							for (int j = 0; j < aggrList.size(); j++)
 							{
-								string aggr = aggrList[j];
+								std::string aggr = aggrList[j];
 								if (aggr == "first")
 								{
 									yyjson_mut_obj_add_int(rlt_mut_doc, curvePtAggr_obj, "first", (int)first);
@@ -3284,18 +3284,18 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 				pCalcResult = &result.rltDataSet;
 			}
 			else {
-				map<DB_TIME, vector<double>*> curveList;
-				vector<double> refCurvePt;
-				vector<double> specifyCurvePt;
-				string tag;
+				map<DB_TIME, std::vector<double>*> curveList;
+				std::vector<double> refCurvePt;
+				std::vector<double> specifyCurvePt;
+				std::string tag;
 				for (auto& i : result.rltDataSet)
 				{
 					yyjson_mut_val* yyv_curve_de = i.second;
 					yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
-					string time = yyjson_mut_get_str(yyv_time);
+					std::string time = yyjson_mut_get_str(yyv_time);
 					yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
 					tag = yyjson_mut_get_str(yyv_tag);
-					vector<double>* pPtList = new vector<double>();
+					std::vector<double>* pPtList = new std::vector<double>();
 					DB_TIME dbtime;
 					dbtime.fromStr(time);
 					DB_FILE dbfile(dbtime, tag, this);
@@ -3339,12 +3339,12 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 				}
 
 				result.rltDataSet.clear();
-				vector<double>* pBase = nullptr;
+				std::vector<double>* pBase = nullptr;
 				if (deSel.baseCurve == "refCurve") {
-					string path = m_confPath + "/refCurve/";
-					string subPath = DB_STR::replace(tag, ".", "/");
+					std::string path = m_confPath + "/refCurve/";
+					std::string subPath = DB_STR::replace(tag, ".", "/");
 					path += subPath + "/refCurve.json";
-					string s;
+					std::string s;
 					DB_FS::readFile(path, s);
 					if (s == "") {
 						db_exception dbe;
@@ -3409,8 +3409,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 					yyjson_doc_free(doc);
 				}
 				else if (DB_STR::isTime(deSel.baseCurve)) {
-					string path = getPath_dbFile(tag, deSel.baseCurve, "curve");
-					string s;
+					std::string path = getPath_dbFile(tag, deSel.baseCurve, "curve");
+					std::string s;
 					DB_FS::readFile(path, s);
 					yyjson_doc* doc = yyjson_read(s.data(), s.size(), 0);
 					if (!doc) {
@@ -3469,7 +3469,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 					yyjson_doc_free(doc);
 				}
 
-				vector<double>* pCur = nullptr;
+				std::vector<double>* pCur = nullptr;
 				size_t sortIdx = 0;
 				for (auto& iter : curveList) {
 					pCur = iter.second;
@@ -3520,15 +3520,15 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 							result.rltDataSet[sf] = yyv_dtw_de;
 						}
 						else if (deSel.calc == "dtw2") {
-							vector<vector<double>> base;
+							std::vector<std::vector<double>> base;
 							for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
-								vector<double> pt;
+								std::vector<double> pt;
 								pt.push_back((*pBase)[i]);
 								base.push_back(pt);
 							}
-							vector<vector<double>> cur;
+							std::vector<std::vector<double>> cur;
 							for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
-								vector<double> pt;
+								std::vector<double> pt;
 								pt.push_back((*pCur)[i]);
 								cur.push_back(pt);
 							}
@@ -3597,7 +3597,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 		yyjson_mut_val* rlt_mut_root = yyjson_mut_obj(rlt_mut_doc);
 		yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
 		for (auto& iter : result.rltDataSetVecList) {
-			vector<yyjson_mut_val*>& vecRlt = iter.second;
+			std::vector<yyjson_mut_val*>& vecRlt = iter.second;
 			yyjson_mut_val* rlt_mut_data_set = yyjson_mut_arr(rlt_mut_doc);
 			for (auto& i : vecRlt)
 			{
@@ -3613,7 +3613,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 	else if (result.rltDataSetVec.size() > 0) {
 		yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc);
 		yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
-		vector<yyjson_mut_val*>& vecRlt = result.rltDataSetVec;
+		std::vector<yyjson_mut_val*>& vecRlt = result.rltDataSetVec;
 		for (auto& i : vecRlt)
 		{
 			if (deSel.ascendingSort)
@@ -3646,7 +3646,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 		}
 	}
 	else {
-		//if p==null，maybe int rlt_mut_doc,some string type pointed to local variable and is already released
+		//if p==null，maybe int rlt_mut_doc,some std::string type pointed to local variable and is already released
 		char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 		if (p) {
 			result.dataList = p;
@@ -3659,7 +3659,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 
 
 
-bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
+bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, std::string& err)
 {
 	//parse time selector
 	if (deSel.timeSel.enable) {
@@ -3691,10 +3691,10 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 			size_t idx = 0;
 			size_t max = 0;
 			yyjson_val* item;
-			vector<string> timeSelList;
+			std::vector<std::string> timeSelList;
 			yyjson_arr_foreach(yyv_time, idx, max, item) {
 				if (yyjson_is_str(item)) {
-					string s = yyjson_get_str(item);
+					std::string s = yyjson_get_str(item);
 					timeSelList.push_back(s);
 				}
 			}
@@ -3704,7 +3704,7 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 			}
 		}
 		else {
-			err = "param time must be string type or array type";
+			err = "param time must be std::string type or array type";
 			return false;
 		}
 
@@ -3716,12 +3716,12 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 
 	//parse tag selector
 	std::string strRootTag;
-	std::vector<string> tagList;
+	std::vector<std::string> tagList;
 	yyjson_val* yyv_tag = yyjson_obj_get(yyParams, "tag");
 	yyjson_val* yyv_colume = yyjson_obj_get(yyParams, "colume");
 	if (yyv_tag && yyjson_is_str(yyv_tag))
 	{
-		string tag = yyjson_get_str(yyv_tag);
+		std::string tag = yyjson_get_str(yyv_tag);
 		if (m_isGbk) {
 			tag = DB_STR::gb_to_utf8(tag);
 		}
@@ -3733,10 +3733,10 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		yyjson_val* item;
 		yyjson_arr_foreach(yyv_tag, idx, max, item) {
 			if (!yyjson_is_str(item)) {
-				err = "tag must be string type";
+				err = "tag must be std::string type";
 				return false;
 			}
-			string tag = yyjson_get_str(item);
+			std::string tag = yyjson_get_str(item);
 			tagList.push_back(tag);
 		}
 	}
@@ -3749,13 +3749,13 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		yyjson_arr_foreach(yyv_colList, idx, max, item) {
 			if (yyjson_is_obj(item)) {
 				yyjson_val* yyv_tag = yyjson_obj_get(item, "tag");
-				string tag = yyjson_get_str(yyv_tag);
+				std::string tag = yyjson_get_str(yyv_tag);
 				tagList.push_back(tag);
 				yyjson_val* yyv_aggr = yyjson_obj_get(item, "aggregate");
 				deSel.vecAggregate.push_back(getAggrOpt(yyv_aggr));
 				deSel.bAggr = true;
 				yyjson_val* yyv_tagLabel = yyjson_obj_get(item, "label");
-				string tagLabel = yyjson_get_str(yyv_tagLabel);
+				std::string tagLabel = yyjson_get_str(yyv_tagLabel);
 				if (tagLabel != "")
 					deSel.vecTagLable.push_back(tagLabel);
 				else {
@@ -3763,7 +3763,7 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 				}
 			}
 			else if (yyjson_is_str(item)) {
-				string tag = yyjson_get_str(item);
+				std::string tag = yyjson_get_str(item);
 				deSel.vecTagLable.push_back(tag);
 				tagList.push_back(tag);
 			}
@@ -3817,7 +3817,7 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	}
 	else if (yyv_interval && yyjson_is_str(yyv_interval))
 	{
-		string sDsti = yyjson_get_str(yyv_interval);
+		std::string sDsti = yyjson_get_str(yyv_interval);
 		deSel.downSamplingSel.dsti = dhmsSpan2Seconds(sDsti);
 		if (deSel.downSamplingSel.dsti > 0)
 			deSel.downSamplingSel.intervalType = INTERVAL_DOWN_SAMPLING_TYPE::DST_Time;
@@ -3829,7 +3829,7 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	}
 
 	//parse condition selector
-	string filter;
+	std::string filter;
 	yyjson_val* yyv_match = yyjson_obj_get(yyParams, "match");
 	if (yyv_match) {
 		filter = yyjson_get_str(yyv_match);
@@ -3884,27 +3884,27 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		deSel.groupby = yyjson_get_str(yyv_groupby);
 
 		//if aggr by time
-		if (deSel.groupby.find("day") != string::npos) {
+		if (deSel.groupby.find("day") != std::string::npos) {
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "day";
 		}
-		else if (deSel.groupby.find("year") != string::npos) {
+		else if (deSel.groupby.find("year") != std::string::npos) {
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "year";
 		}
-		else if (deSel.groupby.find("month") != string::npos) {
+		else if (deSel.groupby.find("month") != std::string::npos) {
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "month";
 		}
-		else if (deSel.groupby.find("hour") != string::npos) {
+		else if (deSel.groupby.find("hour") != std::string::npos) {
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "hour";
 		}
-		else if (deSel.groupby.find("minute") != string::npos) {
+		else if (deSel.groupby.find("minute") != std::string::npos) {
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "minute";
 		}
-		else if (deSel.groupby.find("week") != string::npos) {
+		else if (deSel.groupby.find("week") != std::string::npos) {
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "week";
 		}
@@ -3913,7 +3913,7 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		}
 
 		//if aggr by tag
-		if (deSel.groupby.find("tag") != string::npos) {
+		if (deSel.groupby.find("tag") != std::string::npos) {
 			deSel.groupByTag = true;
 		}
 		else {
@@ -3948,14 +3948,14 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		yyjson_val* key;
 		yyjson_val* val;
 		yyjson_obj_foreach(yyv_timeSlots, idx, maxIdx, key, val) {
-			string slotName = yyjson_get_str(key);
-			vector<DB_TIME_RANGE> rangeSeries;
+			std::string slotName = yyjson_get_str(key);
+			std::vector<DB_TIME_RANGE> rangeSeries;
 
 			size_t timeIdx = 0;
 			size_t maxTimeIdx = 0;
 			yyjson_val* yyTimeRange;
 			yyjson_arr_foreach(val, timeIdx, maxTimeIdx, yyTimeRange) {
-				string timeRange = yyjson_get_str(yyTimeRange);
+				std::string timeRange = yyjson_get_str(yyTimeRange);
 				DB_TIME_RANGE t = parseTimeRange(timeRange);
 				rangeSeries.push_back(t);
 			}
@@ -4070,7 +4070,7 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	return true;
 }
 
-bool TDB::Insert(string strTag, int iVal, DB_TIME* stTime)
+bool TDB::Insert(std::string strTag, int iVal, DB_TIME* stTime)
 {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
@@ -4079,11 +4079,11 @@ bool TDB::Insert(string strTag, int iVal, DB_TIME* stTime)
 	else {
 		dbt.setNow();
 	}
-	string s = to_string(iVal);
+	std::string s = to_string(iVal);
 	return InsertValJsonStr(strTag, dbt, s);
 }
 
-bool TDB::Insert(string strTag, long long iVal, DB_TIME* stTime)
+bool TDB::Insert(std::string strTag, long long iVal, DB_TIME* stTime)
 {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
@@ -4092,11 +4092,11 @@ bool TDB::Insert(string strTag, long long iVal, DB_TIME* stTime)
 	else {
 		dbt.setNow();
 	}
-	string s = to_string(iVal);
+	std::string s = to_string(iVal);
 	return InsertValJsonStr(strTag, dbt, s);
 }
 
-bool TDB::Insert(string strTag, bool bVal, DB_TIME* stTime) {
+bool TDB::Insert(std::string strTag, bool bVal, DB_TIME* stTime) {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
 		dbt = *stTime;
@@ -4104,11 +4104,11 @@ bool TDB::Insert(string strTag, bool bVal, DB_TIME* stTime) {
 	else {
 		dbt.setNow();
 	}
-	string s = bVal ? "true" : "false";
+	std::string s = bVal ? "true" : "false";
 	return InsertValJsonStr(strTag, dbt, s);
 }
 
-bool TDB::Insert(string strTag, double dbVal, DB_TIME* stTime)
+bool TDB::Insert(std::string strTag, double dbVal, DB_TIME* stTime)
 {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
@@ -4117,11 +4117,11 @@ bool TDB::Insert(string strTag, double dbVal, DB_TIME* stTime)
 	else {
 		dbt.setNow();
 	}
-	string s = to_string(dbVal);
+	std::string s = to_string(dbVal);
 	return InsertValJsonStr(strTag, dbt, s);
 }
 
-bool TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time) {
+bool TDB::Insert(std::string strTag, std::string& sDeIdx, std::string& sDeCurve, DB_TIME* time) {
 	if (!m_enableDB)
 		return false;
 	DB_TIME stTime;
@@ -4132,7 +4132,7 @@ bool TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time)
 		stTime = TIME_OPT::now();
 	}
 
-	string deListFolderPath = getPath_dataFolder(strTag, stTime);
+	std::string deListFolderPath = getPath_dataFolder(strTag, stTime);
 	if (!folderExist(deListFolderPath))
 		DB_FS::createFolderOfPath(deListFolderPath.c_str());
 
@@ -4143,15 +4143,15 @@ bool TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time)
 	//if (yyjson_obj_get(yyDe, "time") == nullptr) {
 	yyjson_mut_val* timeKey = yyjson_mut_strcpy(mdoc, "time");
 	yyjson_mut_val* timeVal;
-	string sTime = stTime.toStr(true);
+	std::string sTime = stTime.toStr(true);
 	timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
 	yyjson_mut_obj_put(yymDe, timeKey, timeVal);
 	//}
 
-	string deFilePath = deListFolderPath + "/" + stTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
+	std::string deFilePath = deListFolderPath + "/" + stTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
 	DB_FS::writeFile(deFilePath, (char*)sDeCurve.c_str(), sDeCurve.length());
 
-	string dataListPath;
+	std::string dataListPath;
 	dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
 	saveDeToDataListFile(dataListPath, yymDe);
 
@@ -4161,7 +4161,7 @@ bool TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time)
 	return true;
 }
 
-bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result) {
+bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, std::vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result) {
 	if (m_timeUnit == BY_DAY) {
 		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++) {
 			TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
@@ -4222,12 +4222,12 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					else {
 						bool bFirstLastAggr = false;
 						if (deSel.aggregate.size() > 0) {
-							map<string, vector<string>>::iterator aggrOpt = deSel.aggregate.begin();
-							vector<string>& aggrTypes = aggrOpt->second;
+							map<std::string, std::vector<std::string>>::iterator aggrOpt = deSel.aggregate.begin();
+							std::vector<std::string>& aggrTypes = aggrOpt->second;
 
 							if (deSel.groupByTime == false) {//groupby entire time range,optimize performance in this kind of query
 								if (aggrTypes.size() == 1) {
-									string& aggrType = aggrTypes[0];
+									std::string& aggrType = aggrTypes[0];
 									if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
 										bFirstLastAggr = true;
 									}
@@ -4350,12 +4350,12 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 
 						bool bFirstLastAggr = false;
 						if (deSel.aggregate.size() > 0) {
-							map<string, vector<string>>::iterator aggrOpt = deSel.aggregate.begin();
-							vector<string>& aggrTypes = aggrOpt->second;
+							map<std::string, std::vector<std::string>>::iterator aggrOpt = deSel.aggregate.begin();
+							std::vector<std::string>& aggrTypes = aggrOpt->second;
 							if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
 							{
 								if (aggrTypes.size() == 1) {
-									string& aggrType = aggrTypes[0];
+									std::string& aggrType = aggrTypes[0];
 									if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
 										bFirstLastAggr = true;
 									}
@@ -4455,9 +4455,9 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 	return true;
 }
 
-void TDB::getDeTime(yyjson_mut_val* yyTime, string& deTime) {
+void TDB::getDeTime(yyjson_mut_val* yyTime, std::string& deTime) {
 	if (m_timeUnit == BY_DAY) {
-		string szTime = yyjson_mut_get_str(yyTime);
+		std::string szTime = yyjson_mut_get_str(yyTime);
 		const char* pHms = nullptr;
 		int hmsLen = 0;
 		if (szTime.length() == 19) //2020-02-02 02:02:02
@@ -4520,15 +4520,15 @@ bool do_iter(size_t& idx, size_t max, yyjson_val* deList, yyjson_val*& de, bool 
 	return true;
 }
 
-bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc)
+bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, std::vector<TAG_FILE_SET*>& tagDBFileSet, std::vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc)
 {
 	bool needMut = false;
 	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 	{
 		TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 		DATA_SET& fSetOut = *outputDataSet[tagIdx];
-		string& tag = fSet.tag; // string& instead of local var. yyjson do not copy
-		string& relTag = fSetOut.relTag;
+		std::string& tag = fSet.tag; // std::string& instead of local var. yyjson do not copy
+		std::string& relTag = fSetOut.relTag;
 
 
 		for (int i = 0; i < fSet.fileList.size(); i++)
@@ -4539,13 +4539,13 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 			yyjson_val* de = nullptr;
 			yyjson_val* lastDe = nullptr;
 			yyjson_val* deSnapshot = nullptr;
-			string snapshotDeTime = "";
+			std::string snapshotDeTime = "";
 			int lastDeTime = 0;
 			int currDeTime = 0;
-			string deTime = pdf->ymd + " 00:00:00.000";
+			std::string deTime = pdf->ymd + " 00:00:00.000";
 			DB_TIME dbT;
-			string tmpTime;
-			string groupKeyVal;
+			std::string tmpTime;
+			std::string groupKeyVal;
 			bool ymdEqualityCheckedInDe = false; //check ymd in one de ,if not equal to db folder ymd throw exception
 			bool hasTimeStamp = (deSel.deType != "statisDe" && deSel.deType != "statisByDay" && deSel.deType != "statisByMonth");
 			yyjson_val* deList = nullptr;
@@ -4583,7 +4583,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 			}
 
 			while(do_iter(idx,max,deList,de,reverseIter)){
-				//compatible with number save as a string,when in a aggr query,auto cast to number,info tips returneds
+				//compatible with number save as a std::string,when in a aggr query,auto cast to number,info tips returneds
 				AutoLastDeSet autoSet(&de, &lastDe);
 				if (idx == 0)
 				{
@@ -4633,16 +4633,16 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 						if (yyVal && yyjson_is_str(yyVal) && deSel.valType == "")
 						{
 							for (auto& aggrParam : fSetOut.aggregate) {
-								vector<string>& aggrTypes = aggrParam.second;
-								string aggrType = aggrTypes[0];
+								std::vector<std::string>& aggrTypes = aggrParam.second;
+								std::string aggrType = aggrTypes[0];
 								if (aggrType == "diff" || aggrType == "avg" || aggrType == "sum" || aggrType == "max" || aggrType == "min" || aggrType == "diff.first-last" || aggrType == "diff.lao") {
-									//string err = "data element type is: string, does not support aggregate type:" + aggrType;
-									//err += ",use valType=number to cast string value to number value";
+									//std::string err = "data element type is: std::string, does not support aggregate type:" + aggrType;
+									//err += ",use valType=number to cast std::string value to number value";
 									//json jErr = err;
 									//result.error = jErr.dump();
 									//return false;
 									deSel.valType = "number";
-									result.info = "aggregate type is " + aggrType + ",auto cast value type string to number";
+									result.info = "aggregate type is " + aggrType + ",auto cast value type std::string to number";
 									break;
 								}
 							}
@@ -4755,7 +4755,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 								ymdEqualityCheckedInDe = true;
 								if (memcmp(szTime, pdf->ymd.data(), 10) != 0) {
 									db_exception dbe;
-									string s = szTime;
+									std::string s = szTime;
 									dbe.m_error = "db corruption,ymd " + s + " in one de not equal to db folder path ymd " + pdf->ymd + ",db file path:" + pdf->path;
 									throw dbe;
 								}
@@ -4829,48 +4829,48 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				if (deSel.bAggr) {
 					if (deSel.timeGroupBy == "day") {
 						groupKeyVal = deTime.substr(0, 10);
-						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
+						map<std::string, std::vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
 						if (it != fSetOut.m_origDeGrouped.end()) {
 							it->second.push_back(de);
 						}
 						else {
-							vector<yyjson_val*> newVec;
+							std::vector<yyjson_val*> newVec;
 							newVec.push_back(de);
 							fSetOut.m_origDeGrouped[groupKeyVal] = newVec;
 						}
 					}
 					else if (deSel.timeGroupBy == "month") {
 						groupKeyVal = deTime.substr(0, 7);
-						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
+						map<std::string, std::vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
 						if (it != fSetOut.m_origDeGrouped.end()) {
 							it->second.push_back(de);
 						}
 						else {
-							vector<yyjson_val*> newVec;
+							std::vector<yyjson_val*> newVec;
 							newVec.push_back(de);
 							fSetOut.m_origDeGrouped[groupKeyVal] = newVec;
 						}
 					}
 					else if (deSel.timeGroupBy == "hour") {
 						groupKeyVal = deTime.substr(0, 13);
-						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
+						map<std::string, std::vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
 						if (it != fSetOut.m_origDeGrouped.end()) {
 							it->second.push_back(de);
 						}
 						else {
-							vector<yyjson_val*> newVec;
+							std::vector<yyjson_val*> newVec;
 							newVec.push_back(de);
 							fSetOut.m_origDeGrouped[groupKeyVal] = newVec;
 						}
 					}
 					else if (deSel.timeGroupBy == "minute") { //2020-02-03 11:12:14
 						groupKeyVal = deTime.substr(0, 16);
-						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
+						map<std::string, std::vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
 						if (it != fSetOut.m_origDeGrouped.end()) {
 							it->second.push_back(de);
 						}
 						else {
-							vector<yyjson_val*> newVec;
+							std::vector<yyjson_val*> newVec;
 							newVec.push_back(de);
 							fSetOut.m_origDeGrouped[groupKeyVal] = newVec;
 						}
@@ -4907,7 +4907,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 						if (yyjson_mut_get_type(deyy.val) == YYJSON_TYPE_STR) {
 							if (deSel.isValTypeNumber())
 							{
-								string valStr = yyjson_mut_get_str(deyy.val);
+								std::string valStr = yyjson_mut_get_str(deyy.val);
 								deyy.val = yyjson_mut_real(rlt_mut_doc, atof(valStr.data()));
 							}
 						}
@@ -4934,7 +4934,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 	return true;
 }
 
-bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDataSet, vector<DATA_SET*>& outputDataSet)
+bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, std::vector<DATA_SET*>& inputDataSet, std::vector<DATA_SET*>& outputDataSet)
 {
 	DE_SELECTOR whenSel;
 	whenSel.tagSel.init(deSel.whenSel.tag, deSel.tagSel.m_rootTag);
@@ -4958,14 +4958,14 @@ bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& in
 					bool curStatus = yyjson_mut_get_bool(yyv_val);
 					if (curStatus == deSel.whenSel.status.bVal && lastStatus != deSel.whenSel.status.bVal) {
 						yyjson_mut_val* yyv_time = yyjson_mut_obj_get(i.second, "time");
-						string time = yyjson_mut_get_str(yyv_time);
+						std::string time = yyjson_mut_get_str(yyv_time);
 						timespan.start.fromStr(time);
 						inStatus = true;
 					}
 
 					if (inStatus && curStatus != deSel.whenSel.status.bVal) {
 						yyjson_mut_val* yyv_time = yyjson_mut_obj_get(i.second, "time");
-						string time = yyjson_mut_get_str(yyv_time);
+						std::string time = yyjson_mut_get_str(yyv_time);
 						timespan.end.fromStr(time);
 						inStatus = false;
 						deSel.whenSel.eventTimeSlot.push_back(timespan);
@@ -4988,7 +4988,7 @@ bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& in
 	return false;
 }
 
-bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputData, yyjson_mut_doc* rlt_mut_doc)
+bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, std::vector<DATA_SET*>& inputData, yyjson_mut_doc* rlt_mut_doc)
 {
 	if (deSel.bAggr) {
 		if (deSel.groupByTime) {
@@ -5020,7 +5020,7 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 }
 
 
-bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language)
+bool TDB::handleRpc(const std::string& method, yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language)
 {
 	bool handled = true;
 	if (method == "db.getLock") {
@@ -5054,7 +5054,7 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 		}
 		rlt = DB_OK;
 	}
-	else if (method.find("db.") != string::npos) {
+	else if (method.find("db.") != std::string::npos) {
 		yyjson_val* yyv_table = yyjson_obj_get(params, "table");
 		if (yyv_table) {
 			yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
@@ -5104,7 +5104,7 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 	return handled;
 }
 
-void TDB::rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language) {
+void TDB::rpc_db_table_insert(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, const std::string& org, const std::string& language) {
 	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
 	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
 	yyjson_val* yyv_row = yyjson_obj_get(params, "row");
@@ -5112,8 +5112,8 @@ void TDB::rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, stri
 		err = JSON_STR_VAL("must specify row");
 		return;
 	}
-	string tableType = yyjson_get_str(yyv_tableType);
-	string table = yyjson_get_str(yyv_table);
+	std::string tableType = yyjson_get_str(yyv_tableType);
+	std::string table = yyjson_get_str(yyv_table);
 
 	tableInsert(table, yyv_row, err);
 
@@ -5124,7 +5124,7 @@ void TDB::rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, stri
 	rlt = DB_OK;
 }
 
-void TDB::rpc_db_table_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
+void TDB::rpc_db_table_delete(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, const std::string& org, const std::string& language)
 {
 	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
 	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
@@ -5133,12 +5133,12 @@ void TDB::rpc_db_table_delete(yyjson_val* params, string& rlt, string& err, stri
 		err = JSON_STR_VAL("must specify match");
 		return;
 	}
-	string tableType = yyjson_get_str(yyv_tableType);
-	string table = yyjson_get_str(yyv_table);
-	string match = yyjson_get_str(yyv_match);
-	string path = m_confPath + "/" + table;
+	std::string tableType = yyjson_get_str(yyv_tableType);
+	std::string table = yyjson_get_str(yyv_table);
+	std::string match = yyjson_get_str(yyv_match);
+	std::string path = m_confPath + "/" + table;
 
-	string data;
+	std::string data;
 	if (!DB_FS::readFile(path, data)) {
 		return;
 	}
@@ -5235,7 +5235,7 @@ struct DE_CALC {
 #endif
 	}
 
-	bool calc(yyjson_mut_val* val,yyjson_mut_doc* mdoc, string exp) {
+	bool calc(yyjson_mut_val* val,yyjson_mut_doc* mdoc, std::string exp) {
 		bool ret = false;
 		JSValue json_val = JS_UNDEFINED;
 		JSValue global = JS_UNDEFINED;
@@ -5251,7 +5251,7 @@ struct DE_CALC {
 				if (JS_IsException(json_val)) {
 					JSValue exception = JS_GetException(ctx);
 					const char* err_str = JS_ToCString(ctx, exception);
-					string err = DB_STR::utf8_to_gb(err_str);
+					std::string err = DB_STR::utf8_to_gb(err_str);
 					std::cerr << "JSON parse json: " << err << std::endl;
 					JS_FreeCString(ctx, err_str);
 					JS_FreeValue(ctx, exception);
@@ -5292,7 +5292,7 @@ struct DE_CALC {
 			if (JS_IsException(result)) {
 				JSValue exception = JS_GetException(ctx);
 				const char* err_str = JS_ToCString(ctx, exception);
-				string err = DB_STR::utf8_to_gb(err_str);
+				std::string err = DB_STR::utf8_to_gb(err_str);
 				std::cerr << "evaluate script error: " << err << std::endl;
 				JS_FreeCString(ctx, err_str);
 				JS_FreeValue(ctx, exception);
@@ -5364,19 +5364,19 @@ struct DE_CALC {
 };
 
 
-bool TDB::tableUpdate(string tableName, vector<string>& match, vector<yyjson_val*>& updateData, string& err) {
+bool TDB::tableUpdate(std::string tableName, std::vector<std::string>& match, std::vector<yyjson_val*>& updateData, std::string& err) {
 	
 	return true;
 }
 
-bool TDB::tableUpdate( string tableName, vector<string>& match, vector<string>& updateData,string& err)
+bool TDB::tableUpdate( std::string tableName, std::vector<std::string>& match, std::vector<std::string>& updateData,std::string& err)
 {
-	if (tableName.rfind(".json") == string::npos) {
+	if (tableName.rfind(".json") == std::string::npos) {
 		tableName += ".json";
 	}
-	string path = m_confPath + "/" + tableName;
+	std::string path = m_confPath + "/" + tableName;
 
-	string data;
+	std::string data;
 	DB_FS::readFile(path, data);
 	if (data == "") {
         err = JSON_STR_VAL("table not exist");
@@ -5401,8 +5401,8 @@ bool TDB::tableUpdate( string tableName, vector<string>& match, vector<string>& 
 
 
 	for (size_t i = 0; i < match.size(); i++) {
-		string& m = match[i];
-		string& d = updateData[i];
+		std::string& m = match[i];
+		std::string& d = updateData[i];
 
 		bool calcMode = false;
 		if (d.find("{") == 0) {
@@ -5455,16 +5455,16 @@ bool TDB::tableUpdate( string tableName, vector<string>& match, vector<string>& 
 	return true;
 }
 
-bool TDB::tableUpdate( string tableName, const string& match, const string& updateData,string& err)
+bool TDB::tableUpdate( std::string tableName, const std::string& match, const std::string& updateData,std::string& err)
 {
-	vector<string> matchList;
-	vector<string> updateDataList;
+	std::vector<std::string> matchList;
+	std::vector<std::string> updateDataList;
 	matchList.push_back(match);
 	updateDataList.push_back(updateData);
 	return tableUpdate(tableName, matchList, updateDataList,err);
 }
 
-bool TDB::tableInsert( string tableName, const string& row, string& err)
+bool TDB::tableInsert( std::string tableName, const std::string& row, std::string& err)
 {
 	yyjson_read_err yy_err = { 0 };
 	yyjson_doc* yy_doc =  yyjson_read_opts(
@@ -5486,15 +5486,15 @@ bool TDB::tableInsert( string tableName, const string& row, string& err)
 	return ret;
 }
 
-bool TDB::tableInsert(string tableName, yyjson_val* yyv_row, string& err)
+bool TDB::tableInsert(std::string tableName, yyjson_val* yyv_row, std::string& err)
 {
-	if (tableName.rfind(".json") == string::npos) {
+	if (tableName.rfind(".json") == std::string::npos) {
 		tableName += ".json";
 	}
 
-	string path = m_confPath + "/" + tableName;
+	std::string path = m_confPath + "/" + tableName;
 
-	string data;
+	std::string data;
 	DB_FS::readFile(path, data);
 	if (data == "")
 		data = "[]";
@@ -5549,14 +5549,14 @@ bool TDB::tableInsert(string tableName, yyjson_val* yyv_row, string& err)
 	return false;
 }
 
-bool TDB::tableSelect(string tableName, vector<string>& match, string& rlt, string& err)
+bool TDB::tableSelect(std::string tableName, std::vector<std::string>& match, std::string& rlt, std::string& err)
 {
 
 
 	return false;
 }
 
-void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
+void TDB::rpc_db_table_update(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, const std::string& org, const std::string& language)
 {
 	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
 	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
@@ -5570,12 +5570,12 @@ void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, stri
 		err = JSON_STR_VAL("must specify match");
 		return;
 	}
-	string tableType = yyjson_get_str(yyv_tableType);
-	string table = yyjson_get_str(yyv_table);
-	string match = yyjson_get_str(yyv_match);
+	std::string tableType = yyjson_get_str(yyv_tableType);
+	std::string table = yyjson_get_str(yyv_table);
+	std::string match = yyjson_get_str(yyv_match);
 
-	vector<string> matchList;
-	vector<string> updateDataList;
+	std::vector<std::string> matchList;
+	std::vector<std::string> updateDataList;
 	matchList.push_back(match);
 	auto p = yyjson_val_write(yyv_row, 0, nullptr);
 	updateDataList.push_back(p);
@@ -5590,20 +5590,20 @@ void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, stri
 	rlt = DB_OK;
 }
 
-void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
+void TDB::rpc_db_table_select(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, const std::string& org, const std::string& language)
 {
 	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
 	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
 	yyjson_val* yyv_match = yyjson_obj_get(params, "match");
 
-	string tableType = yyjson_get_str(yyv_tableType);
-	string table = yyjson_get_str(yyv_table);
-	string match;
+	std::string tableType = yyjson_get_str(yyv_tableType);
+	std::string table = yyjson_get_str(yyv_table);
+	std::string match;
 	if (yyv_match)
 		match = yyjson_get_str(yyv_match);
-	string path = m_confPath + "/" + table;
+	std::string path = m_confPath + "/" + table;
 
-	string data;
+	std::string data;
 	DB_FS::readFile(path, data);
 	if (data == "")
 		data = "[]";
@@ -5632,7 +5632,7 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 	for (size_t i = len - 1; i != (size_t)-1; i--) {
 		yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
 		if (yyjson_mut_obj_get(obj, "tdb_row_id") == nullptr){
-			string s = generate_tdb_uuid();
+			std::string s = generate_tdb_uuid();
 			yyjson_mut_val* yy_key_uuid = yyjson_mut_strcpy(yy_mdoc, "tdb_row_id");
 			yyjson_mut_val* yy_val_uuid = yyjson_mut_strcpy(yy_mdoc, s.c_str());
 			yyjson_mut_obj_put(obj, yy_key_uuid, yy_val_uuid);
@@ -5660,7 +5660,7 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		CONDITION_SELECTOR cs;
 		cs.init(match);
 		size_t len = yyjson_mut_arr_size(yy_mroot);
-		vector<yyjson_mut_val*> yyv_selected;
+		std::vector<yyjson_mut_val*> yyv_selected;
 		totalRow = len;
 		for (size_t i = len - 1; i != (size_t)-1; i--) {
 			yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
@@ -5688,14 +5688,14 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 	yyjson_mut_doc_free(yy_mdoc);
 }
 
-void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
+void TDB::rpc_db_insert(std::string& sParams, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 	rpc_db_insert(yyv_params, rlt, err, queryInfo, org, language);
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
+void TDB::rpc_db_insert(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
 	yyjson_val* yyv_val = yyjson_obj_get(params, m_dbFmt.deItemKey_value.c_str());
 	yyjson_val* yyv_file = yyjson_obj_get(params, "file");
 	if (yyv_val == nullptr && yyv_file == nullptr)
@@ -5705,11 +5705,11 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 	else
 	{
 		yyjson_val* yyv_tag = yyjson_obj_get(params, "tag");
-		string tag = yyjson_get_str(yyv_tag);
+		std::string tag = yyjson_get_str(yyv_tag);
 		DB_TIME tNow;
 		yyjson_val* yyv_time = yyjson_obj_get(params, "time");
 		if (yyv_time) {
-			string time = yyjson_get_str(yyv_time);
+			std::string time = yyjson_get_str(yyv_time);
 			if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
 				time += " 00:00:00";
 			}
@@ -5727,7 +5727,7 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 		yyjson_mut_val* yymv_params = yyjson_val_mut_copy(mut_doc, params);
 		yyjson_mut_obj_remove_key(yymv_params, "tag");
 
-		string sDe;
+		std::string sDe;
 
 		size_t len = 0;
 		char* json_str = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
@@ -5741,7 +5741,7 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 		yyjson_val* yyv_db = yyjson_obj_get(params, "db");
 		bool success = false;
 		if (yyjson_is_str(yyv_db)) {
-			string dbName = yyjson_get_str(yyv_db);
+			std::string dbName = yyjson_get_str(yyv_db);
 			TDB* tdb = db.getChildDB(dbName);
 			success = tdb->Insert(tag, sDe, &tNow);
 		}
@@ -5866,7 +5866,7 @@ yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
 				}
 			}
 
-			// convert timestamp to string
+			// convert timestamp to std::string
 			DB_TIME dt;
 			dt.fromUnixTime(timestamp_ms);
 			std::string time_str = dt.toStr();
@@ -5884,7 +5884,7 @@ yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
 			}
 			else if (yyjson_is_str(value_val))
 			{
-				string val = yyjson_get_str(value_val);
+				std::string val = yyjson_get_str(value_val);
 				if (val == "-")
 				{
 					yyjson_mut_obj_put(new_obj, val_key, yyjson_mut_str(new_doc, "-"));
@@ -5924,18 +5924,18 @@ yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
 	return new_doc;
 }
 
-bool TDB::Insert(string strTag, DB_TIME stTime, int& iVal)
+bool TDB::Insert(std::string strTag, DB_TIME stTime, int& iVal)
 {
-	string s = formatStr("%d", iVal);
+	std::string s = formatStr("%d", iVal);
 	return InsertValJsonStr(strTag, stTime, s);
 }
 
-bool TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
+bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal)
 {
 	if (!m_enableDB)
 		return false;
-	string folderPath = getPath_dataFolder(strTag, stTime);
-	string dlPath = folderPath + "/" + m_dbFmt.deListName;
+	std::string folderPath = getPath_dataFolder(strTag, stTime);
+	std::string dlPath = folderPath + "/" + m_dbFmt.deListName;
 	if (!folderExist(folderPath))
 		DB_FS::createFolderOfPath(folderPath.c_str());
 
@@ -5944,9 +5944,9 @@ bool TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 	if (m_bEnableFsBuff) {
 		bool bAppend = false;
 		m_FsBuff.m_csFsb.lock();
-		std::map<string, FILE_BUFF*>::iterator iter = m_FsBuff.m_mapFsBuff.find(dlPath);
+		std::map<std::string, FILE_BUFF*>::iterator iter = m_FsBuff.m_mapFsBuff.find(dlPath);
 		if (iter != m_FsBuff.m_mapFsBuff.end()) {
-			string& fileData = iter->second->data;  // can be an empty file ,length is 0
+			std::string& fileData = iter->second->data;  // can be an empty file ,length is 0
 			if (fileData.size() > 0) {
 				fileData.resize(fileData.size() - 1);
 				fileData += ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";;
@@ -5961,7 +5961,7 @@ bool TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 	bool bAppend = false;
 	if (fileExist(dlPath))
 	{
-		string appendData = ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";
+		std::string appendData = ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";
 		DB_LOCK_GUARD dbLock(dlPath);
 #ifdef _WIN32
 		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
@@ -6036,7 +6036,7 @@ bool TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 		}
 	}
 	if (!bAppend) {
-		string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
+		std::string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
 		if (!DB_FS::writeFile(dlPath, (unsigned char*)s.c_str(), s.length()))
 		{
 			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s.c_str());
@@ -6045,33 +6045,33 @@ bool TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 	return true;
 }
 
-bool TDB::Insert(string strTag, DB_TIME stTime, long long& iVal)
+bool TDB::Insert(std::string strTag, DB_TIME stTime, long long& iVal)
 {
-	string s = formatStr("%d", iVal);
+	std::string s = formatStr("%d", iVal);
 	return InsertValJsonStr(strTag, stTime, s);
 }
 
-bool TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
+bool TDB::Insert(std::string strTag, DB_TIME stTime, double& dbVal)
 {
-	string s = formatStr("%f", dbVal);
+	std::string s = formatStr("%f", dbVal);
 	return InsertValJsonStr(strTag, stTime, s);
 }
 
-bool TDB::Insert(string strTag, DB_TIME stTime, float& fVal)
+bool TDB::Insert(std::string strTag, DB_TIME stTime, float& fVal)
 {
-	string s = formatStr("%f", fVal);
+	std::string s = formatStr("%f", fVal);
 	return InsertValJsonStr(strTag, stTime, s);
 }
 
-void TDB::rpc_db_merge(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
+void TDB::rpc_db_merge(std::string& sParams, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 	rpc_db_merge(yyv_params, rlt, err, queryInfo, org, language);
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_merge(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
-	string dbName;
+void TDB::rpc_db_merge(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
+	std::string dbName;
 	TDB* tdb = nullptr;
 	yyjson_val* yyv_db = nullptr;
 	yyjson_val* yyTag = nullptr;
@@ -6079,13 +6079,13 @@ void TDB::rpc_db_merge(yyjson_val* params, string& rlt, string& err, string& que
 
 	size_t idx, maxIdx;
 	yyjson_val* key, * value;
-	std::multimap<string, yyjson_val*> mapParams;
+	std::multimap<std::string, yyjson_val*> mapParams;
 	yyjson_obj_foreach(params, idx, maxIdx, key, value) {
-		string sKey = yyjson_get_str(key);
+		std::string sKey = yyjson_get_str(key);
 		if (sKey == "db") yyv_db = value;
 		else if (sKey == "tag") yyTag = value;
 		else if (sKey == "time") yyTime = value;
-		else mapParams.insert(std::pair<string, yyjson_val*>(sKey, value));
+		else mapParams.insert(std::pair<std::string, yyjson_val*>(sKey, value));
 	}
 
 	if (yyjson_is_str(yyv_db)) {
@@ -6098,22 +6098,22 @@ void TDB::rpc_db_merge(yyjson_val* params, string& rlt, string& err, string& que
 	}
 
 	if (!yyjson_is_str(yyTag)) {
-		err = JSON_STR_VAL("specify tag in string format");
+		err = JSON_STR_VAL("specify tag in std::string format");
 		return;
 	}
 
 	if (!yyjson_is_str(yyTime)) {
-		err = JSON_STR_VAL("specify time in string format");
+		err = JSON_STR_VAL("specify time in std::string format");
 		return;
 	}
 
-	string tag = yyjson_get_str(yyTag);
-	string timerange = yyjson_get_str(yyTime);
-	string time[2];
+	std::string tag = yyjson_get_str(yyTag);
+	std::string timerange = yyjson_get_str(yyTime);
+	std::string time[2];
 	DB_TIME dbTime[2];
 
 	auto pos = timerange.find('~');
-	if (pos != string::npos)
+	if (pos != std::string::npos)
 	{
 		time[0] = timerange.substr(0, pos);
 		time[1] = timerange.substr(pos + 1);
@@ -6163,10 +6163,10 @@ void TDB::rpc_db_merge(yyjson_val* params, string& rlt, string& err, string& que
 	}
 }
 
-int TDB::Merge(string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, const DB_TIME& stTimeRange2, const std::multimap<string, yyjson_val*>& mMergeParams)
+int TDB::Merge(std::string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, const DB_TIME& stTimeRange2, const std::multimap<std::string, yyjson_val*>& mMergeParams)
 {
-	string dbFile = getPath_dbFile(tag, stTime);
-	string dbData;
+	std::string dbFile = getPath_dbFile(tag, stTime);
+	std::string dbData;
 	DB_FS::readFile(dbFile, dbData);
 	if (dbData == "")
 		return -1;
@@ -6192,9 +6192,9 @@ int TDB::Merge(string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, c
 	}
 
 	bool findDE = false;
-	string deTime = stTime.toYMD() + " 00:00:00.000";
-	string updateTime1 = stTimeRange1.toStr();
-	string updateTime2 = stTimeRange2.toStr();
+	std::string deTime = stTime.toYMD() + " 00:00:00.000";
+	std::string updateTime1 = stTimeRange1.toStr();
+	std::string updateTime2 = stTimeRange2.toStr();
 	size_t idx, max;
 	yyjson_mut_val* de;
 	//the file contont and url to be updated
@@ -6246,14 +6246,14 @@ int TDB::Merge(string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, c
 
 
 
-void TDB::rpc_db_update(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
+void TDB::rpc_db_update(std::string& sParams, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 	rpc_db_update(yyv_params, rlt, err, queryInfo, org, language);
 	yyjson_doc_free(doc);
 }
-void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
-	string dbName;
+void TDB::rpc_db_update(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
+	std::string dbName;
 	TDB* tdb = nullptr;
 	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
 	if (yyjson_is_str(yyv_db)) {
@@ -6267,20 +6267,20 @@ void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& qu
 
 	yyjson_val* yyTag = yyjson_obj_get(params, "tag");
 	if (!yyjson_is_str(yyTag)) {
-		err = JSON_STR_VAL("specify tag in string format");
+		err = JSON_STR_VAL("specify tag in std::string format");
 		return;
 	}
 
 	yyjson_val* yyTime = yyjson_obj_get(params, "time");
 	if (!yyjson_is_str(yyTime)) {
-		err = JSON_STR_VAL("specify time in string format");
+		err = JSON_STR_VAL("specify time in std::string format");
 		return;
 	}
 
 	yyjson_val* updateVal = yyjson_obj_get(params, "val");
 
-	string tag = yyjson_get_str(yyTag);
-	string time = yyjson_get_str(yyTime);
+	std::string tag = yyjson_get_str(yyTag);
+	std::string time = yyjson_get_str(yyTime);
 
 	if (time.length() != 19 && time.length() != 23) {
 		err = JSON_STR_VAL("wrong time format,should be XXXX-XX-XX XX:XX:XX or XXXX-XX-XX XX:XX:XX.XXX");
@@ -6308,10 +6308,10 @@ void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& qu
 	}
 }
 
-int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFileParam)
+int TDB::Update(std::string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFileParam)
 {
-	string dbFile = getPath_dbFile(tag, stTime);
-	string dbData;
+	std::string dbFile = getPath_dbFile(tag, stTime);
+	std::string dbData;
 	DB_FS::readFile(dbFile, dbData);
 	if (dbData == "")
 		return -1;
@@ -6337,14 +6337,14 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	}
 
 	bool findDE = false;
-	string deTime = stTime.toYMD() + " 00:00:00.000";
-	string updateTime = stTime.toStr();
+	std::string deTime = stTime.toYMD() + " 00:00:00.000";
+	std::string updateTime = stTime.toStr();
 	size_t idx, max;
 	yyjson_mut_val* de;
 	//the file contont and url to be updated
-	//yyjson_val* yyFileToUpdate = NULL;  string dbFile1;
-	struct SToBeUpdatedFile { yyjson_val* yyFileToUpdate = NULL;  string dbFile1; };
-	vector<SToBeUpdatedFile > vecToBeUpdatedFile; string theDir;
+	//yyjson_val* yyFileToUpdate = NULL;  std::string dbFile1;
+	struct SToBeUpdatedFile { yyjson_val* yyFileToUpdate = NULL;  std::string dbFile1; };
+	std::vector<SToBeUpdatedFile > vecToBeUpdatedFile; std::string theDir;
 	int nSomeWrong = 0;
 	bool bEmptyAry = false;
 	yyjson_mut_arr_foreach(deList, idx, max, de) {
@@ -6362,7 +6362,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 				if (yyjson_is_arr(updateFileParam)) { //jpg or other files 
 
 					int pos = dbFile.rfind("/");
-					string folder;
+					std::string folder;
 					if (pos > 0) {
 						if (m_timeUnit == BY_DAY) { //db.json path
 							folder = dbFile.substr(0, pos + 1) + stTime.toStampHMS() + "/";
@@ -6385,12 +6385,12 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 						yyjson_arr_foreach(updateFileParam, idx1, max1, val1) {
 							SToBeUpdatedFile one;
 							one.yyFileToUpdate = yyjson_obj_get(val1, "data");
-							string name = yyjson_get_str(yyjson_obj_get(val1, "name"));
-							string type = yyjson_get_str(yyjson_obj_get(val1, "type"));
+							std::string name = yyjson_get_str(yyjson_obj_get(val1, "name"));
+							std::string type = yyjson_get_str(yyjson_obj_get(val1, "type"));
 							one.dbFile1 = folder + name;
 							vecToBeUpdatedFile.push_back(one);
 
-							string strURL = getPath_dataFolder_NO_DB(tag, stTime);
+							std::string strURL = getPath_dataFolder_NO_DB(tag, stTime);
 							if (m_timeUnit == BY_DAY) { //db.json path
 								strURL = "/" + strURL + "/" + stTime.toStampHMS() + "/" + name;
 							}
@@ -6401,7 +6401,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 							auto jOne = yyjson_mut_obj(mut_doc);
 							yyjson_mut_obj_add_strcpy(mut_doc, jOne, "name", name.c_str());
 							yyjson_mut_obj_add_strcpy(mut_doc, jOne, "type", type.c_str());
-							string urlAbs = "/db";
+							std::string urlAbs = "/db";
 							if (m_name != "")
 								urlAbs += "/" + m_name;
 							urlAbs += strURL;
@@ -6423,7 +6423,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 					SToBeUpdatedFile one;
 					one.yyFileToUpdate = yyjson_obj_get(updateFileParam, "data");
 					int pos = dbFile.rfind("/"); //the "db.json" url
-					string folder;
+					std::string folder;
 					if (pos > 0) {
 						folder = dbFile.substr(0, pos + 1);
 					}
@@ -6480,7 +6480,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 		if (theDir != "") {
 			DB_FS::deleteDirectory(theDir);
 			for (auto one : vecToBeUpdatedFile) {
-				string p;
+				std::string p;
 				if (yyjson_is_str(one.yyFileToUpdate))
 					p = yyjson_get_str(one.yyFileToUpdate);
 				else continue;
@@ -6520,7 +6520,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 }
 
 
-void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
+void TDB::rpc_db_saveImage(std::string& sParams, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 	yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
@@ -6544,25 +6544,25 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 	yyjson_val* yyv_info = yyjson_obj_get(yyv_params, "info");
 	yyjson_val* yyv_index = yyjson_obj_get(yyv_params, "index");
 
-	string tag = yyjson_get_str(yyv_tag);
-	string time = yyjson_get_str(yyv_time);
+	std::string tag = yyjson_get_str(yyv_tag);
+	std::string time = yyjson_get_str(yyv_time);
 
-	string strIndex = yyv_index ? yyjson_get_str(yyv_index) : "";
+	std::string strIndex = yyv_index ? yyjson_get_str(yyv_index) : "";
 
 	DB_TIME t;
 	t.fromStr(time);
 
 	if (yyv_img && yyv_info) {
-		string img = yyjson_get_str(yyv_img);
-		string info = yyjson_get_str(yyv_info);
+		std::string img = yyjson_get_str(yyv_img);
+		std::string info = yyjson_get_str(yyv_info);
 
-		string& data = img;
+		std::string& data = img;
 
 		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
 		size_t startPos = 0;
 		if (data.find("data:") == 0) {
 			startPos = data.find(",");
-			if (startPos == string::npos) {
+			if (startPos == std::string::npos) {
 				yyjson_doc_free(doc);
 				return;
 			}
@@ -6581,16 +6581,16 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 		rlt = "\"image info and data saved\"";
 	}
 	else if (yyv_img) {
-		string img = yyjson_get_str(yyv_img);
-		string info = "";
+		std::string img = yyjson_get_str(yyv_img);
+		std::string info = "";
 
-		string& data = img;
+		std::string& data = img;
 
 		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
 		size_t startPos = 0;
 		if (data.find("data:") == 0) {
 			startPos = data.find(",");
-			if (startPos == string::npos) {
+			if (startPos == std::string::npos) {
 				yyjson_doc_free(doc);
 				return;
 			}
@@ -6609,7 +6609,7 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 		rlt = "\"image data saved\"";
 	}
 	else if (yyv_info) {
-		string info = yyjson_get_str(yyv_info);
+		std::string info = yyjson_get_str(yyv_info);
 		saveImage(tag, t, NULL, 0, info, strIndex);
 
 		rlt = "\"image info saved\"";
@@ -6621,7 +6621,7 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_getBufferStatus(string& rlt, string& err) {
+void TDB::rpc_db_getBufferStatus(std::string& rlt, std::string& err) {
 	m_FsBuff.m_csFsb.lock();
 	size_t fileCount = m_FsBuff.m_mapFsBuff.size();
 	size_t bufferSize = 0;
@@ -6634,7 +6634,7 @@ void TDB::rpc_db_getBufferStatus(string& rlt, string& err) {
 }
 
 
-void TDB::rpc_db_setConf(string& sParams, string& rlt, string& err) {
+void TDB::rpc_db_setConf(std::string& sParams, std::string& rlt, std::string& err) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 
@@ -6645,14 +6645,14 @@ void TDB::rpc_db_setConf(string& sParams, string& rlt, string& err) {
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
+void TDB::rpc_db_delete(std::string& sParams, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 	rpc_db_delete(yyv_params, rlt, err, queryInfo, org, language);
 	yyjson_doc_free(doc);
 }
-void TDB::rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
-	string dbName;
+void TDB::rpc_db_delete(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
+	std::string dbName;
 	TDB* tdb = nullptr;
 	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
 	if (yyjson_is_str(yyv_db)) {
@@ -6666,18 +6666,18 @@ void TDB::rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& qu
 
 	yyjson_val* yyTag = yyjson_obj_get(params, "tag");
 	if (!yyjson_is_str(yyTag)) {
-		err = JSON_STR_VAL("specify tag in string format");
+		err = JSON_STR_VAL("specify tag in std::string format");
 		return;
 	}
 
 	yyjson_val* yyTime = yyjson_obj_get(params, "time");
 	if (!yyjson_is_str(yyTime)) {
-		err = JSON_STR_VAL("specify time in string format");
+		err = JSON_STR_VAL("specify time in std::string format");
 		return;
 	}
 
-	string tag = yyjson_get_str(yyTag);
-	string time = yyjson_get_str(yyTime);
+	std::string tag = yyjson_get_str(yyTag);
+	std::string time = yyjson_get_str(yyTime);
 	DB_TIME dbTime;
 	dbTime.fromStr(time);
 	bool ret = false;
@@ -6697,10 +6697,10 @@ void TDB::rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& qu
 	}
 }
 
-bool TDB::Delete(string tag, DB_TIME stTime)
+bool TDB::Delete(std::string tag, DB_TIME stTime)
 {
-	string dbFile = getPath_dbFile(tag, stTime);
-	string dbData;
+	std::string dbFile = getPath_dbFile(tag, stTime);
+	std::string dbData;
 	DB_FS::readFile(dbFile, dbData);
 	if (dbData == "")
 		return false;
@@ -6727,8 +6727,8 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 
 	bool findDE = false;
 	size_t toDeleteIdx = 0;
-	string deTime = stTime.toYMD() + " 00:00:00.000";
-	string updateTime = stTime.toStr();
+	std::string deTime = stTime.toYMD() + " 00:00:00.000";
+	std::string updateTime = stTime.toStr();
 	size_t idx, max;
 	yyjson_mut_val* de = NULL;
 	yyjson_mut_arr_foreach(deList, idx, max, de) {
@@ -6751,7 +6751,7 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 	if (de) {
 		yyjson_mut_val* pFile = yyjson_mut_obj_get(de, "file");
 		if (pFile && yyjson_mut_is_arr(pFile)) {
-			string strPath = getPath_dataFolder(tag, stTime);
+			std::string strPath = getPath_dataFolder(tag, stTime);
 			if (m_timeUnit == BY_DAY) { //db.json path
 				strPath = strPath + "/" + stTime.toStampHMS() + "/";
 			}
@@ -6783,14 +6783,14 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 	return true;
 }
 
-bool TDB::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCount)
+bool TDB::Count(std::string tag, TIME_SELECTOR& timeSelector, std::string filter, int& iCount)
 {
 	return false;
 }
 
-string TDB::saveDEFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, string& type)
+std::string TDB::saveDEFile(yyjson_val* yyvFileInfo, std::string path, DB_TIME dbTime, std::string& type)
 {
-	string deFilePath = "";
+	std::string deFilePath = "";
 
 	yyjson_val* yyv_name = yyjson_obj_get(yyvFileInfo, "name");
 	yyjson_val* yyv_type = yyjson_obj_get(yyvFileInfo, "type");
@@ -6798,7 +6798,7 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, str
 	if (!yyv_type)return "";
 	if (!yyv_data)return "";
 
-	string name;
+	std::string name;
 	if (yyv_name)name = yyjson_get_str(yyv_name);
 
 	type = yyjson_get_str(yyv_type);
@@ -6807,7 +6807,7 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, str
 		name = dbTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
 	}
 
-	string data;
+	std::string data;
 	if (yyjson_is_str(yyv_data)) {
 		const char* pData = yyjson_get_str(yyv_data);
 		int ilen = strlen(pData);
@@ -6826,14 +6826,14 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, str
 		DB_FS::createFolderOfPath(deFilePath);
 	}
 	//encoded to base64 by default
-	if (type.find("jpg") != string::npos || type.find("grh") != string::npos ||
-		type.find("png") != string::npos ||
-		type.find("svg") != string::npos) {
+	if (type.find("jpg") != std::string::npos || type.find("grh") != std::string::npos ||
+		type.find("png") != std::string::npos ||
+		type.find("svg") != std::string::npos) {
 		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
 		size_t startPos = 0;
 		if (data.find("data:") == 0) {
 			startPos = data.find(",");
-			if (startPos == string::npos) {
+			if (startPos == std::string::npos) {
 				return "";
 			}
 
@@ -6867,7 +6867,7 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, str
 }
 
 
-bool TDB::Open(string strDBUrl, fp_getTagsByTagSelector f, string name)
+bool TDB::Open(std::string strDBUrl, fp_getTagsByTagSelector f, std::string name)
 {
 	if (strDBUrl == "")
 		return false;
@@ -6878,14 +6878,14 @@ bool TDB::Open(string strDBUrl, fp_getTagsByTagSelector f, string name)
 	return true;
 }
 
-bool TDB::Open_gbk(string strDBUrl, fp_getTagsByTagSelector f, string name)
+bool TDB::Open_gbk(std::string strDBUrl, fp_getTagsByTagSelector f, std::string name)
 {
 	strDBUrl = DB_STR::gb_to_utf8(strDBUrl);
 	m_isGbk = true;
 	return Open(strDBUrl, f, name);
 }
 
-bool TDB::setBufferTTL(string bufferTTL)
+bool TDB::setBufferTTL(std::string bufferTTL)
 {
 	int timeLen = TIME_OPT::timeLen2seconds(bufferTTL);
 	if (timeLen != 0) {
@@ -6894,7 +6894,7 @@ bool TDB::setBufferTTL(string bufferTTL)
 	return false;
 }
 
-bool TDB::parseDESelector(const string& sParams, DE_SELECTOR& deSelector, string& err)
+bool TDB::parseDESelector(const std::string& sParams, DE_SELECTOR& deSelector, std::string& err)
 {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	if (doc) {
@@ -6917,11 +6917,11 @@ bool TDB::parseDESelector(const string& sParams, DE_SELECTOR& deSelector, string
 //      "min":"min",
 //      "avg":"avg"
 // }
-map<string, vector<string>> TDB::getAggrOpt(yyjson_val* jAggr) {
-	map<string, vector<string>> aggrOpt;
+map<std::string, std::vector<std::string>> TDB::getAggrOpt(yyjson_val* jAggr) {
+	map<std::string, std::vector<std::string>> aggrOpt;
 	if (yyjson_is_str(jAggr)) { //aggr val in a single tag
-		vector<string> aggrTypes;
-		string sAggr = yyjson_get_str(jAggr);
+		std::vector<std::string> aggrTypes;
+		std::string sAggr = yyjson_get_str(jAggr);
 		DB_STR::split(aggrTypes, sAggr, ",");
 		aggrOpt[m_dbFmt.deItemKey_value] = aggrTypes;
 	}
@@ -6929,9 +6929,9 @@ map<string, vector<string>> TDB::getAggrOpt(yyjson_val* jAggr) {
 		size_t idx, maxIdx;
 		yyjson_val* key, * value;
 		yyjson_obj_foreach(jAggr, idx, maxIdx, key, value) {
-			string sKey = yyjson_get_str(key);
-			string sVal = yyjson_get_str(value);
-			vector<string> aggrTypes;
+			std::string sKey = yyjson_get_str(key);
+			std::string sVal = yyjson_get_str(value);
+			std::vector<std::string> aggrTypes;
 			aggrTypes.push_back(sVal);
 			aggrOpt[sKey] = aggrTypes;
 		}
@@ -6939,38 +6939,38 @@ map<string, vector<string>> TDB::getAggrOpt(yyjson_val* jAggr) {
 	return aggrOpt;
 }
 
-int TDB::dhmsSpan2Seconds(string timeSpan) {
-	string time1 = timeSpan;
-	string strDay = "", strH = "", strM = "", strS = "";
+int TDB::dhmsSpan2Seconds(std::string timeSpan) {
+	std::string time1 = timeSpan;
+	std::string strDay = "", strH = "", strM = "", strS = "";
 	int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
 	size_t pos = time1.find("d");
-	if (pos == string::npos)
+	if (pos == std::string::npos)
 		pos = time1.find("D");
-	if (pos != string::npos) {
+	if (pos != std::string::npos) {
 		strDay = time1.substr(0, pos);
 		time1 = time1.erase(0, pos + 1);
 		n1 = (int)(atof(strDay.c_str()) * 24 * 3600);
 	}
 	pos = time1.find("h");
-	if (pos == string::npos)
+	if (pos == std::string::npos)
 		pos = time1.find("H");
-	if (pos != string::npos) {
+	if (pos != std::string::npos) {
 		strH = time1.substr(0, pos);
 		time1 = time1.erase(0, pos + 1);
 		n2 = (int)(atof(strH.c_str()) * 3600);
 	}
 	pos = time1.find("m");
-	if (pos == string::npos)
+	if (pos == std::string::npos)
 		pos = time1.find("M");
-	if (pos != string::npos) {
+	if (pos != std::string::npos) {
 		strM = time1.substr(0, pos);
 		time1 = time1.erase(0, pos + 1);
 		n3 = (int)(atof(strM.c_str()) * 60);
 	}
 	pos = time1.find("s");
-	if (pos == string::npos)
+	if (pos == std::string::npos)
 		pos = time1.find("S");
-	if (pos != string::npos) {
+	if (pos != std::string::npos) {
 		strS = time1.substr(0, pos);
 		time1 = time1.erase(0, pos + 1);
 		n4 = (int)atof(strS.c_str());
@@ -6979,19 +6979,19 @@ int TDB::dhmsSpan2Seconds(string timeSpan) {
 	return n1 + n2 + n3 + n4;
 }
 
-bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string& imgInfo, string sDeIdx)
+bool TDB::saveImage(std::string tag, DB_TIME stTime, char* pData, size_t len, std::string& imgInfo, std::string sDeIdx)
 {
 	if (pData)
 	{
 		//jedge xxxxxx.imageInfo.json file does exist
 		//exist		-->	merge info,after that save image && info
 		//not exist	--> save image && info
-		string imageInfoPath = getPath_dbFile(tag, stTime, "imageInfo");
+		std::string imageInfoPath = getPath_dbFile(tag, stTime, "imageInfo");
 		if (fileExist(imageInfoPath))
 		{
 			if (imgInfo == "")
 			{
-				string info_yuan;
+				std::string info_yuan;
 				DB_FS::readFile(imageInfoPath, info_yuan);
 				imgInfo = info_yuan;
 			}
@@ -7002,7 +7002,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 				auto mut_root = yyjson_mut_doc_get_root(mut_doc);
 				yyjson_doc_free(doc);
 
-				string info_yuan;
+				std::string info_yuan;
 				DB_FS::readFile(imageInfoPath, info_yuan);
 				auto doc_yuan = yyjson_read(info_yuan.c_str(), info_yuan.size(), 0);
 				auto mut_doc_yuan = yyjson_doc_mut_copy(doc_yuan, NULL);
@@ -7013,7 +7013,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 				size_t indx = 0, max = 0;
 				yyjson_mut_obj_foreach(mut_root, indx, max, key, val)
 				{
-					string strKey = yyjson_mut_get_str(key);
+					std::string strKey = yyjson_mut_get_str(key);
 					if (!yyjson_mut_obj_get(mut_root_yuan, strKey.c_str()))
 					{
 						yyjson_mut_obj_add_val(mut_doc_yuan, mut_root_yuan, strKey.c_str(), yyjson_mut_val_mut_copy(mut_doc_yuan, val));
@@ -7035,8 +7035,8 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 
 		bool bInfoEmpty = (imgInfo == "");
 
-		//jjpg = jpg + string + string.size + "jjpg"
-		string path = getPath_dbFile(tag, stTime, "image");
+		//jjpg = jpg + std::string + std::string.size + "jjpg"
+		std::string path = getPath_dbFile(tag, stTime, "image");
 		size_t imgInfoSize = imgInfo.size();
 		size_t buffLen = len + (bInfoEmpty ? 0 : imgInfoSize + 4 + 4);
 		char* buff = new char[buffLen];
@@ -7062,12 +7062,12 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
 			yyjson_mut_val* timeKey = yyjson_mut_strcpy(mdoc, "time");
 			yyjson_mut_val* timeVal;
-			string sTime = stTime.toStr(true);
+			std::string sTime = stTime.toStr(true);
 			timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
 			yyjson_mut_obj_put(yymDe, timeKey, timeVal);
 
-			string dataListPath;
-			string deListFolderPath = getPath_dataFolder(tag, stTime);
+			std::string dataListPath;
+			std::string deListFolderPath = getPath_dataFolder(tag, stTime);
 			dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 			saveDeToDataListFile(dataListPath, yymDe);
 
@@ -7080,10 +7080,10 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			auto mut_root = yyjson_mut_obj(mut_doc);
 			yyjson_mut_doc_set_root(mut_doc, mut_root);
 
-			string sTime = stTime.toStr(true);
+			std::string sTime = stTime.toStr(true);
 			yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "time", sTime.c_str());
-			string dataListPath;
-			string deListFolderPath = getPath_dataFolder(tag, stTime);
+			std::string dataListPath;
+			std::string deListFolderPath = getPath_dataFolder(tag, stTime);
 			dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 			saveDeToDataListFile(dataListPath, mut_root);
 
@@ -7094,17 +7094,17 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 	}
 	else if (imgInfo != "")
 	{
-		string imagePath = getPath_dbFile(tag, stTime, "image");
-		string imageInfoPath = getPath_dbFile(tag, stTime, "imageInfo");
+		std::string imagePath = getPath_dbFile(tag, stTime, "image");
+		std::string imageInfoPath = getPath_dbFile(tag, stTime, "imageInfo");
 		//judge xxxxxx.image.jpg file exist
 		//exist		--> add to the end of the image file
 		//not exist --> save to xxxxxx.imageInfo.json
 		if (fileExist(imagePath))
 		{
-			string image_yuan;
+			std::string image_yuan;
 			DB_FS::readFile(imagePath, image_yuan);
 			size_t temp = image_yuan.size();
-			string strFileEnd = image_yuan.substr(image_yuan.size() - 4, 4);
+			std::string strFileEnd = image_yuan.substr(image_yuan.size() - 4, 4);
 			//judge xxxxxx.image.jpg file inside,info does it exist
 			if (strFileEnd == "jjpg")
 			{
@@ -7113,13 +7113,13 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 				auto mut_root = yyjson_mut_doc_get_root(mut_doc);
 				yyjson_doc_free(doc);
 
-				string strJsonSize = image_yuan.substr(image_yuan.size() - 8, 4);
+				std::string strJsonSize = image_yuan.substr(image_yuan.size() - 8, 4);
 				size_t jsonSize = 0;
 				memcpy(&jsonSize, strJsonSize.c_str(), 4);
-				string strImg = image_yuan.substr(0, image_yuan.size() - jsonSize - 8);
+				std::string strImg = image_yuan.substr(0, image_yuan.size() - jsonSize - 8);
 				if (jsonSize > 0)
 				{
-					string info_yuan = image_yuan.substr(image_yuan.size() - jsonSize - 8, jsonSize);
+					std::string info_yuan = image_yuan.substr(image_yuan.size() - jsonSize - 8, jsonSize);
 					auto doc_yuan = yyjson_read(info_yuan.c_str(), info_yuan.size(), 0);
 					auto mut_doc_yuan = yyjson_doc_mut_copy(doc_yuan, NULL);
 					auto mut_root_yuan = yyjson_mut_doc_get_root(mut_doc_yuan);
@@ -7168,7 +7168,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			auto mut_root = yyjson_mut_doc_get_root(mut_doc);
 			yyjson_doc_free(doc);
 
-			string info_yuan;
+			std::string info_yuan;
 			DB_FS::readFile(imageInfoPath, info_yuan);
 			auto doc_yuan = yyjson_read(info_yuan.c_str(), info_yuan.size(), 0);
 			auto mut_doc_yuan = yyjson_doc_mut_copy(doc_yuan, NULL);
@@ -7179,7 +7179,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			size_t indx = 0, max = 0;
 			yyjson_mut_obj_foreach(mut_root, indx, max, key, val)
 			{
-				string strKey = yyjson_mut_get_str(key);
+				std::string strKey = yyjson_mut_get_str(key);
 				if (!yyjson_mut_obj_get(mut_root_yuan, strKey.c_str()))
 				{
 					yyjson_mut_obj_add_val(mut_doc_yuan, mut_root_yuan, strKey.c_str(), yyjson_mut_val_mut_copy(mut_doc_yuan, val));
@@ -7214,8 +7214,8 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 }
 
 
-TDB* TDB::getChildDB(string dbName) {
-	map<string, TDB*>::iterator iter = m_childDB.find(dbName);
+TDB* TDB::getChildDB(std::string dbName) {
+	map<std::string, TDB*>::iterator iter = m_childDB.find(dbName);
 	if (iter != m_childDB.end()) {
 		return iter->second;
 	}
@@ -7231,14 +7231,14 @@ TDB* TDB::getChildDB(string dbName) {
 	}
 }
 
-string TDB::parseSuffix(string deFileUrl)
+std::string TDB::parseSuffix(std::string deFileUrl)
 {
-	string suffix = "";
+	std::string suffix = "";
 	size_t posDot = deFileUrl.rfind(".");
 	size_t posSlash = deFileUrl.rfind("/");
-	if (posDot != string::npos)
+	if (posDot != std::string::npos)
 	{
-		if (posSlash != string::npos)
+		if (posSlash != std::string::npos)
 		{
 			if (posSlash < posDot)
 			{
@@ -7255,7 +7255,7 @@ string TDB::parseSuffix(string deFileUrl)
 }
 
 
-bool TDB::fileExist(string pszFileName)
+bool TDB::fileExist(std::string pszFileName)
 {
 #ifdef _WIN32
 	wstring filePath = DB_STR::utf8_to_utf16(pszFileName);
@@ -7273,7 +7273,7 @@ bool TDB::fileExist(string pszFileName)
 #endif
 }
 
-bool TDB::folderExist(string pszFileName)
+bool TDB::folderExist(std::string pszFileName)
 {
 #ifdef _WIN32
 	wstring filePath = DB_STR::utf8_to_utf16(pszFileName);
@@ -7299,7 +7299,7 @@ TIME_SELECTOR::TIME_SELECTOR()
 	m_dataNum = 0;
 }
 
-bool TIME_SELECTOR_ATOM::Match(string& deTime)
+bool TIME_SELECTOR_ATOM::Match(std::string& deTime)
 {
 	if (snapShot) {
 		if (deTime <= strEnd) {
@@ -7315,7 +7315,7 @@ bool TIME_SELECTOR_ATOM::Match(string& deTime)
 	}
 }
 
-bool TIME_SELECTOR::Match(string& deTime)
+bool TIME_SELECTOR::Match(std::string& deTime)
 {
 	if (!enable)
 		return true;
@@ -7375,16 +7375,16 @@ int getMonthLastDay(int year, int month) {
 };
 
 
-string time2DbFileDate(string& time) {
-	string dbFileDate;
+std::string time2DbFileDate(std::string& time) {
+	std::string dbFileDate;
 	//2020-02
 	if (time.length() == 7) {
-		string sYear = time.substr(0, 4);
-		string sMonth = time.substr(5, 2);
+		std::string sYear = time.substr(0, 4);
+		std::string sMonth = time.substr(5, 2);
 		int y = atoi(sYear.c_str());
 		int m = atoi(sMonth.c_str());
 		int d = getMonthLastDay(y, m);
-		string sDay = formatStr("%2d", d);
+		std::string sDay = formatStr("%2d", d);
 		dbFileDate = time + "-" + sDay;
 		return dbFileDate;
 	}
@@ -7398,12 +7398,12 @@ string time2DbFileDate(string& time) {
 	}
 }
 
-bool TIME_SELECTOR::init(vector<string> timeSelList) {
+bool TIME_SELECTOR::init(std::vector<std::string> timeSelList) {
 	if (!enable)
 		return true;
 
 	for (int i = 0; i < timeSelList.size(); i++) {
-		string s = timeSelList[i];
+		std::string s = timeSelList[i];
 		TIME_SELECTOR_ATOM tsa;
 		if (!tsa.init(s)) {
 			return false;
@@ -7413,7 +7413,7 @@ bool TIME_SELECTOR::init(vector<string> timeSelList) {
 	return true;
 }
 
-bool TIME_SELECTOR::init(string time)
+bool TIME_SELECTOR::init(std::string time)
 {
 	if (!enable)
 		return true;
@@ -7425,7 +7425,7 @@ bool TIME_SELECTOR::init(string time)
 	{
 		time = time.substr(0, time.length() - 1);
 		m_dataNum = atoi(time.c_str());
-		string timeRange = "2020-01-01 00:00:00.000~" + DB_TIME::nowStr(true);
+		std::string timeRange = "2020-01-01 00:00:00.000~" + DB_TIME::nowStr(true);
 		parseTimeRange(timeRange);
 		TIME_SELECTOR_ATOM tsa;
 		tsa.timeSetType = TSM_Last;
@@ -7435,16 +7435,16 @@ bool TIME_SELECTOR::init(string time)
 	else if ("last" == time)
 	{
 		m_dataNum = 1;
-		string timeRange = "2020-01-01 00:00:00.000~" + DB_TIME::nowStr(true);
+		std::string timeRange = "2020-01-01 00:00:00.000~" + DB_TIME::nowStr(true);
 		parseTimeRange(timeRange);
 		TIME_SELECTOR_ATOM tsa;
 		tsa.timeSetType = TSM_Last;
 		tsa.parseTimeRange(timeRange);
 		atomSelList.push_back(tsa);
 	}
-	else if (time.find("now") != string::npos) {
+	else if (time.find("now") != std::string::npos) {
 		DB_TIME tNow; tNow.setNow();
-		string s = tNow.toStr(false);
+		std::string s = tNow.toStr(false);
 		time = DB_STR::replace(time, "now", s);
 		TIME_SELECTOR_ATOM tsa;
 		tsa.init(time);
@@ -7452,48 +7452,48 @@ bool TIME_SELECTOR::init(string time)
 	}
 	//maybe multi time range, such as:
 	//"00:00:00~01:00:00@2024-09-20~2024-09-21", or "08:40:00~09:40:00,08:40:00~09:40:00@2024-09-20~2024-09-21" 
-	else if (time.find("@") != string::npos) {
+	else if (time.find("@") != std::string::npos) {
 		int pos = time.find("@");
-		string strHmsRanges = time.substr(0, pos);
-		string dateRange = time.substr(pos + 1);
+		std::string strHmsRanges = time.substr(0, pos);
+		std::string dateRange = time.substr(pos + 1);
 
-		vector<vector<string>> vecHms;//[[hmsStart,hmsEnd],...]
-		vector<string> hmsRanges;
+		std::vector<std::vector<std::string>> vecHms;//[[hmsStart,hmsEnd],...]
+		std::vector<std::string> hmsRanges;
 		DB_STR::split(hmsRanges, strHmsRanges, ",");
 		for (auto& oneRange : hmsRanges) {
-			string& hmsRange = oneRange;
+			std::string& hmsRange = oneRange;
 
 			int pos1 = hmsRange.find("~");
-			if (pos1 == string::npos || hmsRange.length() != 17)
+			if (pos1 == std::string::npos || hmsRange.length() != 17)
 				return false;
-			string hmsStart = hmsRange.substr(0, pos1);
-			string hmsEnd = hmsRange.substr(pos1 + 1);
-			vector<string> one; one.push_back(hmsStart); one.push_back(hmsEnd);
+			std::string hmsStart = hmsRange.substr(0, pos1);
+			std::string hmsEnd = hmsRange.substr(pos1 + 1);
+			std::vector<std::string> one; one.push_back(hmsStart); one.push_back(hmsEnd);
 			vecHms.push_back(one);
 		}
 
 		int pos2 = dateRange.find("~");
-		if (pos2 == string::npos || dateRange.length() != 21)
+		if (pos2 == std::string::npos || dateRange.length() != 21)
 			return false;
 		DB_TIME stDateStart; stDateStart.fromStr(dateRange.substr(0, pos2) + " 00:00:00.000");
 		int unixDateStart = stDateStart.toUnixTime();
 		DB_TIME stDateEnd; stDateEnd.fromStr(dateRange.substr(pos2 + 1) + " 00:00:00.999");
 		int unixDateEnd = stDateEnd.toUnixTime();
 
-		vector<string> timeSelList;
+		std::vector<std::string> timeSelList;
 		for (int i = unixDateStart; i <= unixDateEnd; i += 86400) {
 			DB_TIME tmp; tmp.fromUnixTime(i);
-			string ymd = tmp.toYMD();
+			std::string ymd = tmp.toYMD();
 
 			for (auto& one : vecHms) {
-				string oneRange = ymd + " " + one[0] + "~" + ymd + " " + one[1];
+				std::string oneRange = ymd + " " + one[0] + "~" + ymd + " " + one[1];
 				timeSelList.push_back(oneRange);
 			}
 		}
 		init(timeSelList);
 	}
 	//2024-09-20 00:00:00~2024-09-20 10:10:10, 2024-09-21 00:00:00~2024-09-21 10:10:10, ...
-	else if (time.find(",") != string::npos) { //not have "@" && have "," 
+	else if (time.find(",") != std::string::npos) { //not have "@" && have "," 
 		return false;//later do this
 	}
 	else {
@@ -7527,11 +7527,11 @@ bool TIME_SELECTOR::isVarTimePoint()
 	return false;
 }
 
-bool TIME_SELECTOR_ATOM::init(string time)
+bool TIME_SELECTOR_ATOM::init(std::string time)
 {
 	selector = time;
 
-	if (time.find("this-month") != string::npos) {
+	if (time.find("this-month") != std::string::npos) {
 		DB_TIME t;
 		t.setNow();
 		DB_TIME tStart = t;
@@ -7545,7 +7545,7 @@ bool TIME_SELECTOR_ATOM::init(string time)
 		tEnd = TIME_OPT::addTime(tEnd, 0, 0, -1);
 		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
-	else if (time.find("last-month") != string::npos) {
+	else if (time.find("last-month") != std::string::npos) {
 		DB_TIME t;
 		t.setNow();
 		DB_TIME tStart = t;
@@ -7564,7 +7564,7 @@ bool TIME_SELECTOR_ATOM::init(string time)
 		tEnd = TIME_OPT::addTime(tEnd, 0, 0, -1);
 		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
-	else if (time.find("this-year") != string::npos) {
+	else if (time.find("this-year") != std::string::npos) {
 		DB_TIME t;
 		t.setNow();
 		DB_TIME tStart = t;
@@ -7574,17 +7574,17 @@ bool TIME_SELECTOR_ATOM::init(string time)
 		tEnd = TIME_OPT::addTime(tEnd, 0, 0, -1);
 		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
-	else if (time.find("this-day") != string::npos) {
-		string t = DB_TIME::nowStr();
+	else if (time.find("this-day") != std::string::npos) {
+		std::string t = DB_TIME::nowStr();
 		t = t.substr(0, 10);
 		time = replaceStr(time, "this-day", t);
 	}
-	else if (time.find("today") != string::npos) {
-		string t = DB_TIME::nowStr();
+	else if (time.find("today") != std::string::npos) {
+		std::string t = DB_TIME::nowStr();
 		t = t.substr(0, 10);
 		time = replaceStr(time, "today", t);
 	}
-	else if (time.find("yesterday") != string::npos) {
+	else if (time.find("yesterday") != std::string::npos) {
 		DB_TIME t;
 		t.setNow();
 		t = TIME_OPT::addTime(t, -24, 0, 0);
@@ -7597,17 +7597,17 @@ bool TIME_SELECTOR_ATOM::init(string time)
 	}
 
 	if (
-		time.find("y") != string::npos ||
-		time.find("M") != string::npos ||
-		time.find("d") != string::npos ||
-		time.find("h") != string::npos ||
-		time.find("m") != string::npos
+		time.find("y") != std::string::npos ||
+		time.find("M") != std::string::npos ||
+		time.find("d") != std::string::npos ||
+		time.find("h") != std::string::npos ||
+		time.find("m") != std::string::npos
 		) { // 1d2h3m mode
-		string timeRange = TIME_OPT::rel2abs(time);
+		std::string timeRange = TIME_OPT::rel2abs(time);
 		parseTimeRange(timeRange);
 	}
 	else {
-		string timeRange = shortSel2StardardSel(time);
+		std::string timeRange = shortSel2StardardSel(time);
 		parseTimeRange(timeRange);
 	}
 
@@ -7621,16 +7621,16 @@ bool TIME_SELECTOR_ATOM::init(string time)
 	return true;
 }
 
-string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
+std::string TIME_SELECTOR_ATOM::shortSel2StardardSel(std::string time)
 {
 	//2020-02
 	if (time.length() == 7 && time[4] == '-') {
-		string sYear = time.substr(0, 4);
-		string sMonth = time.substr(5, 2);
+		std::string sYear = time.substr(0, 4);
+		std::string sMonth = time.substr(5, 2);
 		int y = atoi(sYear.c_str());
 		int m = atoi(sMonth.c_str());
 		int d = getMonthLastDay(y, m);
-		string sDayEnd = formatStr("%2d", d);
+		std::string sDayEnd = formatStr("%2d", d);
 		return time + "-01 00:00:00.000~" + time + "-" + sDayEnd + " 23:59:59.999";
 	}
 	//2020-02-02
@@ -7643,8 +7643,8 @@ string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
 	}
 	//2021~2022
 	else if (time.length() == 9 && time[4] == '~') {
-		string startYear = time.substr(0, 4);
-		string endYear = time.substr(5, 4);
+		std::string startYear = time.substr(0, 4);
+		std::string endYear = time.substr(5, 4);
 		return startYear + "-01-01 00:00:00.000~" + endYear + "-12-31 23:59:59.999"; //12月份固定是31天
 	}
 	//2021
@@ -7654,28 +7654,28 @@ string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
 	return time;
 }
 
-DB_TIME_RANGE parseTimeRange(string timeExp) {
+DB_TIME_RANGE parseTimeRange(std::string timeExp) {
 	DB_TIME_RANGE tr;
 	size_t pos = timeExp.find("~");
-	string strStart = timeExp.substr(0, pos);
-	string strEnd = timeExp.substr(pos + 1, timeExp.length() - pos - 1);
-	if (strStart.find(":") == string::npos)
+	std::string strStart = timeExp.substr(0, pos);
+	std::string strEnd = timeExp.substr(pos + 1, timeExp.length() - pos - 1);
+	if (strStart.find(":") == std::string::npos)
 		strStart += " 00:00:00";
-	if (strEnd.find(":") == string::npos)
+	if (strEnd.find(":") == std::string::npos)
 		strEnd += " 23:59:59";
 	tr.start.fromStr(strStart);
 	tr.end.fromStr(strEnd);
 	return tr;
 }
 
-bool TIME_SELECTOR_ATOM::parseTimeRange(string condition)
+bool TIME_SELECTOR_ATOM::parseTimeRange(std::string condition)
 {
 	size_t pos = condition.find("~");
 	strStart = condition.substr(0, pos);
 	strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
-	if (strStart.find(":") == string::npos)
+	if (strStart.find(":") == std::string::npos)
 		strStart += " 00:00:00.000";
-	if (strEnd.find(":") == string::npos)
+	if (strEnd.find(":") == std::string::npos)
 		strEnd += " 23:59:59.999";
 	stStart.fromStr(strStart);
 	stEnd.fromStr(strEnd);
@@ -7684,23 +7684,23 @@ bool TIME_SELECTOR_ATOM::parseTimeRange(string condition)
 	return true;
 }
 
-string TIME_SELECTOR_ATOM::getParsedSelector()
+std::string TIME_SELECTOR_ATOM::getParsedSelector()
 {
 	return strStart + "~" + strEnd;
 }
 
 
 
-bool TAG_SELECTOR::init(string tag, string rootTag, string objtype, string objlevel) {
+bool TAG_SELECTOR::init(std::string tag, std::string rootTag, std::string objtype, std::string objlevel) {
 	rootTag = DB_TAG::addRoot(rootTag, m_org);
 	m_rootTag = rootTag;
 	tagSel = tag;
-	if (tag.find("*") != string::npos)
+	if (tag.find("*") != std::string::npos)
 	{
 		//if tag is * ,rootTag is HangZhou, so selector is  HangZhou.*
 		//TAG::addRoot will add .  , so selector won't be  HangZhou*, if HangZhou* ,HangZhou(Test).temprature will be selected uncorrectly
-		string tagExp = DB_TAG::addRoot(tag, rootTag);
-		string regExp = tagExp;
+		std::string tagExp = DB_TAG::addRoot(tag, rootTag);
+		std::string regExp = tagExp;
 
 		/*
 				The special characters in regular expressions are :
@@ -7709,8 +7709,8 @@ bool TAG_SELECTOR::init(string tag, string rootTag, string objtype, string objle
 				- *: Matches the preceding element zero or more times.
 				- +: Matches the preceding element one or more times.
 				- ? : Matches the preceding element zero or one time.
-				- ^ : Matches the beginning of the input string.
-				- $ : Matches the end of the input string.
+				- ^ : Matches the beginning of the input std::string.
+				- $ : Matches the end of the input std::string.
 				- [] : Defines a character class, matches any one character within the brackets.
 				- () : Marks the start and end of a subexpression.
 				- | : Specifies a choice between two or more patterns.
@@ -7743,7 +7743,7 @@ bool TAG_SELECTOR::init(string tag, string rootTag, string objtype, string objle
 	return true;
 }
 
-bool TAG_SELECTOR::init(vector<string>& tag, string rootTag, string objtype, string objlevel)
+bool TAG_SELECTOR::init(std::vector<std::string>& tag, std::string rootTag, std::string objtype, std::string objlevel)
 {
 	for (auto& i : tag) {
 		init(i, rootTag, objtype, objlevel);
@@ -7751,7 +7751,7 @@ bool TAG_SELECTOR::init(vector<string>& tag, string rootTag, string objtype, str
 	return true;
 }
 
-void TAG_SELECTOR::setType(string objType)
+void TAG_SELECTOR::setType(std::string objType)
 {
 	if (objType == "all") {
 		type = "*";
@@ -7770,19 +7770,19 @@ bool TAG_SELECTOR::specifyType()
 	return true;
 }
 
-bool TAG_SELECTOR::match(string tag) {
+bool TAG_SELECTOR::match(std::string tag) {
 	if (tagSel == "*")
 		return true;
 
 	for (int i = 0; i < exactMatchExp.size(); i++) {
-		string& exp = exactMatchExp[i];
+		std::string& exp = exactMatchExp[i];
 		if (exp == tag) {
 			return true;
 		}
 	}
 
 	for (int i = 0; i < fuzzyMatchRegExp.size(); i++) {
-		string& sreg = fuzzyMatchRegExp[i];
+		std::string& sreg = fuzzyMatchRegExp[i];
 		std::regex reg(sreg);
 		if (std::regex_match(tag, reg))
 		{
@@ -7832,7 +7832,7 @@ std::string replaceSingleEquals(const std::string& input) {
 }
 
 
-bool CONDITION_SELECTOR::init(string filter)
+bool CONDITION_SELECTOR::init(std::string filter)
 {
 	if (filter.length() > 0)
 	{
@@ -7888,7 +7888,7 @@ bool CONDITION_SELECTOR::evaluate_condition(const char* json_str, size_t json_le
 		if (JS_IsException(json_val)) {
 			JSValue exception = JS_GetException(global_object);
 			const char* err_str = JS_ToCString(global_object, exception);
-			string err = DB_STR::utf8_to_gb(err_str);
+			std::string err = DB_STR::utf8_to_gb(err_str);
 			std::cerr << "JSON parse json: " << err << std::endl;
 			JS_FreeCString(global_object, err_str);
 			JS_FreeValue(global_object, exception);
@@ -7922,7 +7922,7 @@ bool CONDITION_SELECTOR::evaluate_condition(const char* json_str, size_t json_le
 		if (JS_IsException(result)) {
 			JSValue exception = JS_GetException(global_object);
 			const char* err_str = JS_ToCString(global_object, exception);
-			string err = DB_STR::utf8_to_gb(err_str);
+			std::string err = DB_STR::utf8_to_gb(err_str);
 			std::cerr << "evaluate script error: " << err << std::endl;
 			JS_FreeCString(global_object, err_str);
 			JS_FreeValue(global_object, exception);
@@ -8004,12 +8004,12 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 	return bMatch;
 }
 
-string DE_SELECTOR::getSelectorDesc()
+std::string DE_SELECTOR::getSelectorDesc()
 {
 	return "";
 }
 
-bool DE_SELECTOR::init(const string& params, string& err)
+bool DE_SELECTOR::init(const std::string& params, std::string& err)
 {
 	return db.parseDESelector(params,*this,err);
 }
@@ -8054,21 +8054,21 @@ void DB_TIME::setNow()
 	fromUnixTime(tt, milli);
 }
 
-string DB_TIME::toStampHMS() const
+std::string DB_TIME::toStampHMS() const
 {
-	string s = formatStr("%02d%02d%02d", wHour, wMinute, wSecond);
+	std::string s = formatStr("%02d%02d%02d", wHour, wMinute, wSecond);
 	return s;
 }
 
-string DB_TIME::toStampFull() const
+std::string DB_TIME::toStampFull() const
 {
-	string s = formatStr("%04d-%02d-%02d %02d%02d%02d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
+	std::string s = formatStr("%04d-%02d-%02d %02d%02d%02d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
 	return s;
 }
 
-string DB_TIME::toYMD() const
+std::string DB_TIME::toYMD() const
 {
-	string str;
+	std::string str;
 	if (wYear > 2000 && wDay > 0 && wDay < 40 && wHour >= 0 && wHour <= 24 && wMinute >= 0 && wMinute <= 60)
 	{
 		str = formatStr("%.4d-%.2d-%.2d", wYear, wMonth, wDay);
@@ -8077,19 +8077,19 @@ string DB_TIME::toYMD() const
 }
 
 
-string  DB_TIME::toStr(bool enableMS) const
+std::string  DB_TIME::toStr(bool enableMS) const
 {
 	if (enableMS) {
-		string str = formatStr("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d", wYear, wMonth, wDay, wHour, wMinute, wSecond, wMilliseconds);
+		std::string str = formatStr("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d", wYear, wMonth, wDay, wHour, wMinute, wSecond, wMilliseconds);
 		return str;
 	}
 	else {
-		string str = formatStr("%.4d-%.2d-%.2d %.2d:%.2d:%.2d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
+		std::string str = formatStr("%.4d-%.2d-%.2d %.2d:%.2d:%.2d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
 		return str;
 	}
 }
 
-bool DB_TIME::fromStr(string str)
+bool DB_TIME::fromStr(std::string str)
 {
 	DB_TIME& t = *this;
 	memset(&t, 0, sizeof(t));
@@ -8174,7 +8174,7 @@ bool DB_TIME::fromStr(string str)
 	}
 
 	db_exception e;
-	e.m_error = "wrong time string format," + str;
+	e.m_error = "wrong time std::string format," + str;
 	throw e;
 
 	return false;
@@ -8185,14 +8185,14 @@ int DB_TIME::getTimePassSecond()
 	return TIME_OPT::calcTimePassSecond(*this);
 }
 
-string DB_TIME::nowStr(bool enableMS)
+std::string DB_TIME::nowStr(bool enableMS)
 {
 	DB_TIME t;
 	t.setNow();
 	return t.toStr(enableMS);
 }
 
-string DB_TIME::nowStrWithMilli()
+std::string DB_TIME::nowStrWithMilli()
 {
 	DB_TIME t;
 	t.setNow();
@@ -8227,7 +8227,7 @@ if (data == "") {
 yyjson_read_err err = { 0 };
 doc = yyjson_read_opts((char*)data.c_str(), data.length(), 0, nullptr, &err);
 if (err.code != YYJSON_READ_SUCCESS) {
-	//reload gbk string
+	//reload gbk std::string
 	if (err.code == YYJSON_READ_ERROR_INVALID_STRING)
 	{
 		data = DB_STR::gb_to_utf8(data);
@@ -8236,7 +8236,7 @@ if (err.code != YYJSON_READ_SUCCESS) {
 
 	if (err.code != YYJSON_READ_SUCCESS) {
 		// error message
-		string sErr = err.msg;
+		std::string sErr = err.msg;
 		sErr = "load json file fail,file path:" + path + " ,parse fail at byte " + formatStr("%d", err.pos) + ",errInfo:" + sErr;
 		db_exception e;
 		e.m_error = sErr;
@@ -8248,10 +8248,10 @@ root = yyjson_doc_get_root(doc);
 return true;
 }
 
-bool FS_BUFF::readFile(string path, string& data)
+bool FS_BUFF::readFile(std::string path, std::string& data)
 {
 	m_csFsb.lock();
-	std::map<string, FILE_BUFF*>::iterator iter = m_mapFsBuff.find(path);
+	std::map<std::string, FILE_BUFF*>::iterator iter = m_mapFsBuff.find(path);
 	if (iter != m_mapFsBuff.end()) {
 		data = iter->second->data;
 		FILE_BUFF* fb = iter->second;
@@ -8274,7 +8274,7 @@ bool FS_BUFF::readFile(string path, string& data)
 	return bRet;
 }
 
-bool FS_BUFF::writeFile(string path, unsigned char* data, size_t len)
+bool FS_BUFF::writeFile(std::string path, unsigned char* data, size_t len)
 {
 	return false;
 }

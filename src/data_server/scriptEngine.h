@@ -13,43 +13,43 @@ using namespace std;
 struct SCRIPT_RUN_INFO {
 	bool runSuccess = false;
 	bool valNullInCalc = false;
-	string lastError = "";
-	string lastExe;
-	string retVal = "";
+	std::string lastError = "";
+	std::string lastExe;
+	std::string retVal = "";
 	int runTimeCost = 0;
-	map<string, string> tagRefDataTime;
+	map<std::string, std::string> tagRefDataTime;
 
 	void toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal);
 };
 
 struct SCRIPT_INFO {
-	string script = "";
-	string filePath = "";
-	string folderPath = "";
-	string envVarScript = "";
-	string calcMpTag = "";
-	string callerObjTag = "";
-	string rootTag = "";
-	string devAddr = "";
-	string mode = "";
-	string devId = "";
-	string user = "";
+	std::string script = "";
+	std::string filePath = "";
+	std::string folderPath = "";
+	std::string envVarScript = "";
+	std::string calcMpTag = "";
+	std::string callerObjTag = "";
+	std::string rootTag = "";
+	std::string devAddr = "";
+	std::string mode = "";
+	std::string devId = "";
+	std::string user = "";
 	int interval = 0;
 	bool isExp = 0; //是否表达式脚本
 
-	string org = "";
-	string lastModifyTime = "";
-	string lastModifyUser = "";
-	string name = "";
-	string desc = "";
+	std::string org = "";
+	std::string lastModifyTime = "";
+	std::string lastModifyUser = "";
+	std::string name = "";
+	std::string desc = "";
 
 	SCRIPT_RUN_INFO lastRunInfo = SCRIPT_RUN_INFO();
 	bool enableLog = false;
 
 	bool enable = false;
 
-	string getContextTag();
-	string getExpContextTag();
+	std::string getContextTag();
+	std::string getExpContextTag();
 
 	void toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool getStatus = false);
 	void fromJson(yyjson_val* mutRoot);
@@ -58,29 +58,29 @@ struct SCRIPT_INFO {
 class ScriptEngine;
 
 typedef void (*fp_engineInitFunc)(JSContext* ctx, void* pCustom);
-typedef void (*fp_callMethod)(string method, string param, string& rlt,string& err);
-typedef void (*fp_callMethodRR)(const string& req,string& resp);
+typedef void (*fp_callMethod)(std::string method, std::string param, std::string& rlt,std::string& err);
+typedef void (*fp_callMethodRR)(const std::string& req,std::string& resp);
 
 class ScriptEngine {
 public:
 	ScriptEngine();
 	bool runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri);
 
-	string m_sError;
-	vector<string> m_vecOutput;         //执行一次脚本的输出信息，包含错误信息，脚本中的log
-	map<string,string> m_vecValRefTime; //本次脚本引用的所有val函数的当前值时间，基于val算出来的二次变量，用所有val的最新时间作为二次变量的时间
+	std::string m_sError;
+	std::vector<std::string> m_vecOutput;         //执行一次脚本的输出信息，包含错误信息，脚本中的log
+	map<std::string,std::string> m_vecValRefTime; //本次脚本引用的所有val函数的当前值时间，基于val算出来的二次变量，用所有val的最新时间作为二次变量的时间
 
 	json m_globalObj;
 
 	//当前脚本执行的环境变量
-	string m_tagContext;
-	string m_user;                      //执行脚本的用户，根据该用户权限控制该脚本的权限
-	string m_scriptName;
-	string m_script;
+	std::string m_tagContext;
+	std::string m_user;                      //执行脚本的用户，根据该用户权限控制该脚本的权限
+	std::string m_scriptName;
+	std::string m_script;
 
 	void* m_ioDevThis;
 
-	string m_folderPath;              //脚本所在的文件夹路径
+	std::string m_folderPath;              //脚本所在的文件夹路径
 
 	bool m_reloadFile;
 
@@ -93,11 +93,11 @@ public:
 	// 环境变量脚本行数
 	int m_envVarScriptLine;
 
-	vector<fp_engineInitFunc> m_engineInitFuncList;
+	std::vector<fp_engineInitFunc> m_engineInitFuncList;
 	static fp_callMethod  callMethodImp;
 	static fp_callMethodRR callMethodRRImp;
-	static string ScriptFolder;
-	static string ConfFolder;
+	static std::string ScriptFolder;
+	static std::string ConfFolder;
 
 	static void init();
 
@@ -116,6 +116,6 @@ JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_val* val);
 JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_mut_val* val);
 yyjson_val* qjsVal_to_yyVal(JSContext* ctx, JSValueConst js_val, yyjson_doc*& doc);
 
-extern map<string, string> g_mapConfFile;
+extern map<std::string, std::string> g_mapConfFile;
 
 #endif

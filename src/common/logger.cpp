@@ -78,7 +78,7 @@ void LOG(const char* pszFmt, ...) {
 	LOG(str);
 }
 
-void LOG(string info) {
+void LOG(std::string info) {
 	logger.log(info);
 }
 
@@ -159,9 +159,9 @@ static std::string getAppName() {
 #endif
 }
 
-static string utf8_to_gb(string instr) //utf-8-->ansi
+static std::string utf8_to_gb(std::string instr) //utf-8-->ansi
 {
-	string str;
+	std::string str;
 #ifdef _WIN32
 	size_t MAX_STRSIZE = instr.length() * 2 + 2;
 	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -179,8 +179,8 @@ static string utf8_to_gb(string instr) //utf-8-->ansi
 	return str;
 }
 
-static string gb_to_utf8(string instr) {
-	string str;
+static std::string gb_to_utf8(std::string instr) {
+	std::string str;
 #ifdef _WIN32
 	size_t MAX_STRSIZE = instr.length() * 2 + 2;
 	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -198,7 +198,7 @@ static string gb_to_utf8(string instr) {
 	return str;
 }
 
-static wstring utf8_to_utf16(string instr) //utf-8-->ansi
+static wstring utf8_to_utf16(std::string instr) //utf-8-->ansi
 {
 	wstring str;
 #ifdef _WIN32
@@ -222,8 +222,8 @@ Clogger::Clogger()
 	logOutput = NULL;
 	m_bEnable = true;
 
-	string appDir = getAppDir();
-	string appName = getAppName();
+	std::string appDir = getAppDir();
+	std::string appName = getAppName();
 
 	// getAppDir  getAppName returns gb
 	m_strLogDir = gb_to_utf8(appDir + "/log_" + appName);
@@ -234,7 +234,7 @@ void Clogger::init()
 	
 }
 
-LOG_LEVEL Clogger::str2logLevel(string level)
+LOG_LEVEL Clogger::str2logLevel(std::string level)
 {
 	LOG_LEVEL ll;
 	if (level == "trace")
@@ -256,25 +256,25 @@ LOG_LEVEL Clogger::str2logLevel(string level)
 	return ll;
 }
 
-void Clogger::setLogLevel(string level)
+void Clogger::setLogLevel(std::string level)
 {
 	logLevel = str2logLevel(level);
 }
 
-LOG_LEVEL Clogger::getLogLevel(string& info)
+LOG_LEVEL Clogger::getLogLevel(std::string& info)
 {
 	LOG_LEVEL ll = LL_DEBUG;
-	if (info.find("[trace]") != string::npos)
+	if (info.find("[trace]") != std::string::npos)
 		ll = str2logLevel("trace");
-	else if (info.find("[detail]") != string::npos)
+	else if (info.find("[detail]") != std::string::npos)
 		ll = str2logLevel("detail");
-	else if (info.find("[debug]") != string::npos)
+	else if (info.find("[debug]") != std::string::npos)
 		ll = str2logLevel("debug");
-	else if (info.find("[warn]") != string::npos)
+	else if (info.find("[warn]") != std::string::npos)
 		ll = str2logLevel("warn");
-	else if (info.find("[error]") != string::npos)
+	else if (info.find("[error]") != std::string::npos)
 		ll = str2logLevel("error");
-	else if (info.find("[keyinfo]") != string::npos)
+	else if (info.find("[keyinfo]") != std::string::npos)
 		ll = str2logLevel("keyinfo");
 
 
@@ -311,7 +311,7 @@ void Clogger::setConsoleTextColor(LOG_LEVEL ll) {
 #include <cstdio>
 
 
-static void getTimeInfo(struct tm& timeinfo,string& timestamp) {
+static void getTimeInfo(struct tm& timeinfo,std::string& timestamp) {
 	auto now = std::chrono::system_clock::now();
 	auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
 	auto duration = now_ms.time_since_epoch();
@@ -337,7 +337,7 @@ static void getTimeInfo(struct tm& timeinfo,string& timestamp) {
 	timestamp = buf.data();
 }
 
-static bool appendFile(string path, char* data, size_t len)
+static bool appendFile(std::string path, char* data, size_t len)
 {
 	FILE* fp = nullptr;
 #ifdef _WIN32
@@ -354,11 +354,11 @@ static bool appendFile(string path, char* data, size_t len)
 	return false;
 }
 
-static string replaceStr(string str, const string to_replaced, const string newchars) {
-	for (string::size_type pos(0); pos != string::npos; pos += newchars.length()) {
+static std::string replaceStr(std::string str, const std::string to_replaced, const std::string newchars) {
+	for (std::string::size_type pos(0); pos != std::string::npos; pos += newchars.length()) {
 		pos = str.find(to_replaced, pos);
 
-		if (pos != string::npos) {
+		if (pos != std::string::npos) {
 			str.replace(pos, to_replaced.length(), newchars);
 		}
 		else {
@@ -369,7 +369,7 @@ static string replaceStr(string str, const string to_replaced, const string newc
 	return str;
 }
 
-static void createFolderOfPath(string strFile) {
+static void createFolderOfPath(std::string strFile) {
 	strFile = replaceStr(strFile, "\\", "/");
 	strFile = replaceStr(strFile, "////", "/");
 	strFile = replaceStr(strFile, "///", "/");
@@ -377,7 +377,7 @@ static void createFolderOfPath(string strFile) {
 
 	size_t iDotPos = strFile.rfind('.');
 	size_t iSlashPos = strFile.rfind('/');
-	if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
+	if (iDotPos != std::string::npos && iDotPos > iSlashPos) {//is a file
 		strFile = strFile.substr(0, iSlashPos);
 	}
 
@@ -385,11 +385,11 @@ static void createFolderOfPath(string strFile) {
 	int iStartPos = 0;
 	while (1) {
 		int iSlash = strFile.find('/', iStartPos);
-		if (iSlash == string::npos) {
+		if (iSlash == std::string::npos) {
 			break; 
 		}
 
-		string strFolder = strFile.substr(0, iSlash);
+		std::string strFolder = strFile.substr(0, iSlash);
 		CreateDirectoryW(utf8_to_utf16(strFolder).c_str(), NULL);
 
 		if (iSlash + 1 == strFile.length()) {//last char is /
@@ -405,15 +405,15 @@ static void createFolderOfPath(string strFile) {
 #endif
 }
 
-string Clogger::logInternal(string info, bool writeToFile)
+std::string Clogger::logInternal(std::string info, bool writeToFile)
 {
 	LOG_LEVEL ll = getLogLevel(info);
 
 	struct tm stNow;
-	string timeStamp;
+	std::string timeStamp;
 	getTimeInfo(stNow,timeStamp);
 
-	string logline = timeStamp + " " + info;
+	std::string logline = timeStamp + " " + info;
 
 	if (ll < logLevel) {
 		return logline;
@@ -441,7 +441,7 @@ string Clogger::logInternal(string info, bool writeToFile)
 		createFolderOfPath(m_strLogDir);
 
 		//save to log file
-		string strFile = timeStamp.substr(0,8);
+		std::string strFile = timeStamp.substr(0,8);
 		strFile = m_strLogDir + "/" + strFile + ".log";
 		logline += "\r\n";
 		appendFile(strFile,(char*)logline.c_str(), logline.size());
@@ -450,7 +450,7 @@ string Clogger::logInternal(string info, bool writeToFile)
 	return logline;
 }
 
-void Clogger::log(string info, bool writeToFile) {
+void Clogger::log(std::string info, bool writeToFile) {
 	if (LL_NONE == logLevel) {
 		return;
 	}
@@ -458,7 +458,7 @@ void Clogger::log(string info, bool writeToFile) {
 	//logInternal only log to file and cmdline
 	//log will log to some user specified place, the code must not trigger log again
 	//log to websocket code routine must not use log, but use logInternal
-	string log = logInternal(info);
+	std::string log = logInternal(info);
 	if (log != "" && logOutput) {
 		logOutput(log);
 	}

@@ -29,7 +29,7 @@ SOFTWARE.
 > name pattern
 functions variable
 use camel mode, like  getIODevices
-enum string			            
+enum std::string			            
 short dash,like gw-local-serial
 
 >use double instead of float anywhere, 
@@ -48,31 +48,31 @@ using namespace std;
 
 
 namespace METHOD_CALLER {
-	const string tdspDev = "tdspDev";
-	const string script = "script";
-	const string httpClient = "httpClient";
+	const std::string tdspDev = "tdspDev";
+	const std::string script = "script";
+	const std::string httpClient = "httpClient";
 }
 
 //stateless rpc session
 class RPC_SESSION {
 public:
-	string req;   //maybe batch call
-	string req_single;  //single call
+	std::string req;   //maybe batch call
+	std::string req_single;  //single call
 
 	//authentification
-	string name; //name is defined by tds client
-	string user;
-	string role;
-	string pwd;
-	string token;
-	string method;
-	string dbpath;
-	string language;
+	std::string name; //name is defined by tds client
+	std::string user;
+	std::string role;
+	std::string pwd;
+	std::string token;
+	std::string method;
+	std::string dbpath;
+	std::string language;
 
 	//tag expression in current user; multi-tenant
 	//rootTag = org + queryRootTag
 	//sysTag = org + queryRootTag + tag used in this session   rootTag = org + queryRootTag;
-	string org; //user's org
+	std::string org; //user's org
 
 
 	static bool defaultSubAll;
@@ -86,23 +86,23 @@ public:
 	std::vector<std::string> subTag;
 
 	//session params for rpc route
-	string route_ioAddr;  //route to io device
-	string route_tag;     //route to io device or childTds
-	string route_childTds;
+	std::string route_ioAddr;  //route to io device
+	std::string route_tag;     //route to io device or childTds
+	std::string route_childTds;
 
 	//ip params
-	string remoteAddr;
-	string remoteIP;
+	std::string remoteAddr;
+	std::string remoteIP;
 	int remotePort;
-	string localIP;
+	std::string localIP;
 	int localPort;
 	bool isHttps;
 
-	string sLastRecvTime;
-	string lastMethodCalled;
-	string sLastSendTime;
-	string lastMethodNotified;
-	string caller;
+	std::string sLastRecvTime;
+	std::string lastMethodCalled;
+	std::string sLastSendTime;
+	std::string lastMethodNotified;
+	std::string caller;
 
 	bool isDebug; //调试调用不计入session统计
 
@@ -110,7 +110,7 @@ public:
 	long long tStartHandle;
 	long long tEndCall;
 
-	bool isSubscribed(const string& method, const string& tag) {
+	bool isSubscribed(const std::string& method, const std::string& tag) {
 		bool subByMethod = false;
 		if (subAllMethod) {
 			subByMethod = true;
@@ -179,7 +179,7 @@ public:
 
 class RPC_RESP {
 public:
-	void setResult(string& str) { result = str; }
+	void setResult(std::string& str) { result = str; }
 	RPC_RESP() {
 		result = "";
 		isNotification = false;
@@ -189,45 +189,45 @@ public:
 	{
 	}
 
-	string strResp; 
-	string strRespForLog; //ignore some pkt data ,for log only
-	string error;
-	string result;
-	string params; 
-	string info;   //rpc excution log
-	string dbQueryInfo;
+	std::string strResp; 
+	std::string strRespForLog; //ignore some pkt data ,for log only
+	std::string error;
+	std::string result;
+	std::string params; 
+	std::string info;   //rpc excution log
+	std::string dbQueryInfo;
 	int timeCost;
 	bool isNotification; //is request a notification.no response will send if request is a notification
 };
 
 
 namespace TDS_SESSION_TYPE {
-	const string none = "none";
+	const std::string none = "none";
 
 	//client connections
-	const string tdsClient = "tdsClient";  
-	const string video = "video";
-	const string dataStream = "dataStream";
-	const string iodev = "ioDev"; 
-	const string webHMR = "webHMR"; //web hot module replacement
+	const std::string tdsClient = "tdsClient";  
+	const std::string video = "video";
+	const std::string dataStream = "dataStream";
+	const std::string iodev = "ioDev"; 
+	const std::string webHMR = "webHMR"; //web hot module replacement
 
 	//bridge data interfaces
-	const string bridgeToLocalCom = "bridgeToLocalCom";
-	const string bridgeToiodev = "bridgeToiodev";
-	const string bridgeToTcpClient = "bridgeToTcpClient";
-	const string bridgeToTcpServer = "bridgeToTcpServer";
+	const std::string bridgeToLocalCom = "bridgeToLocalCom";
+	const std::string bridgeToiodev = "bridgeToiodev";
+	const std::string bridgeToTcpClient = "bridgeToTcpClient";
+	const std::string bridgeToTcpServer = "bridgeToTcpServer";
 
 	//debug tools
-	const string terminal = "terminal";
-	const string log = "log";
-	const string apipkt = "apipkt"; 
-	const string iopkt = "sessionPkt";
+	const std::string terminal = "terminal";
+	const std::string log = "log";
+	const std::string apipkt = "apipkt"; 
+	const std::string iopkt = "sessionPkt";
 }
 
 struct ACTIVE_TDS_SESSION {
-	string ip;
+	std::string ip;
 	int port;
-	string type;
+	std::string type;
 };
 
 enum RPC_ERROR_CODE {
@@ -297,12 +297,12 @@ enum RPC_ERROR_CODE {
 };
 
 //code ,msg is specified by JSON RPC stardard. desc is for detail description by TDS.can be Chinese Charactors
-inline string makeRPCError(int code, string msg,string desc = "")
+inline std::string makeRPCError(int code, std::string msg,std::string desc = "")
 {
-	string error = "{\"code\":" + std::to_string(code) + ",\"message\":\"" + msg + "\"";
+	std::string error = "{\"code\":" + std::to_string(code) + ",\"message\":\"" + msg + "\"";
 	if (desc != "")
 	{
-		string data = ",\"data\":{\"desc\":\"" + desc + "\"}";
+		std::string data = ",\"data\":{\"desc\":\"" + desc + "\"}";
 		error += data;
 	}
 	error += "}";

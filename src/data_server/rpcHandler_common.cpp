@@ -11,9 +11,9 @@ namespace stdfs = std::filesystem;
 #endif
 
 RpcHandler_common rpcHandler_common;
-map<string, string> g_mapConfFile;
+map<std::string, std::string> g_mapConfFile;
 
-static std::wstring utf8_to_utf16(const string& u8str) {
+static std::wstring utf8_to_utf16(const std::string& u8str) {
 	const char* utf8_str = u8str.c_str();
 	size_t length = u8str.length();
 	if (!utf8_str || length == 0) {
@@ -155,10 +155,10 @@ static std::string utf16_to_utf8(const wstring& u16str) {
 	return result;
 }
 
-static bool createFolderOfPath(string strFile) {
+static bool createFolderOfPath(std::string strFile) {
 	size_t iDotPos = strFile.rfind('.');
 	size_t iSlashPos = strFile.rfind('/');
-	if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
+	if (iDotPos != std::string::npos && iDotPos > iSlashPos) {//is a file
 		strFile = strFile.substr(0, iSlashPos);
 	}
 
@@ -170,7 +170,7 @@ static bool createFolderOfPath(string strFile) {
 #endif
 }
 
-static bool readFile(string path, string& data)
+static bool readFile(std::string path, std::string& data)
 {
 	FILE* fp = nullptr;
 #ifdef _WIN32
@@ -191,7 +191,7 @@ static bool readFile(string path, string& data)
 	return false;
 }
 
-static bool writeFile(string path, const char* data, size_t len)
+static bool writeFile(std::string path, const char* data, size_t len)
 {
 	createFolderOfPath(path);
 
@@ -216,16 +216,16 @@ static bool writeFile(string path, const char* data, size_t len)
 }
 
 struct FS_FILE_INFO {
-	string modifyTime;
-	string createTime;
+	std::string modifyTime;
+	std::string createTime;
 	size_t len;
-	string accessTime;
-	string name;
-	string path;
-	string folderPath;
+	std::string accessTime;
+	std::string name;
+	std::string path;
+	std::string folderPath;
 };
 
-static string fileTimeToString(stdfs::file_time_type ftime) {
+static std::string fileTimeToString(stdfs::file_time_type ftime) {
 	std::chrono::system_clock::time_point sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
 		ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
 	);
@@ -248,7 +248,7 @@ static string fileTimeToString(stdfs::file_time_type ftime) {
 }
 
 
-static void getFolderList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = false) {
+static void getFolderList(std::vector<FS_FILE_INFO>& list, std::string strFolder, bool recursive = false) {
 	try
 	{
 		wstring wstrFolder = utf8_to_utf16(strFolder);
@@ -282,7 +282,7 @@ static void getFolderList(vector<FS_FILE_INFO>& list, string strFolder, bool rec
 }
 
 
-void getFileList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = false, string suffix = "*", vector<string>* exclude = nullptr) {
+void getFileList(std::vector<FS_FILE_INFO>& list, std::string strFolder, bool recursive = false, std::string suffix = "*", std::vector<std::string>* exclude = nullptr) {
 	try
 	{
 		wstring wstrFolder = utf8_to_utf16(strFolder);
@@ -293,7 +293,7 @@ void getFileList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = 
 			if (exclude != nullptr) {
 				bool excluded = false;
 				for (int i = 0; i < exclude->size(); i++) {
-					string ep = exclude->at(i);
+					std::string ep = exclude->at(i);
 					if (fi.name == ep) {
 						excluded = true;
 						break;
@@ -313,7 +313,7 @@ void getFileList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = 
 			else {
 				//std::filesystem::file_time_type ft = i.last_write_time();
 				//std::time_t tt = decltype(ft)::clock::to_time_t();
-				if (suffix != "*" && fi.path.find(suffix) == string::npos)
+				if (suffix != "*" && fi.path.find(suffix) == std::string::npos)
 					continue;
 				size_t pos = fi.path.rfind("/");
 				fi.folderPath = fi.path.substr(0, pos);
@@ -329,9 +329,9 @@ void getFileList(vector<FS_FILE_INFO>& list, string strFolder, bool recursive = 
 }
 
 
-void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
+void getFileList(std::vector<std::string>& list, std::string strFolder, bool includeFolder, bool recursive)
 {
-	vector<FS_FILE_INFO> filist;
+	std::vector<FS_FILE_INFO> filist;
 	getFileList(filist, strFolder, recursive);
 	for (int i = 0; i < filist.size(); i++) {
 		FS_FILE_INFO& fi = filist[i];
@@ -340,16 +340,16 @@ void getFileList(vector<string>& list, string strFolder, bool includeFolder, boo
 }
 
 
-bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
+bool RpcHandler_common::handleRpc(const std::string& method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	bool handled = true;
-	if (method.find("fs.") != string::npos) {
-		string path = params["path"].get<string>();
-		string rootPath = "";
+	if (method.find("fs.") != std::string::npos) {
+		std::string path = params["path"].get<std::string>();
+		std::string rootPath = "";
 		if (params["root"].is_string()) {
 			rootPath = params["root"];
 		}
 		else if(params["rootType"].is_string()) {
-			string rootType = params["rootType"].get<string>();
+			std::string rootType = params["rootType"].get<std::string>();
 			if (rootType == "fms") {
 				rootPath = m_fmsPath;
 			}
@@ -366,17 +366,17 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 		path = rootPath + path; //rootPath最后不带 / ，path以 /开始
 
 		if (method == "fs.readFile") {
-			if (params["type"] != nullptr && params["type"].get<string>() == "binary") {
+			if (params["type"] != nullptr && params["type"].get<std::string>() == "binary") {
 
 			}
 			else {
-				string s;
+				std::string s;
 				if (readFile(path, s)) {
 					json j = s;
 					rpcResp.result = j.dump();
 				}
 				else {
-					string path = params["path"];
+					std::string path = params["path"];
 					if (!stdfs::exists(path)) {
 						rpcResp.error = makeRPCError(OS_fileNotExist, "file not exist");
 					}
@@ -397,18 +397,18 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 				}
 			}
 			catch (const stdfs::filesystem_error& e) {
-				string s = e.what();
+				std::string s = e.what();
 				rpcResp.error += "文件系统错误:" + s;
 			}
 		}
 		else if (method == "fs.writeFile") {
 			createFolderOfPath(path);
 			if (params["data"] != nullptr) {
-				string d = params["data"].get<string>();
+				std::string d = params["data"].get<std::string>();
 
-				string encode = "";
+				std::string encode = "";
 				if (params.contains("encode")) {
-					encode = params["encode"].get<string>();
+					encode = params["encode"].get<std::string>();
 				}
 
 				if (encode == "base64") {
@@ -446,15 +446,15 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 				recursive = params["recursive"].get<bool>();
 			}
 
-			vector<string> fl;
+			std::vector<std::string> fl;
 			getFileList(fl, path, includeFolder, recursive);
 
 			json j = fl;
 			rpcResp.result = j.dump();
 		}
 		else if (method == "fs.exploreFolder") {
-			vector<FS_FILE_INFO> fileList;
-			vector<FS_FILE_INFO> folderList;
+			std::vector<FS_FILE_INFO> fileList;
+			std::vector<FS_FILE_INFO> folderList;
 
 			if (path == "") {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "specify path");
@@ -527,15 +527,15 @@ static std::string base64_decode(const std::string& in) {
 }
 
 void RpcHandler_common::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION& session) {
-	string p = "";
+	std::string p = "";
 	if (!params["path"].is_string()) {
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param path error");
 		return;
 	}
 
-	p = params["path"].get<string>();
+	p = params["path"].get<std::string>();
 	if (p != "") {
-		string conf = "";
+		std::string conf = "";
 		p = m_confPath + "/" + p;
 
 		readFile(p, conf);
@@ -551,8 +551,8 @@ void RpcHandler_common::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION
 }
 
 void RpcHandler_common::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION& session) {
-	string path = "";
-	string encode = "";
+	std::string path = "";
+	std::string encode = "";
 	if (!params["path"].is_string()) {
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param path error");
 		return;
@@ -564,12 +564,12 @@ void RpcHandler_common::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION
 	}
 
 	if (params["encode"].is_string()) {
-		encode = params["encode"].get<string>();
+		encode = params["encode"].get<std::string>();
 	}
 
-	string rPath = params["path"].get<string>();
+	std::string rPath = params["path"].get<std::string>();
 	if (rPath != "") {
-		string conf = params["data"].get<string>();
+		std::string conf = params["data"].get<std::string>();
 		path = m_confPath + "/" + rPath;
 		createFolderOfPath(path);
 

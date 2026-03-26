@@ -29,7 +29,7 @@ SOFTWARE.
 > name pattern
 functions variable
 use camel mode, like  getIODevices
-enum string			            
+enum std::string			            
 short dash,like gw-local-serial
 
 >use double instead of float anywhere, 
@@ -54,7 +54,7 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 using namespace std;
 using json = nlohmann::json;
 
-string TDS_LAST_ERROR();
+std::string TDS_LAST_ERROR();
 
 
 namespace str {
@@ -62,22 +62,22 @@ namespace str {
 	std::string format(const char* pszFmt, ...);	
 
 	//process
-	string replace(string str, const string to_replaced, const string newchars);
+	std::string replace(std::string str, const std::string to_replaced, const std::string newchars);
 	bool isDigits(char* pData, int len);
-	bool isDigits(string s);
-	string trimPrefix(string s, string prefix = " ");
-	string trimSuffix(string s, string suffix = " ");
-	string trim(std::string s, string toTrim = " ");
+	bool isDigits(std::string s);
+	std::string trimPrefix(std::string s, std::string prefix = " ");
+	std::string trimSuffix(std::string s, std::string suffix = " ");
+	std::string trim(std::string s, std::string toTrim = " ");
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
 
 	//char codec
-	wstring gb_to_utf16(string instr);
-	wstring utf8_to_utf16(string instr);
-	wstring utf8_to_utf16(string instr);
-	string utf16_to_utf8(wstring instr);
-	wstring gb_to_utf16(string instr);
-	string utf8_to_gb(string instr);
-	string gb_to_utf8(string instr);
+	wstring gb_to_utf16(std::string instr);
+	wstring utf8_to_utf16(std::string instr);
+	wstring utf8_to_utf16(std::string instr);
+	std::string utf16_to_utf8(wstring instr);
+	wstring gb_to_utf16(std::string instr);
+	std::string utf8_to_gb(std::string instr);
+	std::string gb_to_utf8(std::string instr);
 }
 
 struct Date {
@@ -88,8 +88,8 @@ struct Date {
 	Date() {
 		memset(this, 0, sizeof(*this));
 	}
-	string toStr();
-	void fromStr(string s);
+	std::string toStr();
+	void fromStr(std::string s);
 };
 
 struct HMS {
@@ -105,8 +105,8 @@ struct HMS {
 	}
 
 	bool operator>(HMS& right) {
-		string sl = toStr();
-		string sr = right.toStr();
+		std::string sl = toStr();
+		std::string sr = right.toStr();
 		if (sl > sr) {
 			return true;
 		}
@@ -115,8 +115,8 @@ struct HMS {
 		}
 	}
 	bool operator>=(HMS& right) {
-		string sl = toStr();
-		string sr = right.toStr();
+		std::string sl = toStr();
+		std::string sr = right.toStr();
 		if (sl >= sr) {
 			return true;
 		}
@@ -125,8 +125,8 @@ struct HMS {
 		}
 	}
 	bool operator<(HMS& right) {
-		string sl = toStr();
-		string sr = right.toStr();
+		std::string sl = toStr();
+		std::string sr = right.toStr();
 		if (sl < sr) {
 			return true;
 		}
@@ -135,8 +135,8 @@ struct HMS {
 		}
 	}
 	bool operator<=(HMS& right) {
-		string sl = toStr();
-		string sr = right.toStr();
+		std::string sl = toStr();
+		std::string sr = right.toStr();
 		if (sl <= sr) {
 			return true;
 		}
@@ -145,8 +145,8 @@ struct HMS {
 		}
 	}
 	void setNow();
-	string toStr();
-	void fromStr(string s);
+	std::string toStr();
+	void fromStr(std::string s);
 };
 
 
@@ -184,8 +184,8 @@ struct TIME {
 	}
 
 	bool operator>(TIME& right) {
-		string sl = toStr();
-		string sr = right.toStr();
+		std::string sl = toStr();
+		std::string sr = right.toStr();
 		if (sl > sr) {
 			return true;
 		}
@@ -194,8 +194,8 @@ struct TIME {
 		}
 	}
 	bool operator>=(TIME& right) {
-		string sl = toStr();
-		string sr = right.toStr();
+		std::string sl = toStr();
+		std::string sr = right.toStr();
 		if (sl >= sr) {
 			return true;
 		}
@@ -204,8 +204,8 @@ struct TIME {
 		}
 	}
 	bool operator<(TIME& right) {
-		string sl = toStr();
-		string sr = right.toStr();
+		std::string sl = toStr();
+		std::string sr = right.toStr();
 		if (sl < sr) {
 			return true;
 		}
@@ -214,8 +214,8 @@ struct TIME {
 		}
 	}
 	bool operator<=(TIME& right) {
-		string sl = toStr();
-		string sr = right.toStr();
+		std::string sl = toStr();
+		std::string sr = right.toStr();
 		if (sl <= sr) {
 			return true;
 		}
@@ -223,12 +223,12 @@ struct TIME {
 			return false;
 		}
 	}
-	string toStr(bool enableMilli = true);
-	void fromStr(string s);
-	string toDateStr();
-	string toStampHMS();
-	string toTimeStr();
-	string toStampFull();
+	std::string toStr(bool enableMilli = true);
+	void fromStr(std::string s);
+	std::string toDateStr();
+	std::string toStampHMS();
+	std::string toTimeStr();
+	std::string toStampFull();
 	time_t toUnixTime();
 	void fromUnixTime(time_t t,int milli=0);
 
@@ -259,7 +259,7 @@ struct TIME {
 		std::this_thread::sleep_for(std::chrono::milliseconds(milliSec));
 	}
 
-	static string nowStr(bool enableMS)
+	static std::string nowStr(bool enableMS)
 	{
 		TIME t; 
 		t.setNow();
@@ -269,66 +269,66 @@ struct TIME {
 
 
 namespace TAG {
-	string resolveTag(string strTagExp, string tagThis);
-	string trimRoot(string tag, string root);
-	string getParentTag(string tag); 
-	string userTag2sysTag(string userTag, string userOrg);
-	string sysTag2userTag(string sysTag, string userOrg);
-	string addRoot(string tag, string root);
+	std::string resolveTag(std::string strTagExp, std::string tagThis);
+	std::string trimRoot(std::string tag, std::string root);
+	std::string getParentTag(std::string tag); 
+	std::string userTag2sysTag(std::string userTag, std::string userOrg);
+	std::string sysTag2userTag(std::string sysTag, std::string userOrg);
+	std::string addRoot(std::string tag, std::string root);
 
-	size_t getMoLevel(string tag);
-	string trimPrefix(string s, string prefix);
+	size_t getMoLevel(std::string tag);
+	std::string trimPrefix(std::string s, std::string prefix);
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
 }
 
 namespace MO_TYPE {
-	const string mo = "mo";
-	const string customMo = "customMo";
-	const string org = "org";
-	const string customOrg = "customOrg";
-	const string mp = "mp";
-	const string mpgroup = "mpGroup";
+	const std::string mo = "mo";
+	const std::string customMo = "customMo";
+	const std::string org = "org";
+	const std::string customOrg = "customOrg";
+	const std::string mp = "mp";
+	const std::string mpgroup = "mpGroup";
 };
 
 namespace VAL_TYPE {
-	const string json = "json";	
-	const string Float = "float"; 
-	const string integer = "int";
-	const string boolean = "bool";
-	const string video = "video";
-	const string str = "string";
-	const string car_strobe = "car_strobe";
-	const string man_strobe = "man_strobe";
+	const std::string json = "json";	
+	const std::string Float = "float"; 
+	const std::string integer = "int";
+	const std::string boolean = "bool";
+	const std::string video = "video";
+	const std::string str = "std::string";
+	const std::string car_strobe = "car_strobe";
+	const std::string man_strobe = "man_strobe";
 };
 	
 
 namespace CHAN_IO_TYPE {
-	const string I = "i";
-	const string O = "o";
-	const string IO = "io";
+	const std::string I = "i";
+	const std::string O = "o";
+	const std::string IO = "io";
 };
 
 namespace IO_TYPE {
-	const string Input = "i";
-	const string Output = "o";
-	const string InAndOut = "io";
-	const string Const = "c";
-	const string InnerVar = "v";
+	const std::string Input = "i";
+	const std::string Output = "o";
+	const std::string InAndOut = "io";
+	const std::string Const = "c";
+	const std::string InnerVar = "v";
 }
 
 namespace JSON_STR {
-	const string Null = "null";
-	const string True = "true";
-	const string False = "false";
-	inline bool is_bool(const string& s) {
+	const std::string Null = "null";
+	const std::string True = "true";
+	const std::string False = "false";
+	inline bool is_bool(const std::string& s) {
 		if (s == "true" || s == "false") { return true; }
 		return false;
 	}
-	inline bool is_null(const string& s) {
+	inline bool is_null(const std::string& s) {
 		if (s == "null") { return true; }
 		return false;
 	}
-	inline bool is_num(const string& s)
+	inline bool is_num(const std::string& s)
 	{
 		auto doc = yyjson_read(s.c_str(), s.size(), 0);
 		if (!doc) return false;
@@ -338,7 +338,7 @@ namespace JSON_STR {
 		yyjson_doc_free(doc);
 		return bResult;
 	}
-	inline bool is_str(const string& s)
+	inline bool is_str(const std::string& s)
 	{
 		auto doc = yyjson_read(s.c_str(), s.size(), 0);
 		if (!doc) return false;
@@ -348,7 +348,7 @@ namespace JSON_STR {
 		yyjson_doc_free(doc);
 		return bResult;
 	}
-	inline bool is_int(const string& s)
+	inline bool is_int(const std::string& s)
 	{
 		auto doc = yyjson_read(s.c_str(), s.size(), 0);
 		if (!doc) return false;
@@ -359,7 +359,7 @@ namespace JSON_STR {
 		return bResult;
 	}
 	
-	inline bool get_bool(const string& s)
+	inline bool get_bool(const std::string& s)
 	{
 		if (s == "true") return true;
 		else if (s == "false") return false;
@@ -367,11 +367,11 @@ namespace JSON_STR {
 		else if(s == "0") return false;
 		else return false;
 	}
-	inline string getNull()
+	inline std::string getNull()
 	{
 		return "null";
 	}
-	inline double get_num(const string& s)
+	inline double get_num(const std::string& s)
 	{
 		if (is_num(s))
 		{
@@ -384,20 +384,20 @@ namespace JSON_STR {
 		else
 			return 0.0;
 	}
-	inline string get_str(const string& s)
+	inline std::string get_str(const std::string& s)
 	{
 		if (is_str(s))
 		{
 			auto doc = yyjson_read(s.c_str(), s.size(), 0);
 			auto root = yyjson_doc_get_root(doc);
-			string iResult = yyjson_get_str(root);
+			std::string iResult = yyjson_get_str(root);
 			yyjson_doc_free(doc);
 			return iResult;
 		}
 		else
 			return "";
 	}
-	inline int get_int(const string& s)
+	inline int get_int(const std::string& s)
 	{	
 		return atoi(s.c_str());		
 	}
@@ -405,7 +405,7 @@ namespace JSON_STR {
 
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, size_t iLen);
-typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);
+typedef bool (*fp_rpcHandler)(std::string strReq, RPC_RESP& resp, std::string& error);
 typedef void (*fp_procBeforeExit)();
 
 
@@ -423,24 +423,24 @@ struct iTDSConf {
 	virtual void loadConf() = 0;
 	virtual void loadCurrentData() = 0;
 	//software conf
-	string mode;
+	std::string mode;
 	bool debugMode;
-	string logLevel;
+	std::string logLevel;
 	bool enableGlobalAlarm;
 
 	//security
 	int tokenExpireTime;
 	bool enableAccessCtrl;
-	string testToken;
+	std::string testToken;
 	
 	//path conf
-	string confPath;   //config data path
-	string currentPath; //current data of path
-	string dbPath;     //database folder path
-	string uiPath;     //ui web files path
-	string logPath;
-	string fmsPath;  //file manage service root path
-	string dbLanguage;
+	std::string confPath;   //config data path
+	std::string currentPath; //current data of path
+	std::string dbPath;     //database folder path
+	std::string uiPath;     //ui web files path
+	std::string logPath;
+	std::string fmsPath;  //file manage service root path
+	std::string dbLanguage;
 
 	//tds service conf
 	int httpsPort;    //https port of tds;  default value 666; can be upgraded to websocket secure
@@ -450,12 +450,12 @@ struct iTDSConf {
 	int fileUploadPort; // default 0 not enable;
 	bool authDownload;
 	int tcpKeepAliveDS;
-	string mediaSrvIP;
+	std::string mediaSrvIP;
 	bool showObjOnline;
 
 	//io service conf
 	int tdspPort;  //tdsp protocol port of ioServer;  default value 665 
-	vector<int> mbPort;    //modbus protocol port of ioServer; default value 664
+	std::vector<int> mbPort;    //modbus protocol port of ioServer; default value 664
 	int iq60Port;  //iq60 protocol port of ioServer; default value 663
 	int tcpKeepAliveIO;
 	int iotimeoutTdsp; //tdsp comm timeout in milliseconds
@@ -470,20 +470,20 @@ struct iTDSConf {
 	bool enableOfflineAlarm;
 
 	//3rd party services integration
-	string smsApiUser;
-	string smsApiKey;
-	string smsApiUrl;
+	std::string smsApiUser;
+	std::string smsApiKey;
+	std::string smsApiUrl;
 
 	//desktop app mode conf
 	bool bConcurrentGateway;
-	string dataCenterIp;
-	string title;
-	string homepage;
-	string uiMode;
-	string uiTitle;
+	std::string dataCenterIp;
+	std::string title;
+	std::string homepage;
+	std::string uiMode;
+	std::string uiTitle;
 	bool fullscreen; 
 	bool singleGenicamHost;
-	vector<ACTIVE_TDS_SESSION> vecActiveSession;
+	std::vector<ACTIVE_TDS_SESSION> vecActiveSession;
 
 	//module enable/disable
 	bool enableLog;
@@ -492,9 +492,9 @@ struct iTDSConf {
 
 	//tds edge conf
 	bool edge; //tds edge gateway mode
-	string cloudIP;
+	std::string cloudIP;
 	int cloudPort;
-	string deviceID;
+	std::string deviceID;
 
 	//debug
 	bool bCreateDumpWhenLogError;
@@ -502,7 +502,7 @@ struct iTDSConf {
 	bool bCallAsyn;
 
 	//disk clean  remove the data which is out dataStorageMonths、mediaStorageMonths。
-	string triggerStratgy = "period"; // LowLimit、 peroid
+	std::string triggerStratgy = "period"; // LowLimit、 peroid
 	int diskSpaceLeft=20; //unit GB
 	int judgePeriod = 60;  //unit second
 	int dataStorageMonths = 24;
@@ -510,26 +510,26 @@ struct iTDSConf {
 
 	//memory clean
 	//ini:  CleanMemoryInterval = xxxh  
-	string strCleanMemoryInterval;
+	std::string strCleanMemoryInterval;
 
 	//rpcSrcipt
-	string m_apiAdaptorScript = "";
-	vector<string> m_apiAdaptorMethod;
+	std::string m_apiAdaptorScript = "";
+	std::vector<std::string> m_apiAdaptorMethod;
 
 	//large Model
 	int largeModelType = -1;
 
 	LOG_ENABLE logEnable;
 
-	virtual int getInt(string key, int iDef) = 0;
-	virtual string getStr(string key, string sDef) = 0;
-	virtual bool setStr(string key, string val) = 0;
-	virtual bool setInt(string key, int val) = 0;
+	virtual int getInt(std::string key, int iDef) = 0;
+	virtual std::string getStr(std::string key, std::string sDef) = 0;
+	virtual bool setStr(std::string key, std::string val) = 0;
+	virtual bool setInt(std::string key, int val) = 0;
 
-	virtual int getCurrentInt(string key, int iDef) = 0;
-	virtual string getCurrentStr(string key, string sDef) = 0;
-	virtual bool setCurrentStr(string key, string val) = 0;
-	virtual bool setCurrentInt(string key, int val) = 0;
+	virtual int getCurrentInt(std::string key, int iDef) = 0;
+	virtual std::string getCurrentStr(std::string key, std::string sDef) = 0;
+	virtual bool setCurrentStr(std::string key, std::string val) = 0;
+	virtual bool setCurrentInt(std::string key, int val) = 0;
 };
 
 class i_tdsPlugin {
@@ -546,19 +546,19 @@ public:
 
 class i_xiaoT : public i_tdsPlugin {
 public:
-	virtual std::string getReply(string msg) = 0;
+	virtual std::string getReply(std::string msg) = 0;
 };
 
 class i_gzhServer : public i_tdsPlugin {
 public:
-	virtual std::string getReply(string msg) = 0;
+	virtual std::string getReply(std::string msg) = 0;
 };
 
 class i_smsServer : public i_tdsPlugin {
 public:
-	virtual bool send(string& msg,string& phoneNum) = 0;
-	virtual bool sendVerificationCode(string phoneNum) = 0;
-	virtual bool checkVerificationCode(string phoneNum, string code) = 0;
+	virtual bool send(std::string& msg,std::string& phoneNum) = 0;
+	virtual bool sendVerificationCode(std::string phoneNum) = 0;
+	virtual bool checkVerificationCode(std::string phoneNum, std::string code) = 0;
 };
 
 
@@ -566,47 +566,47 @@ typedef void (*fp_toolRun)();
 
 
 struct PLUGIN_INFO {
-	string name;
+	std::string name;
 };
 
 //interface of TDS
 class i_tds {
 public:
-	virtual string getVersion() = 0;
-	virtual string getServerID() = 0;
-	virtual string getSvnVersion() = 0;
-	virtual bool setEncodeing(string encoding) = 0; // utf8 or gb2312
-	virtual bool run(string cmdline = "") = 0;
+	virtual std::string getVersion() = 0;
+	virtual std::string getServerID() = 0;
+	virtual std::string getSvnVersion() = 0;
+	virtual bool setEncodeing(std::string encoding) = 0; // utf8 or gb2312
+	virtual bool run(std::string cmdline = "") = 0;
 	virtual void stop() = 0;
 	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;
 	fp_procBeforeExit m_fpProcBeforeExit;
-	virtual void call(string method, json& param, json& err,json& rlt,RPC_SESSION session) = 0;
-	virtual bool call(string method, string param, RPC_RESP& resp) = 0;
-	virtual void callAsyn(string method, json& param, int delay = 0) = 0;
-	virtual void callAsyn(string method, string& param,int delay = 0) = 0;
-	virtual void batchCallAsyn(vector<json> calls, int delay = 0) = 0;
-	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
+	virtual void call(std::string method, json& param, json& err,json& rlt,RPC_SESSION session) = 0;
+	virtual bool call(std::string method, std::string param, RPC_RESP& resp) = 0;
+	virtual void callAsyn(std::string method, json& param, int delay = 0) = 0;
+	virtual void callAsyn(std::string method, std::string& param,int delay = 0) = 0;
+	virtual void batchCallAsyn(std::vector<json> calls, int delay = 0) = 0;
+	virtual void rpcNotify(std::string method, std::string params = "", std::string sessionId = "") = 0;
 
 
 	virtual void setRpcHandler(fp_rpcHandler handler) = 0;
 
 
-	virtual bool enableIoLog(string ioAddr, bool bEnable) = 0;
-	virtual bool sendToIoAddr(string ioAddr, const char* p,int l) = 0;
-	virtual bool connectDev(string ioAddr) = 0; 
-	virtual bool isOnline(string ioAddr) = 0;
-	virtual bool isConnected(string ioAddr) = 0;
-	virtual bool isInUse(string ioAddr) = 0;
-	virtual bool lockIoAddr(string ioAddr) = 0;
-	virtual bool unlockIoAddr(string ioAddr) = 0;
-	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
+	virtual bool enableIoLog(std::string ioAddr, bool bEnable) = 0;
+	virtual bool sendToIoAddr(std::string ioAddr, const char* p,int l) = 0;
+	virtual bool connectDev(std::string ioAddr) = 0; 
+	virtual bool isOnline(std::string ioAddr) = 0;
+	virtual bool isConnected(std::string ioAddr) = 0;
+	virtual bool isInUse(std::string ioAddr) = 0;
+	virtual bool lockIoAddr(std::string ioAddr) = 0;
+	virtual bool unlockIoAddr(std::string ioAddr) = 0;
+	virtual bool setIoAddrRecvCallback(std::string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 
 	//video function
 #ifdef ENABLE_GENICAM
-	virtual void startStream(string streamId, STREAM_INFO* si=NULL) = 0;
+	virtual void startStream(std::string streamId, STREAM_INFO* si=NULL) = 0;
 	//push to sepecified streamId 
-	virtual void pushStream(string streamId, char* pData, int len, STREAM_INFO* si=NULL) = 0;
-	virtual void pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO*si = NULL) = 0;
+	virtual void pushStream(std::string streamId, char* pData, int len, STREAM_INFO* si=NULL) = 0;
+	virtual void pullStream(std::string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO*si = NULL) = 0;
 #endif
 
 	virtual void log(const char* text) = 0;
@@ -618,12 +618,12 @@ public:
 	i_tdsPlugin* shellServer;
 	i_ioServer* ioServer;
 
-	map<string,i_tdsPlugin*> plugins;
+	map<std::string,i_tdsPlugin*> plugins;
 
 	void* uiWnd;
-	string uiWndTitle;
-	string m_sTitle;
-	map<string, fp_toolRun> tools;
+	std::string uiWndTitle;
+	std::string m_sTitle;
+	map<std::string, fp_toolRun> tools;
 };
 
 #ifdef TDSDLL

@@ -19,7 +19,7 @@ namespace stdfs = std::filesystem;
 
 ScriptManager scriptManager;
 
-static wstring utf8_to_utf16(string instr) //utf-8-->ansi
+static wstring utf8_to_utf16(std::string instr) //utf-8-->ansi
 {
 	wstring str;
 #ifdef _WIN32
@@ -36,10 +36,10 @@ static wstring utf8_to_utf16(string instr) //utf-8-->ansi
 	return str;
 }
 
-static bool createFolderOfPath(string strFile) {
+static bool createFolderOfPath(std::string strFile) {
 	size_t iDotPos = strFile.rfind('.');
 	size_t iSlashPos = strFile.rfind('/');
-	if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
+	if (iDotPos != std::string::npos && iDotPos > iSlashPos) {//is a file
 		strFile = strFile.substr(0, iSlashPos);
 	}
 
@@ -51,7 +51,7 @@ static bool createFolderOfPath(string strFile) {
 #endif
 }
 
-static bool readFile(string path, string& data)
+static bool readFile(std::string path, std::string& data)
 {
 	FILE* fp = nullptr;
 #ifdef _WIN32
@@ -72,7 +72,7 @@ static bool readFile(string path, string& data)
 	return false;
 }
 
-static bool writeFile(string path, char* data, size_t len)
+static bool writeFile(std::string path, char* data, size_t len)
 {
 	createFolderOfPath(path);
 
@@ -92,7 +92,7 @@ static bool writeFile(string path, char* data, size_t len)
 	else
 	{
 #ifdef _WIN32
-		string info = str::format("writeFile,path=%s,len=%d", path.c_str(), len);
+		std::string info = str::format("writeFile,path=%s,len=%d", path.c_str(), len);
 		DWORD errCode = GetLastError();
 		printf("[error]%d", errCode);
 #endif
@@ -139,11 +139,11 @@ static bool deleteDir(const std::string& dirPath) {
 	}
 }
 
-void scriptManager_logImp(string log, ScriptEngine* pEngine, bool logToHost) {
+void scriptManager_logImp(std::string log, ScriptEngine* pEngine, bool logToHost) {
 	pEngine->m_vecOutput.push_back(log);
 
 	if (logToHost) {
-		string l = "[脚本日志]" + log;
+		std::string l = "[脚本日志]" + log;
 		LOG(l);
 	}
 }
@@ -168,7 +168,7 @@ bool ScriptManager::init() {
 bool ScriptManager::loadScriptList() {
 	unique_lock<mutex> lock(m_csScripts);
 	m_mapScripts.clear();
-	string sScriptList;
+	std::string sScriptList;
 	if (readFile(m_confPath + "/scripts/list.json", sScriptList)) {
 		yyjson_doc* doc = yyjson_read(sScriptList.c_str(), sScriptList.size(), 0);
 		yyjson_val* root = yyjson_doc_get_root(doc);
@@ -205,7 +205,7 @@ bool ScriptManager::run() {
 	return true;
 }
 
-void ScriptManager::setConfPath(const string& conf) {
+void ScriptManager::setConfPath(const std::string& conf) {
 	m_confPath = conf;
 }
 
@@ -227,14 +227,14 @@ bool ScriptManager::hasScripts() {
 	return false;
 }
 
-void ScriptManager::updateVarExpScript(vector<SCRIPT_INFO>& varExpScripts) {
+void ScriptManager::updateVarExpScript(std::vector<SCRIPT_INFO>& varExpScripts) {
 	unique_lock<mutex> lock(m_csExpScripts);
 
 	m_vecVarExpScripts.clear();
 	m_vecVarExpScripts = varExpScripts;
 }
 
-void scriptThreadTmp(string scriptName, string callerObjTag) {
+void scriptThreadTmp(std::string scriptName, std::string callerObjTag) {
 #ifdef ENABLE_QJS
 	SCRIPT_INFO si;
 	if (scriptManager.getScript(scriptName, si)) {
@@ -252,7 +252,7 @@ void scriptThreadTmp(string scriptName, string callerObjTag) {
 #endif
 }
 
-bool ScriptManager::handleRpc(string method, yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
+bool ScriptManager::handleRpc(std::string method, yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	bool bHandled = true;
 
 	if (method == "getScriptMngerStatus") {
@@ -297,7 +297,7 @@ bool ScriptManager::handleRpc(string method, yyjson_val* params_obj, RPC_RESP& r
 	return bHandled;
 }
 
-bool ScriptManager::runScript(string scriptName, string params, string& result, string& output)
+bool ScriptManager::runScript(std::string scriptName, std::string params, std::string& result, std::string& output)
 {
 	bool bRet = false;
 	if (!scriptName.empty()) {
@@ -327,14 +327,14 @@ bool ScriptManager::runScript(string scriptName, string params, string& result, 
 		json jOutput = json::array();
 
 		for (int i = 0; i < se.m_vecOutput.size(); i++) {
-			string sline = se.m_vecOutput[i];
+			std::string sline = se.m_vecOutput[i];
 			jOutput.push_back(sline);
 		}
 
 		output = jOutput.dump();
 
 		if (se.m_sError != "") {
-			string s = str::format("[error]脚本执行错误，脚本=%s,错误=%s", si.name.c_str(), se.m_sError.c_str());
+			std::string s = str::format("[error]脚本执行错误，脚本=%s,错误=%s", si.name.c_str(), se.m_sError.c_str());
 			LOG(s);
 
 			output = s;
@@ -357,7 +357,7 @@ bool ScriptManager::runScript(string scriptName, string params, string& result, 
 	return bRet;
 }
 
-bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis) {
+bool ScriptManager::runScriptFileAsyn(std::string scriptName,std::string tagThis) {
 #ifdef ENABLE_QJS
 	thread t(scriptThreadTmp, scriptName,tagThis);
 	t.detach();
@@ -369,7 +369,7 @@ void scriptThread1(ScriptManager* p) {
 	p->loopExe();
 }
 
-bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
+bool ScriptManager::getScript(std::string name, SCRIPT_INFO& sInfo) {
 	unique_lock<mutex> lock(scriptManager.m_csScripts);
 
 	for (auto& i : scriptManager.m_mapScripts) {
@@ -383,7 +383,7 @@ bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
 	return false;
 }
 
-bool ScriptManager::setRunInfo(string name, SCRIPT_RUN_INFO& sri)
+bool ScriptManager::setRunInfo(std::string name, SCRIPT_RUN_INFO& sri)
 {
 	unique_lock<mutex> lock(scriptManager.m_csScripts);
 	if (m_mapScripts.find(name) != m_mapScripts.end()) {
@@ -403,7 +403,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 
 	ScriptEngine se;
-	string folder;
+	std::string folder;
 	SCRIPT_INFO si;
 
 	yyjson_val* script_val = yyjson_obj_get(params_obj, "script");
@@ -434,7 +434,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		//读取路径下的debug.json
 		if (si.folderPath == "") {
 			size_t pos = si.filePath.find_last_of("/");
-			if (pos != string::npos) {
+			if (pos != std::string::npos) {
 				si.folderPath = si.filePath.substr(0, pos);
 			}
 		}
@@ -457,12 +457,12 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 
 	if (si.folderPath != "") {
-		string sMockjs;
+		std::string sMockjs;
 		if (readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
 			si.envVarScript = sMockjs;
 			se.m_envVarScriptLine = static_cast<int>(std::count(sMockjs.begin(), sMockjs.end(), '\n')) + 1;
 		}
-		string sDebugParams;
+		std::string sDebugParams;
 		if (readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
 			yyjson_doc* d = yyjson_read(sDebugParams.c_str(), sDebugParams.size(), 0);
 			yyjson_val* r = yyjson_doc_get_root(d);
@@ -523,7 +523,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 
 	for (int i = 0; i < se.m_vecOutput.size(); i++) {
-		string sline = se.m_vecOutput[i];
+		std::string sline = se.m_vecOutput[i];
 		jOutput.push_back(sline);
 	}
 
@@ -550,7 +550,7 @@ bool ScriptManager::rpc_loadScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp
 }
 
 bool ScriptManager::rpc_getScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
-	string type = "global";
+	std::string type = "global";
 
 	yyjson_val* type_val = yyjson_obj_get(params_obj, "type");
 	if (type_val && yyjson_is_str(type_val)) {
@@ -633,7 +633,7 @@ bool ScriptManager::rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, 
 	}
 
 	SCRIPT_INFO& si = m_mapScripts[name];
-	string strPath = m_confPath + "/scripts/" + name;
+	std::string strPath = m_confPath + "/scripts/" + name;
 	deleteDir(strPath);
 
 	m_mapScripts.erase(name);
@@ -646,23 +646,23 @@ bool ScriptManager::rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, 
 bool ScriptManager::rpc_getScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	unique_lock<mutex> lock(m_csScripts);
 
-	string path = getScriptPath(params_obj, session);
+	std::string path = getScriptPath(params_obj, session);
 	yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
 	std::string fileName;
 	if (name_val && yyjson_is_str(name_val)) {
 		fileName = yyjson_get_str(name_val);
 	}
 
-	string path1 = path + "/" + fileName + ".js";
-	string path2 = path + "/" + fileName + "_envVar.js";
+	std::string path1 = path + "/" + fileName + ".js";
+	std::string path2 = path + "/" + fileName + "_envVar.js";
 
-	string s;
+	std::string s;
 	json j;
 	if (readFile(path1, s)) {
 		j["code"] = s;
 	}
 
-	string s1;
+	std::string s1;
 	if (readFile(path2, s1)) {
 		j["envVarCode"] = s1;
 	}
@@ -699,8 +699,8 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		}
 
 		bool success = false;
-		string oldPath = m_confPath + "/scripts/" + oldName;
-		string newPath = m_confPath + "/scripts/" + name;
+		std::string oldPath = m_confPath + "/scripts/" + oldName;
+		std::string newPath = m_confPath + "/scripts/" + name;
 
 		SCRIPT_INFO& si = m_mapScripts[oldName];
 		success = renameFile(oldPath.c_str(), newPath.c_str());
@@ -743,7 +743,7 @@ bool ScriptManager::rpc_getScriptMngStatus(yyjson_val* params_obj, RPC_RESP& rpc
 	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastExpScriptRunTime", m_tLastExpScriptRunTime.toStr(true).c_str());
 
 	int expScriptCount;
-	vector<SCRIPT_INFO> allExpInfo;
+	std::vector<SCRIPT_INFO> allExpInfo;
 
 	m_csExpScripts.lock();
 	expScriptCount = m_vecVarExpScripts.size();
@@ -821,9 +821,9 @@ bool ScriptManager::rpc_runAnalyseScript(yyjson_val* params_obj, RPC_RESP& rpcRe
 	if (scriptName_val && yyjson_is_str(scriptName_val)) {
 		std::string scriptName = yyjson_get_str(scriptName_val);
 
-		string sParams;
-		string sResult;
-		string sOutput;
+		std::string sParams;
+		std::string sResult;
+		std::string sOutput;
 
 		size_t len = 0;
 		char* cParams = yyjson_val_write(params_obj, 0, &len);
@@ -849,7 +849,7 @@ bool ScriptManager::rpc_runAnalyseScript(yyjson_val* params_obj, RPC_RESP& rpcRe
 	return true;
 }
 
-void ScriptManager::scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl, yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot) {
+void ScriptManager::scriptList2Json(std::string org, std::map<std::string, SCRIPT_INFO>& sl, yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot) {
 	org = str::replace(org, ".", "/");
 
 	for (auto& i : sl) {
@@ -862,19 +862,19 @@ void ScriptManager::scriptList2Json(string org, std::map<string, SCRIPT_INFO>& s
 	}
 }
 
-void ScriptManager::saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl, bool saveScriptData) {
+void ScriptManager::saveScriptList(std::string org, std::map<std::string, SCRIPT_INFO>& sl, bool saveScriptData) {
 	yyjson_mut_doc* mutDoc = yyjson_mut_doc_new(nullptr);
 	yyjson_mut_val* mutRoot = yyjson_mut_arr(mutDoc);
 	yyjson_mut_doc_set_root(mutDoc, mutRoot);
 
 	scriptList2Json(org, sl, mutDoc, mutRoot);
 
-	string path = m_confPath + "/scripts/" + org + "/list.json";
+	std::string path = m_confPath + "/scripts/" + org + "/list.json";
 
 	size_t len = 0;
 	char* s = yyjson_mut_write(mutDoc, YYJSON_WRITE_PRETTY, &len);
 	if (s) {
-		string str = s;
+		std::string str = s;
 		createFolderOfPath(path);
 		writeFile(path, (char*)str.c_str(), str.length());
 
@@ -884,8 +884,8 @@ void ScriptManager::saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl
 	yyjson_mut_doc_free(mutDoc);
 }
 
-string ScriptManager::getScriptPath(yyjson_val* params_obj, RPC_SESSION session) {
-	string rootTag;
+std::string ScriptManager::getScriptPath(yyjson_val* params_obj, RPC_SESSION session) {
+	std::string rootTag;
 
 	yyjson_val* tag_val = yyjson_obj_get(params_obj, "tag");
 	if (tag_val && yyjson_is_str(tag_val)) {
@@ -895,11 +895,11 @@ string ScriptManager::getScriptPath(yyjson_val* params_obj, RPC_SESSION session)
 	rootTag = TAG::addRoot(rootTag, session.org);
 	rootTag = str::replace(rootTag, ".", "/");
 
-	string path = m_confPath + "/scripts/" + rootTag;
+	std::string path = m_confPath + "/scripts/" + rootTag;
 	return path;
 }
 
-json ScriptManager::getScriptList(string tag) {
+json ScriptManager::getScriptList(std::string tag) {
 	return json();
 }
 
@@ -908,7 +908,7 @@ ioDev* ScriptManager::getEvnDev(SCRIPT_INFO& si) {
 }
 
 void ScriptManager::exeAllGlobalScripts() {
-	vector<SCRIPT_INFO> toExeScripts;
+	std::vector<SCRIPT_INFO> toExeScripts;
 
 	m_csScripts.lock();
 	for (auto& i : m_mapScripts) {
@@ -958,7 +958,7 @@ void ScriptManager::exeAllVarExpScripts() {
 
 	//获取所有需要执行的脚本
 	//计算表达式脚本都是立即执行的，里面一定没有sleep或者output一类的延时函数，因此以下脚本的执行时间可以认为一致
-	vector<SCRIPT_INFO> toExeScripts;
+	std::vector<SCRIPT_INFO> toExeScripts;
 
 	m_csExpScripts.lock();
 	toExeScripts = m_vecVarExpScripts;
@@ -971,7 +971,7 @@ void ScriptManager::exeAllVarExpScripts() {
 	for (int i = 0; i < toExeScripts.size();i++) {
 		SCRIPT_INFO& info = toExeScripts[i];
 		info.isExp = true;
-		string& script = info.script;
+		std::string& script = info.script;
 		ScriptEngine se;
 
 #ifdef TDS
@@ -1002,7 +1002,7 @@ void ScriptManager::exeAllVarExpScripts() {
 
 			//最后的val取值时间作为计算结果的时间
 			if (se.m_vecValRefTime.size() > 0) {
-				map<string, string> refTime;
+				map<std::string, std::string> refTime;
 				for (auto i : se.m_vecValRefTime) {
 					refTime[i.second] = i.second;
 				}
@@ -1015,7 +1015,7 @@ void ScriptManager::exeAllVarExpScripts() {
 			size_t len = 0;
 			char* result = yyjson_mut_val_write(mutRoot, 0, &len);
 			if (result) {
-				string str = result;
+				std::string str = result;
 				tds->callAsyn("input", str);
 				free(result);
 			}

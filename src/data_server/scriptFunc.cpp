@@ -24,8 +24,8 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
         json tag = jArgs[0];
 
         if (tag.is_string()) {
-            string sTagOrg = tag.get<string>();
-            string sTag = TAG::resolveTag(sTagOrg, pEngine->m_tagContext);
+            std::string sTagOrg = tag.get<std::string>();
+            std::string sTag = TAG::resolveTag(sTagOrg, pEngine->m_tagContext);
 
             OBJ* p = prj.queryObj(sTag);
             if (p == nullptr) {
@@ -50,10 +50,10 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
                     if (rlt != nullptr) {
                         json jVal = rlt["val"];
                         json jTime = rlt["time"];
-                        string info = "val(\"" + sTag + "\") = " + jVal.dump();
+                        std::string info = "val(\"" + sTag + "\") = " + jVal.dump();
                         pEngine->m_vecOutput.push_back(info);
 
-                        string time = jTime.get<string>();
+                        std::string time = jTime.get<std::string>();
 
                         TIME t;
                         t.fromStr(time);
@@ -68,8 +68,8 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
                     else {
                         int errCode = err["code"].get<int>();
 
-                        string errMsg = err["message"].get<string>();
-                        string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+                        std::string errMsg = err["message"].get<std::string>();
+                        std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
 
                         pEngine->m_vecOutput.push_back(errInfo);
                         if (tds->conf->logEnable.scriptEngine) {
@@ -97,13 +97,13 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
                             return ret;
                         }
                         else {
-                            string sTime = time.get<string>();
-                            string sAggr = "";
+                            std::string sTime = time.get<std::string>();
+                            std::string sAggr = "";
                             if (jArgs.size() >= 3) {
                                 json jAggr = jArgs[2];
                                 sAggr = jAggr.dump();
                             }
-                            string sParams = "{"
+                            std::string sParams = "{"
                                 "\"time\":\"" + sTime + "\","
                                 "\"tag\":\"" + sTag + "\","
                                 "\"aggr\":" + sAggr +
@@ -112,11 +112,11 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
                
                             DE_SELECTOR deSel;
                             SELECT_RLT rlt;
-                            string err;
+                            std::string err;
                             db.parseDESelector(sParams, deSel, err);
                             db.Select(deSel, rlt);
 
-                            string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), sAggr.c_str());
+                            std::string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), sAggr.c_str());
                             if (rlt.dataList.length() > 2) {// 不等于 [] ,非空数组
                                 char* p = (char*)rlt.dataList.c_str() + 1;
                                 rlt.dataList[rlt.dataList.length() - 1] = 0;
@@ -247,7 +247,7 @@ static JSValue qjs_getObj(JSContext* ctx, JSValueConst this_val, int argc, JSVal
         return JS_UNDEFINED;
     }
 
-    string sParams = json_str;
+    std::string sParams = json_str;
 
     JS_FreeCString(ctx, json_str);
     JS_FreeValue(ctx, json_str_val);
@@ -571,7 +571,7 @@ static JSValue qjs_ioDev_sendStr(JSContext* ctx, JSValueConst this_val, int argc
 
     json req = jArgs[0];
     std::vector<uint8_t> vecReq;
-    string sReq = "";
+    std::string sReq = "";
     if (req.is_string()) {
 		sReq = req.get<std::string>();
     }

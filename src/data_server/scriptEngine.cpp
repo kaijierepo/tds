@@ -36,7 +36,7 @@ namespace stdfs = std::filesystem;
 #include "tdb.h" //for db.insert,db.select script functions
 #include "tds.h"
 
-static std::wstring utf8_to_utf16(const string& u8str) {
+static std::wstring utf8_to_utf16(const std::string& u8str) {
     const char* utf8_str = u8str.c_str();
     size_t length = u8str.length();
     if (!utf8_str || length == 0) {
@@ -178,10 +178,10 @@ static std::string utf16_to_utf8(const wstring& u16str) {
     return result;
 }
 
-static bool createFolderOfPath(string strFile) {
+static bool createFolderOfPath(std::string strFile) {
     size_t iDotPos = strFile.rfind('.');
     size_t iSlashPos = strFile.rfind('/');
-    if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
+    if (iDotPos != std::string::npos && iDotPos > iSlashPos) {//is a file
         strFile = strFile.substr(0, iSlashPos);
     }
 
@@ -193,7 +193,7 @@ static bool createFolderOfPath(string strFile) {
 #endif
 }
 
-static bool readFile(string path, string& data)
+static bool readFile(std::string path, std::string& data)
 {
     FILE* fp = nullptr;
 #ifdef _WIN32
@@ -214,7 +214,7 @@ static bool readFile(string path, string& data)
     return false;
 }
 
-static bool writeFile(string path, const char* data, size_t len)
+static bool writeFile(std::string path, const char* data, size_t len)
 {
     createFolderOfPath(path);
 
@@ -243,7 +243,7 @@ static bool writeFile(string path, const char* data, size_t len)
 
 
 namespace tJSEngine {
-    int parseStopBits(string s) {
+    int parseStopBits(std::string s) {
         if (s == "1") {
             return 0;
         }
@@ -257,7 +257,7 @@ namespace tJSEngine {
         return 0;
     }
 
-    int parseParity(string s) {
+    int parseParity(std::string s) {
         if (s == "None") {
             return 0;
         }
@@ -420,7 +420,7 @@ extern "C" {
         for (int i = 0; i < argc; i++) {
             const char* log = JS_ToCString(ctx, argv[i]);
             if (!log) {
-                return JS_ThrowTypeError(ctx, "Argument must be a string");
+                return JS_ThrowTypeError(ctx, "Argument must be a std::string");
             }
             if (s != "")
                 s += " ";
@@ -439,7 +439,7 @@ extern "C" {
         if (JS_IsString(argv[0])) {
             const char* log = JS_ToCString(ctx, argv[0]);
             if (!log) {
-                return JS_ThrowTypeError(ctx, "Argument must be a string");
+                return JS_ThrowTypeError(ctx, "Argument must be a std::string");
             }
             s = log;
             JS_FreeCString(ctx, log);
@@ -485,14 +485,14 @@ extern "C" {
 
         if (jArgs.size() == 2) {
             json j = jArgs[0];
-            string method = j.get<string>();
+            std::string method = j.get<std::string>();
             json& params = jArgs[1];
 
             if (ScriptEngine::callMethodImp) {
-                string rlt, err;
+                std::string rlt, err;
                 ScriptEngine::callMethodImp(method, params.dump(), rlt,err);
 
-                string resp;
+                std::string resp;
                 if(rlt != ""){
                     resp = "{\"result\":" + rlt + "}";
                 }
@@ -507,8 +507,8 @@ extern "C" {
                 return js_val;
             }
             else if (ScriptEngine::callMethodRRImp) {
-                string req = "{\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
-                string resp;
+                std::string req = "{\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
+                std::string resp;
                 ScriptEngine::callMethodRRImp(req,resp);
 
                 JSValue js_val = JS_ParseJSON(ctx, resp.c_str(), resp.size(), "<yyjson>");
@@ -525,7 +525,7 @@ extern "C" {
         yyjson_doc* yydoc = nullptr;
 		yyjson_val* yyv = qjsVal_to_yyVal(ctx, argv[0],yydoc);
 		if (yydoc && yyv && yyjson_is_obj(yyv)) {
-            string ip;
+            std::string ip;
             if (yyjson_obj_get(yyv, "hostname")) {
                 ip = yyjson_get_str(yyjson_obj_get(yyv, "hostname"));
             }
@@ -535,22 +535,22 @@ extern "C" {
                 port = yyjson_get_num(yyjson_obj_get(yyv, "port"));
             }
 
-            string method;
+            std::string method;
             if (yyjson_obj_get(yyv, "method")) {
                 method = yyjson_get_str(yyjson_obj_get(yyv, "method"));
             }
 
-            string path;
+            std::string path;
             if (yyjson_obj_get(yyv, "path")) {
                 path = yyjson_get_str(yyjson_obj_get(yyv, "path"));
             }
 
-            string body;
+            std::string body;
             if (yyjson_obj_get(yyv, "body")) {
                 body = yyjson_get_str(yyjson_obj_get(yyv, "body"));
             }
 
-            string headers;
+            std::string headers;
             if (yyjson_obj_get(yyv, "headers")) {
                 yyjson_val* jHeaders = yyjson_obj_get(yyv, "headers");
 
@@ -564,12 +564,12 @@ extern "C" {
                     const char* v = yyjson_get_str(val);
 
                     if (k && v) {
-                        headers += string(k) + ": " + string(v) + "\r\n";
+                        headers += std::string(k) + ": " + std::string(v) + "\r\n";
                     }
                 }
             }
 
-            string url;
+            std::string url;
             if(port != 0)
                 url = "http://" + ip + ":" + std::to_string(port) + path;
             else
@@ -1066,7 +1066,7 @@ extern "C" {
         int32_t len = 0;
         JS_ToInt32(ctx, &len, len_val);
         JS_FreeValue(ctx, len_val);
-        vector<unsigned char> byteArray;
+        std::vector<unsigned char> byteArray;
         for (int32_t i = 0; i < len; ++i) {
             JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
             int32_t v = 0;
@@ -1104,7 +1104,7 @@ extern "C" {
         int32_t len = 0;
         JS_ToInt32(ctx, &len, len_val);
         JS_FreeValue(ctx, len_val);
-        vector<unsigned char> byteArray;
+        std::vector<unsigned char> byteArray;
         for (int32_t i = 0; i < len; ++i) {
             JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
             int32_t v = 0;
@@ -1142,7 +1142,7 @@ extern "C" {
         int32_t len = 0;
         JS_ToInt32(ctx, &len, len_val);
         JS_FreeValue(ctx, len_val);
-        vector<unsigned char> byteArray;
+        std::vector<unsigned char> byteArray;
         for (int32_t i = 0; i < len; ++i) {
             JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
             int32_t v = 0;
@@ -1180,7 +1180,7 @@ extern "C" {
         int32_t len = 0;
         JS_ToInt32(ctx, &len, len_val);
         JS_FreeValue(ctx, len_val);
-        vector<unsigned char> byteArray;
+        std::vector<unsigned char> byteArray;
         for (int32_t i = 0; i < len; ++i) {
             JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
             int32_t v = 0;
@@ -1218,7 +1218,7 @@ extern "C" {
         int32_t len = 0;
         JS_ToInt32(ctx, &len, len_val);
         JS_FreeValue(ctx, len_val);
-        vector<unsigned char> byteArray;
+        std::vector<unsigned char> byteArray;
         for (int32_t i = 0; i < len; ++i) {
             JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
             int32_t v = 0;
@@ -1269,7 +1269,7 @@ extern "C" {
         if (argc == 1) {
             JSValue jsParams = argv[0];
             if (JS_IsObject(jsParams)) {
-                string err, rlt, queryInfo;
+                std::string err, rlt, queryInfo;
                 yyjson_doc* yydoc = nullptr;
                 qjsVal_to_yyVal(ctx, jsParams, yydoc);
 
@@ -1277,7 +1277,7 @@ extern "C" {
                     yyjson_val* yyParams = yyjson_doc_get_root(yydoc);
                     db.handleRpc("db.select",yyParams, rlt, err, queryInfo, "", "zh");
 
-                    string ret;
+                    std::string ret;
                     if (!rlt.empty()) {
                         ret = "{\"result\":" + rlt;
                     }
@@ -1304,8 +1304,8 @@ extern "C" {
 
     static JSValue qjs_db_insert(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
-        string ret = "{\"success\":";
-        string err, rlt, dbQi;
+        std::string ret = "{\"success\":";
+        std::string err, rlt, dbQi;
         if (argc == 1) {
             JSValue params = argv[0];
             JSValue json_str_val = JS_JSONStringify(ctx, params, JS_UNDEFINED, JS_UNDEFINED);
@@ -1317,11 +1317,11 @@ extern "C" {
                 JS_FreeValue(ctx, json_str_val);
                 return JS_NULL;
             }
-            string sParams = json_str;
+            std::string sParams = json_str;
             JS_FreeValue(ctx, json_str_val);
             if (JS_IsObject(params)) {
-                if (sParams.find("table")!=string::npos) {
-                    if (sParams.find("tableType") == string::npos) {
+                if (sParams.find("table")!=std::string::npos) {
+                    if (sParams.find("tableType") == std::string::npos) {
                         return JS_NULL;
                     }
                     yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
@@ -1341,7 +1341,7 @@ extern "C" {
             JSValue jsTag = argv[0];
             JSValue jsVal = argv[1];
             const char* s = JS_ToCString(ctx, jsTag);
-            string tag = s ? s : "";
+            std::string tag = s ? s : "";
             JS_FreeCString(ctx, s);
             JSValue json_str_val = JS_JSONStringify(ctx, jsVal, JS_UNDEFINED, JS_UNDEFINED);
             if (JS_IsException(json_str_val)) {
@@ -1352,15 +1352,15 @@ extern "C" {
                 JS_FreeValue(ctx, json_str_val);
                 return JS_NULL;
             }
-            string val_jstr = s;
-            string time;
+            std::string val_jstr = s;
+            std::string time;
             if (argc >= 3) {
                 JSValue jsTime = argv[2];
                 s = JS_ToCString(ctx, jsTag);
                 time = s ? s : "";
                 JS_FreeCString(ctx, s);
             }
-            string sParams = "{\"tag\":\"" + tag + "\"," +
+            std::string sParams = "{\"tag\":\"" + tag + "\"," +
                 "\"val\":" + val_jstr;
             if (time != "")
                 sParams += ",\"time\":\"" + time + "\"";
@@ -1395,7 +1395,7 @@ extern "C" {
         if (argc == 1) {
             JSValue jsParams = argv[0];
             if (JS_IsObject(jsParams)) {
-                string err, rlt, queryInfo;
+                std::string err, rlt, queryInfo;
                 yyjson_doc* yydoc = nullptr;
                 qjsVal_to_yyVal(ctx, jsParams, yydoc);
 
@@ -1403,7 +1403,7 @@ extern "C" {
                     yyjson_val* yyParams = yyjson_doc_get_root(yydoc);
                     db.handleRpc("db.delete", yyParams, rlt, err, queryInfo, "", "zh");
 
-                    string ret;
+                    std::string ret;
                     if (!rlt.empty()) {
                         ret = "{\"result\":" + rlt;
                     }
@@ -1433,7 +1433,7 @@ extern "C" {
         if (argc == 1) {
             JSValue jsParams = argv[0];
             if (JS_IsObject(jsParams)) {
-                string err, rlt, queryInfo;
+                std::string err, rlt, queryInfo;
                 yyjson_doc* yydoc = nullptr;
                 qjsVal_to_yyVal(ctx, jsParams, yydoc);
 
@@ -1441,7 +1441,7 @@ extern "C" {
                     yyjson_val* yyParams = yyjson_doc_get_root(yydoc);
                     db.handleRpc("db.update", yyParams, rlt, err, queryInfo, "", "zh");
 
-                    string ret;
+                    std::string ret;
                     if (!rlt.empty()) {
                         ret = "{\"result\":" + rlt;
                     }
@@ -1474,9 +1474,9 @@ extern "C" {
             json data = jArgs[1];
             if (path.is_string() && data.is_string()) {
                 std::string rPath = path.get<std::string>();
-                string sData = data.get<string>();
+                std::string sData = data.get<std::string>();
 
-                string aPath = ScriptEngine::ConfFolder + "/" + rPath;
+                std::string aPath = ScriptEngine::ConfFolder + "/" + rPath;
                 createFolderOfPath(aPath);
 
                 bool bRet = writeFile(aPath, sData.c_str(),sData.length());
@@ -1496,7 +1496,7 @@ extern "C" {
             json path = jArgs[0];
             if (path.is_string()) {
                 std::string sPath = path.get<std::string>();
-                string sData;
+                std::string sData;
 
                 sPath = ScriptEngine::ConfFolder + "/" + sPath;
                 bool bRet = readFile(sPath, sData);
@@ -1515,7 +1515,7 @@ extern "C" {
             json path = jArgs[0];
             if (path.is_string()) {
                 std::string rPath = path.get<std::string>();
-                map<string, string>::iterator iter = g_mapConfFile.find(rPath);
+                map<std::string, std::string>::iterator iter = g_mapConfFile.find(rPath);
                 if (iter != g_mapConfFile.end()) {
                     return JS_NewString(ctx, iter->second.c_str());
                 }
@@ -1626,9 +1626,9 @@ bool is_integer(double x) {
 }
 
 mutex g_mutexScriptFileBuff;
-map<string, string> g_mapScriptFileBuff;
+map<std::string, std::string> g_mapScriptFileBuff;
 
-void thread_reloadFile(string filePath) {
+void thread_reloadFile(std::string filePath) {
     if (filePath.empty()) {
         return;
     }
@@ -1636,7 +1636,7 @@ void thread_reloadFile(string filePath) {
     //收到通知时，文件可能还在写入，因此等待一点时间再读取
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    string file_data;
+    std::string file_data;
     if (readFile(filePath, file_data)) {
         g_mutexScriptFileBuff.lock();
         g_mapScriptFileBuff[filePath] = file_data;
@@ -1645,7 +1645,7 @@ void thread_reloadFile(string filePath) {
 }
 
 //脚本目录下的所有文件，发现文件直接加载到内存
-void thread_watchScriptFile(string scriptPath) {
+void thread_watchScriptFile(std::string scriptPath) {
 #ifdef _WIN32
     if (scriptPath.empty()) {
         return;
@@ -1715,9 +1715,9 @@ void thread_watchScriptFile(string scriptPath) {
 
                 // 处理修改事件（FILE_ACTION_MODIFIED）
                 if (notify_info->Action == FILE_ACTION_MODIFIED) {
-                    string file_name = utf16_to_utf8(file_name_w);//得到发生变化的文件名
+                    std::string file_name = utf16_to_utf8(file_name_w);//得到发生变化的文件名
                     file_name = str::replace(file_name, "\\", "/");
-                    string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
+                    std::string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
                     LOG("[keyinfo]脚本目录检测到脚本文件改变:" + file_path);
 					thread th(thread_reloadFile, file_path);
                     th.detach();
@@ -1803,9 +1803,9 @@ void thread_watchScriptFile(string scriptPath) {
 #endif
 }
 
-bool loadScriptFile(string path, string& script) {
+bool loadScriptFile(std::string path, std::string& script) {
     lock_guard<mutex> g(g_mutexScriptFileBuff);
-    map<string, string>::iterator iter = g_mapScriptFileBuff.find(path);
+    map<std::string, std::string>::iterator iter = g_mapScriptFileBuff.find(path);
     if (iter != g_mapScriptFileBuff.end()) {
         script = iter->second;
         return true;
@@ -1825,10 +1825,10 @@ bool loadScriptFile(string path, string& script) {
 JSModuleDef* qjs_module_loader(JSContext* ctx, const char* module_name, void* opaque) {
     ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
-    string s = str::trim(module_name,".");
-	string path = pEngine->m_folderPath + "/" + s;
+    std::string s = str::trim(module_name,".");
+	std::string path = pEngine->m_folderPath + "/" + s;
 
-    string script;
+    std::string script;
     bool ret = loadScriptFile(path, script);
 
     if (!ret) {
@@ -1851,8 +1851,8 @@ JSModuleDef* qjs_module_loader(JSContext* ctx, const char* module_name, void* op
 
 fp_callMethod ScriptEngine::callMethodImp = nullptr;
 fp_callMethodRR ScriptEngine::callMethodRRImp = nullptr;
-string ScriptEngine::ScriptFolder = "";
-string ScriptEngine::ConfFolder = "";
+std::string ScriptEngine::ScriptFolder = "";
+std::string ScriptEngine::ConfFolder = "";
 
 ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;
@@ -1864,12 +1864,12 @@ ScriptEngine::ScriptEngine() {
 
 bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
     if (si.script == "") {
-        string scriptPath;
+        std::string scriptPath;
         if (si.filePath != "") {
             scriptPath = si.filePath;
             if (si.folderPath == "") {
 				size_t pos = si.filePath.find_last_of("/");
-                if (pos != string::npos) {
+                if (pos != std::string::npos) {
 					si.folderPath = si.filePath.substr(0, pos);
                 }
             }	
@@ -1914,7 +1914,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
             JSValue result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "main.js", JS_EVAL_TYPE_GLOBAL);
             if (!JS_IsException(result)) {
                 jsValToJsonVal(ctx, result, m_sEvalRet);
-                string s = "Eval Return:" + m_sEvalRet.dump();
+                std::string s = "Eval Return:" + m_sEvalRet.dump();
                 m_vecOutput.push_back(s);
                 JS_FreeValue(ctx, result);
 
@@ -1960,7 +1960,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
                 JS_FreeValue(ctx, err_stack);
                 JS_FreeValue(ctx, err);
 
-                string s = msg;
+                std::string s = msg;
                 s += "\n";
                 s += stack;
                 s = str::replace(s, "\n", "\r\n");
@@ -1996,7 +1996,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
         m_vecOutput.push_back("执行耗时:" + to_string(costMilli) + "ms");
 	}
 	catch (std::exception& e) {
-		string s = e.what();
+		std::string s = e.what();
 		m_vecOutput.push_back(s);
 		return false;
 	}
@@ -2102,7 +2102,7 @@ void jsValToJsonVal(JSContext* ctx, JSValueConst jsVal, json& jsonVal) {
 
 void jsonValToJsVal(json& jsonVal, JSContext* ctx, JSValue& jsVal) {
     if (jsonVal.is_string()) {
-        jsVal = JS_NewString(ctx, jsonVal.get<string>().c_str());
+        jsVal = JS_NewString(ctx, jsonVal.get<std::string>().c_str());
     }
     else if (jsonVal.is_null()) {
         jsVal = JS_NULL;
@@ -2249,24 +2249,24 @@ void SCRIPT_RUN_INFO::toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal)
 
     yyjson_mut_val* yyTagRefDataTime = yyjson_mut_obj(doc);
     for (auto& iter : tagRefDataTime) {
-        string key = iter.first;
-        string value = iter.second;
+        std::string key = iter.first;
+        std::string value = iter.second;
         yyjson_mut_obj_add_str(doc, yyTagRefDataTime, key.c_str(), value.c_str());
     }
 
     yyjson_mut_obj_add_val(doc, yyVal, "tagRefDataTime", yyTagRefDataTime);
 }
 
-string SCRIPT_INFO::getContextTag() {
-    string envTag = rootTag;
+std::string SCRIPT_INFO::getContextTag() {
+    std::string envTag = rootTag;
     envTag = TAG::addRoot(envTag, callerObjTag);
     envTag = TAG::addRoot(envTag, org);
 
     return envTag;
 }
 
-string SCRIPT_INFO::getExpContextTag() {
-    string envTag = rootTag;
+std::string SCRIPT_INFO::getExpContextTag() {
+    std::string envTag = rootTag;
     envTag = TAG::addRoot(envTag, callerObjTag);
     envTag = TAG::addRoot(envTag, org);
 
