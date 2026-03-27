@@ -5500,7 +5500,7 @@ bool TDB::tableInsert(std::string tableName, yyjson_val* yyv_row, std::string& e
 		data = "[]";
 
 	yyjson_read_err yy_err = { 0 };
-	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
+	//yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
 	yyjson_doc* yy_doc = yyjson_read_opts(
 		(char*)data.data(),
 		data.length(),
@@ -5512,7 +5512,7 @@ bool TDB::tableInsert(std::string tableName, yyjson_val* yyv_row, std::string& e
 		err = JSON_STR_VAL("wrong table format,json parse error");
 		return false;
 	}
-	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
+	auto yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
 	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
 
 	if (yyjson_is_obj(yyv_row)) {
@@ -5531,6 +5531,8 @@ bool TDB::tableInsert(std::string tableName, yyjson_val* yyv_row, std::string& e
 	}
 	else {
 		err = JSON_STR_VAL("row must be an object or an array");
+		yyjson_doc_free(yy_doc);
+		yyjson_mut_doc_free(yy_mdoc);
 		return false;
 	}
 
