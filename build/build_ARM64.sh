@@ -5,7 +5,41 @@ set -e
 cd ../src
 echo "当前编译目录: $(pwd)"
 
+# 命令行参数控制 rebuild/clean
+rebuild_mode=false
+clean_mode=false
+for arg in "$@"; do
+    case "$arg" in
+        --rebuild|-r)
+            rebuild_mode=true
+            ;;
+        --clean)
+            clean_mode=true
+            ;;
+        --help|-h)
+            echo "用法: $0 [--rebuild|-r] [--clean]"
+            echo "  --rebuild, -r  : 强制重新编译所有源文件（忽略时间戳）"
+            echo "  --clean        : 删除所有 .o 目标文件并退出"
+            echo "  --help, -h     : 显示帮助"
+            exit 0
+            ;;
+        *)
+            echo "未知参数: $arg"
+            echo "用法: $0 [--rebuild|-r] [--clean]"
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$clean_mode" = true ]; then
+    echo "clean 模式: 删除所有 .o 文件"
+    find . -name '*.o' -delete
+    echo "clean 完成"
+    exit 0
+fi
+
 # ===================== 1. 定义编译参数（保留原有）=====================
+
 common_flags="\
 -DENABLE_ALM_SRV_HOOK_SCRIPT \
 -DENABLE_QJS \
@@ -46,12 +80,11 @@ cpp_flags="\
 linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -latomic -ldl"
 
 # ===================== 2. 定义增量编译函数（核心新增）=====================
-# 函数：判断是否需要编译 C 文件（源文件比目标文件新，或目标文件不存在）
+# 函数：条件编译 C 文件（支持 rebuild）
 compile_c_if_needed() {
     local src_file=$1
     local obj_file=$2
-    # 如果目标文件不存在，或源文件更新时间更晚 → 编译
-    if [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
+    if [ "$rebuild_mode" = true ] || [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
         echo "编译 C 文件: $src_file → $obj_file"
         gcc $common_flags $c_flags -c "$src_file" -o "$obj_file"
     else
@@ -59,11 +92,11 @@ compile_c_if_needed() {
     fi
 }
 
-# 函数：判断是否需要编译 C++ 文件
+# 函数：条件编译 C++ 文件（支持 rebuild）
 compile_cpp_if_needed() {
     local src_file=$1
     local obj_file=$2
-    if [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
+    if [ "$rebuild_mode" = true ] || [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
         echo "编译 C++ 文件: $src_file → $obj_file"
         g++ $common_flags $cpp_flags -c "$src_file" -o "$obj_file"
     else
