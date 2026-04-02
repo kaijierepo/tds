@@ -158,6 +158,8 @@ compile_cpp_if_needed ./video/rtspRelay.cpp ./video/rtspRelay.o
 
 # ===================== 4. 链接生成可执行文件（每次都执行，确保最新）=====================
 obj_files="\
+./common/rsa.o \
+./common/rsa_verify.o \
 ./common/base64.o \
 ./common/miniz.o \
 ./common/yyjson.o \
