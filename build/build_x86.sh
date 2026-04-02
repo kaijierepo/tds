@@ -113,6 +113,8 @@ compile_c_if_needed ./script/libunicode.c ./script/libunicode.o
 compile_c_if_needed ./script/quickjs-libc.c ./script/quickjs-libc.o
 compile_c_if_needed ./script/quickjs.c ./script/quickjs.o
 compile_c_if_needed ./script/repl.c ./script/repl.o
+compile_c_if_needed ./common/rsa.c ./common/rsa.o
+compile_c_if_needed ./common/bignum.c ./common/bignum.o
 
 # 编译C++文件（与您原脚本一致）
 compile_cpp_if_needed ./CDataSimu.cpp ./CDataSimu.o
@@ -181,6 +183,8 @@ compile_cpp_if_needed ./io_server/proto_eip.cpp ./io_server/proto_eip.o
 compile_cpp_if_needed ./io_server/proto_tb3386.cpp ./io_server/proto_tb3386.o
 compile_cpp_if_needed ./io_server/proto_ws.cpp ./io_server/proto_ws.o
 compile_cpp_if_needed ./video/rtspRelay.cpp ./video/rtspRelay.o
+compile_cpp_if_needed ./common/rsa_verify.cpp ./common/rsa_verify.o
+
 
 # ===================== 7. 链接生成可执行文件 =====================
 echo "链接生成x86_64可执行文件..."
@@ -190,6 +194,7 @@ obj_files="\
 ./common/base64.o \
 ./common/miniz.o \
 ./common/yyjson.o \
+./common/bignum.o \
 ./mongoose/mongoose.o \
 ./script/unicode_data.o \
 ./script/cutils.o \
@@ -265,6 +270,8 @@ obj_files="\
 ./io_server/proto_tb3386.o \
 ./io_server/proto_ws.o \
 ./video/rtspRelay.o \
+./common/rsa_verify.o \
+./common/rsa.o \
 "
 
 output_file="../out/tds/tds_x86_64"
