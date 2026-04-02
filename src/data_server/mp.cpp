@@ -1594,6 +1594,7 @@ bool MP::startStreamPush(string desUrl) {
 		+ "&dst_url=" + mg_get_url_encode(desUrl)
 		+ "&schema=" + mg_get_url_encode("rtsp")
 		+ "&secret=" + mg_get_url_encode(zlmSecret);
+		+"&rtp_type=1";   //0 tcp 1 udp
 	string url = "http://" + ip + ":" + port + path;
 
 	struct mg_mgr mgr;
