@@ -73,6 +73,7 @@ compile_cpp_if_needed() {
 
 # ===================== 3. 增量编译所有文件（替换原有逐条编译）=====================
 # --- 编译 C 文件 ---
+compile_c_if_needed ./common/rsa.c ./common/rsa.o
 compile_c_if_needed ./common/base64.c ./common/base64.o
 compile_c_if_needed ./common/miniz.c ./common/miniz.o
 compile_c_if_needed ./common/yyjson.c ./common/yyjson.o
@@ -97,6 +98,7 @@ compile_cpp_if_needed ./common/dtwrecoge.cpp ./common/dtwrecoge.o
 compile_cpp_if_needed ./common/kvIni.cpp ./common/kvIni.o
 compile_cpp_if_needed ./common/logger.cpp ./common/logger.o
 compile_cpp_if_needed ./common/md5.cpp ./common/md5.o
+compile_cpp_if_needed ./common/rsa_verify.cpp ./common/rsa_verify.o
 compile_cpp_if_needed ./common/memDiag.cpp ./common/memDiag.o
 compile_cpp_if_needed ./common/secure.cpp ./common/secure.o
 compile_cpp_if_needed ./common/sha1.cpp ./common/sha1.o
