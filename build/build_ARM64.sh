@@ -73,6 +73,7 @@ compile_cpp_if_needed() {
 
 # ===================== 3. 增量编译所有文件（替换原有逐条编译）=====================
 # --- 编译 C 文件 ---
+compile_c_if_needed ./common/bignum.c ./common/bignum.o
 compile_c_if_needed ./common/rsa.c ./common/rsa.o
 compile_c_if_needed ./common/base64.c ./common/base64.o
 compile_c_if_needed ./common/miniz.c ./common/miniz.o
@@ -158,6 +159,7 @@ compile_cpp_if_needed ./video/rtspRelay.cpp ./video/rtspRelay.o
 
 # ===================== 4. 链接生成可执行文件（每次都执行，确保最新）=====================
 obj_files="\
+./common/bignum.o \
 ./common/rsa.o \
 ./common/rsa_verify.o \
 ./common/base64.o \
