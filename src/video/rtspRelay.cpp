@@ -419,6 +419,11 @@ bool RTSPRelay::Connection::connect(const std::string& host, int port, int timeo
         return false;
     }
 
+    // 禁用 Nagle 算法，确保请求立即发送
+    int nodelay = 1;
+    setsockopt(static_cast<SOCKET_TYPE>(sockfd_), IPPROTO_TCP, TCP_NODELAY,
+        reinterpret_cast<char*>(&nodelay), sizeof(nodelay));
+
     host_ = host;
     port_ = port;
 
@@ -508,28 +513,50 @@ int RTSPRelay::Connection::receiveHttpResp(std::string& response, int timeout_ms
     int total = 0;
     char buf[1000] = { 0 };
 
-    if (timeout_ms > 0) {
-        setSocketTimeout(timeout_ms);
-    }
+    // 清除超时设置，使用 select() 来等待
+    setSocketTimeout(0);
 
     while (true) {
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(sockfd_, &readfds);
+        
+        struct timeval tv;
+        tv.tv_sec = timeout_ms / 1000;
+        tv.tv_usec = (timeout_ms % 1000) * 1000;
+        
+        int select_result = ::select(static_cast<int>(sockfd_) + 1, &readfds, nullptr, nullptr, &tv);
+        if (select_result <= 0) {
+            // select 超时或错误
+            last_error_ = (select_result < 0) ? SOCKET_ERROR_NUM : 0;
+            // 即使超时，如果有部分数据也要尝试处理
+            if (total > 0 && IsValidPkt_HTTP(response, static_cast<size_t>(total))) {
+                last_error_ = 0;
+                return total;
+            }
+            return (total > 0) ? total : -1;
+        }
+
+        // socket 可读
         int n = static_cast<int>(::recv(static_cast<SOCKET_TYPE>(sockfd_), buf, (int)sizeof(buf), 0));
         if (n <= 0) {
             last_error_ = (n < 0) ? SOCKET_ERROR_NUM : 0;
-            if (timeout_ms > 0) setSocketTimeout(0);
+            if (total > 0 && IsValidPkt_HTTP(response, static_cast<size_t>(total))) {
+                last_error_ = 0;
+                return total;
+            }
             return (total > 0) ? total : n;
         }
 
         total += n;
         response.append(buf, n);
 
+        // 调试：打印每次接收的数据
+        printf("[DEBUG] recv %d bytes, total=%d, first bytes: %.*s\n", n, total, n > 20 ? 20 : n, buf);
+
         if (IsValidPkt_HTTP(response, static_cast<size_t>(total))) {
             break;
         }
-    }
-
-    if (timeout_ms > 0) {
-        setSocketTimeout(0);
     }
 
     last_error_ = 0;
@@ -882,7 +909,15 @@ bool RTSPRelay::rtspDescribe(Connection& conn, const std::string& url,
                 else {
                     sdp.clear();
                 }
-                session = extractSessionID(response);
+                // 注意：虽然 RTSP RFC 规定 Session 应该在 SETUP 响应中返回，
+                // 但 ZLMediaKit 在 DESCRIBE 响应中也包含 Session。
+                // 为了兼容 ZLM，我们需要从 DESCRIBE 响应中提取 Session。
+                // 这样在后续的 SETUP 请求中可以带上 Session。
+                std::string session_in_response = extractSessionID(response);
+                if (!session_in_response.empty()) {
+                    session = session_in_response;
+                    logVerbose("Session from DESCRIBE: " + session);
+                }
                 return true;
             }
             else if (response.find("401 Unauthorized") != std::string::npos) {
@@ -973,28 +1008,41 @@ bool RTSPRelay::rtspSetup(Connection& conn, const std::string& url,
         auth_info = &target_auth_;
     }
 
+    // 根据 ZLM 的 SDP 格式，正确拼接 SETUP URL
+    // ZLM SDP: a=control:* 表示 base URL, a=control:streamid=0 表示相对路径
     std::string setup_url = url;
+    
     if (!stream.control_url.empty()) {
-        setup_url = stream.control_url;
-        if (!(setup_url.rfind("rtsp://", 0) == 0 || setup_url.rfind("rtsps://", 0) == 0)) {
-            if (!url.empty() && !setup_url.empty() && setup_url.front() == '/') {
-                size_t scheme_pos = url.find("://");
-                if (scheme_pos != std::string::npos) {
-                    size_t authority_end = url.find('/', scheme_pos + 3);
-                    std::string base = (authority_end == std::string::npos) ? url : url.substr(0, authority_end);
-                    setup_url = base + setup_url;
+        if (stream.control_url.rfind("rtsp://", 0) == 0 || 
+            stream.control_url.rfind("rtsps://", 0) == 0) {
+            // 绝对 URL：直接使用
+            setup_url = stream.control_url;
+        }
+        else if (stream.control_url.front() == '/') {
+            // 以 / 开头的绝对路径：rtsp://host:port/path
+            URLComponents src_url;
+            if (URLComponents::parse(url, src_url)) {
+                setup_url = src_url.protocol + "://" + src_url.host + ":" + 
+                           std::to_string(src_url.port) + stream.control_url;
+            }
+        }
+        else {
+            // 相对路径（如 streamid=0）：拼接到原始 URL 后面
+            // ZLM 格式：/stream/1 + streamid=0 = /stream/1/streamid=0
+            if (!url.empty()) {
+                if (url.back() == '*') {
+                    // a=control:* 表示用 base URL
+                    setup_url = url.substr(0, url.length() - 1) + stream.control_url;
+                }
+                else if (url.back() == '/') {
+                    setup_url = url + stream.control_url;
                 }
                 else {
-                    setup_url = url + setup_url;
+                    setup_url = url + "/" + stream.control_url;
                 }
             }
             else {
-                if (!url.empty() && url.back() == '/') {
-                    setup_url = url + setup_url;
-                }
-                else {
-                    setup_url = url + "/" + setup_url;
-                }
+                setup_url = stream.control_url;
             }
         }
     }
@@ -1004,9 +1052,9 @@ bool RTSPRelay::rtspSetup(Connection& conn, const std::string& url,
         << "CSeq: " << generateCSeq() << "\r\n"
         << "User-Agent: RTSPRelay/1.0\r\n";
 
-    if (!host_header.empty()) {
-        request << "Host: " << host_header << "\r\n";
-    }
+    // 注意：SETUP 请求中通常不需要 Host 头，RTSP 服务器通过 URL 获取主机信息
+    // 移除 Host 头，避免某些服务器拒绝请求
+    (void)host_header;  // 抑制未使用变量警告
 
     if (!session.empty()) {
         request << "Session: " << session << "\r\n";
@@ -1018,13 +1066,45 @@ bool RTSPRelay::rtspSetup(Connection& conn, const std::string& url,
         request << auth_info->authorization_header << "\r\n";
     }
 
-    request << "Transport: RTP/AVP;unicast;"
-        << (record_mode ? "mode=record;" : "")
-        << "client_port=" << stream.client_port << "\r\n"
-        << "\r\n";
+    // UDP传输模式：使用RTP/AVP/UDP
+    if (record_mode) {
+        // 推流（发送）：服务端接收
+        if (config_.push_mode == TransportMode::UDP) {
+            request << "Transport: RTP/AVP/UDP;unicast;mode=record;"
+                << "client_port=" << stream.client_port;
+            if (config_.udp_ttl != 64) {
+                request << ";ttl=" << config_.udp_ttl;
+            }
+            request << "\r\n";
+        }
+        else {
+            // TCP推流
+            request << "Transport: RTP/AVP/TCP;unicast;mode=record;interleaved=0-1\r\n";
+        }
+    }
+    else {
+        // 拉流（接收）：客户端接收
+        if (config_.pull_mode == TransportMode::UDP) {
+            request << "Transport: RTP/AVP/UDP;unicast;"
+                << "client_port=" << stream.client_port;
+            if (config_.udp_ttl != 64) {
+                request << ";ttl=" << config_.udp_ttl;
+            }
+            request << "\r\n";
+        }
+    else {
+        // TCP拉流 - 尝试多种格式
+        // 格式1: 标准 RFC 格式
+        request << "Transport: RTP/AVP/TCP;unicast;interleaved=0-1\r\n";
+    }
+    }
 
     const std::string req = request.str();
-    logVerbose(">> SETUP " + setup_url);
+    // 打印完整请求内容，便于调试
+    std::string req_for_log = req;
+    std::replace(req_for_log.begin(), req_for_log.end(), '\r', '~');
+    std::replace(req_for_log.begin(), req_for_log.end(), '\n', '~');
+    logVerbose(">> SETUP REQUEST:\n" + req_for_log);
 
     int sent = conn.send(req.c_str(), req.size());
     if (sent != static_cast<int>(req.size())) {
@@ -1034,11 +1114,27 @@ bool RTSPRelay::rtspSetup(Connection& conn, const std::string& url,
     }
 
     std::string response;
-    int rc = conn.receiveHttpResp(response, 5000);
+    // 增加超时时间，因为 ZLM 可能延迟发送 SETUP 响应
+    int rc = conn.receiveHttpResp(response, 10000);
     if (rc <= 0) {
+        // 调试：打印收到的原始数据
+        if (!response.empty()) {
+            std::string resp_for_log = response;
+            std::replace(resp_for_log.begin(), resp_for_log.end(), '\r', '~');
+            std::replace(resp_for_log.begin(), resp_for_log.end(), '\n', '~');
+            logVerbose("<< SETUP PARTIAL DATA: " + resp_for_log);
+        }
         logError("SETUP recv failed: rc=" + std::to_string(rc) +
             " err=" + std::to_string(conn.lastError()));
         return false;
+    }
+
+    // 调试：打印收到的响应
+    {
+        std::string resp_for_log = response;
+        std::replace(resp_for_log.begin(), resp_for_log.end(), '\r', '~');
+        std::replace(resp_for_log.begin(), resp_for_log.end(), '\n', '~');
+        logVerbose("<< SETUP RESPONSE (rc=" + std::to_string(rc) + "): " + resp_for_log);
     }
 
     if (response.find("200 OK") == std::string::npos) {
@@ -1509,6 +1605,16 @@ bool RTSPRelay::connectToSource() {
         return false;
     }
 
+    // 调试：打印收到的 SDP 内容
+    {
+        std::string sdp_for_log = sdp;
+        std::replace(sdp_for_log.begin(), sdp_for_log.end(), '\r', '~');
+        std::replace(sdp_for_log.begin(), sdp_for_log.end(), '\n', '~');
+        logVerbose("[SDP RECEIVED] " + sdp_for_log);
+        logVerbose("[STREAM INFO] video_control=" + source_video_info_.control_url + 
+                   " audio_control=" + source_audio_info_.control_url);
+    }
+
     setState(State::CONNECTED, "Source connected");
     return true;
 }
@@ -1516,75 +1622,30 @@ bool RTSPRelay::connectToSource() {
 bool RTSPRelay::setupStreams() {
     setState(State::CONNECTING, "Setting up streams");
 
-    // 重置之前的套接字
-    if (rtp_socket_ != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_socket_));
-        rtp_socket_ = kInvalidSocket;
-    }
-    if (rtcp_socket_ != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_socket_));
-        rtcp_socket_ = kInvalidSocket;
-    }
-    target_rtp_port_ = 0;
-
-    // 创建RTP接收套接字
-    rtp_socket_ = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
-    if (rtp_socket_ == kInvalidSocket) {
-        setError("Failed to create RTP socket", 3001);
-        return false;
+    // 清理之前的UDP sockets
+    closeUDPSockets();
+    
+    // 根据拉流模式决定是否创建UDP socket
+    bool pullUseUDP = (config_.pull_mode == TransportMode::UDP);
+    
+    if (pullUseUDP) {
+        // 创建专用的UDP socket用于拉流（接收RTP）
+        if (!createUDPPullSocket()) {
+            logError("Failed to create UDP pull socket");
+            pullUseUDP = false;
+        }
     }
 
-    // 绑定到任意端口
-    struct sockaddr_in local_addr;
-    memset(&local_addr, 0, sizeof(local_addr));
-    local_addr.sin_family = AF_INET;
-    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    local_addr.sin_port = htons(0);
-
-    if (::bind(static_cast<SOCKET_TYPE>(rtp_socket_), (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
-        setError("Failed to bind RTP socket", 3002);
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_socket_));
-        rtp_socket_ = kInvalidSocket;
-        return false;
+    if (pullUseUDP) {
+        logInfo("Pull stream: Using UDP mode");
+        logInfo("Local UDP port: " + std::to_string(local_rtp_port_));
+        source_video_info_.client_port = std::to_string(local_rtp_port_) + "-" + std::to_string(local_rtcp_port_);
+        logInfo("Source SETUP client_port: " + source_video_info_.client_port);
     }
-
-    // 获取绑定的端口
-    socklen_t len = sizeof(local_addr);
-    getsockname(static_cast<SOCKET_TYPE>(rtp_socket_), (struct sockaddr*)&local_addr, &len);
-    int rtp_port = ntohs(local_addr.sin_port);
-    if (rtp_port <= 0 || rtp_port >= 65535) {
-        setError("Invalid RTP port selected", 3002);
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_socket_));
-        rtp_socket_ = kInvalidSocket;
-        return false;
+    else {
+        logInfo("Pull stream: Using TCP mode (interleaved)");
+        source_video_info_.client_port = "0-0";  // TCP模式不需要client_port
     }
-
-    // 创建RTCP套接字
-    rtcp_socket_ = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
-    if (rtcp_socket_ == kInvalidSocket) {
-        setError("Failed to create RTCP socket", 3001);
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_socket_));
-        rtp_socket_ = kInvalidSocket;
-        return false;
-    }
-
-    struct sockaddr_in rtcp_addr;
-    memset(&rtcp_addr, 0, sizeof(rtcp_addr));
-    rtcp_addr.sin_family = AF_INET;
-    rtcp_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    rtcp_addr.sin_port = htons(static_cast<uint16_t>(rtp_port + 1));
-
-    if (::bind(static_cast<SOCKET_TYPE>(rtcp_socket_), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) < 0) {
-        setError("Failed to bind RTCP socket", 3002);
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_socket_));
-        rtcp_socket_ = kInvalidSocket;
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_socket_));
-        rtp_socket_ = kInvalidSocket;
-        return false;
-    }
-
-    source_video_info_.client_port = std::to_string(rtp_port) + "-" + std::to_string(rtp_port + 1);
-    logInfo("Local RTP/RTCP ports: " + source_video_info_.client_port);
 
     // 发送SETUP到源
     if (!rtspSetup(*source_conn_, config_.source_url, source_session_, source_video_info_)) {
@@ -1697,6 +1758,26 @@ bool RTSPRelay::setupStreams() {
         return false;
     }
 
+    // 保存目标RTP地址信息（用于UDP推流）
+    target_rtp_host_ = target_url.host;
+    logInfo("Target RTP host: " + target_rtp_host_);
+
+    // 根据推流模式决定是否创建UDP socket
+    if (config_.push_mode == TransportMode::UDP) {
+        if (!createUDPPushSocket()) {
+            logError("Failed to create UDP push socket, falling back to TCP");
+            config_.push_mode = TransportMode::TCP;
+        }
+        else {
+            logInfo("Push stream: Using UDP mode");
+        }
+    }
+    
+    if (config_.push_mode == TransportMode::TCP) {
+        logInfo("Push stream: Using TCP mode (RTP over RTSP)");
+    }
+
+
     // 发送RECORD到目标
     if (!rtspRecord(*target_conn_, config_.target_url, target_session_)) {
         setError("RECORD failed", 3009);
@@ -1707,33 +1788,86 @@ bool RTSPRelay::setupStreams() {
 }
 
 void RTSPRelay::rtpThread() {
-    logInfo("RTP thread started");
+    bool pullUDP = (config_.pull_mode == TransportMode::UDP);
+    
+    if (pullUDP) {
+        logInfo("Pull thread started (UDP mode)");
+    }
+    else {
+        logInfo("Pull thread started (TCP/interleaved mode)");
+    }
 
     std::vector<uint8_t> buffer(config_.buffer_size);
-    struct sockaddr_in from_addr;
-    socklen_t from_len = sizeof(from_addr);
+    std::string src_ip;
+    int src_port = 0;
 
     {
         std::lock_guard<std::mutex> lock(stats_mutex_);
         stats_.last_frame_time = std::chrono::steady_clock::now();
     }
 
+    // TCP拉流模式下的状态
+    int tcpRtpChannel = 0;
+    int tcpRtcpChannel = 1;
+    std::vector<uint8_t> tcpBuffer;
+    bool waitingForRtpData = true;
+
     while (running_ && !stopping_ && streaming_) {
-        // 设置接收超时
-#ifdef _WIN32
-        DWORD tv = 1000;
-        setsockopt(static_cast<SOCKET_TYPE>(rtp_socket_), SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-#else
-        struct timeval tv;
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
-        setsockopt(static_cast<SOCKET_TYPE>(rtp_socket_), SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-#endif
+        int received = 0;
+        
+        if (pullUDP) {
+            // UDP拉流
+            received = receiveUDPData(buffer.data(), buffer.size(), src_ip, src_port);
+        }
+        else {
+            // TCP拉流：通过RTSP连接接收RTP数据
+            if (!source_conn_ || !source_conn_->isConnected()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            }
+            
+            // 接收数据
+            char tmpBuf[2048] = {0};
+            int n = source_conn_->receive(tmpBuf, sizeof(tmpBuf), 100);
+            
+            if (n > 0) {
+                // 添加到缓冲区
+                tcpBuffer.insert(tcpBuffer.end(), (uint8_t*)tmpBuf, (uint8_t*)tmpBuf + n);
+                
+                // 处理RTP包 ( interleaved = $ + channel + len + data )
+                while (tcpBuffer.size() >= 4) {
+                    if (tcpBuffer[0] != 0x24) {
+                        // 不是interleaved标记，跳过
+                        tcpBuffer.erase(tcpBuffer.begin());
+                        continue;
+                    }
+                    
+                    int channel = tcpBuffer[1];
+                    int len = (tcpBuffer[2] << 8) | tcpBuffer[3];
+                    
+                    if (tcpBuffer.size() < 4 + len) {
+                        // 数据不完整，等待更多数据
+                        break;
+                    }
+                    
+                    // 检查是否是RTP数据 (channel 0)
+                    if (channel == tcpRtpChannel) {
+                        // 复制RTP数据
+                        memcpy(buffer.data(), &tcpBuffer[4], len);
+                        received = len;
+                    }
+                    
+                    // 移除已处理的数据
+                    tcpBuffer.erase(tcpBuffer.begin(), tcpBuffer.begin() + 4 + len);
+                }
+            }
+            else if (n < 0) {
+                // 接收错误
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        }
 
-        long received = recvfrom(static_cast<SOCKET_TYPE>(rtp_socket_), (char*)buffer.data(), (int)buffer.size(), 0,
-            (struct sockaddr*)&from_addr, &from_len);
-
-        if (received > 0) {
+        if (received > 12) {  // RTP包最小12字节头
             const auto now = std::chrono::steady_clock::now();
 
             {
@@ -1754,27 +1888,19 @@ void RTSPRelay::rtpThread() {
                     frame_callback_(packet.payload.data(), packet.payload.size(), packet.timestamp);
                 }
 
-                logVerbose("RTP packet: seq=" + std::to_string(packet.sequence_number) +
+                logVerbose((pullUDP ? "UDP" : "TCP") + std::string("->RTP: seq=") + 
+                    std::to_string(packet.sequence_number) +
                     " ts=" + std::to_string(packet.timestamp) +
                     " size=" + std::to_string(received));
             }
         }
-        else if (received < 0) {
-#ifdef _WIN32
-            int err = WSAGetLastError();
-            if (err != WSAETIMEDOUT && err != WSAEWOULDBLOCK && err != WSAECONNRESET) {
-#else
-            int err = errno;
-            if (err != EAGAIN && err != EWOULDBLOCK) {
-#endif
-                logError("recvfrom error: " + std::to_string(err));
-                break;
-            }
-            }
+        else if (received < 0 && pullUDP) {
+            // 超时或其他错误（UDP模式）
         }
-
-    logInfo("RTP thread stopped");
     }
+
+    logInfo("Pull thread stopped");
+}
 
 void RTSPRelay::controlThread() {
     logInfo("Control thread started");
@@ -1855,6 +1981,7 @@ void RTSPRelay::teardown() {
     source_session_.clear();
     target_session_.clear();
     target_rtp_port_ = 0;
+    target_rtp_host_.clear();
 
     // 清除认证信息（保留用户名密码）
     source_auth_.realm.clear();
@@ -1865,14 +1992,242 @@ void RTSPRelay::teardown() {
     target_auth_.nonce.clear();
     target_auth_.authorization_header.clear();
 
-    if (rtp_socket_ != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_socket_));
-        rtp_socket_ = kInvalidSocket;
+    // 关闭UDP sockets
+    closeUDPSockets();
+}
+
+// ============================================================================
+// UDP传输函数
+// ============================================================================
+
+bool RTSPRelay::createUDPPullSocket() {
+    // 创建UDP拉流socket（接收源服务器的RTP数据）
+    udp_pull_socket_ = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
+    if (udp_pull_socket_ == kInvalidSocket) {
+        logError("Failed to create UDP pull socket");
+        return false;
+    }
+
+    // 配置拉流socket
+    if (!configureUDPSocket(udp_pull_socket_, false)) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_pull_socket_));
+        udp_pull_socket_ = kInvalidSocket;
+        return false;
+    }
+
+    // 绑定到指定端口
+    struct sockaddr_in local_addr;
+    memset(&local_addr, 0, sizeof(local_addr));
+    local_addr.sin_family = AF_INET;
+    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    local_addr.sin_port = htons(0);  // 系统自动分配端口
+
+    if (::bind(static_cast<SOCKET_TYPE>(udp_pull_socket_), (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
+        logError("Failed to bind UDP pull socket");
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_pull_socket_));
+        udp_pull_socket_ = kInvalidSocket;
+        return false;
+    }
+
+    // 获取分配的端口
+    socklen_t len = sizeof(local_addr);
+    getsockname(static_cast<SOCKET_TYPE>(udp_pull_socket_), (struct sockaddr*)&local_addr, &len);
+    local_rtp_port_ = ntohs(local_addr.sin_port);
+    local_rtcp_port_ = local_rtp_port_ + 1;
+
+    logInfo("UDP pull socket created: fd=" + std::to_string(udp_pull_socket_) + 
+            " port=" + std::to_string(local_rtp_port_));
+    return true;
+}
+
+bool RTSPRelay::createUDPPushSocket() {
+    // 创建UDP推流socket（发送RTP数据到目标）
+    udp_push_socket_ = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
+    if (udp_push_socket_ == kInvalidSocket) {
+        logError("Failed to create UDP push socket");
+        return false;
+    }
+
+    // 配置推流socket
+    if (!configureUDPSocket(udp_push_socket_, false)) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_push_socket_));
+        udp_push_socket_ = kInvalidSocket;
+        return false;
+    }
+
+    logInfo("UDP push socket created: fd=" + std::to_string(udp_push_socket_));
+    return true;
+}
+
+void RTSPRelay::closeUDPSockets() {
+    if (udp_pull_socket_ != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_pull_socket_));
+        udp_pull_socket_ = kInvalidSocket;
+    }
+    if (udp_push_socket_ != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_push_socket_));
+        udp_push_socket_ = kInvalidSocket;
     }
     if (rtcp_socket_ != kInvalidSocket) {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_socket_));
         rtcp_socket_ = kInvalidSocket;
     }
+    local_rtp_port_ = 0;
+    local_rtcp_port_ = 0;
+}
+
+bool RTSPRelay::configureUDPSocket(SocketHandle sock, bool is_multicast) {
+    if (sock == kInvalidSocket) return false;
+
+#ifdef _WIN32
+    DWORD tv = 1000;  // 1秒超时
+    if (setsockopt(static_cast<SOCKET_TYPE>(sock), SOL_SOCKET, SO_RCVTIMEO, 
+                   (const char*)&tv, sizeof(tv)) != 0) {
+        logError("Failed to set UDP socket timeout");
+        return false;
+    }
+#else
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    if (setsockopt(static_cast<SOCKET_TYPE>(sock), SOL_SOCKET, SO_RCVTIMEO, 
+                   (const char*)&tv, sizeof(tv)) != 0) {
+        logError("Failed to set UDP socket timeout");
+        return false;
+    }
+#endif
+
+    // 设置TTL
+    if (config_.udp_ttl > 0) {
+        int ttl = config_.udp_ttl;
+        if (setsockopt(static_cast<SOCKET_TYPE>(sock), IPPROTO_IP, IP_TTL,
+                       (const char*)&ttl, sizeof(ttl)) != 0) {
+            logError("Failed to set UDP TTL");
+        }
+    }
+
+    // 设置ToS
+    if (config_.udp_tos > 0) {
+        int tos = config_.udp_tos;
+        if (setsockopt(static_cast<SOCKET_TYPE>(sock), IPPROTO_IP, IP_TOS,
+                       (const char*)&tos, sizeof(tos)) != 0) {
+            logError("Failed to set UDP ToS");
+        }
+    }
+
+    // 设置组播回环
+    if (is_multicast) {
+        char loop = config_.udp_multicast_loop ? 1 : 0;
+        if (setsockopt(static_cast<SOCKET_TYPE>(sock), IPPROTO_IP, IP_MULTICAST_LOOP,
+                       &loop, sizeof(loop)) != 0) {
+            logError("Failed to set UDP multicast loop");
+        }
+    }
+
+    // 设置接收缓冲区大小
+    if (config_.udp_recv_buffer_size > 0) {
+        if (setsockopt(static_cast<SOCKET_TYPE>(sock), SOL_SOCKET, SO_RCVBUF,
+                       (const char*)&config_.udp_recv_buffer_size, sizeof(config_.udp_recv_buffer_size)) != 0) {
+            logError("Failed to set UDP recv buffer size");
+        }
+    }
+
+    // 设置发送缓冲区大小
+    if (config_.udp_send_buffer_size > 0) {
+        if (setsockopt(static_cast<SOCKET_TYPE>(sock), SOL_SOCKET, SO_SNDBUF,
+                       (const char*)&config_.udp_send_buffer_size, sizeof(config_.udp_send_buffer_size)) != 0) {
+            logError("Failed to set UDP send buffer size");
+        }
+    }
+
+    // 允许地址重用（用于快速重启）
+    int reuse = 1;
+    if (setsockopt(static_cast<SOCKET_TYPE>(sock), SOL_SOCKET, SO_REUSEADDR,
+                   (const char*)&reuse, sizeof(reuse)) != 0) {
+        logError("Failed to set UDP socket reuse");
+    }
+
+    return true;
+}
+
+bool RTSPRelay::sendUDPData(const uint8_t* data, size_t size) {
+    if (udp_push_socket_ == kInvalidSocket || target_rtp_port_ == 0) {
+        return false;
+    }
+
+    // 解析目标地址
+    struct sockaddr_in target_addr;
+    memset(&target_addr, 0, sizeof(target_addr));
+    target_addr.sin_family = AF_INET;
+    target_addr.sin_port = htons(target_rtp_port_);
+
+    if (inet_pton(AF_INET, target_rtp_host_.c_str(), &target_addr.sin_addr) <= 0) {
+        struct hostent* server = gethostbyname(target_rtp_host_.c_str());
+        if (!server) {
+            logError("Failed to resolve target host: " + target_rtp_host_);
+            std::lock_guard<std::mutex> lock(stats_mutex_);
+            stats_.errors++;
+            return false;
+        }
+        memcpy(&target_addr.sin_addr, server->h_addr, server->h_length);
+    }
+
+    // 发送UDP数据
+    int sent = sendto(static_cast<SOCKET_TYPE>(udp_push_socket_),
+                      (const char*)data, (int)size, 0,
+                      (struct sockaddr*)&target_addr, sizeof(target_addr));
+
+    if (sent != static_cast<int>(size)) {
+#ifdef _WIN32
+        int err = WSAGetLastError();
+#else
+        int err = errno;
+#endif
+        logVerbose("UDP sendto error: sent=" + std::to_string(sent) + 
+                   " expected=" + std::to_string(size) + 
+                   " err=" + std::to_string(err));
+        std::lock_guard<std::mutex> lock(stats_mutex_);
+        stats_.errors++;
+        return false;
+    }
+
+    return true;
+}
+
+int RTSPRelay::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
+    if (udp_pull_socket_ == kInvalidSocket) {
+        return -1;
+    }
+
+    struct sockaddr_in from_addr;
+    socklen_t from_len = sizeof(from_addr);
+
+    int received = recvfrom(static_cast<SOCKET_TYPE>(udp_pull_socket_),
+                             (char*)buffer, (int)size, 0,
+                             (struct sockaddr*)&from_addr, &from_len);
+
+    if (received > 0) {
+        char ip_str[INET_ADDRSTRLEN] = {0};
+        inet_ntop(AF_INET, &from_addr.sin_addr, ip_str, sizeof(ip_str));
+        src_ip = ip_str;
+        src_port = ntohs(from_addr.sin_port);
+        return received;
+    }
+    else if (received < 0) {
+#ifdef _WIN32
+        int err = WSAGetLastError();
+        if (err != WSAETIMEDOUT && err != WSAEWOULDBLOCK && err != WSAECONNRESET) {
+            logError("UDP recvfrom error: " + std::to_string(err));
+        }
+#else
+        int err = errno;
+        if (err != EAGAIN && err != EWOULDBLOCK) {
+            logError("UDP recvfrom error: " + std::to_string(err));
+        }
+#endif
+    }
+
+    return received;
 }
 
 // ============================================================================
@@ -2047,46 +2402,37 @@ bool RTSPRelay::URLComponents::parse(const std::string & url, URLComponents & co
 }
 
 void RTSPRelay::forwardRTPPacket(const RTPPacket & packet) {
-    if (!target_conn_ || target_rtp_port_ == 0 || rtp_socket_ == kInvalidSocket) {
-        return;
-    }
-
-    // 构建目标地址
-    URLComponents target_url;
-    if (!URLComponents::parse(config_.target_url, target_url)) {
-        return;
-    }
-
-    struct sockaddr_in target_addr;
-    memset(&target_addr, 0, sizeof(target_addr));
-    target_addr.sin_family = AF_INET;
-    target_addr.sin_port = htons(target_rtp_port_);
-
-    if (inet_pton(AF_INET, target_url.host.c_str(), &target_addr.sin_addr) <= 0) {
-        struct hostent* server = gethostbyname(target_url.host.c_str());
-        if (!server) return;
-        memcpy(&target_addr.sin_addr, server->h_addr, server->h_length);
-    }
-
-    // 序列化并发送RTP包
+    // 序列化RTP包
     auto data = packet.serialize();
-    int sent = sendto(static_cast<SOCKET_TYPE>(rtp_socket_), (const char*)data.data(), (int)data.size(), 0,
-        (struct sockaddr*)&target_addr, sizeof(target_addr));
-    if (sent != static_cast<int>(data.size())) {
-#ifdef _WIN32
-        int err = WSAGetLastError();
-#else
-        int err = errno;
-#endif
-        logError("sendto error: sent=" + std::to_string(sent) + " err=" + std::to_string(err));
-        std::lock_guard<std::mutex> lock(stats_mutex_);
-        stats_.errors++;
-        return;
+    
+    if (config_.push_mode == TransportMode::UDP) {
+        // UDP推流
+        if (sendUDPData(data.data(), data.size())) {
+            std::lock_guard<std::mutex> lock(stats_mutex_);
+            stats_.bytes_forwarded += data.size();
+            stats_.frames_forwarded++;
+        }
     }
-
-    std::lock_guard<std::mutex> lock(stats_mutex_);
-    stats_.bytes_forwarded += data.size();
-    stats_.frames_forwarded++;
+    else {
+        // TCP推流：发送到目标RTSP服务器（通过RTSP控制的连接）
+        if (target_conn_ && target_conn_->isConnected()) {
+            // RTP over RTSP: 插入 $ (0x24) + channel + length
+            uint8_t rtpOverTcp[4] = { 0x24, 0x00, 0x00, 0x00 };  // channel 0, length待定
+            rtpOverTcp[2] = (data.size() >> 8) & 0xFF;
+            rtpOverTcp[3] = data.size() & 0xFF;
+            
+            std::vector<uint8_t> tcpPacket;
+            tcpPacket.insert(tcpPacket.end(), rtpOverTcp, rtpOverTcp + 4);
+            tcpPacket.insert(tcpPacket.end(), data.begin(), data.end());
+            
+            int sent = target_conn_->send(tcpPacket.data(), tcpPacket.size());
+            if (sent > 0) {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                stats_.bytes_forwarded += data.size();
+                stats_.frames_forwarded++;
+            }
+        }
+    }
 }
 
 bool RTSPRelay::RTPPacket::parse(const uint8_t * data, size_t size) {

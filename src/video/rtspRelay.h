@@ -25,19 +25,37 @@ public:
         RECONNECTING
     };
 
+    // 传输模式枚举
+    enum class TransportMode {
+        UDP,    // UDP传输
+        TCP     // RTP over RTSP (TCP)
+    };
+
     // 配置结构
     struct Config {
         std::string source_url;      // 源RTSP地址
-        std::string target_url;      // 目标RTSP地址
+        std::string target_url;       // 目标RTSP地址
         std::string source_username; // 源用户名（可选）
-        std::string source_password; // 源密码（可选）
-        std::string target_username; // 目标用户名（可选）
-        std::string target_password; // 目标密码（可选）
+        std::string source_password;  // 源密码（可选）
+        std::string target_username;  // 目标用户名（可选）
+        std::string target_password;  // 目标密码（可选）
         int retry_interval = 3000;   // 重试间隔(ms)
         int max_retries = 10;        // 最大重试次数
         int rtp_timeout = 5000;      // RTP超时(ms)
         int buffer_size = 65536;     // 缓冲区大小
         bool verbose = false;        // 详细日志
+        
+        // 拉流（从源获取）传输模式
+        TransportMode pull_mode = TransportMode::UDP;
+        // 推流（发送到目标）传输模式
+        TransportMode push_mode = TransportMode::UDP;
+        
+        // UDP特定配置
+        int udp_recv_buffer_size = 0;    // UDP接收缓冲区大小(0=系统默认)
+        int udp_send_buffer_size = 0;    // UDP发送缓冲区大小(0=系统默认)
+        int udp_ttl = 64;                // TTL生存时间
+        int udp_tos = 0xC0;              // Type of Service (Default: AF41 低延迟)
+        bool udp_multicast_loop = false; // 组播回环
     };
 
     // 统计结构
@@ -219,10 +237,14 @@ private:
     StreamInfo source_video_info_;
     StreamInfo target_video_info_;
 
-    // 网络套接字
-    SocketHandle rtp_socket_ = kInvalidSocket;
+    // UDP套接字（用于RTP数据传输）
+    SocketHandle udp_pull_socket_ = kInvalidSocket;   // UDP拉流socket
+    SocketHandle udp_push_socket_ = kInvalidSocket;    // UDP推流socket
     SocketHandle rtcp_socket_ = kInvalidSocket;
-    int target_rtp_port_ = 0;
+    int local_rtp_port_ = 0;        // 本地RTP监听端口
+    int local_rtcp_port_ = 0;       // 本地RTCP端口
+    int target_rtp_port_ = 0;       // 目标RTP端口
+    std::string target_rtp_host_;   // 目标RTP主机地址
 
     // 线程
     std::thread worker_thread_;
@@ -303,6 +325,14 @@ private:
     void setState(State new_state, const std::string& msg = "");
     bool shouldReconnect() const;
     void doReconnect();
+
+    // UDP传输相关
+    bool createUDPPullSocket();   // 创建UDP拉流socket
+    bool createUDPPushSocket();    // 创建UDP推流socket
+    void closeUDPSockets();
+    bool configureUDPSocket(SocketHandle sock, bool is_multicast);
+    bool sendUDPData(const uint8_t* data, size_t size);
+    int receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port);
 
     // 日志
     void logInfo(const std::string& msg) const;
