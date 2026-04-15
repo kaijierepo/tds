@@ -5941,7 +5941,7 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 	if (!folderExist(folderPath))
 		DB_FS::createFolderOfPath(folderPath.c_str());
 
-	DB_LOCK_GUARD dbLock(dlPath);
+
 
 	if (m_bEnableFsBuff) {
 		bool bAppend = false;
@@ -5964,7 +5964,7 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 	if (fileExist(dlPath))
 	{
 		std::string appendData = ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";
-		
+		DB_LOCK_GUARD dbLock(dlPath);
 #ifdef _WIN32
 		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
 #else
@@ -6030,19 +6030,8 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 
 			if (len > 0)
 			{
-				fseek(fp, -1, SEEK_END);
-				char lastChar;
-				fread(&lastChar, 1, 1, fp);
-
-				if (lastChar == ']') {
-					fseek(fp, -1, SEEK_END);
-					fwrite(appendData.c_str(), 1, appendData.length(), fp);
-				}
-				else {
-					// 如果文件格式不对，直接追加
-					fseek(fp, 0, SEEK_END);
-					fwrite(appendData.c_str(), 1, appendData.length(), fp);
-				}
+				fseek(fp, len - 1, SEEK_SET);  //overwrite last ] charactor
+				fwrite(appendData.c_str(), 1, appendData.length(), fp);
 				bAppend = true;
 			}
 			fclose(fp);
