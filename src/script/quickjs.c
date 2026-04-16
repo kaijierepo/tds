@@ -11970,7 +11970,7 @@ static JSValue JS_CompactBigInt(JSContext *ctx, JSBigInt *p)
 /* return an exception in case of memory error. Return JS_NAN if
    invalid syntax */
 /* XXX: directly use js_atod() */
-static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+static JSValue js_stof(JSContext *ctx, const char *str, const char **pp,
                        int radix, int flags)
 {
     const char *p, *p_start;
@@ -12215,7 +12215,7 @@ static JSValue JS_ToNumberHintFree(JSContext *ctx, JSValue val,
                 ret = JS_NewInt32(ctx, 0);
             } else {
                 int flags = ATOD_ACCEPT_BIN_OCT;
-                ret = js_atof(ctx, p, &p, 0, flags);
+                ret = js_stof(ctx, p, &p, 0, flags);
                 if (!JS_IsException(ret)) {
                     p += skip_spaces(p);
                     if ((p - str) != len) {
@@ -13297,7 +13297,7 @@ static JSValue JS_StringToBigInt(JSContext *ctx, JSValue val)
         val = JS_NewBigInt64(ctx, 0);
     } else {
         flags = ATOD_INT_ONLY | ATOD_ACCEPT_BIN_OCT | ATOD_TYPE_BIG_INT;
-        val = js_atof(ctx, p, &p, 0, flags);
+        val = js_stof(ctx, p, &p, 0, flags);
         p += skip_spaces(p);
         if (!JS_IsException(val)) {
             if ((p - str) != len) {
@@ -21086,7 +21086,7 @@ static __exception int next_token(JSParseState *s)
             int flags;
             flags = ATOD_ACCEPT_BIN_OCT | ATOD_ACCEPT_LEGACY_OCTAL |
                 ATOD_ACCEPT_UNDERSCORES | ATOD_ACCEPT_SUFFIX;
-            ret = js_atof(s->ctx, (const char *)p, (const char **)&p, 0,
+            ret = js_stof(s->ctx, (const char *)p, (const char **)&p, 0,
                           flags);
             if (JS_IsException(ret))
                 goto fail;
@@ -21511,7 +21511,7 @@ static __exception int json_next_token(JSParseState *s)
                 flags = ATOD_ACCEPT_BIN_OCT;
                 radix = 0;
             }
-            ret = js_atof(s->ctx, (const char *)p, (const char **)&p, radix,
+            ret = js_stof(s->ctx, (const char *)p, (const char **)&p, radix,
                           flags);
             if (JS_IsException(ret))
                 goto fail;
@@ -41377,7 +41377,7 @@ static JSValue js_parseInt(JSContext *ctx, JSValueConst this_val,
         p = str;
         p += skip_spaces(p);
         flags = ATOD_INT_ONLY | ATOD_ACCEPT_PREFIX_AFTER_SIGN;
-        ret = js_atof(ctx, p, NULL, radix, flags);
+        ret = js_stof(ctx, p, NULL, radix, flags);
     }
     JS_FreeCString(ctx, str);
     return ret;
@@ -41394,7 +41394,7 @@ static JSValue js_parseFloat(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     p = str;
     p += skip_spaces(p);
-    ret = js_atof(ctx, p, NULL, 10, 0);
+    ret = js_stof(ctx, p, NULL, 10, 0);
     JS_FreeCString(ctx, str);
     return ret;
 }

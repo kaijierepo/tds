@@ -1515,7 +1515,7 @@ extern "C" {
             json path = jArgs[0];
             if (path.is_string()) {
                 std::string rPath = path.get<std::string>();
-                map<std::string, std::string>::iterator iter = g_mapConfFile.find(rPath);
+                std::map<std::string, std::string>::iterator iter = g_mapConfFile.find(rPath);
                 if (iter != g_mapConfFile.end()) {
                     return JS_NewString(ctx, iter->second.c_str());
                 }
@@ -1626,7 +1626,7 @@ bool is_integer(double x) {
 }
 
 mutex g_mutexScriptFileBuff;
-map<std::string, std::string> g_mapScriptFileBuff;
+std::map<std::string, std::string> g_mapScriptFileBuff;
 
 void thread_reloadFile(std::string filePath) {
     if (filePath.empty()) {
@@ -1805,7 +1805,7 @@ void thread_watchScriptFile(std::string scriptPath) {
 
 bool loadScriptFile(std::string path, std::string& script) {
     lock_guard<mutex> g(g_mutexScriptFileBuff);
-    map<std::string, std::string>::iterator iter = g_mapScriptFileBuff.find(path);
+    std::map<std::string, std::string>::iterator iter = g_mapScriptFileBuff.find(path);
     if (iter != g_mapScriptFileBuff.end()) {
         script = iter->second;
         return true;
@@ -2241,17 +2241,17 @@ bool jsItemToJsonItem(JSContext* ctx, JSAtom atom, JSValueConst prop_value, void
 void SCRIPT_RUN_INFO::toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal)
 {
     yyjson_mut_obj_add_strcpy(doc, yyVal, "runTime", lastExe.c_str());
-	yyjson_mut_obj_add_str(doc, yyVal, "retVal", retVal.c_str());
-    yyjson_mut_obj_add_str(doc, yyVal, "lastError", lastError.c_str());
+	yyjson_mut_obj_add_strcpy(doc, yyVal, "retVal", retVal.c_str());
+    yyjson_mut_obj_add_strcpy(doc, yyVal, "lastError", lastError.c_str());
 	yyjson_mut_obj_add_bool(doc, yyVal, "runSuccess", runSuccess);
 	yyjson_mut_obj_add_bool(doc, yyVal, "valNullInCalc", valNullInCalc);
 
 
     yyjson_mut_val* yyTagRefDataTime = yyjson_mut_obj(doc);
     for (auto& iter : tagRefDataTime) {
-        std::string key = iter.first;
-        std::string value = iter.second;
-        yyjson_mut_obj_add_str(doc, yyTagRefDataTime, key.c_str(), value.c_str());
+ 		auto key = yyjson_mut_str(doc, iter.first.c_str());
+		auto value = yyjson_mut_str(doc, iter.second.c_str());
+        yyjson_mut_obj_put(yyTagRefDataTime, key, value);
     }
 
     yyjson_mut_obj_add_val(doc, yyVal, "tagRefDataTime", yyTagRefDataTime);

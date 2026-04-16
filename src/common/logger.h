@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <mutex>
-using namespace std;
+
 
 //log level:  trace,debug,warn,error
 enum LOG_LEVEL {
@@ -42,7 +42,7 @@ public:
 	bool m_bSaveToFile; //save to console mode is supported
 	bool m_bEnable;
 
-	mutex m_lock;
+	std::mutex m_lock;
 	std::string m_strLogDir;
 	LOG_LEVEL logLevel;
 

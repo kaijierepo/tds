@@ -8,7 +8,7 @@
 #include "yyjson.h"
 
 using json = nlohmann::json;
-using namespace std;
+
 
 struct SCRIPT_RUN_INFO {
 	bool runSuccess = false;
@@ -17,7 +17,7 @@ struct SCRIPT_RUN_INFO {
 	std::string lastExe;
 	std::string retVal = "";
 	int runTimeCost = 0;
-	map<std::string, std::string> tagRefDataTime;
+	std::map<std::string, std::string> tagRefDataTime;
 
 	void toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal);
 };
@@ -68,7 +68,7 @@ public:
 
 	std::string m_sError;
 	std::vector<std::string> m_vecOutput;         //执行一次脚本的输出信息，包含错误信息，脚本中的log
-	map<std::string,std::string> m_vecValRefTime; //本次脚本引用的所有val函数的当前值时间，基于val算出来的二次变量，用所有val的最新时间作为二次变量的时间
+	std::map<std::string,std::string> m_vecValRefTime; //本次脚本引用的所有val函数的当前值时间，基于val算出来的二次变量，用所有val的最新时间作为二次变量的时间
 
 	json m_globalObj;
 
@@ -116,6 +116,6 @@ JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_val* val);
 JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_mut_val* val);
 yyjson_val* qjsVal_to_yyVal(JSContext* ctx, JSValueConst js_val, yyjson_doc*& doc);
 
-extern map<std::string, std::string> g_mapConfFile;
+extern std::map<std::string, std::string> g_mapConfFile;
 
 #endif

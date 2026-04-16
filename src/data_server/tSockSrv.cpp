@@ -2,7 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
-
+#include <WinSock2.h>
 #ifdef TDS
 #include "logger.h"
 #else

@@ -1,6 +1,7 @@
 #include "tcpSrv.h"
 #include "tds.h"
 #include <thread>
+#include "mongoose.h"
 
 namespace tcpServer {
 	TIME str2time(const std::string& s) {
@@ -120,6 +121,7 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 
 	}
 }
+struct mg_mgr mgr;
 
 void mongoose_tcp_listen_thread(int port, tcpSrv* pSrv) {
 	pSrv->m_bStarted = true;
@@ -128,9 +130,9 @@ void mongoose_tcp_listen_thread(int port, tcpSrv* pSrv) {
 			pSrv->m_pCallBackUser = nullptr;
 			break;
 		}
-		mg_mgr_poll(&pSrv->mgr, 1000);
+		mg_mgr_poll(&mgr, 1000);
 	}// Event loop
-	mg_mgr_free(&pSrv->mgr);                                // Cleanup
+	mg_mgr_free(&mgr);                                // Cleanup
 	pSrv->m_bStarted = false;
 }
 

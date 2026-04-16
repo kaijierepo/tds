@@ -3,7 +3,9 @@
 #include "scriptFunc.h"
 #include "logger.h"
 #include <iostream>
-
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 #ifdef TDS
 #include "ioSrv.h"
 #endif
@@ -21,19 +23,20 @@ ScriptManager scriptManager;
 
 static wstring utf8_to_utf16(std::string instr) //utf-8-->ansi
 {
-	wstring str;
 #ifdef _WIN32
-	size_t MAX_STRSIZE = instr.length() * 2 + 2;
-	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-	memset(wcharstr, 0, MAX_STRSIZE);
-	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
-	str = wcharstr;
-	delete[] wcharstr;
+	if (instr.empty()) return std::wstring();
+
+	// 获取所需缓冲区大小（包括终止符）
+	int required_size = MultiByteToWideChar(CP_UTF8, 0, instr.c_str(), (int)instr.size(), nullptr, 0);
+	if (required_size <= 0) return std::wstring();
+	std::wstring str(required_size, L'\0');
+	MultiByteToWideChar(CP_UTF8, 0, instr.c_str(), (int)instr.size(), &str[0], required_size);
+	return str;
 
 #else
 
+	return std::wstring();
 #endif
-	return str;
 }
 
 static bool createFolderOfPath(std::string strFile) {

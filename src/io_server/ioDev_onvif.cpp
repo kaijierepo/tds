@@ -10,6 +10,8 @@
 #include "rpcHandler.h"
 #include "secure.h"
 #include "../data_server/tAlmSrv.h"
+#include "mongoose.h"
+
 
 struct PTZPosition {
 	float pan;    // 水平角度

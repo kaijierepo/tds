@@ -3,12 +3,12 @@
 using namespace std;
 
 struct UDP_SESSION {
-	string remoteIP;
+	std::string remoteIP;
 	int remotePort;
-	string localIP;
+	std::string localIP;
 	int localPort;
 	bool multicast;
-	string getRemoteIOAddr();
+	std::string getRemoteIOAddr();
 
 	UDP_SESSION() {
 		multicast = false;
@@ -27,37 +27,37 @@ public:
 	udpServer(void);
 	~udpServer(void);
 
-	size_t onRecvData(unsigned char* recvData, size_t recvDataLen, string strIP, int port);
-	size_t SendData(unsigned char* pData, size_t iLen, string strIP, int port);
+	size_t onRecvData(unsigned char* recvData, size_t recvDataLen, std::string strIP, int port);
+	size_t SendData(unsigned char* pData, size_t iLen, std::string strIP, int port);
 
-	bool run(ICallback_udpSrv* pcb,int localPort = 0, string localIP = "");
-	bool run_multicast(ICallback_udpSrv* pcb, int localPort = 0, string multicastGroup = "", string localIP = "");
+	bool run(ICallback_udpSrv* pcb,int localPort = 0, std::string localIP = "");
+	bool run_multicast(ICallback_udpSrv* pcb, int localPort = 0, std::string multicastGroup = "", std::string localIP = "");
 	void startMulticast();
 	bool start();
 	void stop();
 
-	void startMultiCast(string multiCastAddr, int port);
+	void startMultiCast(std::string multiCastAddr, int port);
 	void multiCast(char* pData, int len);
 
-	void addToMultiCast(string multiCastAddr, int port);
+	void addToMultiCast(std::string multiCastAddr, int port);
 
 	bool m_recvThreadRunning;
 
 	int m_sock;
 	int m_multiCastSendSock;
-	string m_multiCastSendAddr;
+	std::string m_multiCastSendAddr;
 	int m_multiCastSendPort;
-	string m_multicastRecvIP;
+	std::string m_multicastRecvIP;
 	int m_multiCastRecvSock;
-	string m_bindIP;
+	std::string m_bindIP;
 	int m_port;
 	ICallback_udpSrv*  m_pCallback;
-	string m_lastError;
+	std::string m_lastError;
 };
 
 class UdpClt : public udpServer {
 public:
-	string m_remoteIP;
+	std::string m_remoteIP;
 	int m_remotePort;
 
 	size_t sendData(unsigned char* pData, size_t iLen);

@@ -40,6 +40,7 @@ SOFTWARE.
 
 #include "scriptEngine.h"
 #include "./func_module/dumpCatch.h"
+#include "mongoose.h"
 
 #ifdef _WIN32
 #include <shellapi.h>  //for this:  SHELLEXECUTEINFO

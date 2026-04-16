@@ -198,9 +198,9 @@ static std::string gb_to_utf8(std::string instr) {
 	return str;
 }
 
-static wstring utf8_to_utf16(std::string instr) //utf-8-->ansi
+static std::wstring utf8_to_utf16(std::string instr) //utf-8-->ansi
 {
-	wstring str;
+	std::wstring str;
 #ifdef _WIN32
 	size_t MAX_STRSIZE = instr.length() * 2 + 2;
 	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -430,12 +430,12 @@ std::string Clogger::logInternal(std::string info, bool writeToFile)
 
 	setConsoleTextColor(ll);
 
-	cout << logline;
+	std::cout << logline;
 	printf("\r\n");
 
 	if (writeToFile && m_strLogDir!="" && m_bEnable) {
 		//create log path
-		std::lock_guard<mutex> lockGuard(m_lock);
+		std::lock_guard<std::mutex> lockGuard(m_lock);
 	
 		//when debugging ,maybe all log dir is deleted, then wait new log file generate, try create folder each time
 		createFolderOfPath(m_strLogDir);

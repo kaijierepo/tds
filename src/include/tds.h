@@ -618,12 +618,12 @@ public:
 	i_tdsPlugin* shellServer;
 	i_ioServer* ioServer;
 
-	map<std::string,i_tdsPlugin*> plugins;
+	std::map<std::string,i_tdsPlugin*> plugins;
 
 	void* uiWnd;
 	std::string uiWndTitle;
 	std::string m_sTitle;
-	map<std::string, fp_toolRun> tools;
+	std::map<std::string, fp_toolRun> tools;
 };
 
 #ifdef TDSDLL

@@ -3,7 +3,6 @@
 #include <vector>
 #include <mutex>
 #include <memory>
-#include "mongoose.h"
 #include "tds.h"
 
 using namespace std;
@@ -19,16 +18,16 @@ using namespace std;
 namespace tcpServer {
 	TIME str2time(const std::string& s);
 	time_t time2unixstamp(TIME t);
-	int calcTimePassSecond(string sTime);
-	string getNowStr();
+	int calcTimePassSecond(std::string sTime);
+	std::string getNowStr();
 }
 
 struct tcpSession
 {
 	int sock;
-	string remoteIP;
+	std::string remoteIP;
 	int remotePort;
-	string localIP;
+	std::string localIP;
 	int localPort;
 	bool bIsTransmit;
 	size_t iSendSucCount;
@@ -42,7 +41,7 @@ struct tcpSession
 
 	bool bEnable;
 
-	string stLastActive;
+	std::string stLastActive;
 	void* pData1;
 
 	tcpSession()
@@ -89,12 +88,12 @@ typedef void (*fp_statisSend)(int port, size_t len);
 
 class tcpSrv  {
 public:
-	bool run(ICallback_tcpSrv* pUser, int port, string strLocalIP = "");
+	bool run(ICallback_tcpSrv* pUser, int port, std::string strLocalIP = "");
 	void stop();
 
-	void disconnect(string remoteAddr);
+	void disconnect(std::string remoteAddr);
 
-	bool SendData(char* pData, size_t iLen, string remoteIP);
+	bool SendData(char* pData, size_t iLen, std::string remoteIP);
 	bool SendData(char* pData, size_t iLen);
 	ICallback_tcpSrv* m_pCallBackUser;
 
@@ -105,9 +104,8 @@ public:
 	bool m_stop;
 	bool m_bReuseAddr;
 
-	string m_strName;
+	std::string m_strName;
 
-	struct mg_mgr mgr;
 
 	void Log(char* sz);
 	void (*pLog)(char*);
@@ -116,11 +114,11 @@ public:
 	tcpSrv();
 	~tcpSrv();
 	
-	string m_strServerIP;
+	std::string m_strServerIP;
 	int m_iServerPort;
 	int keepAliveTimeout;
 };
 
 extern fp_statisSend g_fp_tcpSrv_statisSend;
-extern string        g_cmdListScockIP;
-extern string        g_cmdListScockPort;
+extern std::string        g_cmdListScockIP;
+extern std::string        g_cmdListScockPort;

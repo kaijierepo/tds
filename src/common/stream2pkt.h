@@ -6,14 +6,14 @@
 using namespace std;
 
 namespace APP_LAYER_PROTO {
-	const string UNKNOWN = "unknown";
-	const string HTTP = "http";
-	const string PROTOCOL_WEBSOCKET = "websocket";
-	const string PROTOCOL_FRAMING_PROTOCOL = "alp_framing_protocol";
-	const string tdsHMR = "tdsHMR";  //tds web hot module replacement
-	const string terminalPrompt = "->";
-	const string textEnd1LF = "textEnd1LF";
-	const string textEnd2LF = "textEnd2LF";
+	const std::string UNKNOWN = "unknown";
+	const std::string HTTP = "http";
+	const std::string PROTOCOL_WEBSOCKET = "websocket";
+	const std::string PROTOCOL_FRAMING_PROTOCOL = "alp_framing_protocol";
+	const std::string tdsHMR = "tdsHMR";  //tds web hot module replacement
+	const std::string terminalPrompt = "->";
+	const std::string textEnd1LF = "textEnd1LF";
+	const std::string textEnd2LF = "textEnd2LF";
 };
 
 typedef size_t(*fp_validPktCheck)(unsigned char* pData, size_t iLen);
@@ -45,7 +45,7 @@ public:
 	void ResizePopPktBuff(size_t iNewSize);
 	void PushStream(unsigned char* pData, size_t iLen);
 	void PushStream(char* pData, size_t iLen);
-	bool PopPkt(string cpt = "");
+	bool PopPkt(std::string cpt = "");
 	//faultTolerant=true,allow error data between data pkt
 	//causes performance loss
 	bool PopPkt(fp_validPktCheck pktCheckFn,bool faultTolerant = true);
@@ -70,12 +70,12 @@ public:
 	unsigned char* pkt;
 	size_t iPktBuffSize;
 	size_t iPktLen;
-	string m_protocolType;
+	std::string m_protocolType;
 
 	size_t iAbandonLen;
-	string abandonData;
+	std::string abandonData;
 	mutex m_cs;
-	map<string, fp_validPktCheck> m_mapProto2PktCheckFn;
+	std::map<std::string, fp_validPktCheck> m_mapProto2PktCheckFn;
 };
 
 

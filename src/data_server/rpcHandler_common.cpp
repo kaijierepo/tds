@@ -11,7 +11,7 @@ namespace stdfs = std::filesystem;
 #endif
 
 RpcHandler_common rpcHandler_common;
-map<std::string, std::string> g_mapConfFile;
+std::map<std::string, std::string> g_mapConfFile;
 
 static std::wstring utf8_to_utf16(const std::string& u8str) {
 	const char* utf8_str = u8str.c_str();

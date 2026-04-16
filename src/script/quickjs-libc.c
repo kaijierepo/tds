@@ -47,6 +47,7 @@
 #include <sys/stat.h>
 
 #if defined(_WIN32)
+#include <winsock2.h>
 #include <windows.h>
 #include <conio.h>
 #include <sys/utime.h>

@@ -8,7 +8,7 @@
 #include "scriptFunc.h"
 
 using json = nlohmann::json;
-using namespace std;
+
 
 extern RPC_SESSION currentSession;
 

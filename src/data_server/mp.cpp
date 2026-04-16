@@ -10,7 +10,7 @@
 #include "ioSrv.h"
 #include "ioChan.h"
 
-
+#include "mongoose.h"
 #include "json.hpp"
 
 inline string getValTypeLabel(string valType)

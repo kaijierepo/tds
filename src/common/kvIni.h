@@ -29,29 +29,29 @@ enum LINE_TYPE
 
 struct KV_INI_LINE {
 	LINE_TYPE type;
-	string note = "";
-	string key = "";
-	string val = "";
+	std::string note = "";
+	std::string key = "";
+	std::string val = "";
 };
 
 struct KV_CONF_ITEM
 {
-	string key;
-	string val;
+	std::string key;
+	std::string val;
 };
 
 
 class KV_INI {
 public:
 	KV_INI() {};
-	bool load(string path);
-	bool save(string path);
-	void setVal(string key, int val);
-	void setVal(string key, string val);
-	int getValInt(string key, int defaultVal);
-	string getValStr(string key, string defaultVal);
-	vector<KV_INI_LINE> mapConf;
-	string m_path;//ini路径
-	string m_strConf;//ini所有内容
+	bool load(std::string path);
+	bool save(std::string path);
+	void setVal(std::string key, int val);
+	void setVal(std::string key, std::string val);
+	int getValInt(std::string key, int defaultVal);
+	std::string getValStr(std::string key, std::string defaultVal);
+	std::vector<KV_INI_LINE> mapConf;
+	std::string m_path;//ini路径
+	std::string m_strConf;//ini所有内容
 };
 

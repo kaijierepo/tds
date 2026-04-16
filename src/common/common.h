@@ -172,9 +172,9 @@ struct FLAG_GUARD {
 };
 
 namespace common {
-	string& getCharCodec();
+	std::string& getCharCodec();
 
-	void setCharCodec(string codec);
+	void setCharCodec(std::string codec);
 
 	const unsigned char auchCRCHi[] =
 	{
@@ -230,63 +230,63 @@ namespace common {
 
 namespace charCodec {
 	//gbk,utf8 <-> unicode
-	string utf16_to_utf8(wstring instr);
-	string utf16_to_gb(wstring instr);
-	wstring utf8_to_utf16(string instr);
-	wstring gb_to_utf16(string instr);
+	std::string utf16_to_utf8(wstring instr);
+	std::string utf16_to_gb(wstring instr);
+	wstring utf8_to_utf16(std::string instr);
+	wstring gb_to_utf16(std::string instr);
 
 	//gbk <-> utf8
-	string utf8_to_gb(string instr);
-	string gb_to_utf8(string instr);
+	std::string utf8_to_gb(std::string instr);
+	std::string gb_to_utf8(std::string instr);
 
-	string utf16Str_to_utf8(string s);
+	std::string utf16Str_to_utf8(std::string s);
 
 	//gbk checks   GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
-	bool hasGB2312(string s);
-	bool isValidGB2312(string s, size_t& errorPos, string& errorChar);
-	bool isValidGB2312(string s);
+	bool hasGB2312(std::string s);
+	bool isValidGB2312(std::string s, size_t& errorPos, std::string& errorChar);
+	bool isValidGB2312(std::string s);
 
 	//tds local codec can  be utf8 or gbk.
-	string utf16_to_tds(wstring instr);
-	wstring tds_to_utf16(string instr);
-	string tds_to_utf8(string instr);
-	string tds_to_gb(string instr);
-	string gb_to_tds(string instr);
-	string utf8_to_tds(string instr);
+	std::string utf16_to_tds(wstring instr);
+	wstring tds_to_utf16(std::string instr);
+	std::string tds_to_utf8(std::string instr);
+	std::string tds_to_gb(std::string instr);
+	std::string gb_to_tds(std::string instr);
+	std::string utf8_to_tds(std::string instr);
 	std::string urlEncode(const std::string& str);
 }
 namespace str {
 	bool isASCII(char* p, int len);
 	bool isGB2312(const std::string& str);
-	bool isUTF8(const string& s);
-	std::string parseEscapeChar(string s);
+	bool isUTF8(const std::string& s);
+	std::string parseEscapeChar(std::string s);
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
-	string removeChar(string str, char c);
-	string trimFloat(string str);
-	string fromFloat(double f);
-	vector<char> toChars(string str);
-	vector<unsigned char> toBytes(string str);
-	string bytesToHexStr(vector<char>& bytes);
-	string bytesToHexStr(vector<unsigned char>& bytes);
+	std::string removeChar(std::string str, char c);
+	std::string trimFloat(std::string str);
+	std::string fromFloat(double f);
+	std::vector<char> toChars(std::string str);
+	std::vector<unsigned char> toBytes(std::string str);
+	std::string bytesToHexStr(std::vector<char>& bytes);
+	std::string bytesToHexStr(std::vector<unsigned char>& bytes);
 	bool isValidHexString(const std::string& str);
-	vector<unsigned char> hexStrToBytes(string hexStr);
-	string bytesToHexStr(char* p, size_t len, string splitter = " ");
-	string bytesToHexStr(unsigned char* p, size_t len, string splitter = " ");
-	string fromInt(int v);
-	string fromInt(long long v);
-	string fromInt(size_t v);
-	string fromBuff(unsigned char* p, size_t len);
-	string fromBuff(const char* p, size_t len);
-	void fromBuff(unsigned char* p, size_t len, string& s);
-	void fromBuff(char* p, size_t len, string& s);
-	int toInt(string s);
-	string encodeAscII(const string& s);
-	bool isInteger(string s);
-	bool isIp(string s);
-	bool parseIpPort(string s, string& ip, int& port);
+	std::vector<unsigned char> hexStrToBytes(std::string hexStr);
+	std::string bytesToHexStr(char* p, size_t len, std::string splitter = " ");
+	std::string bytesToHexStr(unsigned char* p, size_t len, std::string splitter = " ");
+	std::string fromInt(int v);
+	std::string fromInt(long long v);
+	std::string fromInt(size_t v);
+	std::string fromBuff(unsigned char* p, size_t len);
+	std::string fromBuff(const char* p, size_t len);
+	void fromBuff(unsigned char* p, size_t len, std::string& s);
+	void fromBuff(char* p, size_t len, std::string& s);
+	int toInt(std::string s);
+	std::string encodeAscII(const std::string& s);
+	bool isInteger(std::string s);
+	bool isIp(std::string s);
+	bool parseIpPort(std::string s, std::string& ip, int& port);
 	bool In(wchar_t   start, wchar_t   end, wchar_t   code);
 	char  getShenMu(wchar_t n);
-	bool hanZi2Pinyin(string hanZi, string& pinyin,bool upperCase = false);
+	bool hanZi2Pinyin(std::string hanZi, std::string& pinyin,bool upperCase = false);
 
 	int TwoHexStringToInt(const char* str);
 	int HexCharToInt(char c);
@@ -300,98 +300,98 @@ namespace timeopt {
 	void now(TIME& t);
 	void now(TIME* t);
 	void sleepMilli(int milliSec);
-	string toFmt(string time, string fmt);
-	string stTimeToStr(TIME time);
+	std::string toFmt(std::string time, std::string fmt);
+	std::string stTimeToStr(TIME time);
 	time_t SysTime2Unix(TIME sDT);
 	TIME Unix2SysTime(time_t iUnix, int milli=0);
-	TIME str2st(string str);
-	int HMS2Sec(string hms);
-	bool isRelative(string time);
-	unsigned long duration2sec(string strTime);
-	int dhmsSpan2Seconds(string timeSpan);
-	string rel2abs(string time);
-	string st2str(TIME t,bool enableMS=false);
+	TIME str2st(std::string str);
+	int HMS2Sec(std::string hms);
+	bool isRelative(std::string time);
+	unsigned long duration2sec(std::string strTime);
+	int dhmsSpan2Seconds(std::string timeSpan);
+	std::string rel2abs(std::string time);
+	std::string st2str(TIME t,bool enableMS=false);
 
-	string st2strWithMilli(TIME t);
-	string TimeToYMD(const TIME time);
-	string TimeToHMS(const TIME time);
-	string TimeToHMSForFile(const TIME time);
-	time_t calcTimePassSecond(string lastTime);
+	std::string st2strWithMilli(TIME t);
+	std::string TimeToYMD(const TIME time);
+	std::string TimeToHMS(const TIME time);
+	std::string TimeToHMSForFile(const TIME time);
+	time_t calcTimePassSecond(std::string lastTime);
 	time_t CalcTimePassSecond(TIME lastTime);
 	long long CalcTimePassMilliSecond(TIME lastTime);
-	long long calcTimePassMilliSecond(string lastTime);
+	long long calcTimePassMilliSecond(std::string lastTime);
 	long long calcTimePassMilliSecond(TIME lastTime);
 	long long calcTimePassMilliSecond(TIME lastTime,TIME nowTime);
 	time_t CalcTimeDiffSecond(TIME newTime, TIME oldTime);
 	time_t getTick();
 	void setAsTimeOrg(TIME& st);
 	bool isValidTime(TIME& st);
-	string nowStr(bool enableMS = false);
-	string nowStrIso();
-	string nowStrForFile(bool enableMS = false);
+	std::string nowStr(bool enableMS = false);
+	std::string nowStrIso();
+	std::string nowStrForFile(bool enableMS = false);
 	TIME addTime(TIME base, int h, int m, int s);
-	bool isValidTimeStr(string time);
+	bool isValidTimeStr(std::string time);
 }
 
 
 namespace TAG {
-	bool hasTag(json& tree, string tag);
+	bool hasTag(json& tree, std::string tag);
 	json mapTree2List(json mapTree);
 }
 
 
 namespace sys {
 	struct COM_INFO {
-		string portNum;
-		string desc;
+		std::string portNum;
+		std::string desc;
 	};
-	vector<COM_INFO> getCOMInfoList();
-	string getLastError(string szReason = "");
+	std::vector<COM_INFO> getCOMInfoList();
+	std::string getLastError(std::string szReason = "");
 	unsigned long getThreadId();
 }
 
 
 namespace fs {
-	string normalizationPath(string& s);
+	std::string normalizationPath(std::string& s);
 	//带后缀 .XXX 作为文件路径
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
-	bool createFolderOfPath(string strFile);
-	string appName();
-	string appPath();
-	string toAbsolutePath(string path, string currentPath);
-	string toAbsolutePath(string str);
-	string getExt(string strFilePath);
-	bool readFile(string path, char*& pData, int& len);
-	bool readFile(string path, unsigned char*& pData, int& len);
-	bool readFile(string path, string& data);
-	bool writeFile(string path, unsigned char* data, size_t len);
-	bool writeFile(string path, char* data, size_t len);
-	bool appendFile(string path, char* data, size_t len);
-	bool appendFile(string path, string data);
-	bool writeFile(string path, string& data);
+	bool createFolderOfPath(std::string strFile);
+	std::string appName();
+	std::string appPath();
+	std::string toAbsolutePath(std::string path, std::string currentPath);
+	std::string toAbsolutePath(std::string str);
+	std::string getExt(std::string strFilePath);
+	bool readFile(std::string path, char*& pData, int& len);
+	bool readFile(std::string path, unsigned char*& pData, int& len);
+	bool readFile(std::string path, std::string& data);
+	bool writeFile(std::string path, unsigned char* data, size_t len);
+	bool writeFile(std::string path, char* data, size_t len);
+	bool appendFile(std::string path, char* data, size_t len);
+	bool appendFile(std::string path, std::string data);
+	bool writeFile(std::string path, std::string& data);
 	bool copyFile(const std::string& src, const std::string& dest);
-	bool fileExist(string pszFileName);
-	bool deleteFile(string path);
-	bool deleteFolder(string path);
+	bool fileExist(std::string pszFileName);
+	bool deleteFile(std::string path);
+	bool deleteFolder(std::string path);
 	float getFolderSizeMB(const std::string& path);
 	float getFreeDiskSizeGB(const std::string& path);
 	struct FILE_INFO {
-		string modifyTime;
-		string createTime;
+		std::string modifyTime;
+		std::string createTime;
 		size_t len;
-		string accessTime;
-		string name;
-		string path;
-		string folderPath;
+		std::string accessTime;
+		std::string name;
+		std::string path;
+		std::string folderPath;
 	};
 
-	void getFolderList(vector<FILE_INFO>& list, string strFolder,bool recursive = false);
-	void getFileList(vector<FILE_INFO>& list, string strFolder, bool recursive = false,string suffix="*",vector<string>* exclude = nullptr);
-	void getFileList(vector<string>& list, string strFolder, bool includeFolder = false, bool recursive = false);
+	void getFolderList(std::vector<FILE_INFO>& list, std::string strFolder,bool recursive = false);
+	void getFileList(std::vector<FILE_INFO>& list, std::string strFolder, bool recursive = false,std::string suffix="*",std::vector<std::string>* exclude = nullptr);
+	void getFileList(std::vector<std::string>& list, std::string strFolder, bool includeFolder = false, bool recursive = false);
 }
 
 namespace common {
-	string uuid();
+	std::string uuid();
 	double randomFloat(double min, double max);
 	int randomInt(int min, int max);
 }
@@ -402,8 +402,8 @@ namespace buffer {
 	unsigned char setBit(unsigned char byte, int bitIdx, bool val);
 }
 
-void setThreadName2(string name);
-void setThreadName(string name);
+void setThreadName2(std::string name);
+void setThreadName(std::string name);
 
 #define _GB(s) charCodec::utf8_to_gb(s).c_str()
 
@@ -432,20 +432,20 @@ __TIME__ 程序被编译的时间, 以"hh:mm:ss"格式的字符串标注, 该时
 
 #define DATE_AS_INT (((YEAR - 2000) * 12 + MONTH) * 31 + DAY)
 
-inline string getbuildtime()
+inline std::string getbuildtime()
 {
 	return str::format("%d-%02d-%02d %s", YEAR, MONTH + 1, DAY, __TIME__);
 }
 
-inline string getbuildtimeShort()
+inline std::string getbuildtimeShort()
 {
 	int year = YEAR - 2000;
-	string t = __TIME__;
+	std::string t = __TIME__;
 	t = str::replace(t,":","");
 	return str::format("%02d%02d%02d-%s", year, MONTH + 1, DAY, t.c_str());
 }
 
-inline string getbuilddate()
+inline std::string getbuilddate()
 {
 	return str::format("%d-%02d-%02d", YEAR, MONTH + 1, DAY);
 }

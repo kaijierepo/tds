@@ -40,7 +40,7 @@ SOFTWARE.
 #include <string>
 #include <functional>
 #include <thread>
-using namespace std;
+
 
 class TDB;
 /*
@@ -226,11 +226,11 @@ struct DB_TIME_RANGE {
 };
 
 namespace DB_STR {
-	wstring utf8_to_utf16(std::string instr);
-	std::string utf16_to_utf8(wstring instr);
+	std::wstring utf8_to_utf16(std::string instr);
+	std::string utf16_to_utf8(std::wstring instr);
 	std::string gb_to_utf8(std::string instr);
 	std::string utf8_to_gb(std::string instr);
-	wstring gb_to_utf16(std::string instr);
+	std::wstring gb_to_utf16(std::string instr);
 }
 
 namespace DB_FS {
@@ -575,7 +575,7 @@ struct DE_yyjson {
 	std::string fmtTime; 
 	
 	yyjson_mut_val* de;   
-	map<std::string, yyjson_mut_val*> items; //custom de,when val is not used; only one level json structrue is supported. key store json key,val stores val after aggregate
+	std::map<std::string, yyjson_mut_val*> items; //custom de,when val is not used; only one level json structrue is supported. key store json key,val stores val after aggregate
 
 	DE_yyjson() {
 		val = 0;
@@ -610,10 +610,10 @@ public:
 	std::string colKey;
 
 
-	map<std::string, std::vector<std::string>> aggregate; //key is the json key to aggregate，val is aggregate mode (max,min,diff ...)
+	std::map<std::string, std::vector<std::string>> aggregate; //key is the json key to aggregate，val is aggregate mode (max,min,diff ...)
 	
 	//grouped data before aggregate key is time stamp ,val is de std::vector
-	map<std::string, std::vector<yyjson_val*>> m_origDeGrouped;
+	std::map<std::string, std::vector<yyjson_val*>> m_origDeGrouped;
 	//ungrouped data before aggregate or without aggr option or no de mutation
 	std::vector<yyjson_val*> m_orgDe;
 
@@ -621,7 +621,7 @@ public:
 	std::vector<DE_yyjson*> m_afterAggr;
 
 	//   saved custom groupby columns
-	map<std::string, map<std::string, std::string>> customGroupValues;
+	std::map<std::string, std::map<std::string, std::string>> customGroupValues;
 	DATA_SET() {
 
 	}
@@ -714,12 +714,12 @@ struct DE_SELECTOR {
 	bool groupByTime; //time in selected de is set a time group key such as "2023-09-01 11" when groupby "hour"
 	bool groupByTag;  
 	std::vector<std::string> customGroupBy;  // 自定义分组字段，如 ["acqType"]
-	map<std::string, std::string> customGroupAlias; // 自定义分组字段别名
+	std::map<std::string, std::string> customGroupAlias; // 自定义分组字段别名
 
 	bool bAggr; 
-	map<std::string,std::vector<std::string>> aggregate; //global aggr option. key is the json key to aggr, val is aggr type
-	std::vector<map<std::string, std::vector<std::string>>> vecAggregate; //specified each tag in its own aggregate type
-	map<std::string, std::vector<DB_TIME_RANGE>> mapTimeSlots;  //named time slots,used in "increase" aggr mode
+	std::map<std::string,std::vector<std::string>> aggregate; //global aggr option. key is the json key to aggr, val is aggr type
+	std::vector<std::map<std::string, std::vector<std::string>>> vecAggregate; //specified each tag in its own aggregate type
+	std::map<std::string, std::vector<DB_TIME_RANGE>> mapTimeSlots;  //named time slots,used in "increase" aggr mode
 	bool tagAsColume; //return data set as a table.each tag as a columne
 
 	//use function to calc the selected dataset
@@ -805,10 +805,10 @@ struct SELECT_RLT {
 	size_t rowCount;
 	size_t deCount;
 	size_t fileCount;
-	map<SORT_FLAG, yyjson_mut_val*> rltDataSet; //single result data set
-	map<std::string, map<SORT_FLAG, yyjson_mut_val*>> rltDataSetList; //db.select uses splitBy
+	std::map<SORT_FLAG, yyjson_mut_val*> rltDataSet; //single result data set
+	std::map<std::string, std::map<SORT_FLAG, yyjson_mut_val*>> rltDataSetList; //db.select uses splitBy
 	std::vector<yyjson_mut_val*> rltDataSetVec;  //single result data set ,do not need order
-	map<std::string, std::vector<yyjson_mut_val*>> rltDataSetVecList; //db.select uses splitBy
+	std::map<std::string, std::vector<yyjson_mut_val*>> rltDataSetVecList; //db.select uses splitBy
 	yyjson_mut_doc* rlt_mut_doc;
 	std::string error;
 	std::string info;
@@ -1005,14 +1005,14 @@ public:
 	bool Delete(std::string tag, DB_TIME stTime);
 
 	TDB* getChildDB(std::string dbName);
-	map<std::string, TDB*> m_childDB;
+	std::map<std::string, TDB*> m_childDB;
 //private func
 public:
 	// convert old datalist file to new format
 	yyjson_mut_doc* convertJsonFormat(yyjson_doc* original_doc);
 
 	//param parse
-	map<std::string, std::vector<std::string>> getAggrOpt(yyjson_val* jAggr);
+	std::map<std::string, std::vector<std::string>> getAggrOpt(yyjson_val* jAggr);
 	bool parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector, std::string& err);
 	bool parseDESelector(const std::string& sParams, DE_SELECTOR& deSelector, std::string& err);
 	int dhmsSpan2Seconds(std::string timeSpan);
@@ -1026,13 +1026,13 @@ public:
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, std::vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, std::vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool saveDeToDataListFile(std::string dataListPath, yyjson_mut_val* yymDe);
-	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, std::vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt,SELECT_RLT& result, yyjson_mut_doc* mut_doc);
-	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, std::vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, std::vector<DATA_SET*>& set_list, std::map<SORT_FLAG, yyjson_mut_val*>& mapRlt,SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, std::vector<DATA_SET*>& set_list, std::map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, std::vector<DATA_SET*>& set_list, std::vector<yyjson_mut_val*>& vecRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, std::vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<std::string, std::vector<std::string>> aggrKeyType, std::string groupKey,std::vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
 	//double doAggrOneGroup_increase(DE_SELECTOR& deSel, std::string& aggrKey, std::vector<yyjson_val*>& deGroup);
-	map<std::string, double> doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, std::string& aggrKey, std::string groupKey, std::vector<yyjson_val*>& deGroup);
+	std::map<std::string, double> doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, std::string& aggrKey, std::string groupKey, std::vector<yyjson_val*>& deGroup);
 	double doAggrOneGroup_sum(DE_SELECTOR& deSel, std::string& aggrKey, std::vector<yyjson_val*>& deGroup);
 	void doAggrOneGroup_duration(DE_SELECTOR& deSel, std::string& aggrKey, std::vector<yyjson_val*>& deGroup, yyjson_mut_val*& pAggrRlt, yyjson_mut_doc* yydoc);
 	double doAggrOneGroup_diff(DE_SELECTOR& deSel, std::string& aggrKey, std::vector<yyjson_val*>& deGroup);
