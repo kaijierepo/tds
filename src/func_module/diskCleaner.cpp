@@ -220,7 +220,7 @@ Date parseFolderDate(const std::string& folderName) {
 
 Date parseFolderDate2(const std::string& folderName) {
     int year = std::stoi(folderName.substr(0, 4));
-    int month = std::stoi(folderName.substr(5, 2));
+    int month = std::stoi(folderName.substr(6, 2));//2024-01-15 -> 01
 
     if (month < 1 || month > 12) {
         throw std::invalid_argument("Invalid month value");
@@ -398,7 +398,7 @@ void cleanThread() {
             LOG("Cleanup error: %s", e.what());
         }
 
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        std::this_thread::sleep_for(std::chrono::seconds(3600));
     }
 }
 
