@@ -212,7 +212,7 @@ rsa_verify_result_t rsa2048_verify_hash_base64(const rsa2048_public_key_t *key,
     }
     
     // 解码Base64签名
-    uint8_t signature[RSA2048_KEY_BYTES];
+    uint8_t signature[RSA2048_KEY_BYTES+1];
     size_t signature_len = base64_decode_to_buffer(signature_base64, signature, sizeof(signature));
     
     if (signature_len == 0) {
@@ -548,7 +548,9 @@ static rsa_verify_result_t parse_pem_public_key_pkcs8(const char* pem_string,
         }
     }
 
-    if (n_len <= 0 || n_len > RSA2048_KEY_BYTES || (size_t)n_len > der_len - pos) {
+    // RSA2048密钥：模数应为256字节，但DER编码可能为257字节
+    if (n_len < RSA2048_KEY_BYTES - 1 || n_len > RSA2048_KEY_BYTES + 1) {
+        // 允许255-257字节的容差
         return RSA_VERIFY_INVALID_LENGTH;
     }
 
@@ -559,6 +561,12 @@ static rsa_verify_result_t parse_pem_public_key_pkcs8(const char* pem_string,
     }
 
     size_t actual_n_len = n_len - n_start;
+
+    // 移除前导零后的实际长度应该是256字节
+    if (actual_n_len != RSA2048_KEY_BYTES) {
+        return RSA_VERIFY_INVALID_LENGTH;
+    }
+
     if (actual_n_len == 0) {
         actual_n_len = 1;  // 模数至少1字节
         modulus[0] = 0x00;
@@ -655,73 +663,63 @@ static bool validate_public_key(const rsa2048_public_key_t *key)
     return true;
 }
 
-/**
- * @brief RSA-PKCS#1 v1.5 签名验证核心函数
- */
-static rsa_verify_result_t rsa_pkcs1_verify(const rsa2048_public_key_t *key,
-                                          const uint8_t *hash,
-                                          const uint8_t *signature, size_t signature_len)
+
+
+static rsa_verify_result_t rsa_pkcs1_verify(const rsa2048_public_key_t* key,
+    const uint8_t* hash,
+    const uint8_t* signature, size_t signature_len)
 {
     if (!key || !hash || !signature) {
         return RSA_VERIFY_INVALID_DATA;
     }
-    
+
     if (signature_len != RSA2048_KEY_BYTES) {
         return RSA_VERIFY_INVALID_SIGNATURE;
     }
-    
-    // 将密钥转换为rsa_pk_t结构
+
     rsa_pk_t rsa_key;
     memset(&rsa_key, 0, sizeof(rsa_pk_t));
-    
     rsa_key.bits = key->bits;
     memcpy(rsa_key.modulus, key->modulus, RSA2048_KEY_BYTES);
     memcpy(rsa_key.exponent, key->exponent, RSA2048_KEY_BYTES);
-    
-    // 使用提供的RSA库进行公钥解密
+
     uint8_t decrypted[RSA2048_KEY_BYTES];
     uint32_t decrypted_len = 0;
-    
-    int result = rsa_public_decrypt(decrypted, &decrypted_len, 
-                                   (uint8_t *)signature, signature_len, 
-                                   &rsa_key);
-    
+
+    int result = rsa_public_decrypt(decrypted, &decrypted_len,
+        (uint8_t*)signature, signature_len,
+        &rsa_key);
+
     if (result != 0) {
         return RSA_VERIFY_FAILED;
     }
-    
-    // 检查PKCS#1 v1.5填充格式
-    if (decrypted_len < 2 + SHA256_DIGEST_SIZE + 8) {  // 最小填充长度
+
+    printf("解密长度: %u\n", decrypted_len);
+
+    // 只处理51字节的情况
+    if (decrypted_len != 51) {
+        printf("错误: 期望51字节，实际%u字节\n", decrypted_len);
         return RSA_VERIFY_FAILED;
     }
-    
-    // 检查填充头
-    if (decrypted[0] != 0x00 || decrypted[1] != 0x01) {
+
+    // 直接检查ASN.1格式
+    // 字节0-18应该是固定的ASN.1前缀
+    static const uint8_t SHA256_ASN1_PREFIX[] = {
+        0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
+        0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20
+    };
+
+    if (memcmp(decrypted, SHA256_ASN1_PREFIX, 19) != 0) {
+        printf("ASN.1前缀不匹配\n");
         return RSA_VERIFY_FAILED;
     }
-    
-    // 查找分隔符0x00
-    size_t i = 2;
-    while (i < decrypted_len && decrypted[i] == 0xFF) {
-        i++;
-    }
-    
-    if (i >= decrypted_len || decrypted[i] != 0x00) {
+
+    // 比较哈希值（在字节19-50位置）
+    if (memcmp(decrypted + 19, hash, SHA256_DIGEST_SIZE) != 0) {
+        printf("哈希值不匹配\n");
         return RSA_VERIFY_FAILED;
     }
-    
-    i++;  // 跳过0x00
-    
-    // 检查剩余长度是否足够
-    if (decrypted_len - i < SHA256_DIGEST_SIZE) {
-        return RSA_VERIFY_FAILED;
-    }
-    
-    // 比较哈希值
-    if (memcmp(&decrypted[i], hash, SHA256_DIGEST_SIZE) != 0) {
-        return RSA_VERIFY_FAILED;
-    }
-    
+
     return RSA_VERIFY_SUCCESS;
 }
 

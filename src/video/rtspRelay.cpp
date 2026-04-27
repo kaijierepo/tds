@@ -421,8 +421,8 @@ bool RTSPRelay::Connection::connect(const std::string& host, int port, int timeo
 
     // 禁用 Nagle 算法，确保请求立即发送
     int nodelay = 1;
-    setsockopt(static_cast<SOCKET_TYPE>(sockfd_), IPPROTO_TCP, TCP_NODELAY,
-        reinterpret_cast<char*>(&nodelay), sizeof(nodelay));
+    //setsockopt(static_cast<SOCKET_TYPE>(sockfd_), IPPROTO_TCP, TCP_NODELAY,
+    //    reinterpret_cast<char*>(&nodelay), sizeof(nodelay));
 
     host_ = host;
     port_ = port;
