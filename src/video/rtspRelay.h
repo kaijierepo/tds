@@ -13,6 +13,34 @@
 #include <chrono>
 #include <cstdint>
 
+// RTP包结构
+// NAL header (1 byte) format: F(1) | NRI(2) | Type(5)
+// - F: forbidden_zero_bit
+// - NRI (bits 6-5): nal_ref_idc (importance / priority)
+// - Type (bits 4-0): nal_unit_type
+// Helper macros to extract fields from NAL header byte
+#define NAL_HDR_F(_h) (((_h) >> 7) & 0x01)
+#define NAL_HDR_NRI(_h) (((_h) & 0x60) >> 5)
+#define NAL_HDR_TYPE(_h) ((_h) & 0x1F)
+
+    // Common NAL unit type constants
+#define NAL_TYPE_NON_IDR          1
+#define NAL_TYPE_IDR              5
+#define NAL_TYPE_SEI              6
+#define NAL_TYPE_SPS              7
+#define NAL_TYPE_PPS              8
+#define NAL_TYPE_AUD              9
+#define NAL_TYPE_END_OF_SEQUENCE  10
+#define NAL_TYPE_END_OF_STREAM    11
+#define NAL_TYPE_FILLER_DATA      12
+#define NAL_TYPE_PREFIX_NALU      14
+#define NAL_TYPE_SUBSET_SPS       15
+#define NAL_TYPE_SLICE_EXTENSION  19
+#define NAL_TYPE_SLICE_EXT_3D     20
+#define NAL_TYPE_SLICE_EXT_DEPTH  21
+#define NAL_TYPE_STAP_A           24
+#define NAL_TYPE_FU_A             28
+
 class RTSPRelay {
 public:
     enum State {
@@ -27,6 +55,7 @@ public:
 
     // 传输模式枚举
     enum class TransportMode {
+        NONE,   // 
         UDP,    // UDP传输
         TCP     // RTP over RTSP (TCP)
     };
@@ -44,6 +73,8 @@ public:
         int rtp_timeout = 5000;      // RTP超时(ms)
         int buffer_size = 65536;     // 缓冲区大小
         bool verbose = false;        // 详细日志
+        bool record = false;         // 是否录制视频
+        std::string recordPath = "";   //录像路径   
         
         // 拉流（从源获取）传输模式
         TransportMode pull_mode = TransportMode::UDP;
@@ -145,7 +176,6 @@ private:
         static RTSPMessage parse(const std::string& data);
     };
 
-    // RTP包结构
     struct RTPPacket {
         uint8_t version = 2;
         bool padding = false;
@@ -259,7 +289,7 @@ private:
     std::condition_variable cv_;
 
     // 数据队列
-    std::queue<RTPPacket> packet_queue_;
+    std::vector<RTPPacket*> packet_queue_;
     size_t max_queue_size_ = 1000;
 
     // 统计
@@ -280,7 +310,7 @@ private:
 
     // 工作线程
     void workerThread();
-    void rtpThread();
+    void doRtpRecv();
     void controlThread();
     void statsThread();
 
@@ -309,6 +339,7 @@ private:
     bool parseSDP(const std::string& sdp, StreamInfo& video_info, StreamInfo& audio_info);
     std::string generateSDP(const StreamInfo& video_info, const StreamInfo& audio_info);
     void forwardRTPPacket(const RTPPacket& packet);
+    void recordRTPPacket(RTPPacket* pPkt);
     std::string extractSessionID(const std::string& response);
     std::string extractTransport(const std::string& response);
 

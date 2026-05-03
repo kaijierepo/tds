@@ -45,6 +45,7 @@ public:
         WSADATA wsaData;
         WSAStartup(MAKEWORD(2, 2), &wsaData);
     }
+
     ~WinsockInitializer() {
         WSACleanup();
     }
@@ -1099,6 +1100,8 @@ bool RTSPRelay::rtspSetup(Connection& conn, const std::string& url,
     }
     }
 
+    request << "\r\n";
+
     const std::string req = request.str();
     // 打印完整请求内容，便于调试
     std::string req_for_log = req;
@@ -1466,7 +1469,6 @@ void RTSPRelay::workerThread() {
     logInfo("Worker thread started");
 
     while (running_ && !stopping_) {
-        try {
             if (!connectToSource()) {
                 streaming_ = false;
                 cv_.notify_all();
@@ -1502,75 +1504,9 @@ void RTSPRelay::workerThread() {
             }
             streaming_ = true;
 
-            rtp_thread_ = std::thread(&RTSPRelay::rtpThread, this);
-            control_thread_ = std::thread(&RTSPRelay::controlThread, this);
-
-            setState(State::PLAYING, "Streaming started");
-
-            // 等待结束
-            while (running_ && !stopping_) {
-                {
-                    std::unique_lock<std::mutex> lock(state_mutex_);
-                    cv_.wait_for(lock, std::chrono::seconds(1));
-
-                    if (state_ == State::S_ERROR) {
-                        break;
-                    }
-                }
-
-                // 检查RTP超时
-                auto now = std::chrono::steady_clock::now();
-                std::chrono::steady_clock::time_point last_frame_time;
-                {
-                    std::lock_guard<std::mutex> lock(stats_mutex_);
-                    last_frame_time = stats_.last_frame_time;
-                }
-
-                if (now - last_frame_time > std::chrono::milliseconds(config_.rtp_timeout)) {
-                    logError("RTP timeout detected");
-                    setError("RTP timeout", 1001);
-                    break;
-                }
-            }
-
-            streaming_ = false;
-            cv_.notify_all();
-
-            if (rtp_thread_.joinable()) {
-                rtp_thread_.join();
-            }
-
-            if (control_thread_.joinable()) {
-                control_thread_.join();
-            }
-
-            teardown();
-
-        }
-        catch (const std::exception& e) {
-            setError(std::string("Worker thread exception: ") + e.what(), 1000);
-        }
-
-        // 确保在重连尝试前停止会话线程并清理
-        streaming_ = false;
-        cv_.notify_all();
-
-        if (rtp_thread_.joinable()) {
-            rtp_thread_.join();
-        }
-
-        if (control_thread_.joinable()) {
-            control_thread_.join();
-        }
-
-        teardown();
-
-        if (running_ && !stopping_ && shouldReconnect()) {
-            doReconnect();
-        }
+            RTSPRelay::doRtpRecv();
+            //control_thread_ = std::thread(&RTSPRelay::controlThread, this);
     }
-
-    logInfo("Worker thread stopped");
 }
 
 bool RTSPRelay::connectToSource() {
@@ -1680,6 +1616,8 @@ bool RTSPRelay::setupStreams() {
     }
 
     // Play成功后表示拉流成功，下面开始推流
+    if (config_.push_mode == TransportMode::NONE)
+        return true;
 
     // 连接到目标服务器
     URLComponents target_url;
@@ -1787,7 +1725,8 @@ bool RTSPRelay::setupStreams() {
     return true;
 }
 
-void RTSPRelay::rtpThread() {
+void RTSPRelay::doRtpRecv() {
+    setState(State::PLAYING, "Streaming started");
     bool pullUDP = (config_.pull_mode == TransportMode::UDP);
     
     if (pullUDP) {
@@ -1816,7 +1755,7 @@ void RTSPRelay::rtpThread() {
         int received = 0;
         
         if (pullUDP) {
-            // UDP拉流
+            // UDP拉流 最多阻塞1秒 configureUDPSocket 中设置了1秒超时
             received = receiveUDPData(buffer.data(), buffer.size(), src_ip, src_port);
         }
         else {
@@ -1878,10 +1817,18 @@ void RTSPRelay::rtpThread() {
             }
 
             // 解析RTP包
-            RTPPacket packet;
+            RTPPacket* pPkt = new RTPPacket();
+            RTPPacket& packet = *pPkt;
             if (packet.parse(buffer.data(), received)) {
                 // 转发到目标
-                forwardRTPPacket(packet);
+                if (config_.push_mode != TransportMode::NONE) {
+                    forwardRTPPacket(packet);
+                }
+
+                // 录制到磁盘
+                if (config_.record) {
+					recordRTPPacket(pPkt);
+                }
 
                 // 调用回调
                 if (frame_callback_) {
@@ -1896,6 +1843,21 @@ void RTSPRelay::rtpThread() {
         }
         else if (received < 0 && pullUDP) {
             // 超时或其他错误（UDP模式）
+        }
+        else {
+            // 检查RTP超时
+            auto now = std::chrono::steady_clock::now();
+            std::chrono::steady_clock::time_point last_frame_time;
+            {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                last_frame_time = stats_.last_frame_time;
+            }
+
+            if (now - last_frame_time > std::chrono::milliseconds(config_.rtp_timeout)) {
+                logError("RTP timeout detected");
+                setError("RTP timeout", 1001);
+                break;
+            }
         }
     }
 
@@ -2001,43 +1963,88 @@ void RTSPRelay::teardown() {
 // ============================================================================
 
 bool RTSPRelay::createUDPPullSocket() {
-    // 创建UDP拉流socket（接收源服务器的RTP数据）
-    udp_pull_socket_ = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
-    if (udp_pull_socket_ == kInvalidSocket) {
-        logError("Failed to create UDP pull socket");
-        return false;
+    // 我们需要为 RTP 和 RTCP 创建一对连续的端口以便向服务器声明 "client_port=RTP-RTCP"
+    // 尝试多次分配以找到一对可用的连续端口
+    const int max_attempts = 10;
+
+    for (int attempt = 0; attempt < max_attempts; ++attempt) {
+        // 创建RTP socket并绑定到系统分配的端口（0）
+        SocketHandle rtp_sock = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
+        if (rtp_sock == kInvalidSocket) {
+            logError("Failed to create UDP pull socket (rtp)");
+            return false;
+        }
+
+        if (!configureUDPSocket(rtp_sock, false)) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        struct sockaddr_in local_addr;
+        memset(&local_addr, 0, sizeof(local_addr));
+        local_addr.sin_family = AF_INET;
+        local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        local_addr.sin_port = htons(0); // 让系统分配端口
+
+        if (::bind(static_cast<SOCKET_TYPE>(rtp_sock), (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        // 获取分配的端口
+        socklen_t len = sizeof(local_addr);
+        if (getsockname(static_cast<SOCKET_TYPE>(rtp_sock), (struct sockaddr*)&local_addr, &len) != 0) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        int rtp_port = ntohs(local_addr.sin_port);
+        int rtcp_port = rtp_port + 1;
+
+        // 创建RTCP socket并绑定到 rtp_port + 1
+        SocketHandle rtcp_sock = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
+        if (rtcp_sock == kInvalidSocket) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        if (!configureUDPSocket(rtcp_sock, false)) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
+            continue;
+        }
+
+        struct sockaddr_in rtcp_addr;
+        memset(&rtcp_addr, 0, sizeof(rtcp_addr));
+        rtcp_addr.sin_family = AF_INET;
+        rtcp_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        rtcp_addr.sin_port = htons(rtcp_port);
+
+        if (::bind(static_cast<SOCKET_TYPE>(rtcp_sock), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) == 0) {
+            // 成功获取到一对连续端口
+            udp_pull_socket_ = rtp_sock;
+            rtcp_socket_ = rtcp_sock;
+            local_rtp_port_ = rtp_port;
+            local_rtcp_port_ = rtcp_port;
+
+            logInfo("UDP pull sockets created: rtp_fd=" + std::to_string(udp_pull_socket_) +
+                    " rtp_port=" + std::to_string(local_rtp_port_) +
+                    " rtcp_fd=" + std::to_string(rtcp_socket_) +
+                    " rtcp_port=" + std::to_string(local_rtcp_port_));
+            return true;
+        }
+
+        // 如果绑定失败，释放并重试（可能下一个端口被占用）
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
     }
 
-    // 配置拉流socket
-    if (!configureUDPSocket(udp_pull_socket_, false)) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_pull_socket_));
-        udp_pull_socket_ = kInvalidSocket;
-        return false;
-    }
-
-    // 绑定到指定端口
-    struct sockaddr_in local_addr;
-    memset(&local_addr, 0, sizeof(local_addr));
-    local_addr.sin_family = AF_INET;
-    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    local_addr.sin_port = htons(0);  // 系统自动分配端口
-
-    if (::bind(static_cast<SOCKET_TYPE>(udp_pull_socket_), (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
-        logError("Failed to bind UDP pull socket");
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_pull_socket_));
-        udp_pull_socket_ = kInvalidSocket;
-        return false;
-    }
-
-    // 获取分配的端口
-    socklen_t len = sizeof(local_addr);
-    getsockname(static_cast<SOCKET_TYPE>(udp_pull_socket_), (struct sockaddr*)&local_addr, &len);
-    local_rtp_port_ = ntohs(local_addr.sin_port);
-    local_rtcp_port_ = local_rtp_port_ + 1;
-
-    logInfo("UDP pull socket created: fd=" + std::to_string(udp_pull_socket_) + 
-            " port=" + std::to_string(local_rtp_port_));
-    return true;
+    logError("Failed to create consecutive UDP pull sockets for RTP/RTCP");
+    udp_pull_socket_ = kInvalidSocket;
+    rtcp_socket_ = kInvalidSocket;
+    local_rtp_port_ = 0;
+    local_rtcp_port_ = 0;
+    return false;
 }
 
 bool RTSPRelay::createUDPPushSocket() {
@@ -2436,6 +2443,22 @@ void RTSPRelay::forwardRTPPacket(const RTPPacket & packet) {
 }
 
 bool RTSPRelay::RTPPacket::parse(const uint8_t * data, size_t size) {
+    // RTP 数据包格式（简要）：
+    // 0               1               2               3
+    // 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // |                           timestamp                           |
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // |           synchronization source (SSRC) identifier            |
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // |            contributing source (CSRC) identifiers             |
+    // |                             ....                              |
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // 后面可能有 extension header，之后是 RTP 负载（payload）
+    // 本函数按 RFC 3550 解析基础 RTP 头并将 payload 提取出来。
+
     if (size < 12) return false;
 
     version = (data[0] >> 6) & 0x03;
@@ -2608,6 +2631,7 @@ void RTSPRelay::logVerbose(const std::string & msg) const {
  * @param config 配置结构体（包含source_url，输出source_username/source_password）
  * @return 解析成功返回true，失败返回false
  */
+
 bool RTSPRelay::extractRtspAuthInfo(RTSPRelay::Config& config) {
     // 正则表达式匹配RTSP URL格式：rtsp://[user:pass@]host[:port]/path
     // 分组说明：
@@ -2628,4 +2652,206 @@ bool RTSPRelay::extractRtspAuthInfo(RTSPRelay::Config& config) {
     config.source_username = "";
     config.source_password = "";
     return false;
+}
+
+
+/*
+ * H.264 NAL Unit Header (1 byte, non-FU-A mode)
+ * ==============================================
+ *
+ *  7 6 5 4 3 2 1 0  (bit index)
+ * +-+-+-+-+-+-+-+-+
+ * |F|NRI |  Type  |
+ * +-+-+-+-+-+-+-+-+
+ *
+ * F (bit 7)     : forbidden_zero_bit, should be 0
+ * NRI (bits 6-5): nal_ref_idc, importance/priority level
+ *                 00 = not used for reconstruction (discardable)
+ *                 01 = used for ref (low priority)
+ *                 10 = used for ref (medium priority)
+ *                 11 = used for ref (high priority / key data like SPS/PPS/IDR)
+ * Type (bits 4-0): nal_unit_type
+ *                  1  = non-IDR slice
+ *                  5  = IDR slice
+ *                  6  = SEI
+ *                  7  = SPS (Sequence Parameter Set)
+ *                  8  = PPS (Picture Parameter Set)
+ *                  9  = Access Unit delimiter
+ *                  10 = End of sequence
+ *                  11 = End of stream
+ *                  12 = Filler data
+ *                  14 = Prefix NALU (SVAC)
+ *                  15 = Subset SPS (SVAC)
+ *                  19 = Slice extension
+ *                  20 = Slice extension for 3D
+ *                  21 = Slice extension depth
+ *                  22 = Reserved
+ *                  23 = Reserved
+ *                  24+ = Unspecified
+ *                  28 = FU-A (Fragmentation Unit Type A) — NOT this format
+ */
+
+ /*
+  * NAL unit 类型取值说明（逐项中文说明，便于代码阅读）
+  * -----------------------------------------------------
+  * 0   : 未指定
+  * 1   : 非IDR切片（P/B 片），普通帧的切片数据，非关键帧
+  * 2-4 : 切片分区（Partition A/B/C），非常见，一般忽略
+  * 5   : IDR 切片（关键帧），解码器可从此帧起开始正确解码
+  * 6   : SEI（补充增强信息），包含时间、字幕等元数据，不属于图像数据
+  * 7   : SPS（序列参数集），包含编码参数（profile/level/分辨率），解码前必须有
+  * 8   : PPS（图像参数集），与 SPS 配合使用以初始化解码器
+  * 9   : AUD（访问单元分隔符），可选，用于标记帧边界
+  * 10  : 序列结束
+  * 11  : 码流结束
+  * 12  : 填充数据
+  * 13  : 保留
+  * 14  : 前缀 NAL（Prefix），某些流/编码器使用
+  * 15  : 子集 SPS
+  * 16-18: 保留
+  * 19  : 切片扩展
+  * 20  : 3D 切片扩展
+  * 21  : 深度切片扩展
+  * 22-23: 保留
+  * 24  : STAP-A（单时刻聚合包）——一个 RTP 包内包含多个子 NAL，每个子 NAL 前有 2 字节长度
+  * 25  : STAP-B（带 DON 的聚合包）
+  * 26  : MTAP16（多时刻聚合，16 位偏移）
+  * 27  : MTAP24（多时刻聚合，24 位偏移）
+  * 28  : FU-A（分片单元 A）——大 NAL 被分片在多个 RTP 包中传输，需要重组；payload[0]=FU indicator，payload[1]=FU header
+  * 29  : FU-B（分片单元 B）
+  * 30-31: 未指定/保留
+  *
+  * 处理建议：
+  * - 录制裸 h264 文件时，非聚合且非分片的 RTP 包直接写入起始码(0x00000001)+payload。
+  * - 对于 FU-A，需要在 S=1 的起始片段写入起始码 + 重建的 NAL 头（从 FU indicator 和 FU header 得到），随后写入片段数据；后续片段只写数据。
+  * - 对于 STAP-A，需要按 2 字节长度解析每个子 NAL，逐个写入起始码 + 子NAL数据。
+  * - 其他类型（聚合/扩展）按需补充解析，或记录为原始 payload 供离线分析。
+  */
+
+std::string getNALTypeDesc(unsigned char nal_type) {
+    switch (nal_type) {
+    case 0: return "Unspecified (0)";
+    case 1: return "Non-IDR slice (Coded slice of a non-IDR picture)";
+    case 2: return "Partition A (coded slice data partition A)";
+    case 3: return "Partition B (coded slice data partition B)";
+    case 4: return "Partition C (coded slice data partition C)";
+    case 5: return "IDR slice (Instantaneous Decoding Refresh)";
+    case 6: return "SEI (Supplemental enhancement information)";
+    case 7: return "SPS (Sequence Parameter Set)";
+    case 8: return "PPS (Picture Parameter Set)";
+    case 9: return "AUD (Access Unit Delimiter)";
+    case 10: return "End of sequence";
+    case 11: return "End of stream";
+    case 12: return "Filler data";
+    case 13: return "Reserved (13)";
+    case 14: return "Prefix NALU (SVAC) / Prefix";
+    case 15: return "Subset SPS (SVAC)";
+    case 16: return "Reserved (16)";
+    case 17: return "Reserved (17)";
+    case 18: return "Reserved (18)";
+    case 19: return "Slice extension";
+    case 20: return "Slice extension for 3D";
+    case 21: return "Slice extension depth";
+    case 22: return "Reserved (22)";
+    case 23: return "Reserved (23)";
+    case 24: return "STAP-A (Single-time aggregation packet)";
+    case 25: return "STAP-B (Single-time aggregation packet, with DON)";
+    case 26: return "MTAP16 (Multi-time aggregation packet, 16-bit offsets)";
+    case 27: return "MTAP24 (Multi-time aggregation packet, 24-bit offsets)";
+    case 28: return "FU-A (Fragmentation Unit A)";
+    case 29: return "FU-B (Fragmentation Unit B)";
+    case 30: return "Unspecified (30)";
+    case 31: return "Unspecified (31)";
+    default: {
+        // Other values (>=32) are invalid for 5-bit type but handle gracefully
+        return std::string("Unknown/Unspecified NAL type: ") + std::to_string((int)nal_type);
+    }
+    }
+}
+
+// h264文件分析工具 https://nalu.qer.im/
+void RTSPRelay::recordRTPPacket(RTPPacket* pPkt) {
+    if (!config_.record || config_.recordPath.empty()) return;
+
+    std::vector<RTPPacket*> to_write;
+    {
+        std::lock_guard<std::mutex> lock(queue_mutex_);
+        packet_queue_.push_back(pPkt);
+
+        if (packet_queue_.size() < 20) {
+            return;
+        }
+
+        // 交换出待写入队列，清空原队列
+        to_write.swap(packet_queue_);
+    }
+
+    // 打开文件（追加二进制）
+    std::ofstream ofs(config_.recordPath, std::ios::binary | std::ios::app);
+    if (!ofs) {
+        logError("Failed to open record file: " + config_.recordPath);
+        for (auto p : to_write) delete p;
+        return;
+    }
+
+    // 测试信息文件
+    std::ofstream ofs_info(config_.recordPath + ".txt", std::ios::binary | std::ios::app);
+
+    // 写入每个缓存的RTP包为H.264裸流（简单处理FU-A）
+    const uint8_t start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
+
+    for (auto p : to_write) {
+        if (!p) continue;
+        const std::vector<uint8_t>& payload = p->payload;
+        if (payload.empty()) {
+            delete p;
+            continue;
+        }
+
+        uint8_t nal_unit_type = payload[0] & 0x1F;
+
+        std::string nal_type_desc = getNALTypeDesc(nal_unit_type) + "\r\n";
+        ofs_info.write(nal_type_desc.c_str(), nal_type_desc.size());
+
+        if (nal_unit_type == 28 && payload.size() >= 2) {
+            // FU-A 片段化（RFC 6184）处理
+            // H.264 NAL 单元在 RTP 中可能被分片为 FU-A（Fragmentation Unit A）格式。
+            // FU-A payload 格式：
+            //  byte0: FU indicator (F|NRI|Type=28) NRI 2bit 指示该 NALU 的重要性等级
+            //  byte1: FU header    (S|E|R|Type) S=Start E=End R=Reserved
+            //  byte2...: 分片的实际数据（不包含原始 NAL 头）
+            //  S (start) 位为1 表示这是该 NAL 单元的第一个片段，
+            //  需要重建原始 NAL 头并写入起始码 (0x00000001) + NAL头 + 片段数据。
+            //  非起始片段只是 NAL 的继续数据，直接写入即可（不再写 NAL 头）。
+
+
+
+            uint8_t fu_header = payload[1];
+            bool start = (fu_header & 0x80) != 0; // S 位
+            // 重建原始 NAL 头：FU indicator 的 F/NRI 保留，高 3 位；
+            // FU header 的低 5 位是原始 NAL 单元类型
+            uint8_t nal_header = (payload[0] & 0xE0) | (fu_header & 0x1F);
+
+            if (start) {
+                // 起始片段：写入 H.264 起始码 + 重建的 NAL 头，然后写入本片段的负载（从第3字节开始）
+                ofs.write((const char*)start_code, sizeof(start_code));
+                ofs.put((char)nal_header);
+                ofs.write((const char*)&payload[2], static_cast<std::streamsize>(payload.size() - 2));
+            }
+            else {
+                // 后续片段：只写入负载（从第3字节开始），不写起始码也不写 NAL 头
+                ofs.write((const char*)&payload[2], static_cast<std::streamsize>(payload.size() - 2));
+            }
+        }
+        else {
+            // 非片段：直接写入起始码 + payload
+            ofs.write((const char*)start_code, sizeof(start_code));
+            ofs.write((const char*)payload.data(), static_cast<std::streamsize>(payload.size()));
+        }
+
+        delete p;
+    }
+
+    ofs.flush();
+    ofs_info.flush();
 }

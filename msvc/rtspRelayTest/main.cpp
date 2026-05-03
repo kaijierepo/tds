@@ -3,6 +3,9 @@
 #include <iostream>
 #include <csignal>
 #include <atomic>
+#include <Windows.h>
+
+using namespace std;
 
 std::atomic<bool> running{true};
 
@@ -12,6 +15,15 @@ void signalHandler(int signum) {
 }
 
 int main(int argc, char* argv[]) {
+    char exePath[500];                         // 存储路径的字符数组缓冲区
+    GetModuleFileNameA(NULL, exePath, 500);    // 调用 Windows API 获取程序路径
+    string exeDir = std::string(exePath);             // 转换为 std::string
+    size_t pos = exeDir.rfind('\\');           // 查找最后一个反斜杠位置
+    if (pos != std::string::npos)              // 如果找到
+    {
+        exeDir = exeDir.substr(0, pos);         // 截取目录部分
+    }
+
     // 设置信号处理
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
@@ -33,7 +45,7 @@ int main(int argc, char* argv[]) {
     
     // 配置中继
     RTSPRelay::Config config;
-    config.source_url = "rtsp://127.0.0.1:554/stream/1";  
+    config.source_url = "rtsp://192.168.0.111:554/stream/1";  
     config.target_url = "rtsp://127.0.0.1:554/stream/2";
     config.retry_interval = 3000;    // 3秒重试
     config.max_retries = 0;          // 0表示无限重试
@@ -42,8 +54,8 @@ int main(int argc, char* argv[]) {
     
     // UDP传输配置 - 拉流和推流可独立选择
     // TCP 模式测试（PowerShell 验证可行）
-    config.pull_mode = RTSPRelay::TransportMode::TCP;   // 拉流: TCP模式
-    config.push_mode = RTSPRelay::TransportMode::TCP;    // 推流: TCP模式
+    config.pull_mode = RTSPRelay::TransportMode::UDP;   // 拉流: UDP模式
+    config.push_mode = RTSPRelay::TransportMode::NONE;    // 推流: TCP模式
     // config.pull_mode = RTSPRelay::TransportMode::UDP;  // 拉流: UDP模式
     // config.push_mode = RTSPRelay::TransportMode::UDP; // 推流: UDP模式
     
@@ -52,6 +64,9 @@ int main(int argc, char* argv[]) {
     config.udp_tos = 0xC0;           // ToS: AF41 低延迟
     config.udp_recv_buffer_size = 2 * 1024 * 1024;  // 2MB接收缓冲区
     config.udp_send_buffer_size = 2 * 1024 * 1024;  // 2MB发送缓冲区
+
+    config.record = true;
+	config.recordPath = exeDir + "\\recorded_stream.h264";  // 录像路径
     
     // 启动中继
     if (!relay.start(config)) {
