@@ -1,5 +1,5 @@
 // main.cpp
-#include "rtspRelay.h"
+#include "rtspClient.h"
 #include <iostream>
 #include <csignal>
 #include <atomic>
@@ -28,10 +28,10 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
     
-    RTSPRelay relay;
+    RtspClient relay;
     
     // 配置回调
-    relay.setStatusCallback([](RTSPRelay::State state, const std::string& msg) {
+    relay.setStatusCallback([](RtspClient::State state, const std::string& msg) {
         std::cout << "Status: " << static_cast<int>(state) << " - " << msg << std::endl;
     });
     
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     });
     
     // 配置中继
-    RTSPRelay::Config config;
+    RtspClient::Config config;
     config.source_url = "rtsp://192.168.0.111:554/stream/1";  
     config.target_url = "rtsp://127.0.0.1:554/stream/2";
     config.retry_interval = 3000;    // 3秒重试
@@ -54,8 +54,8 @@ int main(int argc, char* argv[]) {
     
     // UDP传输配置 - 拉流和推流可独立选择
     // TCP 模式测试（PowerShell 验证可行）
-    config.pull_mode = RTSPRelay::TransportMode::UDP;   // 拉流: UDP模式
-    config.push_mode = RTSPRelay::TransportMode::NONE;    // 推流: TCP模式
+    config.pull_mode = RtspClient::TransportMode::UDP;   // 拉流: UDP模式
+    config.push_mode = RtspClient::TransportMode::NONE;    // 推流: TCP模式
     // config.pull_mode = RTSPRelay::TransportMode::UDP;  // 拉流: UDP模式
     // config.push_mode = RTSPRelay::TransportMode::UDP; // 推流: UDP模式
     

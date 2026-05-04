@@ -41,7 +41,7 @@
 #define NAL_TYPE_STAP_A           24
 #define NAL_TYPE_FU_A             28
 
-class RTSPRelay {
+class RtspClient {
 public:
     enum State {
         IDLE = 0,
@@ -136,12 +136,12 @@ public:
     using ErrorCallback = std::function<void(const std::string& error, int code)>;
 
     // 构造函数/析构函数
-    RTSPRelay();
-    ~RTSPRelay();
+    RtspClient();
+    ~RtspClient();
 
     // 禁止拷贝
-    RTSPRelay(const RTSPRelay&) = delete;
-    RTSPRelay& operator=(const RTSPRelay&) = delete;
+    RtspClient(const RtspClient&) = delete;
+    RtspClient& operator=(const RtspClient&) = delete;
 
     // 公共接口
     bool start(const Config& config);
@@ -158,7 +158,7 @@ public:
     void setFrameCallback(FrameCallback cb);
     void setErrorCallback(ErrorCallback cb);
 
-    bool extractRtspAuthInfo(RTSPRelay::Config& config);
+    bool extractRtspAuthInfo(RtspClient::Config& config);
 
 private:
     using SocketHandle = uintptr_t;

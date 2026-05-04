@@ -116,7 +116,7 @@ static std::vector<uint8_t> base64Decode(const std::string& input) {
 }
 
 // MD5初始化
-void RTSPRelay::md5Init(MD5Context* context) {
+void RtspClient::md5Init(MD5Context* context) {
     context->count[0] = 0;
     context->count[1] = 0;
 
@@ -128,7 +128,7 @@ void RTSPRelay::md5Init(MD5Context* context) {
 }
 
 // MD5更新
-void RTSPRelay::md5Update(MD5Context* context, const uint8_t* data, size_t length) {
+void RtspClient::md5Update(MD5Context* context, const uint8_t* data, size_t length) {
     size_t index = (size_t)((context->count[0] >> 3) & 0x3F);
 
     // 更新位数
@@ -161,7 +161,7 @@ void RTSPRelay::md5Update(MD5Context* context, const uint8_t* data, size_t lengt
 }
 
 // MD5结束
-void RTSPRelay::md5Final(MD5Context* context, uint8_t digest[16]) {
+void RtspClient::md5Final(MD5Context* context, uint8_t digest[16]) {
     static uint8_t padding[64] = {
         0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -195,7 +195,7 @@ void RTSPRelay::md5Final(MD5Context* context, uint8_t digest[16]) {
 }
 
 // MD5转换函数
-void RTSPRelay::md5Transform(uint32_t state[4], const uint8_t block[64]) {
+void RtspClient::md5Transform(uint32_t state[4], const uint8_t block[64]) {
     uint32_t a = state[0], b = state[1], c = state[2], d = state[3];
     uint32_t x[16];
 
@@ -285,7 +285,7 @@ void RTSPRelay::md5Transform(uint32_t state[4], const uint8_t block[64]) {
 }
 
 // MD5辅助函数
-std::string RTSPRelay::md5Hex(const std::string& input) {
+std::string RtspClient::md5Hex(const std::string& input) {
     MD5Context context;
     md5Init(&context);
     md5Update(&context, (const uint8_t*)input.c_str(), input.size());
@@ -302,7 +302,7 @@ std::string RTSPRelay::md5Hex(const std::string& input) {
 }
 
 // Base64编码辅助函数
-std::string RTSPRelay::base64Encode(const std::string& input) {
+std::string RtspClient::base64Encode(const std::string& input) {
     static const std::string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
@@ -396,20 +396,20 @@ size_t IsValidPkt_HTTP(std::string& strData, size_t iLen) {
 // Connection 实现
 // ============================================================================
 
-RTSPRelay::Connection::Connection() : sockfd_(RTSPRelay::kInvalidSocket) {
+RtspClient::Connection::Connection() : sockfd_(RtspClient::kInvalidSocket) {
 }
 
-RTSPRelay::Connection::~Connection() {
+RtspClient::Connection::~Connection() {
     disconnect();
 }
 
-bool RTSPRelay::Connection::connect(const std::string& host, int port, int timeout_ms) {
+bool RtspClient::Connection::connect(const std::string& host, int port, int timeout_ms) {
     disconnect();
     last_error_ = 0;
 
     // 创建socket
-    sockfd_ = static_cast<RTSPRelay::SocketHandle>(socket(AF_INET, SOCK_STREAM, 0));
-    if (sockfd_ == RTSPRelay::kInvalidSocket) {
+    sockfd_ = static_cast<RtspClient::SocketHandle>(socket(AF_INET, SOCK_STREAM, 0));
+    if (sockfd_ == RtspClient::kInvalidSocket) {
         last_error_ = SOCKET_ERROR_NUM;
         return false;
     }
@@ -430,7 +430,7 @@ bool RTSPRelay::Connection::connect(const std::string& host, int port, int timeo
         if (!server) {
             last_error_ = SOCKET_ERROR_NUM;
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
-            sockfd_ = RTSPRelay::kInvalidSocket;
+            sockfd_ = RtspClient::kInvalidSocket;
             return false;
         }
         memcpy(&serv_addr.sin_addr, server->h_addr, server->h_length);
@@ -440,7 +440,7 @@ bool RTSPRelay::Connection::connect(const std::string& host, int port, int timeo
     if (::connect(static_cast<SOCKET_TYPE>(sockfd_), (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
         last_error_ = SOCKET_ERROR_NUM;
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
-        sockfd_ = RTSPRelay::kInvalidSocket;
+        sockfd_ = RtspClient::kInvalidSocket;
         return false;
     }
 
@@ -459,22 +459,22 @@ bool RTSPRelay::Connection::connect(const std::string& host, int port, int timeo
     return true;
 }
 
-void RTSPRelay::Connection::disconnect() {
-    if (sockfd_ != RTSPRelay::kInvalidSocket) {
+void RtspClient::Connection::disconnect() {
+    if (sockfd_ != RtspClient::kInvalidSocket) {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
-        sockfd_ = RTSPRelay::kInvalidSocket;
+        sockfd_ = RtspClient::kInvalidSocket;
     }
     host_.clear();
     port_ = 0;
     last_error_ = 0;
 }
 
-bool RTSPRelay::Connection::isConnected() const {
-    return sockfd_ != RTSPRelay::kInvalidSocket;
+bool RtspClient::Connection::isConnected() const {
+    return sockfd_ != RtspClient::kInvalidSocket;
 }
 
-int RTSPRelay::Connection::send(const void* data, size_t size, int timeout_ms) {
-    if (sockfd_ == RTSPRelay::kInvalidSocket) return -1;
+int RtspClient::Connection::send(const void* data, size_t size, int timeout_ms) {
+    if (sockfd_ == RtspClient::kInvalidSocket) return -1;
 
     if (timeout_ms > 0) {
         setSocketTimeout(timeout_ms);
@@ -509,8 +509,8 @@ int RTSPRelay::Connection::send(const void* data, size_t size, int timeout_ms) {
     return static_cast<int>(total_sent);
 }
 
-int RTSPRelay::Connection::receive(void* buffer, size_t size, int timeout_ms) {
-    if (sockfd_ == RTSPRelay::kInvalidSocket) return -1;
+int RtspClient::Connection::receive(void* buffer, size_t size, int timeout_ms) {
+    if (sockfd_ == RtspClient::kInvalidSocket) return -1;
 
     if (timeout_ms > 0) {
         setSocketTimeout(timeout_ms);
@@ -532,8 +532,8 @@ int RTSPRelay::Connection::receive(void* buffer, size_t size, int timeout_ms) {
     return received;
 }
 
-int RTSPRelay::Connection::receiveHttpResp(std::string& response, int timeout_ms) {
-    if (sockfd_ == RTSPRelay::kInvalidSocket) return -1;
+int RtspClient::Connection::receiveHttpResp(std::string& response, int timeout_ms) {
+    if (sockfd_ == RtspClient::kInvalidSocket) return -1;
 
     int total = 0;
     char buf[1000] = { 0 };
@@ -588,8 +588,8 @@ int RTSPRelay::Connection::receiveHttpResp(std::string& response, int timeout_ms
     return total;
 }
 
-bool RTSPRelay::Connection::setSocketTimeout(int timeout_ms) {
-    if (sockfd_ == RTSPRelay::kInvalidSocket) return false;
+bool RtspClient::Connection::setSocketTimeout(int timeout_ms) {
+    if (sockfd_ == RtspClient::kInvalidSocket) return false;
 
 #ifdef _WIN32
     DWORD tv = timeout_ms;
@@ -616,16 +616,16 @@ bool RTSPRelay::Connection::setSocketTimeout(int timeout_ms) {
 // RTSPRelay 实现
 // ============================================================================
 
-RTSPRelay::RTSPRelay() {
+RtspClient::RtspClient() {
     stats_.start_time = std::chrono::steady_clock::now();
     stats_.last_frame_time = std::chrono::steady_clock::now();
 }
 
-RTSPRelay::~RTSPRelay() {
+RtspClient::~RtspClient() {
     stop();
 }
 
-bool RTSPRelay::start(const Config& config) {
+bool RtspClient::start(const Config& config) {
     if (running_) {
         logError("Already running");
         return false;
@@ -654,8 +654,8 @@ bool RTSPRelay::start(const Config& config) {
 
     setState(State::CONNECTING, "Starting RTSP relay");
 
-    worker_thread_ = std::thread(&RTSPRelay::workerThread, this);
-    stats_thread_ = std::thread(&RTSPRelay::statsThread, this);
+    worker_thread_ = std::thread(&RtspClient::workerThread, this);
+    stats_thread_ = std::thread(&RtspClient::statsThread, this);
 
     logInfo("RTSP relay started");
     logInfo("Source: " + config_.source_url);
@@ -664,7 +664,7 @@ bool RTSPRelay::start(const Config& config) {
     return true;
 }
 
-void RTSPRelay::stop() {
+void RtspClient::stop() {
     if (!running_) return;
 
     stopping_ = true;
@@ -695,22 +695,22 @@ void RTSPRelay::stop() {
     logInfo("RTSP relay stopped");
 }
 
-void RTSPRelay::restart() {
+void RtspClient::restart() {
     stop();
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     start(config_);
 }
 
-RTSPRelay::State RTSPRelay::getState() {
+RtspClient::State RtspClient::getState() {
     std::lock_guard<std::mutex> lock(state_mutex_);
     return state_;
 }
 
-bool RTSPRelay::isRunning() {
+bool RtspClient::isRunning() {
     return running_;
 }
 
-RTSPRelay::Statistics RTSPRelay::getStatistics() {
+RtspClient::Statistics RtspClient::getStatistics() {
     std::lock_guard<std::mutex> lock(stats_mutex_);
 
     // 计算实时统计
@@ -725,15 +725,15 @@ RTSPRelay::Statistics RTSPRelay::getStatistics() {
     return stats_;
 }
 
-void RTSPRelay::setStatusCallback(StatusCallback cb) {
+void RtspClient::setStatusCallback(StatusCallback cb) {
     status_callback_ = cb;
 }
 
-void RTSPRelay::setFrameCallback(FrameCallback cb) {
+void RtspClient::setFrameCallback(FrameCallback cb) {
 
 }
 
-void RTSPRelay::setErrorCallback(ErrorCallback cb) {
+void RtspClient::setErrorCallback(ErrorCallback cb) {
     error_callback_ = cb;
 }
 
@@ -741,12 +741,12 @@ void RTSPRelay::setErrorCallback(ErrorCallback cb) {
 // 认证相关函数
 // ============================================================================
 
-std::string RTSPRelay::calculateBasicAuth(const AuthInfo& auth) {
+std::string RtspClient::calculateBasicAuth(const AuthInfo& auth) {
     std::string credentials = auth.username + ":" + auth.password;
     return "Basic " + base64Encode(credentials);
 }
 
-std::string RTSPRelay::calculateDigest(const std::string& method, const std::string& uri,
+std::string RtspClient::calculateDigest(const std::string& method, const std::string& uri,
     const AuthInfo& auth) {
     // 计算HA1 = MD5(username:realm:password)
     std::string ha1_input = auth.username + ":" + auth.realm + ":" + auth.password;
@@ -763,7 +763,7 @@ std::string RTSPRelay::calculateDigest(const std::string& method, const std::str
     return response;
 }
 
-bool RTSPRelay::parseWWWAuthenticate(const std::string& response, AuthInfo& auth) {
+bool RtspClient::parseWWWAuthenticate(const std::string& response, AuthInfo& auth) {
     // 查找WWW-Authenticate头
     size_t www_auth_pos = response.find("WWW-Authenticate: ");
     if (www_auth_pos == std::string::npos) {
@@ -826,7 +826,7 @@ bool RTSPRelay::parseWWWAuthenticate(const std::string& response, AuthInfo& auth
     return false;
 }
 
-void RTSPRelay::updateAuthHeader(AuthInfo& auth, const std::string& method, const std::string& uri) {
+void RtspClient::updateAuthHeader(AuthInfo& auth, const std::string& method, const std::string& uri) {
     if (!auth.hasCredentials()) {
         auth.authorization_header.clear();
         return;
@@ -858,7 +858,7 @@ void RTSPRelay::updateAuthHeader(AuthInfo& auth, const std::string& method, cons
 // RTSP协议函数
 // ============================================================================
 
-bool RTSPRelay::rtspDescribe(Connection& conn, const std::string& url,
+bool RtspClient::rtspDescribe(Connection& conn, const std::string& url,
     std::string& sdp, std::string& session) {
     URLComponents url_components;
     if (!URLComponents::parse(url, url_components)) {
@@ -1012,7 +1012,7 @@ bool RTSPRelay::rtspDescribe(Connection& conn, const std::string& url,
     return false;
 }
 
-bool RTSPRelay::rtspSetup(Connection& conn, const std::string& url,
+bool RtspClient::rtspSetup(Connection& conn, const std::string& url,
     std::string& session, StreamInfo& stream, bool record_mode) {
     URLComponents url_components;
     std::string host_header;
@@ -1184,7 +1184,7 @@ bool RTSPRelay::rtspSetup(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RTSPRelay::rtspPlay(Connection& conn, const std::string& url,
+bool RtspClient::rtspPlay(Connection& conn, const std::string& url,
     const std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1247,7 +1247,7 @@ bool RTSPRelay::rtspPlay(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RTSPRelay::rtspTeardown(Connection& conn, const std::string& url,
+bool RtspClient::rtspTeardown(Connection& conn, const std::string& url,
     const std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1299,7 +1299,7 @@ bool RTSPRelay::rtspTeardown(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RTSPRelay::rtspAnnounce(Connection& conn, const std::string& url,
+bool RtspClient::rtspAnnounce(Connection& conn, const std::string& url,
     const std::string& sdp, std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1362,7 +1362,7 @@ bool RTSPRelay::rtspAnnounce(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RTSPRelay::rtspRecord(Connection& conn, const std::string& url,
+bool RtspClient::rtspRecord(Connection& conn, const std::string& url,
     const std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1422,7 +1422,7 @@ bool RTSPRelay::rtspRecord(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RTSPRelay::rtspGetParameter(Connection& conn, const std::string& url,
+bool RtspClient::rtspGetParameter(Connection& conn, const std::string& url,
     const std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1489,7 +1489,7 @@ bool RTSPRelay::rtspGetParameter(Connection& conn, const std::string& url,
 // 工作线程
 // ============================================================================
 
-void RTSPRelay::workerThread() {
+void RtspClient::workerThread() {
     logInfo("Worker thread started");
 
     while (running_ && !stopping_) {
@@ -1528,12 +1528,12 @@ void RTSPRelay::workerThread() {
             }
             streaming_ = true;
 
-            RTSPRelay::doRtpRecv();
+            RtspClient::doRtpRecv();
             //control_thread_ = std::thread(&RTSPRelay::controlThread, this);
     }
 }
 
-bool RTSPRelay::connectToSource() {
+bool RtspClient::connectToSource() {
     setState(State::CONNECTING, "Connecting to source");
 
     // 解析源URL
@@ -1579,7 +1579,7 @@ bool RTSPRelay::connectToSource() {
     return true;
 }
 
-bool RTSPRelay::setupStreams() {
+bool RtspClient::setupStreams() {
     setState(State::CONNECTING, "Setting up streams");
 
     // 清理之前的UDP sockets
@@ -1749,7 +1749,7 @@ bool RTSPRelay::setupStreams() {
     return true;
 }
 
-void RTSPRelay::doRtpRecv() {
+void RtspClient::doRtpRecv() {
     setState(State::PLAYING, "Streaming started");
     bool pullUDP = (config_.pull_mode == TransportMode::UDP);
     
@@ -1883,7 +1883,7 @@ void RTSPRelay::doRtpRecv() {
     logInfo("Pull thread stopped");
 }
 
-void RTSPRelay::controlThread() {
+void RtspClient::controlThread() {
     logInfo("Control thread started");
 
     while (running_ && !stopping_) {
@@ -1920,7 +1920,7 @@ void RTSPRelay::controlThread() {
     logInfo("Control thread stopped");
 }
 
-void RTSPRelay::statsThread() {
+void RtspClient::statsThread() {
     logInfo("Statistics thread started");
 
     while (running_ && !stopping_) {
@@ -1942,7 +1942,7 @@ void RTSPRelay::statsThread() {
     logInfo("Statistics thread stopped");
 }
 
-void RTSPRelay::teardown() {
+void RtspClient::teardown() {
     if (source_conn_ && !source_session_.empty()) {
         rtspTeardown(*source_conn_, config_.source_url, source_session_);
     }
@@ -1981,7 +1981,7 @@ void RTSPRelay::teardown() {
 // UDP传输函数
 // ============================================================================
 
-bool RTSPRelay::createUDPPullSocket() {
+bool RtspClient::createUDPPullSocket() {
     // 我们需要为 RTP 和 RTCP 创建一对连续的端口以便向服务器声明 "client_port=RTP-RTCP"
     // 尝试多次分配以找到一对可用的连续端口
     const int max_attempts = 10;
@@ -2066,7 +2066,7 @@ bool RTSPRelay::createUDPPullSocket() {
     return false;
 }
 
-bool RTSPRelay::createUDPPushSocket() {
+bool RtspClient::createUDPPushSocket() {
     // 创建UDP推流socket（发送RTP数据到目标）
     udp_push_socket_ = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
     if (udp_push_socket_ == kInvalidSocket) {
@@ -2085,7 +2085,7 @@ bool RTSPRelay::createUDPPushSocket() {
     return true;
 }
 
-void RTSPRelay::closeUDPSockets() {
+void RtspClient::closeUDPSockets() {
     if (udp_pull_socket_ != kInvalidSocket) {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_pull_socket_));
         udp_pull_socket_ = kInvalidSocket;
@@ -2102,7 +2102,7 @@ void RTSPRelay::closeUDPSockets() {
     local_rtcp_port_ = 0;
 }
 
-bool RTSPRelay::configureUDPSocket(SocketHandle sock, bool is_multicast) {
+bool RtspClient::configureUDPSocket(SocketHandle sock, bool is_multicast) {
     if (sock == kInvalidSocket) return false;
 
 #ifdef _WIN32
@@ -2176,7 +2176,7 @@ bool RTSPRelay::configureUDPSocket(SocketHandle sock, bool is_multicast) {
     return true;
 }
 
-bool RTSPRelay::sendUDPData(const uint8_t* data, size_t size) {
+bool RtspClient::sendUDPData(const uint8_t* data, size_t size) {
     if (udp_push_socket_ == kInvalidSocket || target_rtp_port_ == 0) {
         return false;
     }
@@ -2220,7 +2220,7 @@ bool RTSPRelay::sendUDPData(const uint8_t* data, size_t size) {
     return true;
 }
 
-int RTSPRelay::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
+int RtspClient::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
     if (udp_pull_socket_ == kInvalidSocket) {
         return -1;
     }
@@ -2260,7 +2260,7 @@ int RTSPRelay::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip,
 // SDP处理函数
 // ============================================================================
 
-bool RTSPRelay::parseSDP(const std::string & sdp, StreamInfo & video_info, StreamInfo & audio_info) {
+bool RtspClient::parseSDP(const std::string & sdp, StreamInfo & video_info, StreamInfo & audio_info) {
     std::istringstream ss(sdp);
     std::string line;
     StreamInfo* current_info = nullptr;
@@ -2349,7 +2349,7 @@ bool RTSPRelay::parseSDP(const std::string & sdp, StreamInfo & video_info, Strea
     return true;
 }
 
-std::string RTSPRelay::generateSDP(const StreamInfo & video_info, const StreamInfo & audio_info) {
+std::string RtspClient::generateSDP(const StreamInfo & video_info, const StreamInfo & audio_info) {
     std::stringstream sdp;
 
     sdp << "v=0\r\n"
@@ -2378,7 +2378,7 @@ std::string RTSPRelay::generateSDP(const StreamInfo & video_info, const StreamIn
 // 工具函数
 // ============================================================================
 
-bool RTSPRelay::URLComponents::parse(const std::string & url, URLComponents & components) {
+bool RtspClient::URLComponents::parse(const std::string & url, URLComponents & components) {
     URLComponents out;
 
     size_t protocol_end = url.find("://");
@@ -2449,7 +2449,7 @@ bool RTSPRelay::URLComponents::parse(const std::string & url, URLComponents & co
     return true;
 }
 
-void RTSPRelay::forwardRTPPacket(const RTPPacket & packet) {
+void RtspClient::forwardRTPPacket(const RTPPacket & packet) {
     // 序列化RTP包
     auto data = packet.serialize();
     
@@ -2483,7 +2483,7 @@ void RTSPRelay::forwardRTPPacket(const RTPPacket & packet) {
     }
 }
 
-bool RTSPRelay::RTPPacket::parse(const uint8_t * data, size_t size) {
+bool RtspClient::RTPPacket::parse(const uint8_t * data, size_t size) {
     // RTP 数据包格式（简要）：
     // 0               1               2               3
     // 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -2526,7 +2526,7 @@ bool RTSPRelay::RTPPacket::parse(const uint8_t * data, size_t size) {
     return true;
 }
 
-std::vector<uint8_t> RTSPRelay::RTPPacket::serialize() const {
+std::vector<uint8_t> RtspClient::RTPPacket::serialize() const {
     std::vector<uint8_t> data(12 + csrc_count * 4 + payload.size());
 
     data[0] = (version << 6) | (padding << 5) | (extension << 4) | csrc_count;
@@ -2553,7 +2553,7 @@ std::vector<uint8_t> RTSPRelay::RTPPacket::serialize() const {
     return data;
 }
 
-std::string RTSPRelay::extractSessionID(const std::string & response) {
+std::string RtspClient::extractSessionID(const std::string & response) {
     size_t pos = response.find("Session: ");
     if (pos == std::string::npos) return "";
 
@@ -2570,7 +2570,7 @@ std::string RTSPRelay::extractSessionID(const std::string & response) {
     return session;
 }
 
-std::string RTSPRelay::extractTransport(const std::string & response) {
+std::string RtspClient::extractTransport(const std::string & response) {
     size_t pos = response.find("Transport: ");
     if (pos == std::string::npos) return "";
 
@@ -2578,12 +2578,12 @@ std::string RTSPRelay::extractTransport(const std::string & response) {
     return response.substr(pos + 11, end - pos - 11);
 }
 
-std::string RTSPRelay::generateCSeq() {
+std::string RtspClient::generateCSeq() {
     static std::atomic<int> counter{ 1 };
     return std::to_string(counter++);
 }
 
-void RTSPRelay::setError(const std::string & error, int code) {
+void RtspClient::setError(const std::string & error, int code) {
     logError("Error [" + std::to_string(code) + "]: " + error);
 
     {
@@ -2598,7 +2598,7 @@ void RTSPRelay::setError(const std::string & error, int code) {
     setState(State::S_ERROR, error);
 }
 
-void RTSPRelay::setState(State new_state, const std::string & msg) {
+void RtspClient::setState(State new_state, const std::string & msg) {
     {
         std::lock_guard<std::mutex> lock(state_mutex_);
         state_ = new_state;
@@ -2612,7 +2612,7 @@ void RTSPRelay::setState(State new_state, const std::string & msg) {
     cv_.notify_all();
 }
 
-bool RTSPRelay::shouldReconnect() const {
+bool RtspClient::shouldReconnect() const {
     if (config_.max_retries > 0 && retry_count_ >= config_.max_retries) {
         return false;
     }
@@ -2625,7 +2625,7 @@ bool RTSPRelay::shouldReconnect() const {
     return true;
 }
 
-void RTSPRelay::doReconnect() {
+void RtspClient::doReconnect() {
     retry_count_++;
     last_reconnect_time_ = std::chrono::steady_clock::now();
 
@@ -2646,21 +2646,21 @@ void RTSPRelay::doReconnect() {
     std::this_thread::sleep_for(std::chrono::milliseconds(config_.retry_interval));
 }
 
-void RTSPRelay::logInfo(const std::string & msg) const {
+void RtspClient::logInfo(const std::string & msg) const {
     std::cout << "[INFO] " << msg << std::endl;
 }
 
-void RTSPRelay::logError(const std::string & msg) const {
+void RtspClient::logError(const std::string & msg) const {
     std::cerr << "[ERROR] " << msg << std::endl;
 }
 
-void RTSPRelay::logDebug(const std::string & msg) const {
+void RtspClient::logDebug(const std::string & msg) const {
     if (config_.verbose) {
         std::cout << "[DEBUG] " << msg << std::endl;
     }
 }
 
-void RTSPRelay::logVerbose(const std::string & msg) const {
+void RtspClient::logVerbose(const std::string & msg) const {
     if (config_.verbose) {
         std::cout << "[VERBOSE] " << msg << std::endl;
     }
@@ -2673,7 +2673,7 @@ void RTSPRelay::logVerbose(const std::string & msg) const {
  * @return 解析成功返回true，失败返回false
  */
 
-bool RTSPRelay::extractRtspAuthInfo(RTSPRelay::Config& config) {
+bool RtspClient::extractRtspAuthInfo(RtspClient::Config& config) {
     // 正则表达式匹配RTSP URL格式：rtsp://[user:pass@]host[:port]/path
     // 分组说明：
     // 1: 用户名  2: 密码  3: 剩余部分（IP/端口/路径）
@@ -2811,7 +2811,7 @@ std::string getNALTypeDesc(unsigned char nal_type) {
 }
 
 // h264文件分析工具 https://nalu.qer.im/
-void RTSPRelay::recordRTPPacket(RTPPacket* pPkt) {
+void RtspClient::recordRTPPacket(RTPPacket* pPkt) {
     if (!config_.record || config_.recordPath.empty()) return;
 
     std::vector<RTPPacket*> to_write;
