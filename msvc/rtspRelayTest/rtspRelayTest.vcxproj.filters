@@ -8,9 +8,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="..\..\src\video\rtspRelay.cpp" />
+    <ClCompile Include="..\..\src\video\rtspClient.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\video\rtspRelay.h" />
+    <ClInclude Include="..\..\src\video\rtspClient.h" />
   </ItemGroup>
 </Project>

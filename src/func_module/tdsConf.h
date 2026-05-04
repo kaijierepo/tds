@@ -6,8 +6,6 @@ using namespace std;
 #include "json.hpp"
 using json = nlohmann::json;
 
-
-
 class tdsConfig : public iTDSConf
 {
 public:
@@ -16,12 +14,9 @@ public:
 	void generateDefaultProjectConfFile(std::string prjConfPath);
 	std::string defaultAppConf_tds();
 	std::string defaultProjectConf_tds();
-	std::string defaultConf_tdb();
-	std::string defaultConf_rphttp();
-	void loadConf_httpServer(std::vector<KV_CONF_ITEM>& vecConf);
+
 	void loadConfPath(std::vector<KV_INI_LINE>& vecConf);
 	void loadConf_tds(std::vector<KV_INI_LINE>& vecConf);
-	void loadConf_rphttp(std::vector<KV_CONF_ITEM>& vecConf);
 	void loadConf() override;
 	void loadCurrentData() override;
 	json toJson();

@@ -559,6 +559,18 @@ void runDataSimu() {
 	g_pDataSimu->startDataSimu();
 }
 
+void openAllStream() {
+	map<string, MP*> mapAllMP;
+	prj.getMpList(mapAllMP);
+	for (auto& pair : mapAllMP) {
+		MP* pmp = pair.second;
+		if (pmp && pmp->m_mediaUrl != "") {
+			string tag = pmp->getTag();
+			prj.openStream(tag);
+		}
+	}
+}
+
 bool TDS_imp::run(string cmdline) {
 	mg_log_set(MG_LL_NONE);
 
@@ -690,6 +702,9 @@ bool TDS_imp::run(string cmdline) {
 		::db.m_currentPath   = tds->conf->currentPath;
 		::db.m_bEnableFsBuff = tds->conf->getInt("dbBuffer", 0) == 1 ? true : false;
 		::db.m_enableDB = tds->conf->getInt("enableDB", 1) == 1 ? true : false;
+
+		string recPath = tds->conf->dbPath + "/record";
+		fs::createFolderOfPath(recPath);
 	}
 		
 	prj.loadObjTemplate();
@@ -813,6 +828,12 @@ bool TDS_imp::run(string cmdline) {
 	//开启一个线程,进行数据仿真
 	thread t(runDataSimu);
 	t.detach();
+
+	if(conf->alwaysOpenStream)
+	{
+		thread t_os(openAllStream);
+		t_os.detach();
+	}
 
 	return true;
 }

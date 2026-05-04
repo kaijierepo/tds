@@ -8,7 +8,7 @@ using json = nlohmann::json;
 #include <shared_mutex>
 #include "scriptManager.h"
 
-class RTSPRelay;
+class RtspClient;
 
 struct OBJ_TEMPLATE {
 	std::string type;
@@ -81,10 +81,10 @@ public:
 	bool m_enableEzviz;
 	bool m_enableZLM;
 
-	map<std::string, std::unique_ptr<RTSPRelay>> m_mapRtspRelays;
-	map<std::string, std::unique_ptr<RTSPRelay>> m_mapRtspRelays_urlID;
+	map<std::string, std::unique_ptr<RtspClient>> m_mapRtspClients;
+	map<std::string, std::unique_ptr<RtspClient>> m_mapRtspClients_urlID;
 	mutable std::mutex m_relayMutex_urlID;
-	mutable std::mutex m_relayMutex; // 保护 m_mapRtspRelays 的互斥锁
+	mutable std::mutex m_relayMutex; // 保护 m_mapRtspClients 的互斥锁
 	map<std::string, EZVIZ_ACCESS_INFO> m_mapEzvizAccess;
 
 public:
@@ -109,6 +109,8 @@ public:
 	bool openStream(std::string tag,std::string pushTo = "");
 
 	bool closeStream(std::string tag);
+
+	RtspClient* getRtspClient(std::string tag);
 
 private:
 	json m_jMOTree;

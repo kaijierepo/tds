@@ -4,26 +4,38 @@
     <Filter Include="common">
       <UniqueIdentifier>{61f8ed5b-3995-4b52-98af-21ad15ab804f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="data_server">
-      <UniqueIdentifier>{5d91d037-d2ac-4c19-880f-65f813a180bc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="io_server">
-      <UniqueIdentifier>{bb3caff4-0780-48ec-9125-75891b23875a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="func_module">
-      <UniqueIdentifier>{2ceef404-76b7-46d3-825a-f27e496c0dda}</UniqueIdentifier>
-    </Filter>
     <Filter Include="tdb">
       <UniqueIdentifier>{81ba2ff7-a317-4111-888d-0c00a3926fb6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="io_server\io_dev">
-      <UniqueIdentifier>{5d15c05a-673e-4837-ba4f-f137414c2c12}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="io_server\protocol">
-      <UniqueIdentifier>{555db3b2-d165-4f93-9ca3-cb495ddbe43f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="script">
       <UniqueIdentifier>{b2626dd6-bf07-45c3-ac89-5f97cbdd8196}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="video">
+      <UniqueIdentifier>{2edcd043-849f-4c13-a251-2ac41bdf2dac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="device">
+      <UniqueIdentifier>{bb3caff4-0780-48ec-9125-75891b23875a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="device\io_dev">
+      <UniqueIdentifier>{5d15c05a-673e-4837-ba4f-f137414c2c12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="device\protocol">
+      <UniqueIdentifier>{555db3b2-d165-4f93-9ca3-cb495ddbe43f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="script\quickjs">
+      <UniqueIdentifier>{58826a90-44b0-4e01-9c77-626ce50295b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="object">
+      <UniqueIdentifier>{e0a89998-492c-4e08-b815-7fdbf40113ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="server">
+      <UniqueIdentifier>{5d91d037-d2ac-4c19-880f-65f813a180bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="func">
+      <UniqueIdentifier>{2ceef404-76b7-46d3-825a-f27e496c0dda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framework">
+      <UniqueIdentifier>{6f483738-c21b-4635-8e96-9294b0283611}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,8 +48,6 @@
     <ClCompile Include="..\src\common\tcpSrv.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\main.cpp" />
-    <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\common\yyjson.c">
       <Filter>common</Filter>
     </ClCompile>
@@ -47,7 +57,6 @@
     <ClCompile Include="..\src\common\stream2pkt.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\common\base64.c">
       <Filter>common</Filter>
     </ClCompile>
@@ -58,64 +67,43 @@
       <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\tAlmSrv.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\mp.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\obj.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\prj.cpp">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\tSockSrv.cpp">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\rpcHandler.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\scriptEngine.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\scriptFunc.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\scriptManager.cpp">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\tdsSession.cpp">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\webSrv.cpp">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioChan.cpp">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev.cpp">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioSrv.cpp">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClCompile>
     <ClCompile Include="..\src\func_module\csvTable.cpp">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClCompile>
     <ClCompile Include="..\src\func_module\dumpCatch.cpp">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClCompile>
     <ClCompile Include="..\src\func_module\logServer.cpp">
-      <Filter>func_module</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\func_module\tdsConf.cpp">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClCompile>
     <ClCompile Include="..\src\func_module\userMng.cpp">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClCompile>
     <ClCompile Include="..\src\common\secure.cpp">
       <Filter>common</Filter>
@@ -130,17 +118,16 @@
       <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="..\src\func_module\taskServer.cpp">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\pch.cpp" />
     <ClCompile Include="..\src\func_module\statusServer.cpp">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\tdb.cpp">
       <Filter>tdb</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClCompile>
     <ClCompile Include="..\src\common\memDiag.cpp">
       <Filter>common</Filter>
@@ -151,101 +138,71 @@
     <ClCompile Include="..\src\common\dtwrecoge.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\include\tds.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_dcqk.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioGW_rs485ToNet.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\proto_common.cpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_dlt645_2007.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_eip.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_iq60.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_modbusRtu.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_modbusTcp.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_onvif.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_visca.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\proto_eip.cpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\proto_tb3386.cpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_bacnet.cpp">
-      <Filter>io_server\io_dev</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\script\cutils.c">
-      <Filter>script</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\script\dtoa.c">
-      <Filter>script</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\func_module\fileUploadSrv.cpp">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\proto_ws.cpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\as_interface.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\script\libregexp.c">
-      <Filter>script</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\script\libunicode.c">
-      <Filter>script</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\script\quickjs.c">
-      <Filter>script</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\script\quickjs-libc.c">
-      <Filter>script</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\script\repl.c">
-      <Filter>script</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\script\unicode_data.c">
-      <Filter>script</Filter>
+      <Filter>server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\mongoose\mongoose.c">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\data_server\rpcHandler_common.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_mqtt.cpp">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\mqttSrv.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\CDataSimu.cpp" />
-    <ClCompile Include="..\src\video\rtspRelay.cpp">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\common\bignum.c">
       <Filter>common</Filter>
@@ -255,6 +212,75 @@
     </ClCompile>
     <ClCompile Include="..\src\common\rsa_verify.cpp">
       <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\cutils.c">
+      <Filter>script\quickjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\dtoa.c">
+      <Filter>script\quickjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\libregexp.c">
+      <Filter>script\quickjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\libunicode.c">
+      <Filter>script\quickjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\quickjs.c">
+      <Filter>script\quickjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\quickjs-libc.c">
+      <Filter>script\quickjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\repl.c">
+      <Filter>script\quickjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\unicode_data.c">
+      <Filter>script\quickjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\scriptEngine.cpp">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\scriptFunc.cpp">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\scriptManager.cpp">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\mp.cpp">
+      <Filter>object</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\obj.cpp">
+      <Filter>object</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\CDataSimu.cpp">
+      <Filter>func</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\rpcHandler_common.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\main.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pch.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\include\tds.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tds_imp.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\test.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\rtspClient.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\tdsConf.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\prj.cpp">
+      <Filter>framework</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -273,7 +299,6 @@
     <ClInclude Include="..\src\common\tcpSrv.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\common\yyjson.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -293,65 +318,43 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\tAlmSrv.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\mp.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\obj.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\prj.h">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\tSockSrv.h">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\rpcHandler.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\scriptEngine.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\scriptFunc.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\scriptManager.h">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\tdsSession.h">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\webSrv.h">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioChan.h">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev.h">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioSrv.h">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\csvTable.h">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\dumpCatch.h">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\logServer.h">
-      <Filter>func_module</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\func_module\tdsConf.h">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\userMng.h">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\pch.h" />
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\secure.h">
       <Filter>common</Filter>
@@ -369,16 +372,16 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\taskServer.h">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\statusServer.h">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\tdb.h">
       <Filter>tdb</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_custom.h">
-      <Filter>io_server</Filter>
+      <Filter>device</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\memDiag.h">
       <Filter>common</Filter>
@@ -392,138 +395,95 @@
     <ClInclude Include="..\src\common\dtwrecoge.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\tds.h" />
-    <ClInclude Include="..\src\include\tdsRPC.h" />
     <ClInclude Include="..\src\io_server\ioDev_dcqk.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_srvStatus.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioGW_rs485ToNet.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_can.hpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_common.h">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_camera.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_bacnet.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_dlt645_2007.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_eip.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_iq60.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_modbusRtu.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_modbusTcp.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_onvif.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_visca.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_bacnet.hpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_cip.hpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_dlt645_2007.hpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_eip.hpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_logix_plc.hpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_rtu.hpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_visca.hpp">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_tb3386.h">
-      <Filter>io_server\protocol</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\cutils.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\dtoa.h">
-      <Filter>script</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\fileUploadSrv.h">
-      <Filter>func_module</Filter>
+      <Filter>func</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_ws.h">
-      <Filter>io_server\protocol</Filter>
+      <Filter>device\protocol</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\as_interface.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\libregexp.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\libregexp-opcode.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\libunicode.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\libunicode-table.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\list.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\quickjs.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\quickjs-atom.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\quickjs-libc.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\quickjs-opcode.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\script\unicode_gen_def.h">
-      <Filter>script</Filter>
+      <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\mongoose\mongoose.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\data_server\rpcHandler_common.h" />
     <ClInclude Include="..\src\io_server\ioDev_mqtt.h">
-      <Filter>io_server\io_dev</Filter>
+      <Filter>device\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\mqttSrv.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\CDataSimu.h" />
-    <ClInclude Include="..\src\video\rtspRelay.h">
-      <Filter>data_server</Filter>
+      <Filter>server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\bignum.h">
       <Filter>common</Filter>
@@ -537,8 +497,88 @@
     <ClInclude Include="test.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\script\cutils.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\dtoa.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\libregexp.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\libregexp-opcode.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\libunicode.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\libunicode-table.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\list.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\quickjs.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\quickjs-atom.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\quickjs-libc.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\quickjs-opcode.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\unicode_gen_def.h">
+      <Filter>script\quickjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\scriptEngine.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\scriptFunc.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\scriptManager.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\mp.h">
+      <Filter>object</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\obj.h">
+      <Filter>object</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CDataSimu.h">
+      <Filter>func</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\rpcHandler_common.h">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\pch.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\tds.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tds_imp.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\tdsRPC.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\video\rtspClient.h">
+      <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\tdsConf.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\prj.h">
+      <Filter>framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\src\res\logo.ico" />
+    <Image Include="..\src\res\logo.ico">
+      <Filter>framework</Filter>
+    </Image>
   </ItemGroup>
 </Project>

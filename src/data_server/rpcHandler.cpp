@@ -27,7 +27,7 @@
 #include "ioDev_onvif.h"
 #include "rpcHandler_common.h"
 #include "mqttSrv.h"
-#include "video/rtspRelay.h"
+#include "video/RtspClient.h"
 #include "rsa_verify.h"
 
 #ifdef _WIN32
@@ -498,34 +498,34 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound,"specified tag not found");
 		}
 	}
-	else if (method == "startRtspRelay") {
+	else if (method == "startRtspClient") {
 		string srcUrl = params["srcUrl"];
 		string destUrl = params["destUrl"];
 		{
 			std::lock_guard<std::mutex> lock(prj.m_relayMutex_urlID);
-			if (prj.m_mapRtspRelays_urlID.find(srcUrl) != prj.m_mapRtspRelays_urlID.end()) {
-				LOG("[流媒体] RTSPRelay 已在运行 for src url: %s", srcUrl.c_str());
+			if (prj.m_mapRtspClients_urlID.find(srcUrl) != prj.m_mapRtspClients_urlID.end()) {
+				LOG("[流媒体] RtspClient 已在运行 for src url: %s", srcUrl.c_str());
 				return true;
 			}
 		}
 
-		// 2. 创建新的 RTSPRelay
-		auto relay = std::make_unique<RTSPRelay>();
+		// 2. 创建新的 RtspClient
+		auto relay = std::make_unique<RtspClient>();
 
 		// 设置回调
 		relay->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
 			// 可以在这里处理帧，例如存档或分析
 			});
-		relay->setStatusCallback([](RTSPRelay::State state, const std::string& msg) {
-			LOG("[RTSPRelay] Status: %d - %s", static_cast<int>(state), msg.c_str());
+		relay->setStatusCallback([](RtspClient::State state, const std::string& msg) {
+			LOG("[RtspClient] Status: %d - %s", static_cast<int>(state), msg.c_str());
 			});
 		relay->setErrorCallback([](const std::string& error, int code) {
-			LOG("[RTSPRelay] Error (%d): %s", code, error.c_str());
+			LOG("[RtspClient] Error (%d): %s", code, error.c_str());
 			});
 
 
 		// 3. 配置 relay
-		RTSPRelay::Config config;
+		RtspClient::Config config;
 		config.source_url = srcUrl; // 源地址
 		// 提取用户名和密码
 		bool isSuccess = relay->extractRtspAuthInfo(config);
@@ -536,21 +536,47 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 		config.rtp_timeout = 10000;
 
 		// 4. 启动 relay
-		LOG("[流媒体] 启动 RTSPRelay (内置模式)，源: %s, 目标: %s",
+		LOG("[流媒体] 启动 RtspClient (内置模式)，源: %s, 目标: %s",
 			config.source_url.c_str(), config.target_url.c_str());
 
 		if (relay->start(config)) {
 			std::lock_guard<std::mutex> lock(prj.m_relayMutex_urlID);
-			prj.m_mapRtspRelays_urlID[srcUrl] = std::move(relay);
+			prj.m_mapRtspClients_urlID[srcUrl] = std::move(relay);
 		}
 		else {
-			LOG("[流媒体] 启动 RTSPRelay 失败 for srcUrl: %s", srcUrl.c_str());
+			LOG("[流媒体] 启动 RtspClient 失败 for srcUrl: %s", srcUrl.c_str());
 		}
 
 		rpcResp.result = RPC_OK;
 	}
-	else if (method == "stopRtspRelay") {
+	else if (method == "stopRtspClient") {
 
+	}
+	else if (method == "startRecord") {
+		string tag = params["tag"];
+		int preTime = params["preSeconds"].get<int>();
+		RtspClient* rc = prj.getRtspClient(tag);
+		if (rc) {
+			rc->rec_ctrl_.enable = true;
+			rc->rec_ctrl_.preSeconds = preTime;
+			DB_TIME now; now.setNow();
+			rc->rec_ctrl_.path = tds->conf->dbPath + "/record/" + tag + "_" + now.toStampFull() + ".h264";
+			rpcResp.result = RPC_OK;
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
+		}
+	}
+	else if(method == "stopRecord") {
+		string tag = params["tag"];
+		RtspClient* rc = prj.getRtspClient(tag);
+		if (rc) {
+			rc->rec_ctrl_.enable = false;
+			rpcResp.result = RPC_OK;
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
+		}
 	}
 #ifdef ENABLE_GENICAM
 	else if (method == "setStream")
@@ -3538,19 +3564,19 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 
 		rpcResp.result = RPC_OK;
 	}
-	else if (method == "getRtspRelayList") {
+	else if (method == "getRtspClientList") {
 		std::lock_guard<std::mutex> lock(prj.m_relayMutex);
-		const auto& mapRtspRelays = prj.m_mapRtspRelays;
+		const auto& mapRtspClients = prj.m_mapRtspClients;
 
 		// 1. 创建yyjson文档和根对象（JSON数组）
 		yyjson_mut_doc* doc = yyjson_mut_doc_new(NULL);
 		yyjson_mut_val* root_arr = yyjson_mut_arr(doc);
 		yyjson_mut_doc_set_root(doc, root_arr);
 
-		// 2. 遍历map中的每个RTSPRelay实例
-		for (const auto& pair : mapRtspRelays) {
+		// 2. 遍历map中的每个RtspClient实例
+		for (const auto& pair : mapRtspClients) {
 			const std::string& relay_key = pair.first;          // map的key（比如RTSP流标识）
-			const std::unique_ptr<RTSPRelay>& relay_ptr = pair.second;
+			const std::unique_ptr<RtspClient>& relay_ptr = pair.second;
 
 			// 安全检查：跳过空指针
 			if (!relay_ptr) {
@@ -3558,7 +3584,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			}
 
 			// 3. 获取当前实例的Statistics统计信息
-			const RTSPRelay::Statistics& stats = relay_ptr->getStatistics();
+			const RtspClient::Statistics& stats = relay_ptr->getStatistics();
 
 			// 4. 创建当前relay的JSON对象
 			yyjson_mut_val* relay_obj = yyjson_mut_obj(doc);

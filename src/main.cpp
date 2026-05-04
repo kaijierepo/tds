@@ -388,10 +388,6 @@ int main(int argc, char** argv)
 	TIME zlmLastClearPusherTime = timeopt::now();
 	vector<MP*> ezvizMp = prj.getAllEzvizMp();
 
-	//1月13日 lirj 配置文件enableZLM，测试内嵌rtspRelay与zlMedia拉流、推流功能
-	//project prj;
-	//prj.openStream("8#","rtsp://127.0.0.1:554/Streaming/Channels/101");
-
 	if (ezvizMp.size() > 0) {
 		LOG("共有%d个萤石云视频监控点", ezvizMp.size());
 	}

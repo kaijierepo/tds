@@ -151,36 +151,6 @@ largeModelType = -1          #-1:不应用大模型     0:sam分割/检测大模
 	return s;
 }
 
-string tdsConfig::defaultConf_tdb()
-{
-	string s = R"(#TDB 数据库配置
-dbPath=./db            #数据库数据存储路径
-uiPath=./ui            #管理后台web根目录
-httpsPort=666          #https服务端口,同时支持websocket secure
-httpPort=667           #http服务端口,同时支持websocket
-loglevel=debug         #日志级别
-)";
-	return s;
-}
-
-string tdsConfig::defaultConf_rphttp()
-{
-	string s = R"(#HTTP 反向代理服务器配置
-httpPort=80            #http服务代理端口
-)";
-	return s;
-}
-
-void tdsConfig::loadConf_httpServer(vector<KV_CONF_ITEM>& vecConf) {
-	for (int i = 0; i < vecConf.size(); i++)
-	{
-		KV_CONF_ITEM& tci = vecConf[i];
-		if (checkKey(tci.key, "httpPort"))
-		{
-			httpPort = atoi(tci.val.c_str());
-		}
-	}
-}
 
 void tdsConfig::loadConfPath(vector<KV_INI_LINE>& vecConf) {
 	for (auto& iter : vecConf)
@@ -463,7 +433,13 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 		{
 			largeModelType = atoi(val.c_str());
 		}
-		
+		else if (checkKey(key, "alwaysOpenStream"))
+		{
+			if (val == "true" || val == "1")
+				alwaysOpenStream = true;
+			else if (val == "false" || val == "0")
+				alwaysOpenStream = false;
+		}
 	}
 
 	//j = jsonConf["active_session"];
@@ -503,18 +479,6 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 	}
 	if (uiTitle == "")
 		uiTitle = "tdsUI";
-}
-
-void tdsConfig::loadConf_rphttp(vector<KV_CONF_ITEM>& vecConf)
-{
-	for (int i = 0; i < vecConf.size(); i++)
-	{
-		KV_CONF_ITEM& tci = vecConf[i];
-		if (checkKey(tci.key, "httpPort"))
-		{
-			httpPort = atoi(tci.val.c_str());
-		}
-	}
 }
 
 void tdsConfig::loadCurrentData()

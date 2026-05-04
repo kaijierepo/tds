@@ -110,7 +110,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'" Label="Configuration">
@@ -673,7 +673,7 @@
     <ClCompile Include="..\src\script\unicode_data.c" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
-    <ClCompile Include="..\src\video\rtspRelay.cpp" />
+    <ClCompile Include="..\src\video\rtspClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CDataSimu.h" />
@@ -771,7 +771,7 @@
     <ClInclude Include="..\src\script\quickjs.h" />
     <ClInclude Include="..\src\script\unicode_gen_def.h" />
     <ClInclude Include="..\src\tds_imp.h" />
-    <ClInclude Include="..\src\video\rtspRelay.h" />
+    <ClInclude Include="..\src\video\rtspClient.h" />
     <ClInclude Include="test.h" />
   </ItemGroup>
   <ItemGroup>

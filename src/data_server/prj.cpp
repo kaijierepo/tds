@@ -7,7 +7,7 @@
 #include "logger.h"
 #include "yyjson.h"
 #include "rpcHandler.h"
-#include "../video/rtspRelay.h"
+#include "../video/RtspClient.h"
 
 project prj;
 
@@ -416,54 +416,49 @@ bool project::openStream(string tag, string pushTo)
 		}
 	}
 	else {
-		// 1. 检查是否已有 relay 在运行
-		{
-			std::lock_guard<std::mutex> lock(m_relayMutex);
-			if (m_mapRtspRelays.find(tag) != m_mapRtspRelays.end()) {
-				LOG("[流媒体] RTSPRelay 已在运行 for tag: %s", tag.c_str());
-				pmp->m_isOpenningStream = false;
-				return true;
-			}
+		if (prj.getRtspClient(tag)) {
+			LOG("[流媒体] RtspClient 已在运行 for tag: %s", tag.c_str());
+			pmp->m_isOpenningStream = false;
+			return true;
 		}
 
-		// 2. 创建新的 RTSPRelay
-		auto relay = std::make_unique<RTSPRelay>();
+		// 创建新的 RtspClient
+		auto rtspClt = std::make_unique<RtspClient>();
 
 		// 设置回调
-			relay->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
+		rtspClt->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
 				// 可以在这里处理帧，例如存档或分析
 				});
-			relay->setStatusCallback([](RTSPRelay::State state, const std::string& msg) {
-				LOG("[RTSPRelay] Status: %d - %s", static_cast<int>(state), msg.c_str());
+		rtspClt->setStatusCallback([](RtspClient::State state, const std::string& msg) {
+				LOG("[RtspClient] Status: %d - %s", static_cast<int>(state), msg.c_str());
 				});
-			relay->setErrorCallback([](const std::string& error, int code) {
-				LOG("[RTSPRelay] Error (%d): %s", code, error.c_str());
+		rtspClt->setErrorCallback([](const std::string& error, int code) {
+				LOG("[RtspClient] Error (%d): %s", code, error.c_str());
 				});
 		
 
 		// 3. 配置 relay
-		RTSPRelay::Config config;
+		RtspClient::Config config;
 		config.source_url = pmp->m_mediaUrl; // 源地址
 		// 提取用户名和密码
-		bool isSuccess = relay->extractRtspAuthInfo(config);
+		bool isSuccess = rtspClt->extractRtspAuthInfo(config);
 
-		config.target_url = pushTo.empty() ? "rtsp://127.0.0.1:554/" + tag : pushTo; // 目标地址
+		config.target_url = pushTo; // 目标地址
 		config.retry_interval = 3000;
 		config.max_retries = 0; // 无限重试
 		config.rtp_timeout = 10000;
 
 		// 4. 启动 relay
-		LOG("[流媒体] 启动 RTSPRelay (内置模式)，源: %s, 目标: %s",
+		LOG("[流媒体] 启动 RtspClient (内置模式)，源: %s, 目标: %s",
 			config.source_url.c_str(), config.target_url.c_str());
 
-		if (relay->start(config)) {
-			// 5. 将 relay 实例存入 map
+		if (rtspClt->start(config)) {
 			std::lock_guard<std::mutex> lock(m_relayMutex);
-			m_mapRtspRelays[tag] = std::move(relay);
+			m_mapRtspClients[tag] = std::move(rtspClt);
 			ret = true;
 		}
 		else {
-			LOG("[流媒体] 启动 RTSPRelay 失败 for tag: %s", tag.c_str());
+			LOG("[流媒体] 启动 RtspClient 失败 for tag: %s", tag.c_str());
 			ret = false;
 		}
 	}
@@ -482,26 +477,36 @@ bool project::closeStream(string tag)
 		}
 	}
 	else {
-		// 再尝试关闭 RTSPRelay
-		std::unique_ptr<RTSPRelay> relayToStop;
+		// 再尝试关闭 RtspClient
+		std::unique_ptr<RtspClient> relayToStop;
 		{
 			std::lock_guard<std::mutex> lock(m_relayMutex);
-			auto it = m_mapRtspRelays.find(tag);
-			if (it != m_mapRtspRelays.end()) {
+			auto it = m_mapRtspClients.find(tag);
+			if (it != m_mapRtspClients.end()) {
 				relayToStop = std::move(it->second);
-				m_mapRtspRelays.erase(it);
-				LOG("[流媒体] 正在停止 RTSPRelay for tag: %s", tag.c_str());
+				m_mapRtspClients.erase(it);
+				LOG("[流媒体] 正在停止 RtspClient for tag: %s", tag.c_str());
 			}
 		}
 
 		// 在锁外停止 relay，避免潜在死锁
 		if (relayToStop) {
 			relayToStop->stop();
-			LOG("[流媒体] RTSPRelay 已停止 for tag: %s", tag.c_str());
+			LOG("[流媒体] RtspClient 已停止 for tag: %s", tag.c_str());
 		}
 	}
 
 	return true;
+}
+
+RtspClient* project::getRtspClient(std::string tag)
+{
+	std::lock_guard<std::mutex> lock(m_relayMutex);
+	auto it = m_mapRtspClients.find(tag);
+	if (it != m_mapRtspClients.end()) {
+		return it->second.get();
+	}
+	return nullptr;
 }
 
 

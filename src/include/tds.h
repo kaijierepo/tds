@@ -409,6 +409,43 @@ typedef bool (*fp_rpcHandler)(std::string strReq, RPC_RESP& resp, std::string& e
 typedef void (*fp_procBeforeExit)();
 
 
+class i_tdsPlugin {
+public:
+	virtual bool init() = 0;
+	virtual bool run() = 0;
+};
+
+class i_ioServer {
+public:
+	virtual size_t getBindedChanCount() = 0;
+};
+
+
+class i_xiaoT : public i_tdsPlugin {
+public:
+	virtual std::string getReply(std::string msg) = 0;
+};
+
+class i_gzhServer : public i_tdsPlugin {
+public:
+	virtual std::string getReply(std::string msg) = 0;
+};
+
+class i_smsServer : public i_tdsPlugin {
+public:
+	virtual bool send(std::string& msg,std::string& phoneNum) = 0;
+	virtual bool sendVerificationCode(std::string phoneNum) = 0;
+	virtual bool checkVerificationCode(std::string phoneNum, std::string code) = 0;
+};
+
+
+typedef void (*fp_toolRun)();
+
+
+struct PLUGIN_INFO {
+	std::string name;
+};
+
 //custom define which kind of message to log
 struct LOG_ENABLE {
 	bool innerRPCCall;
@@ -432,7 +469,7 @@ struct iTDSConf {
 	int tokenExpireTime;
 	bool enableAccessCtrl;
 	std::string testToken;
-	
+
 	//path conf
 	std::string confPath;   //config data path
 	std::string currentPath; //current data of path
@@ -481,7 +518,7 @@ struct iTDSConf {
 	std::string homepage;
 	std::string uiMode;
 	std::string uiTitle;
-	bool fullscreen; 
+	bool fullscreen;
 	bool singleGenicamHost;
 	std::vector<ACTIVE_TDS_SESSION> vecActiveSession;
 
@@ -503,7 +540,7 @@ struct iTDSConf {
 
 	//disk clean  remove the data which is out dataStorageMonths、mediaStorageMonths。
 	std::string triggerStratgy = "period"; // LowLimit、 peroid
-	int diskSpaceLeft=20; //unit GB
+	int diskSpaceLeft = 20; //unit GB
 	int judgePeriod = 60;  //unit second
 	int dataStorageMonths = 24;
 	int mediaStorageMonths = 3;
@@ -519,6 +556,9 @@ struct iTDSConf {
 	//large Model
 	int largeModelType = -1;
 
+	// video func
+	bool alwaysOpenStream = false; // 软件启动后就打开视频流，默认为false，即按需打开
+
 	LOG_ENABLE logEnable;
 
 	virtual int getInt(std::string key, int iDef) = 0;
@@ -530,43 +570,6 @@ struct iTDSConf {
 	virtual std::string getCurrentStr(std::string key, std::string sDef) = 0;
 	virtual bool setCurrentStr(std::string key, std::string val) = 0;
 	virtual bool setCurrentInt(std::string key, int val) = 0;
-};
-
-class i_tdsPlugin {
-public:
-	virtual bool init() = 0;
-	virtual bool run() = 0;
-};
-
-class i_ioServer {
-public:
-	virtual size_t getBindedChanCount() = 0;
-};
-
-
-class i_xiaoT : public i_tdsPlugin {
-public:
-	virtual std::string getReply(std::string msg) = 0;
-};
-
-class i_gzhServer : public i_tdsPlugin {
-public:
-	virtual std::string getReply(std::string msg) = 0;
-};
-
-class i_smsServer : public i_tdsPlugin {
-public:
-	virtual bool send(std::string& msg,std::string& phoneNum) = 0;
-	virtual bool sendVerificationCode(std::string phoneNum) = 0;
-	virtual bool checkVerificationCode(std::string phoneNum, std::string code) = 0;
-};
-
-
-typedef void (*fp_toolRun)();
-
-
-struct PLUGIN_INFO {
-	std::string name;
 };
 
 //interface of TDS

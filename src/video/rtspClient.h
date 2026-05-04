@@ -60,6 +60,20 @@ public:
         TCP     // RTP over RTSP (TCP)
     };
 
+    // 录像控制
+    struct RecordControl {
+        bool enable = false;          // 是否启用录像
+        std::string path;             // 录像文件路径
+        uint64_t max_file_size = 0;   // 单个录像文件最大大小(字节)，0表示不限制
+        uint64_t max_duration = 0;    // 单个录像文件最长时长(秒)，0表示不限制
+        int max_files = 0;            // 最多保留的录像文件数量，0表示不限制
+		int preSeconds = 0;          // 录像预录时间(秒)，即在事件发生前也保存的录像时长
+
+        std::vector<char> fu_a_buffer_; // FU-A分片缓存
+        // 记录上一个写入的是否为 IDR，用于判断连续的 IDR
+        bool last_was_idr_ = false;
+	};
+
     // 配置结构
     struct Config {
         std::string source_url;      // 源RTSP地址
@@ -73,8 +87,6 @@ public:
         int rtp_timeout = 5000;      // RTP超时(ms)
         int buffer_size = 65536;     // 缓冲区大小
         bool verbose = false;        // 详细日志
-        bool record = false;         // 是否录制视频
-        std::string recordPath = "";   //录像路径   
         
         // 拉流（从源获取）传输模式
         TransportMode pull_mode = TransportMode::UDP;
@@ -247,13 +259,15 @@ private:
         bool setSocketTimeout(int timeout_ms);
     };
 
-private:
+public:
     // 配置和状态
     Config config_;
     State state_ = State::IDLE;
     std::atomic<bool> running_{ false };
     std::atomic<bool> stopping_{ false };
     std::atomic<bool> streaming_{ false };
+
+    RecordControl rec_ctrl_;
 
     // 认证信息
     AuthInfo source_auth_;
@@ -310,9 +324,6 @@ private:
     // 重连控制
     std::chrono::steady_clock::time_point last_reconnect_time_;
 
-    // 记录上一个写入的是否为 IDR，用于判断连续的 IDR
-    bool last_was_idr_ = false;
-
     // 工作线程
     void workerThread();
     void doRtpRecv();
@@ -345,6 +356,7 @@ private:
     std::string generateSDP(const StreamInfo& video_info, const StreamInfo& audio_info);
     void forwardRTPPacket(const RTPPacket& packet);
     void recordRTPPacket(RTPPacket* pPkt);
+    void writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs);
     std::string extractSessionID(const std::string& response);
     std::string extractTransport(const std::string& response);
 
