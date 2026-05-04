@@ -53,6 +53,30 @@ public:
 static WinsockInitializer winsock_init;
 #endif
 
+// Base64解码（用于解析 sprop-parameter-sets）
+static std::vector<uint8_t> base64Decode(const std::string& input) {
+    static const std::string chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789+/";
+
+    std::vector<uint8_t> out;
+    std::vector<int> T(256, -1);
+    for (int i = 0; i < 64; i++) T[(unsigned char)chars[i]] = i;
+
+    int val = 0, valb = -8;
+    for (unsigned char c : input) {
+        if (T[c] == -1) break;
+        val = (val << 6) + T[c];
+        valb += 6;
+        if (valb >= 0) {
+            out.push_back((uint8_t)((val >> valb) & 0xFF));
+            valb -= 8;
+        }
+    }
+    return out;
+}
+
 // ============================================================================
 // MD5实现 (RFC 1321)
 // ============================================================================
@@ -706,7 +730,7 @@ void RTSPRelay::setStatusCallback(StatusCallback cb) {
 }
 
 void RTSPRelay::setFrameCallback(FrameCallback cb) {
-    frame_callback_ = cb;
+
 }
 
 void RTSPRelay::setErrorCallback(ErrorCallback cb) {
@@ -1830,19 +1854,14 @@ void RTSPRelay::doRtpRecv() {
 					recordRTPPacket(pPkt);
                 }
 
-                // 调用回调
-                if (frame_callback_) {
-                    frame_callback_(packet.payload.data(), packet.payload.size(), packet.timestamp);
-                }
-
                 logVerbose((pullUDP ? "UDP" : "TCP") + std::string("->RTP: seq=") + 
                     std::to_string(packet.sequence_number) +
                     " ts=" + std::to_string(packet.timestamp) +
                     " size=" + std::to_string(received));
             }
         }
-        else if (received < 0 && pullUDP) {
-            // 超时或其他错误（UDP模式）
+        else if (received > 0 && received<=12) {
+            logVerbose("wrong recv len");
         }
         else {
             // 检查RTP超时
@@ -2296,6 +2315,28 @@ bool RTSPRelay::parseSDP(const std::string & sdp, StreamInfo & video_info, Strea
                 size_t fmtp_start = value.find(' ');
                 if (fmtp_start != std::string::npos) {
                     current_info->fmtp = value.substr(fmtp_start + 1);
+
+                    // 解析 sprop-parameter-sets（如果存在），格式类似：sprop-parameter-sets=Z0IAH5WoFAFuQA==,aM48gA==
+                    size_t sprop_pos = current_info->fmtp.find("sprop-parameter-sets=");
+                    if (sprop_pos != std::string::npos) {
+                        size_t start = sprop_pos + strlen("sprop-parameter-sets=");
+                        size_t end = current_info->fmtp.find(';', start);
+                        std::string sprop = (end == std::string::npos) ? current_info->fmtp.substr(start) : current_info->fmtp.substr(start, end - start);
+
+                        // 去掉可能的空格
+                        while (!sprop.empty() && sprop.front() == ' ') sprop.erase(sprop.begin());
+
+                        // sprop 通常为 base64_sps,base64_pps
+                        size_t comma = sprop.find(',');
+                        if (comma != std::string::npos) {
+                            std::string sps_b64 = sprop.substr(0, comma);
+                            std::string pps_b64 = sprop.substr(comma + 1);
+                            auto sps_dec = base64Decode(sps_b64);
+                            auto pps_dec = base64Decode(pps_b64);
+                            if (!sps_dec.empty()) current_info->sps = std::move(sps_dec);
+                            if (!pps_dec.empty()) current_info->pps = std::move(pps_dec);
+                        }
+                    }
                 }
             }
             else if (value.find("control:") == 0) {
@@ -2813,7 +2854,48 @@ void RTSPRelay::recordRTPPacket(RTPPacket* pPkt) {
         std::string nal_type_desc = getNALTypeDesc(nal_unit_type) + "\r\n";
         ofs_info.write(nal_type_desc.c_str(), nal_type_desc.size());
 
-        if (nal_unit_type == 28 && payload.size() >= 2) {
+        // 当 NALU 长度超过 以太网MTU（典型 1500 字节）时会触发 FU-A 分片，但实际工程中常用阈值是 1400 字节左右（留安全余量）。
+        // SPS/PPS/SEI 通常很小（几十~几百字节），都是 Single NALU 方式；I 帧（IDR）NALU 通常很大（几十KB~几百KB），几乎必然走 FU-A
+        if (nal_unit_type == NAL_TYPE_STAP_A && payload.size() >= 2) {
+            // STAP-A: 单时刻聚合包，payload 格式：
+            // byte0: STAP-A header (F|NRI|Type=24)
+            // 接下来重复： 2 字节大端长度 L, L 字节子NAL 数据
+            size_t off = 1;
+            while (off + 2 <= payload.size()) {
+                uint16_t L = (payload[off] << 8) | payload[off + 1];
+                off += 2;
+                if (L == 0) continue;
+                if (off + L > payload.size()) break; // 不完整，退出
+
+                const uint8_t* subNal = &payload[off];
+                uint8_t sub_nal_type = subNal[0] & 0x1F;
+
+                if (sub_nal_type == NAL_TYPE_IDR) {
+                    if (!last_was_idr_ && !source_video_info_.sps.empty() && !source_video_info_.pps.empty()) {
+                        ofs.write((const char*)start_code, sizeof(start_code));
+                        ofs.write((const char*)source_video_info_.sps.data(), static_cast<std::streamsize>(source_video_info_.sps.size()));
+                        ofs.write((const char*)start_code, sizeof(start_code));
+                        ofs.write((const char*)source_video_info_.pps.data(), static_cast<std::streamsize>(source_video_info_.pps.size()));
+                        std::string s = "sps+pps\r\n";
+                        ofs_info.write(s.c_str(), s.size());
+                    }
+                    last_was_idr_ = true;
+                }
+                else {
+                    last_was_idr_ = false;
+                }
+
+                // 写入起始码 + 子 NAL 数据
+                ofs.write((const char*)start_code, sizeof(start_code));
+                ofs.write((const char*)subNal, static_cast<std::streamsize>(L));
+
+                off += L;
+
+                std::string sub_nal_type_desc = getNALTypeDesc(sub_nal_type) + "\r\n";
+                ofs_info.write(sub_nal_type_desc.c_str(), sub_nal_type_desc.size());
+            }
+        }
+        else if (nal_unit_type == NAL_TYPE_FU_A && payload.size() >= 2) {
             // FU-A 片段化（RFC 6184）处理
             // H.264 NAL 单元在 RTP 中可能被分片为 FU-A（Fragmentation Unit A）格式。
             // FU-A payload 格式：
@@ -2830,13 +2912,35 @@ void RTSPRelay::recordRTPPacket(RTPPacket* pPkt) {
             bool start = (fu_header & 0x80) != 0; // S 位
             // 重建原始 NAL 头：FU indicator 的 F/NRI 保留，高 3 位；
             // FU header 的低 5 位是原始 NAL 单元类型
-            uint8_t nal_header = (payload[0] & 0xE0) | (fu_header & 0x1F);
+			uint8_t fu_a_org_type = fu_header & 0x1F;
+            uint8_t nal_header = (payload[0] & 0xE0) | fu_a_org_type;
 
             if (start) {
-                // 起始片段：写入 H.264 起始码 + 重建的 NAL 头，然后写入本片段的负载（从第3字节开始）
+                // 起始片段：重建的 NAL 头的低5位是原始 nal_unit_type
+                uint8_t orig_type = nal_header & 0x1F;
+                // 只有当被分片的原始 NAL 是 IDR（type==5）时，才在写入该 NAL 前插入 SPS/PPS
+                // 否则可能会在非关键帧前重复写入参数集，造成冗余或误导播放器
+                if (orig_type == NAL_TYPE_IDR) {
+                    if (!last_was_idr_ && !source_video_info_.sps.empty() && !source_video_info_.pps.empty()) {
+                        ofs.write((const char*)start_code, sizeof(start_code));
+                        ofs.write((const char*)source_video_info_.sps.data(), static_cast<std::streamsize>(source_video_info_.sps.size()));
+                        ofs.write((const char*)start_code, sizeof(start_code));
+                        ofs.write((const char*)source_video_info_.pps.data(), static_cast<std::streamsize>(source_video_info_.pps.size()));
+                        std::string s = "sps+pps\r\n";
+                        ofs_info.write(s.c_str(), s.size());
+                    }
+                    last_was_idr_ = true;
+                }
+                else {
+                    last_was_idr_ = false;
+                }
+
                 ofs.write((const char*)start_code, sizeof(start_code));
                 ofs.put((char)nal_header);
                 ofs.write((const char*)&payload[2], static_cast<std::streamsize>(payload.size() - 2));
+
+                std::string org_nal_type_desc = getNALTypeDesc(fu_a_org_type) + "\r\n";
+                ofs_info.write(org_nal_type_desc.c_str(), org_nal_type_desc.size());
             }
             else {
                 // 后续片段：只写入负载（从第3字节开始），不写起始码也不写 NAL 头
@@ -2845,6 +2949,22 @@ void RTSPRelay::recordRTPPacket(RTPPacket* pPkt) {
         }
         else {
             // 非片段：直接写入起始码 + payload
+            // 在写入 IDR（type 5）或其他关键 NAL 前，如果有 SDP 提供的 sps/pps，先写入
+            if (nal_unit_type == NAL_TYPE_IDR) {
+                if (!last_was_idr_ && !source_video_info_.sps.empty() && !source_video_info_.pps.empty()) {
+                    ofs.write((const char*)start_code, sizeof(start_code));
+                    ofs.write((const char*)source_video_info_.sps.data(), static_cast<std::streamsize>(source_video_info_.sps.size()));
+                    ofs.write((const char*)start_code, sizeof(start_code));
+                    ofs.write((const char*)source_video_info_.pps.data(), static_cast<std::streamsize>(source_video_info_.pps.size()));
+                    std::string s = "sps+pps\r\n";
+                    ofs_info.write(s.c_str(), s.size());
+                }
+                last_was_idr_ = true;
+            }
+            else {
+                last_was_idr_ = false;
+            }
+
             ofs.write((const char*)start_code, sizeof(start_code));
             ofs.write((const char*)payload.data(), static_cast<std::streamsize>(payload.size()));
         }

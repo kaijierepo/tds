@@ -199,6 +199,9 @@ private:
         int payload_type = 96;
         int clock_rate = 90000;
         std::string fmtp;
+        // 如果 SDP 中包含 sprop-parameter-sets，会把解码后的 SPS/PPS 保存到这里
+        std::vector<uint8_t> sps;
+        std::vector<uint8_t> pps;
 
         // 传输信息
         std::string transport;
@@ -298,7 +301,6 @@ private:
 
     // 回调函数
     StatusCallback status_callback_;
-    FrameCallback frame_callback_;
     ErrorCallback error_callback_;
 
     // 时间戳
@@ -307,6 +309,9 @@ private:
 
     // 重连控制
     std::chrono::steady_clock::time_point last_reconnect_time_;
+
+    // 记录上一个写入的是否为 IDR，用于判断连续的 IDR
+    bool last_was_idr_ = false;
 
     // 工作线程
     void workerThread();
