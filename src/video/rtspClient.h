@@ -62,12 +62,13 @@ public:
 
     // 录像控制
     struct RecordControl {
-        bool enable = false;          // 是否启用录像
+        bool recording = false;          // 是否启用录像
         std::string path;             // 录像文件路径
         uint64_t max_file_size = 0;   // 单个录像文件最大大小(字节)，0表示不限制
         uint64_t max_duration = 0;    // 单个录像文件最长时长(秒)，0表示不限制
         int max_files = 0;            // 最多保留的录像文件数量，0表示不限制
 		int preSeconds = 0;          // 录像预录时间(秒)，即在事件发生前也保存的录像时长
+        bool firstWrite = true;
 
         std::vector<char> fu_a_buffer_; // FU-A分片缓存
         // 记录上一个写入的是否为 IDR，用于判断连续的 IDR
@@ -87,6 +88,7 @@ public:
         int rtp_timeout = 5000;      // RTP超时(ms)
         int buffer_size = 65536;     // 缓冲区大小
         bool verbose = false;        // 详细日志
+        std::string tag;
         
         // 拉流（从源获取）传输模式
         TransportMode pull_mode = TransportMode::UDP;
@@ -295,9 +297,7 @@ public:
 
     // 线程
     std::thread worker_thread_;
-    std::thread rtp_thread_;
     std::thread control_thread_;
-    std::thread stats_thread_;
 
     // 同步
     mutable std::mutex state_mutex_;
@@ -306,8 +306,12 @@ public:
     std::condition_variable cv_;
 
     // 数据队列
-    std::vector<RTPPacket*> packet_queue_;
-    size_t max_queue_size_ = 1000;
+    int getBufferedSeconds();
+    void addToRtpBuffer(RTPPacket* pPkt);
+    int rtp_buffer_max_seconds_ = 60; 
+    std::vector<RTPPacket*> rtp_buffer_;
+    std::vector<RTPPacket*> record_batch_buffer_;
+    size_t max_queue_size_ = 50000;
 
     // 统计
     Statistics stats_;
@@ -326,9 +330,11 @@ public:
 
     // 工作线程
     void workerThread();
-    void doRtpRecv();
     void controlThread();
-    void statsThread();
+    bool doStreamPull();
+    bool doStreamPush();
+    void doRtpRecv();
+
 
     // RTSP控制方法
     bool rtspDescribe(Connection& conn, const std::string& url,
@@ -347,9 +353,7 @@ public:
         const std::string& session);
     void teardown();
 
-    // 连接和设置
-    bool connectToSource();
-    bool setupStreams();
+
 
     // SDP处理
     bool parseSDP(const std::string& sdp, StreamInfo& video_info, StreamInfo& audio_info);

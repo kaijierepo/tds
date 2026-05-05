@@ -476,7 +476,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	bool bHandled = true;
 
 	if(method == "getStreamInfo") {
-		//result = rpc_getStreamInfo(params, error);
+		rpc_getStreamInfo(params, rpcResp, session);
 	}
 	else if (method == "getYsAccessInfo") {
 		string tag = params["tag"];
@@ -557,26 +557,30 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 		int preTime = params["preSeconds"].get<int>();
 		RtspClient* rc = prj.getRtspClient(tag);
 		if (rc) {
-			rc->rec_ctrl_.enable = true;
+			rc->rec_ctrl_.fu_a_buffer_.clear();
+			rc->rec_ctrl_.firstWrite = true;
 			rc->rec_ctrl_.preSeconds = preTime;
 			DB_TIME now; now.setNow();
 			rc->rec_ctrl_.path = tds->conf->dbPath + "/record/" + tag + "_" + now.toStampFull() + ".h264";
+			rc->rec_ctrl_.recording = true;
 			rpcResp.result = RPC_OK;
 		}
 		else {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
 		}
+		LOG("[HTTP API]startRecord, tag: %s, preSeconds: %d", tag.c_str(), preTime);
 	}
 	else if(method == "stopRecord") {
 		string tag = params["tag"];
 		RtspClient* rc = prj.getRtspClient(tag);
 		if (rc) {
-			rc->rec_ctrl_.enable = false;
+			rc->rec_ctrl_.recording = false;
 			rpcResp.result = RPC_OK;
 		}
 		else {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
 		}
+		LOG("[HTTP API]stopRecord, tag: %s", tag.c_str());
 	}
 #ifdef ENABLE_GENICAM
 	else if (method == "setStream")
@@ -6578,48 +6582,58 @@ string rpcHandler::rpc_setStream(json params,string& error)
 	error = makeRPCError(TEC_STREAM_ID_NOT_FOUND, "stream id not found");
 	return "";
 }
+#endif
 
-
-string rpcHandler::rpc_getStreamInfo(json params,string& error)
+bool rpcHandler::rpc_getStreamInfo(json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string streamId;
 	if (params.find("streamId") != params.end())
 		streamId = params["streamId"].get<string>();
+	if (params.find("tag") != params.end())
+	{
+		streamId = params["tag"].get<string>();
+		streamId = TAG::addRoot(streamId, session.org);
+	}
 	if (streamId == "")
 	{
-		error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing,"param missing,tag is not specified");
-		return "";
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing,"param missing,streamid or tag is not specified");
+		return true;
 	}
 
-	streamSrvNode* pssn = streamSrv.getSrvNode(streamId);
-	if(pssn->m_streamPusher == NULL)
+	RtspClient* rc = prj.getRtspClient(streamId);
+	if(rc == nullptr)
 	{
-		error = makeRPCError(RPC_ERROR_CODE::TEC_NO_STREAM_SRC, "no stream src of this tag");
-		return "";
-	}
-
-	if (pssn->m_streamPusher->m_streamInfo.w == 0 || pssn->m_streamPusher->m_streamInfo.h == 0)
-	{
-		error = makeRPCError(RPC_ERROR_CODE::TEC_VIDEO_PARAM_NOT_VALID, "video param is not valid");
-		return "";
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_NO_STREAM_SRC, "no stream src of this tag");
+		return true;
 	}
 
 	json jSi;
-	jSi["w"] = pssn->m_streamPusher->m_streamInfo.w;
-	jSi["h"] = pssn->m_streamPusher->m_streamInfo.h;
-	jSi["pixelFmt"] = pssn->m_streamPusher->m_streamInfo.pixelFmt;
-	if (pssn->m_streamPusher->m_pusherType == "ioDev")
-	{
-		ioDev* p = pssn->m_streamPusher->m_ioDev;
-		json jIoDev = json::object();
-		jIoDev["type"] = p->m_devType;
-		jIoDev["ioAddr"] = p->getIOAddrStr();
-		jSi["ioDev"] = jIoDev;
-	}
-	
-	return jSi.dump();
+	jSi["srcUrl"] = rc->config_.source_url;
+	jSi["destUrl"] = rc->config_.target_url;
+	json jRtpBuffer;
+	jRtpBuffer["size"] = rc->rtp_buffer_.size();
+	jRtpBuffer["maxSeconds"] = rc->rtp_buffer_max_seconds_;
+	jRtpBuffer["bufferedSeconds"] = rc->getBufferedSeconds();
+	jSi["rtpBuffer"] = jRtpBuffer;
+	json jRecCtrl;
+	jRecCtrl["recording"] = rc->rec_ctrl_.recording;
+	jRecCtrl["preSeconds"] = rc->rec_ctrl_.preSeconds;
+	jSi["recordCtrl"] = jRecCtrl;
+	json jStatis;
+	RtspClient::Statistics statis = rc->getStatistics();
+	jStatis["bitrate"] = statis.bitrate;
+	jStatis["fps"] = statis.fps;
+	jStatis["frameReceived"] = statis.frames_received;
+	jStatis["frameForwarded"] = statis.frames_forwarded;
+	jStatis["bytesReceived"] = statis.bytes_received;
+	jStatis["bytesForwarded"] = statis.bytes_forwarded;
+	jStatis["reconnectCount"] = statis.reconnect_count;
+	jSi["statis"] = jStatis;
+	jSi["startTime"] = statis.start_time.time_since_epoch().count();
+	rpcResp.result = jSi.dump();
+	return true;
 }
-#endif
+
 
 string rpcHandler::rpc_com_list(json params, string& error)
 {

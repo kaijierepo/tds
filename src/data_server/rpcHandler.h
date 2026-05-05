@@ -93,6 +93,9 @@ public:
 	void rpc_moList2table(Mo_Attr_Params& params, std::vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION& session);
 	void rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session);
 	std::string rpc_heartbeat(json params, std::string& error, RPC_SESSION& session);
+	void rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	void rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	std::string getChildTdsRegPkt();
 
 	//device manage
 	void rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION& session);
@@ -100,19 +103,16 @@ public:
 	void rpc_getChanVal(json params, RPC_RESP& resp);
 	std::string rpc_io_scanChannel(json params, std::string& error);
 
-
 	//serial function
 	std::string rpc_openCom(json params, std::string& error);
 	std::string rpc_com_list(json params, std::string& error);
 	std::string rpc_closeCom(json params, std::string& error);
 
-	void rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION& session);
-	void rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	//video stream
 	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION& session);
-
-	std::string getChildTdsRegPkt();
-
+	bool rpc_getStreamInfo(json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, std::string tag);
+	json rpc_getStreamUrl(MP* pmp, std::string tag, bool isHttps, std::string hostname, int port);
 
 	//genicam steam function
 #ifdef ENABLE_GENICAM
@@ -127,8 +127,6 @@ public:
 	//普通通知，数值变化这些，数据量很多，订阅才通知
 	void notify(std::string method, std::string notifyParams,bool specialNotify = false, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
 	
-
-
 	//alarm
 	json getAlarmStatis(std::string rootTag, RPC_SESSION& session);
 
@@ -136,7 +134,6 @@ public:
 	std::string rpc_getconf(json params, std::string& error);
 	std::string rpc_setconf(json params, std::string& error);
 
-	json rpc_getStreamUrl(MP* pmp, std::string tag, bool isHttps, std::string hostname, int port);
 
     std::string  ResolveTdsRpcEvnVar(std::string strIn, std::shared_ptr<TDS_SESSION> pSession);
 
