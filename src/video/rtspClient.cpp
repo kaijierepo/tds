@@ -578,7 +578,7 @@ int RtspClient::Connection::receiveHttpResp(std::string& response, int timeout_m
         response.append(buf, n);
 
         // 调试：打印每次接收的数据
-        printf("[DEBUG] recv %d bytes, total=%d, first bytes: %.*s\n", n, total, n > 20 ? 20 : n, buf);
+        //printf("[DEBUG] recv %d bytes, total=%d, first bytes: %.*s\n", n, total, n > 20 ? 20 : n, buf);
 
         if (IsValidPkt_HTTP(response, static_cast<size_t>(total))) {
             break;
@@ -634,7 +634,6 @@ bool RtspClient::start(const Config& config) {
     config_ = config;
     running_ = true;
     stopping_ = false;
-    streaming_ = false;
     retry_count_ = 0;
 
     // 清除之前的认证信息
@@ -652,9 +651,8 @@ bool RtspClient::start(const Config& config) {
         target_auth_.password = config_.target_password;
     }
 
-    setState(State::CONNECTING, "Starting RTSP relay");
-
-    worker_thread_ = std::thread(&RtspClient::workerThread, this);
+    control_thread_ = std::thread(&RtspClient::controlThread, this);
+	control_thread_.detach();
 
     LOG("[RtspClient] RtspClient started,tag=%s,src=%s,target=%s",config_.tag.c_str(), config_.source_url.c_str(), config_.target_url.c_str());
 
@@ -665,13 +663,12 @@ void RtspClient::stop() {
     if (!running_) return;
 
     stopping_ = true;
-    streaming_ = false;
     running_ = false;
 
     cv_.notify_all();
 
-    if (worker_thread_.joinable()) {
-        worker_thread_.join();
+    if (rtp_handle_thread_.joinable()) {
+        rtp_handle_thread_.join();
     }
 
     if (control_thread_.joinable()) {
@@ -681,7 +678,6 @@ void RtspClient::stop() {
     teardown();
 
     setState(State::IDLE, "Stopped");
-    logInfo("RTSP relay stopped");
 }
 
 void RtspClient::restart() {
@@ -1564,38 +1560,51 @@ void RtspClient::addToRtpBuffer(RTPPacket* pPkt)
     }
 }
 
-void RtspClient::workerThread() {
+void RtspClient::rtpHandleThread() {
+    RtspClient::doRtpRecv();
+}
+
+void RtspClient::controlThread() {
     while (running_ && !stopping_) {
-            if (!doStreamPull()) {
-                teardown();
-                std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-            }
-
-            if (config_.target_url == "")
-                return true;
-            if (!setupStreams()) {
-                streaming_ = false;
-                cv_.notify_all();
-                teardown();
-
-                if (shouldReconnect()) {
-                    doReconnect();
-                    continue;
+            // 启动拉流与推流
+            if (isPulling_ == false) {
+                if (doStreamPull()) {
+                    rtp_handle_thread_ = std::thread(&RtspClient::rtpHandleThread,this);
+                    rtp_handle_thread_.detach();
+                    isPulling_ = true;
                 }
                 else {
-                    break;
+                    teardown();
+                }
+            }
+ 
+            if (isPulling_ == true && isPushing_ == false && config_.target_url != "") {
+                if (doStreamPush()) {
+                    isPushing_ = true;
+				}
+                else {
+                    teardown();
+                }
+            }
+            
+            // 心跳保活
+            if (isPulling_) {
+                if (source_conn_ && !source_session_.empty()) {
+                    if (!rtspGetParameter(*source_conn_, config_.source_url, source_session_)) {
+                        setError("Source RTSP keepalive failed", 1002);
+                    }
                 }
             }
 
-            // 启动RTP接收线程
-            {
-                std::lock_guard<std::mutex> lock(stats_mutex_);
-                stats_.last_frame_time = std::chrono::steady_clock::now();
+            if (isPushing_) {
+                if (target_conn_ && !target_session_.empty()) {
+                    if (!rtspGetParameter(*target_conn_, config_.target_url, target_session_)) {
+                        setError("Target RTSP keepalive failed", 1002);
+                    }
+                }
             }
-            streaming_ = true;
 
-            RtspClient::doRtpRecv();
-            //control_thread_ = std::thread(&RtspClient::controlThread, this);
+            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     }
 }
 
@@ -1764,15 +1773,17 @@ bool RtspClient::doStreamPull() {
     }
 
     if (pullUseUDP) {
-        logInfo("Pull stream: Using UDP mode");
-        logInfo("Local UDP port: " + std::to_string(local_rtp_port_));
         source_video_info_.client_port = std::to_string(local_rtp_port_) + "-" + std::to_string(local_rtcp_port_);
-        logInfo("Source SETUP client_port: " + source_video_info_.client_port);
     }
     else {
-        logInfo("Pull stream: Using TCP mode (interleaved)");
         source_video_info_.client_port = "0-0";  // TCP模式不需要client_port
     }
+
+    LOG("[RtspClient]SETUP,tag=%s,mode=%s,local rtp/rtcp port=%s",
+        config_.tag.c_str(),
+        pullUseUDP ? "udp" : "tcp",
+        source_video_info_.client_port.c_str()
+    );
 
     // 发送SETUP到源
     if (!rtspSetup(*source_conn_, config_.source_url, source_session_, source_video_info_)) {
@@ -1800,6 +1811,13 @@ bool RtspClient::doStreamPull() {
         }
     }
 
+
+    LOG("[RtspClient]SETUP success,tag=%s,mode=%s,server port=%s",
+        config_.tag.c_str(),
+        pullUseUDP ? "udp" : "tcp",
+        source_video_info_.server_port.c_str()
+    );
+
     // 发送PLAY
     if (!rtspPlay(*source_conn_, config_.source_url, source_session_)) {
         setError("PLAY failed", 3004);
@@ -1812,13 +1830,7 @@ bool RtspClient::doStreamPull() {
 void RtspClient::doRtpRecv() {
     setState(State::PLAYING, "Streaming started");
     bool pullUDP = (config_.pull_mode == TransportMode::UDP);
-    
-    if (pullUDP) {
-        logInfo("Pull thread started (UDP mode)");
-    }
-    else {
-        logInfo("Pull thread started (TCP/interleaved mode)");
-    }
+    LOG("[keyinfo][RtspClient]Pull Success,rtp handle thread start,mode:" + std::string(pullUDP ? "UDP" : "TCP"));
 
     std::vector<uint8_t> buffer(config_.buffer_size);
     std::string src_ip;
@@ -1835,7 +1847,7 @@ void RtspClient::doRtpRecv() {
     std::vector<uint8_t> tcpBuffer;
     bool waitingForRtpData = true;
 
-    while (running_ && !stopping_ && streaming_) {
+    while (running_ && !stopping_) {
         int received = 0;
         
         if (pullUDP) {
@@ -1936,14 +1948,14 @@ void RtspClient::doRtpRecv() {
 					    recordRTPPacket(pPkt);
                 }
 
-                logVerbose((pullUDP ? "UDP" : "TCP") + std::string("->RTP: seq=") + 
-                    std::to_string(packet.sequence_number) +
-                    " ts=" + std::to_string(packet.timestamp) +
-                    " size=" + std::to_string(received));
+                //logVerbose((pullUDP ? "UDP" : "TCP") + std::string("->RTP: seq=") + 
+                //    std::to_string(packet.sequence_number) +
+                //    " ts=" + std::to_string(packet.timestamp) +
+                //    " size=" + std::to_string(received));
             }
         }
         else if (received > 0 && received<=12) {
-            logVerbose("wrong recv len");
+            printf("[RtspClient]rtp handle thread,wrong recv len");
         }
         else {
             // 检查RTP超时
@@ -1962,44 +1974,7 @@ void RtspClient::doRtpRecv() {
         }
     }
 
-    logInfo("Pull thread stopped");
-}
-
-void RtspClient::controlThread() {
-    logInfo("Control thread started");
-
-    while (running_ && !stopping_) {
-        bool should_exit = false;
-        {
-            std::unique_lock<std::mutex> lock(state_mutex_);
-            cv_.wait_for(lock, std::chrono::seconds(5), [&]() {
-                return !running_ || stopping_ || !streaming_ || state_ == State::S_ERROR;
-                });
-            should_exit = !running_ || stopping_ || !streaming_ || state_ == State::S_ERROR;
-        }
-        if (should_exit) {
-            break;
-        }
-
-        // 发送保活消息
-        if (source_conn_ && !source_session_.empty()) {
-            if (!rtspGetParameter(*source_conn_, config_.source_url, source_session_)) {
-                setError("Source RTSP keepalive failed", 1002);
-                break;
-            }
-        }
-
-        if (target_conn_ && !target_session_.empty()) {
-            if (!rtspGetParameter(*target_conn_, config_.target_url, target_session_)) {
-                setError("Target RTSP keepalive failed", 1002);
-                break;
-            }
-        }
-
-        logVerbose("Control thread heartbeat");
-    }
-
-    logInfo("Control thread stopped");
+    LOG("[RtspClient]Pull thread stopped,tag=",config_.tag);
 }
 
 void RtspClient::teardown() {

@@ -267,7 +267,8 @@ public:
     State state_ = State::IDLE;
     std::atomic<bool> running_{ false };
     std::atomic<bool> stopping_{ false };
-    std::atomic<bool> streaming_{ false };
+    bool isPulling_{ false };
+	bool isPushing_{ false };
 
     RecordControl rec_ctrl_;
 
@@ -296,7 +297,7 @@ public:
     std::string target_rtp_host_;   // 目标RTP主机地址
 
     // 线程
-    std::thread worker_thread_;
+    std::thread rtp_handle_thread_;
     std::thread control_thread_;
 
     // 同步
@@ -329,8 +330,8 @@ public:
     std::chrono::steady_clock::time_point last_reconnect_time_;
 
     // 工作线程
-    void workerThread();
     void controlThread();
+    void rtpHandleThread();
     bool doStreamPull();
     bool doStreamPush();
     void doRtpRecv();

@@ -425,18 +425,6 @@ bool project::openStream(string tag, string pushTo)
 		// 创建新的 RtspClient
 		auto rtspClt = std::make_unique<RtspClient>();
 
-		// 设置回调
-		rtspClt->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
-				// 可以在这里处理帧，例如存档或分析
-				});
-		rtspClt->setStatusCallback([](RtspClient::State state, const std::string& msg) {
-				LOG("[RtspClient] Status: %d - %s", static_cast<int>(state), msg.c_str());
-				});
-		rtspClt->setErrorCallback([](const std::string& error, int code) {
-				LOG("[RtspClient] Error (%d): %s", code, error.c_str());
-				});
-		
-
 		// 3. 配置 relay
 		RtspClient::Config config;
 		config.source_url = pmp->m_mediaUrl; // 源地址
@@ -447,6 +435,7 @@ bool project::openStream(string tag, string pushTo)
 		config.retry_interval = 3000;
 		config.max_retries = 0; // 无限重试
 		config.rtp_timeout = 10000;
+		config.tag = tag;
 
 		// 4. 启动 relay
 		LOG("[流媒体] 启动 RtspClient (内置模式)，源: %s, 目标: %s",
