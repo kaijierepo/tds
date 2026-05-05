@@ -895,16 +895,16 @@ bool RtspClient::rtspDescribe(Connection& conn, const std::string& url,
 
             int sent = conn.send(req.c_str(), req.size());
             if (sent != static_cast<int>(req.size())) {
-                logError("DESCRIBE send failed: sent=" + std::to_string(sent) +
+                setError("DESCRIBE send failed: sent=" + std::to_string(sent) +
                     " err=" + std::to_string(conn.lastError()));
                 response.clear();
                 return false;
             }
 
             response.clear();
-            int rc = conn.receiveHttpResp(response, 5000);
+            int rc = conn.receiveHttpResp(response, 1000);
             if (rc <= 0) {
-                logError("DESCRIBE recv failed: rc=" + std::to_string(rc) +
+                setError("DESCRIBE recv failed: rc=" + std::to_string(rc) +
                     " err=" + std::to_string(conn.lastError()));
                 response.clear();
                 return false;
@@ -947,7 +947,7 @@ bool RtspClient::rtspDescribe(Connection& conn, const std::string& url,
                 return false;
             }
             else {
-                logError("DESCRIBE failed: " + response.substr(0, 200));
+                LOG("[RtspClient]tag=%s,DESCRIBE failed:%s",config_.tag.c_str(),response.substr(0, 200).c_str());
                 return false;
             }
         };
@@ -1732,7 +1732,7 @@ bool RtspClient::doStreamPull() {
         return false;
     }
 
-    LOG("[RtspClient]Connect to source success," + src_url.host + ":" + std::to_string(src_url.port));
+    LOG("[RtspClient]tag=%s,Connect to source success,%s",config_.tag.c_str(),(src_url.host + ":" + std::to_string(src_url.port)).c_str());
 
     // 发送DESCRIBE
     std::string sdp;
@@ -1751,9 +1751,11 @@ bool RtspClient::doStreamPull() {
     std::string sdp_for_log = sdp;
     std::replace(sdp_for_log.begin(), sdp_for_log.end(), '\r', '~');
     std::replace(sdp_for_log.begin(), sdp_for_log.end(), '\n', '~');
-    LOG("[RtspClient] sdp received: " + sdp_for_log + 
-        ",streamInfo:" + source_video_info_.control_url + 
-        ",audio_control:" + source_audio_info_.control_url);
+    LOG("[RtspClient]tag=%s, sdp received: %s,streamInfo:%s,audioControl:%s",
+        config_.tag.c_str(), 
+        sdp_for_log.c_str(),
+        source_video_info_.control_url.c_str(),
+        source_audio_info_.control_url.c_str());
 
     setState(State::CONNECTED, "Source connected");
     setState(State::CONNECTING, "Setting up streams");
@@ -1779,7 +1781,7 @@ bool RtspClient::doStreamPull() {
         source_video_info_.client_port = "0-0";  // TCP模式不需要client_port
     }
 
-    LOG("[RtspClient]SETUP,tag=%s,mode=%s,local rtp/rtcp port=%s",
+    LOG("[RtspClient]tag=%s,SETUP,mode=%s,local rtp/rtcp port=%s",
         config_.tag.c_str(),
         pullUseUDP ? "udp" : "tcp",
         source_video_info_.client_port.c_str()
@@ -1812,7 +1814,7 @@ bool RtspClient::doStreamPull() {
     }
 
 
-    LOG("[RtspClient]SETUP success,tag=%s,mode=%s,server port=%s",
+    LOG("[RtspClient]tag=%s,SETUP success,mode=%s,server port=%s",
         config_.tag.c_str(),
         pullUseUDP ? "udp" : "tcp",
         source_video_info_.server_port.c_str()
@@ -1830,7 +1832,7 @@ bool RtspClient::doStreamPull() {
 void RtspClient::doRtpRecv() {
     setState(State::PLAYING, "Streaming started");
     bool pullUDP = (config_.pull_mode == TransportMode::UDP);
-    LOG("[keyinfo][RtspClient]Pull Success,rtp handle thread start,mode:" + std::string(pullUDP ? "UDP" : "TCP"));
+    LOG("[keyinfo][RtspClient]tag=%s,Pull Success,rtp handle thread start,mode:%s",config_.tag.c_str(),pullUDP ? "UDP" : "TCP");
 
     std::vector<uint8_t> buffer(config_.buffer_size);
     std::string src_ip;

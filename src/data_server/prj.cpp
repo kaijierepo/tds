@@ -437,17 +437,12 @@ bool project::openStream(string tag, string pushTo)
 		config.rtp_timeout = 10000;
 		config.tag = tag;
 
-		// 4. 启动 relay
-		LOG("[流媒体] 启动 RtspClient (内置模式)，源: %s, 目标: %s",
-			config.source_url.c_str(), config.target_url.c_str());
-
 		if (rtspClt->start(config)) {
 			std::lock_guard<std::mutex> lock(m_relayMutex);
 			m_mapRtspClients[tag] = std::move(rtspClt);
 			ret = true;
 		}
 		else {
-			LOG("[流媒体] 启动 RtspClient 失败 for tag: %s", tag.c_str());
 			ret = false;
 		}
 	}
