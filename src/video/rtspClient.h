@@ -222,8 +222,10 @@ private:
         std::string client_port;
         std::string server_port;
         std::string source_host;
-        int source_rtp_port = 0;
-        int source_rtcp_port = 0;
+        int client_rtp_port = 0;
+        int client_rtcp_port = 0;
+		int server_rtp_port = 0;
+		int server_rtcp_port = 0;
     };
 
     // URL解析
@@ -291,9 +293,6 @@ public:
     SocketHandle udp_pull_socket_ = kInvalidSocket;   // UDP拉流socket
     SocketHandle udp_push_socket_ = kInvalidSocket;    // UDP推流socket
     SocketHandle rtcp_socket_ = kInvalidSocket;
-    int local_rtp_port_ = 0;        // 本地RTP监听端口
-    int local_rtcp_port_ = 0;       // 本地RTCP端口
-    int target_rtp_port_ = 0;       // 目标RTP端口
     std::string target_rtp_host_;   // 目标RTP主机地址
 
     // 线程

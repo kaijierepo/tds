@@ -416,8 +416,13 @@ bool project::openStream(string tag, string pushTo)
 		}
 	}
 	else {
-		if (prj.getRtspClient(tag)) {
+		RtspClient* rc = prj.getRtspClient(tag);
+		if (rc) {
 			LOG("[流媒体] RtspClient 已在运行 for tag: %s", tag.c_str());
+			if (rc->config_.target_url == "" && pushTo != "") {
+				rc->config_.target_url = pushTo;
+				LOG("[流媒体] RtspClient is pulling for tag: %s, start push to %s", tag.c_str(),pushTo.c_str());
+			}
 			pmp->m_isOpenningStream = false;
 			return true;
 		}

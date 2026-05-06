@@ -1627,7 +1627,6 @@ bool RtspClient::doStreamPush() {
 
     // 生成目标SDP
     target_video_info_ = source_video_info_;
-    target_rtp_port_ = 0;
     {
         std::string track_control = "trackID=0";
         if (!source_video_info_.control_url.empty()) {
@@ -1649,6 +1648,24 @@ bool RtspClient::doStreamPush() {
     if (!rtspAnnounce(*target_conn_, config_.target_url, target_sdp, target_session_)) {
         setError("ANNOUNCE failed", 3007);
         return false;
+    }
+
+    // 如果使用 UDP 推流，应先创建并绑定本地 RTP/RTCP sockets，
+    // 并将 client_port 写入 target_video_info_，再发送 SETUP。
+    if (config_.push_mode == TransportMode::UDP) {
+        if (!createUDPPushSocket()) {
+            logError("Failed to create UDP push socket, falling back to TCP");
+            config_.push_mode = TransportMode::TCP;
+        }
+        else {
+            // 填写 client_port，格式 "RTP-RTCP"
+            target_video_info_.client_port = std::to_string(target_video_info_.client_rtp_port) + "-" + std::to_string(target_video_info_.client_rtcp_port);
+            logInfo("Push stream: Using UDP mode, client_port=" + target_video_info_.client_port);
+        }
+    }
+
+    if (config_.push_mode == TransportMode::TCP) {
+        logInfo("Push stream: Using TCP mode (RTP over RTSP)");
     }
 
     // 发送SETUP到目标
@@ -1675,13 +1692,13 @@ bool RtspClient::doStreamPush() {
                 ++pos;
             }
             if (port > 0 && port <= 65535) {
-                target_rtp_port_ = port;
+                target_video_info_.server_rtp_port = port;
             }
         }
     }
 
-    logInfo("Target RTP port: " + std::to_string(target_rtp_port_));
-    if (target_rtp_port_ == 0) {
+    logInfo("Target RTP port: " + std::to_string(target_video_info_.server_rtp_port));
+    if (target_video_info_.server_rtp_port == 0) {
         setError("Missing/invalid server_port in target Transport: " + target_video_info_.transport, 3010);
         return false;
     }
@@ -1690,27 +1707,14 @@ bool RtspClient::doStreamPush() {
     target_rtp_host_ = target_url.host;
     logInfo("Target RTP host: " + target_rtp_host_);
 
-    // 根据推流模式决定是否创建UDP socket
-    if (config_.push_mode == TransportMode::UDP) {
-        if (!createUDPPushSocket()) {
-            logError("Failed to create UDP push socket, falling back to TCP");
-            config_.push_mode = TransportMode::TCP;
-        }
-        else {
-            logInfo("Push stream: Using UDP mode");
-        }
-    }
-
-    if (config_.push_mode == TransportMode::TCP) {
-        logInfo("Push stream: Using TCP mode (RTP over RTSP)");
-    }
-
 
     // 发送RECORD到目标
     if (!rtspRecord(*target_conn_, config_.target_url, target_session_)) {
         setError("RECORD failed", 3009);
         return false;
     }
+
+	LOG("[keyinfo][RtspClient]tag=%s,stream forward success,pushToUrl:%s", config_.tag.c_str(), config_.target_url.c_str());
 
     return true;
 }
@@ -1775,7 +1779,7 @@ bool RtspClient::doStreamPull() {
     }
 
     if (pullUseUDP) {
-        source_video_info_.client_port = std::to_string(local_rtp_port_) + "-" + std::to_string(local_rtcp_port_);
+        source_video_info_.client_port = std::to_string(source_video_info_.client_rtp_port) + "-" + std::to_string(source_video_info_.client_rtcp_port);
     }
     else {
         source_video_info_.client_port = "0-0";  // TCP模式不需要client_port
@@ -1804,7 +1808,7 @@ bool RtspClient::doStreamPull() {
             // 解析RTP端口
             size_t dash = source_video_info_.server_port.find('-');
             if (dash != std::string::npos) {
-                source_video_info_.source_rtp_port = std::stoi(source_video_info_.server_port.substr(0, dash));
+                source_video_info_.server_rtp_port = std::stoi(source_video_info_.server_port.substr(0, dash));
             }
         }
         else if (token.find("source=") != std::string::npos) {
@@ -1922,7 +1926,7 @@ void RtspClient::doRtpRecv() {
                 addToRtpBuffer(pPkt);
 
                 // 转发到目标
-                if (config_.push_mode != TransportMode::NONE) {
+                if (isPushing_) {
                     forwardRTPPacket(packet);
                 }
 
@@ -1998,8 +2002,12 @@ void RtspClient::teardown() {
 
     source_session_.clear();
     target_session_.clear();
-    target_rtp_port_ = 0;
     target_rtp_host_.clear();
+
+    source_video_info_.client_rtp_port = 0;
+    source_video_info_.client_rtcp_port = 0;
+    target_video_info_.client_rtp_port = 0;
+    target_video_info_.client_rtcp_port = 0;
 
     // 清除认证信息（保留用户名密码）
     source_auth_.realm.clear();
@@ -2080,13 +2088,13 @@ bool RtspClient::createUDPPullSocket() {
             // 成功获取到一对连续端口
             udp_pull_socket_ = rtp_sock;
             rtcp_socket_ = rtcp_sock;
-            local_rtp_port_ = rtp_port;
-            local_rtcp_port_ = rtcp_port;
+            source_video_info_.client_rtp_port = rtp_port;
+            source_video_info_.client_rtcp_port = rtcp_port;
 
             logInfo("UDP pull sockets created: rtp_fd=" + std::to_string(udp_pull_socket_) +
-                    " rtp_port=" + std::to_string(local_rtp_port_) +
+                    " rtp_port=" + std::to_string(source_video_info_.client_rtp_port) +
                     " rtcp_fd=" + std::to_string(rtcp_socket_) +
-                    " rtcp_port=" + std::to_string(local_rtcp_port_));
+                    " rtcp_port=" + std::to_string(source_video_info_.client_rtcp_port));
             return true;
         }
 
@@ -2098,30 +2106,94 @@ bool RtspClient::createUDPPullSocket() {
     logError("Failed to create consecutive UDP pull sockets for RTP/RTCP");
     udp_pull_socket_ = kInvalidSocket;
     rtcp_socket_ = kInvalidSocket;
-    local_rtp_port_ = 0;
-    local_rtcp_port_ = 0;
+    source_video_info_.client_rtp_port = 0;
+    source_video_info_.client_rtcp_port = 0;
     return false;
 }
 
+// 修改 createUDPPushSocket()：分配并 bind 一对连续端口（RTP/RTCP）
 bool RtspClient::createUDPPushSocket() {
-    // 创建UDP推流socket（发送RTP数据到目标）
-    udp_push_socket_ = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
-    if (udp_push_socket_ == kInvalidSocket) {
-        logError("Failed to create UDP push socket");
-        return false;
+    const int max_attempts = 10;
+
+    for (int attempt = 0; attempt < max_attempts; ++attempt) {
+        // 创建RTP socket并绑定到系统分配的端口（0）
+        SocketHandle rtp_sock = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
+        if (rtp_sock == kInvalidSocket) {
+            logError("Failed to create UDP push socket (rtp)");
+            return false;
+        }
+
+        if (!configureUDPSocket(rtp_sock, false)) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        struct sockaddr_in local_addr;
+        memset(&local_addr, 0, sizeof(local_addr));
+        local_addr.sin_family = AF_INET;
+        local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        local_addr.sin_port = htons(0); // 系统分配端口
+
+        if (::bind(static_cast<SOCKET_TYPE>(rtp_sock), (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        // 获取分配的端口
+        socklen_t len = sizeof(local_addr);
+        if (getsockname(static_cast<SOCKET_TYPE>(rtp_sock), (struct sockaddr*)&local_addr, &len) != 0) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        int rtp_port = ntohs(local_addr.sin_port);
+        int rtcp_port = rtp_port + 1;
+
+        // 创建RTCP socket并绑定到 rtp_port + 1
+        SocketHandle rtcp_sock = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
+        if (rtcp_sock == kInvalidSocket) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        if (!configureUDPSocket(rtcp_sock, false)) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
+            continue;
+        }
+
+        struct sockaddr_in rtcp_addr;
+        memset(&rtcp_addr, 0, sizeof(rtcp_addr));
+        rtcp_addr.sin_family = AF_INET;
+        rtcp_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        rtcp_addr.sin_port = htons(rtcp_port);
+
+        if (::bind(static_cast<SOCKET_TYPE>(rtcp_sock), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) == 0) {
+            // 成功获取到一对连续端口
+            udp_push_socket_ = rtp_sock;
+            rtcp_socket_ = rtcp_sock;
+            target_video_info_.client_rtp_port = rtp_port;
+            target_video_info_.client_rtcp_port = rtcp_port;
+
+            logInfo("UDP push sockets created: rtp_fd=" + std::to_string(udp_push_socket_) +
+                " rtp_port=" + std::to_string(target_video_info_.client_rtp_port = rtp_port) +
+                " rtcp_fd=" + std::to_string(rtcp_socket_) +
+                " rtcp_port=" + std::to_string(target_video_info_.client_rtcp_port));
+            return true;
+        }
+
+        // 绑定失败，释放并重试
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
     }
 
-    // 配置推流socket
-    if (!configureUDPSocket(udp_push_socket_, false)) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_push_socket_));
-        udp_push_socket_ = kInvalidSocket;
-        return false;
-    }
-
-    logInfo("UDP push socket created: fd=" + std::to_string(udp_push_socket_));
-    return true;
+    logError("Failed to create consecutive UDP push sockets for RTP/RTCP");
+    udp_push_socket_ = kInvalidSocket;
+    rtcp_socket_ = kInvalidSocket;
+    target_video_info_.client_rtp_port = 0;
+    target_video_info_.client_rtcp_port = 0;
+    return false;
 }
-
 void RtspClient::closeUDPSockets() {
     if (udp_pull_socket_ != kInvalidSocket) {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_pull_socket_));
@@ -2135,8 +2207,11 @@ void RtspClient::closeUDPSockets() {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_socket_));
         rtcp_socket_ = kInvalidSocket;
     }
-    local_rtp_port_ = 0;
-    local_rtcp_port_ = 0;
+
+    source_video_info_.client_rtp_port = 0;
+    source_video_info_.client_rtcp_port = 0;
+    target_video_info_.client_rtp_port = 0;
+    target_video_info_.client_rtcp_port = 0;
 }
 
 bool RtspClient::configureUDPSocket(SocketHandle sock, bool is_multicast) {
@@ -2214,7 +2289,7 @@ bool RtspClient::configureUDPSocket(SocketHandle sock, bool is_multicast) {
 }
 
 bool RtspClient::sendUDPData(const uint8_t* data, size_t size) {
-    if (udp_push_socket_ == kInvalidSocket || target_rtp_port_ == 0) {
+    if (udp_push_socket_ == kInvalidSocket || target_video_info_.server_rtp_port == 0) {
         return false;
     }
 
@@ -2222,7 +2297,7 @@ bool RtspClient::sendUDPData(const uint8_t* data, size_t size) {
     struct sockaddr_in target_addr;
     memset(&target_addr, 0, sizeof(target_addr));
     target_addr.sin_family = AF_INET;
-    target_addr.sin_port = htons(target_rtp_port_);
+    target_addr.sin_port = htons(target_video_info_.server_rtp_port);
 
     if (inet_pton(AF_INET, target_rtp_host_.c_str(), &target_addr.sin_addr) <= 0) {
         struct hostent* server = gethostbyname(target_rtp_host_.c_str());
