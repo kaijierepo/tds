@@ -554,16 +554,24 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "playWebRtc") {
 		string tag = params["tag"];
-		int preTime = params["preSeconds"].get<int>();
+		int clientRtpPort = 0;
+		if (params["clientRtpPort"].is_number_integer()) {
+			clientRtpPort = params["clientRtpPort"].get<int>();
+		}
 		RtspClient* rc = prj.getRtspClient(tag);
 		if (rc) {
-			RtspClient::StreamInfo si = rc->source_video_info_;
-			rc->rec_ctrl_.fu_a_buffer_.clear();
-			rc->rec_ctrl_.firstWrite = true;
-			rc->rec_ctrl_.preSeconds = preTime;
-			DB_TIME now; now.setNow();
-			rc->rec_ctrl_.path = tds->conf->dbPath + "/record/" + tag + "_" + now.toStampFull() + ".h264";
-			rc->rec_ctrl_.recording = true;
+			RtspClient::RTSP_SESSION si = rc->pull_session_;
+			si.client_rtp_port = clientRtpPort;
+			si.remote_host = session.remoteIP;
+			rc->createUDPServerSocket(si);
+			rc->client_sessions_mutex_.lock();
+			rc->client_sessions_.push_back(si);
+			rc->client_sessions_mutex_.unlock();
+
+			json j;
+			j["serverRtpPort"] = si.server_rtp_port;
+			j["serverRtspPort"] = si.server_rtcp_port;
+			j["clientRtpPort"] = si.client_rtp_port;
 			rpcResp.result = RPC_OK;
 		}
 		else {

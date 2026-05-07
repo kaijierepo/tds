@@ -998,7 +998,7 @@ bool RtspClient::rtspDescribe(Connection& conn, const std::string& url,
 }
 
 bool RtspClient::rtspSetup(Connection& conn, const std::string& url,
-    std::string& session, StreamInfo& stream, bool record_mode) {
+    std::string& session, RTSP_SESSION& stream, bool record_mode) {
     URLComponents url_components;
     std::string host_header;
     if (URLComponents::parse(url, url_components)) {
@@ -1487,7 +1487,7 @@ int RtspClient::getBufferedSeconds()
     uint32_t diff = newest_ts - oldest_ts; // 无符号差值，处理 32 位回绕
 
     // 获取时钟频率（ticks per second），RTCP/SDP 中给出，视频常见为 90000
-    uint32_t clock = (source_video_info_.clock_rate > 0) ? static_cast<uint32_t>(source_video_info_.clock_rate) : 90000u;
+    uint32_t clock = (pull_session_.clock_rate > 0) ? static_cast<uint32_t>(pull_session_.clock_rate) : 90000u;
     if (clock == 0) clock = 90000u;
 
     // 整数秒（截断子秒）。如果存在刻度差但小于1秒，返回1以提示非空缓冲
@@ -1525,8 +1525,8 @@ void RtspClient::addToRtpBuffer(RTPPacket* pPkt)
         uint32_t newest_ts = rtp_buffer_.back()->timestamp;
 
         // 获取时钟频率（每秒刻度数），若 SDP 未提供则默认使用常见的视频值 90000Hz。
-        uint32_t clock = (source_video_info_.clock_rate > 0) ?
-            static_cast<uint32_t>(source_video_info_.clock_rate) : 90000u;
+        uint32_t clock = (pull_session_.clock_rate > 0) ?
+            static_cast<uint32_t>(pull_session_.clock_rate) : 90000u;
         if (clock == 0) clock = 90000u;
 
         // 当最旧包到最新包的时间差超过配置的秒数窗口时，逐个删除最旧包。
@@ -1626,11 +1626,11 @@ bool RtspClient::doStreamPush() {
     }
 
     // 生成目标SDP
-    target_video_info_ = source_video_info_;
+    push_session_ = pull_session_;
     {
         std::string track_control = "trackID=0";
-        if (!source_video_info_.control_url.empty()) {
-            std::string src = source_video_info_.control_url;
+        if (!pull_session_.control_url.empty()) {
+            std::string src = pull_session_.control_url;
             auto pos = src.find_last_of('/');
             track_control = (pos == std::string::npos) ? src : src.substr(pos + 1);
             if (track_control.empty() || track_control == "*" ||
@@ -1639,10 +1639,10 @@ bool RtspClient::doStreamPush() {
                 track_control = "trackID=0";
             }
         }
-        target_video_info_.control_url = track_control;
+        push_session_.control_url = track_control;
     }
 
-    std::string target_sdp = generateSDP(target_video_info_, StreamInfo());
+    std::string target_sdp = generateSDP(push_session_, RTSP_SESSION());
 
     // 发送ANNOUNCE到目标
     if (!rtspAnnounce(*target_conn_, config_.target_url, target_sdp, target_session_)) {
@@ -1659,8 +1659,8 @@ bool RtspClient::doStreamPush() {
         }
         else {
             // 填写 client_port，格式 "RTP-RTCP"
-            target_video_info_.client_port = std::to_string(target_video_info_.client_rtp_port) + "-" + std::to_string(target_video_info_.client_rtcp_port);
-            logInfo("Push stream: Using UDP mode, client_port=" + target_video_info_.client_port);
+            push_session_.client_port = std::to_string(push_session_.client_rtp_port) + "-" + std::to_string(push_session_.client_rtcp_port);
+            logInfo("Push stream: Using UDP mode, client_port=" + push_session_.client_port);
         }
     }
 
@@ -1669,37 +1669,37 @@ bool RtspClient::doStreamPush() {
     }
 
     // 发送SETUP到目标
-    if (!rtspSetup(*target_conn_, config_.target_url, target_session_, target_video_info_, true)) {
+    if (!rtspSetup(*target_conn_, config_.target_url, target_session_, push_session_, true)) {
         setError("SETUP failed for target", 3008);
         return false;
     }
 
     // 解析目标服务器端口
     {
-        logInfo("Target SETUP Transport: " + target_video_info_.transport);
+        logInfo("Target SETUP Transport: " + push_session_.transport);
         const std::string key = "server_port=";
-        size_t pos = target_video_info_.transport.find(key);
+        size_t pos = push_session_.transport.find(key);
         if (pos != std::string::npos) {
             pos += key.size();
-            while (pos < target_video_info_.transport.size() &&
-                (target_video_info_.transport[pos] == ' ' || target_video_info_.transport[pos] == '\t')) {
+            while (pos < push_session_.transport.size() &&
+                (push_session_.transport[pos] == ' ' || push_session_.transport[pos] == '\t')) {
                 ++pos;
             }
             int port = 0;
-            while (pos < target_video_info_.transport.size() &&
-                target_video_info_.transport[pos] >= '0' && target_video_info_.transport[pos] <= '9') {
-                port = port * 10 + (target_video_info_.transport[pos] - '0');
+            while (pos < push_session_.transport.size() &&
+                push_session_.transport[pos] >= '0' && push_session_.transport[pos] <= '9') {
+                port = port * 10 + (push_session_.transport[pos] - '0');
                 ++pos;
             }
             if (port > 0 && port <= 65535) {
-                target_video_info_.server_rtp_port = port;
+                push_session_.server_rtp_port = port;
             }
         }
     }
 
-    logInfo("Target RTP port: " + std::to_string(target_video_info_.server_rtp_port));
-    if (target_video_info_.server_rtp_port == 0) {
-        setError("Missing/invalid server_port in target Transport: " + target_video_info_.transport, 3010);
+    logInfo("Target RTP port: " + std::to_string(push_session_.server_rtp_port));
+    if (push_session_.server_rtp_port == 0) {
+        setError("Missing/invalid server_port in target Transport: " + push_session_.transport, 3010);
         return false;
     }
 
@@ -1746,7 +1746,7 @@ bool RtspClient::doStreamPull() {
     }
 
     // 解析SDP
-    if (!parseSDP(sdp, source_video_info_, source_audio_info_)) {
+    if (!parseSDP(sdp, pull_session_, pull_audio_session_)) {
         setError("Failed to parse SDP", 2004);
         return false;
     }
@@ -1758,8 +1758,8 @@ bool RtspClient::doStreamPull() {
     LOG("[RtspClient]tag=%s, sdp received: %s,streamInfo:%s,audioControl:%s",
         config_.tag.c_str(), 
         sdp_for_log.c_str(),
-        source_video_info_.control_url.c_str(),
-        source_audio_info_.control_url.c_str());
+        pull_session_.control_url.c_str(),
+        pull_audio_session_.control_url.c_str());
 
     setState(State::CONNECTED, "Source connected");
     setState(State::CONNECTING, "Setting up streams");
@@ -1779,41 +1779,41 @@ bool RtspClient::doStreamPull() {
     }
 
     if (pullUseUDP) {
-        source_video_info_.client_port = std::to_string(source_video_info_.client_rtp_port) + "-" + std::to_string(source_video_info_.client_rtcp_port);
+        pull_session_.client_port = std::to_string(pull_session_.client_rtp_port) + "-" + std::to_string(pull_session_.client_rtcp_port);
     }
     else {
-        source_video_info_.client_port = "0-0";  // TCP模式不需要client_port
+        pull_session_.client_port = "0-0";  // TCP模式不需要client_port
     }
 
     LOG("[RtspClient]tag=%s,SETUP,mode=%s,local rtp/rtcp port=%s",
         config_.tag.c_str(),
         pullUseUDP ? "udp" : "tcp",
-        source_video_info_.client_port.c_str()
+        pull_session_.client_port.c_str()
     );
 
     // 发送SETUP到源
-    if (!rtspSetup(*source_conn_, config_.source_url, source_session_, source_video_info_)) {
+    if (!rtspSetup(*source_conn_, config_.source_url, source_session_, pull_session_)) {
         setError("SETUP failed for source", 3003);
         return false;
     }
 
     // 解析传输信息
-    std::istringstream transport_stream(source_video_info_.transport);
+    std::istringstream transport_stream(pull_session_.transport);
     std::string token;
     while (std::getline(transport_stream, token, ';')) {
         if (token.find("server_port=") != std::string::npos) {
             size_t pos = token.find('=');
-            source_video_info_.server_port = token.substr(pos + 1);
+            pull_session_.server_port = token.substr(pos + 1);
 
             // 解析RTP端口
-            size_t dash = source_video_info_.server_port.find('-');
+            size_t dash = pull_session_.server_port.find('-');
             if (dash != std::string::npos) {
-                source_video_info_.server_rtp_port = std::stoi(source_video_info_.server_port.substr(0, dash));
+                pull_session_.server_rtp_port = std::stoi(pull_session_.server_port.substr(0, dash));
             }
         }
         else if (token.find("source=") != std::string::npos) {
             size_t pos = token.find('=');
-            source_video_info_.source_host = token.substr(pos + 1);
+            pull_session_.remote_host = token.substr(pos + 1);
         }
     }
 
@@ -1821,7 +1821,7 @@ bool RtspClient::doStreamPull() {
     LOG("[RtspClient]tag=%s,SETUP success,mode=%s,server port=%s",
         config_.tag.c_str(),
         pullUseUDP ? "udp" : "tcp",
-        source_video_info_.server_port.c_str()
+        pull_session_.server_port.c_str()
     );
 
     // 发送PLAY
@@ -1925,10 +1925,14 @@ void RtspClient::doRtpRecv() {
                 // 放入缓存
                 addToRtpBuffer(pPkt);
 
-                // 转发到目标
+                // 转发推流
                 if (isPushing_) {
                     forwardRTPPacket(packet);
                 }
+
+                //发送给拉流客户端
+				sendRTPPacketToClients(packet);
+                
 
                 // 录制到磁盘
                 if (rec_ctrl_.recording) {
@@ -2004,10 +2008,10 @@ void RtspClient::teardown() {
     target_session_.clear();
     target_rtp_host_.clear();
 
-    source_video_info_.client_rtp_port = 0;
-    source_video_info_.client_rtcp_port = 0;
-    target_video_info_.client_rtp_port = 0;
-    target_video_info_.client_rtcp_port = 0;
+    pull_session_.client_rtp_port = 0;
+    pull_session_.client_rtcp_port = 0;
+    push_session_.client_rtp_port = 0;
+    push_session_.client_rtcp_port = 0;
 
     // 清除认证信息（保留用户名密码）
     source_auth_.realm.clear();
@@ -2086,15 +2090,15 @@ bool RtspClient::createUDPPullSocket() {
 
         if (::bind(static_cast<SOCKET_TYPE>(rtcp_sock), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) == 0) {
             // 成功获取到一对连续端口
-            udp_pull_socket_ = rtp_sock;
-            rtcp_socket_ = rtcp_sock;
-            source_video_info_.client_rtp_port = rtp_port;
-            source_video_info_.client_rtcp_port = rtcp_port;
+            pull_session_.rtp_socket = rtp_sock;
+            pull_session_.rtcp_socket = rtcp_sock;
+            pull_session_.client_rtp_port = rtp_port;
+            pull_session_.client_rtcp_port = rtcp_port;
 
-            logInfo("UDP pull sockets created: rtp_fd=" + std::to_string(udp_pull_socket_) +
-                    " rtp_port=" + std::to_string(source_video_info_.client_rtp_port) +
-                    " rtcp_fd=" + std::to_string(rtcp_socket_) +
-                    " rtcp_port=" + std::to_string(source_video_info_.client_rtcp_port));
+            logInfo("UDP pull sockets created: rtp_fd=" + std::to_string(pull_session_.rtp_socket) +
+                    " rtp_port=" + std::to_string(pull_session_.client_rtp_port) +
+                    " rtcp_fd=" + std::to_string(pull_session_.rtcp_socket) +
+                    " rtcp_port=" + std::to_string(pull_session_.client_rtcp_port));
             return true;
         }
 
@@ -2104,10 +2108,10 @@ bool RtspClient::createUDPPullSocket() {
     }
 
     logError("Failed to create consecutive UDP pull sockets for RTP/RTCP");
-    udp_pull_socket_ = kInvalidSocket;
-    rtcp_socket_ = kInvalidSocket;
-    source_video_info_.client_rtp_port = 0;
-    source_video_info_.client_rtcp_port = 0;
+    pull_session_.rtp_socket = kInvalidSocket;
+    pull_session_.rtcp_socket = kInvalidSocket;
+    pull_session_.client_rtp_port = 0;
+    pull_session_.client_rtcp_port = 0;
     return false;
 }
 
@@ -2170,15 +2174,15 @@ bool RtspClient::createUDPPushSocket() {
 
         if (::bind(static_cast<SOCKET_TYPE>(rtcp_sock), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) == 0) {
             // 成功获取到一对连续端口
-            udp_push_socket_ = rtp_sock;
-            rtcp_socket_ = rtcp_sock;
-            target_video_info_.client_rtp_port = rtp_port;
-            target_video_info_.client_rtcp_port = rtcp_port;
+            push_session_.rtp_socket = rtp_sock;
+            push_session_.rtcp_socket = rtcp_sock;
+            push_session_.client_rtp_port = rtp_port;
+            push_session_.client_rtcp_port = rtcp_port;
 
-            logInfo("UDP push sockets created: rtp_fd=" + std::to_string(udp_push_socket_) +
-                " rtp_port=" + std::to_string(target_video_info_.client_rtp_port = rtp_port) +
-                " rtcp_fd=" + std::to_string(rtcp_socket_) +
-                " rtcp_port=" + std::to_string(target_video_info_.client_rtcp_port));
+            logInfo("UDP push sockets created: rtp_fd=" + std::to_string(push_session_.rtp_socket) +
+                " rtp_port=" + std::to_string(push_session_.client_rtp_port = rtp_port) +
+                " rtcp_fd=" + std::to_string(push_session_.rtcp_socket) +
+                " rtcp_port=" + std::to_string(push_session_.client_rtcp_port));
             return true;
         }
 
@@ -2188,13 +2192,13 @@ bool RtspClient::createUDPPushSocket() {
     }
 
     logError("Failed to create consecutive UDP push sockets for RTP/RTCP");
-    udp_push_socket_ = kInvalidSocket;
-    rtcp_socket_ = kInvalidSocket;
-    target_video_info_.client_rtp_port = 0;
-    target_video_info_.client_rtcp_port = 0;
+    push_session_.rtp_socket = kInvalidSocket;
+    push_session_.rtcp_socket = kInvalidSocket;
+    push_session_.client_rtp_port = 0;
+    push_session_.client_rtcp_port = 0;
     return false;
 }
-bool RtspClient::createUDPServerSocket(StreamInfo& streamInfo)
+bool RtspClient::createUDPServerSocket(RTSP_SESSION& streamInfo)
 {
     const int max_attempts = 10;
 
@@ -2253,14 +2257,14 @@ bool RtspClient::createUDPServerSocket(StreamInfo& streamInfo)
 
         if (::bind(static_cast<SOCKET_TYPE>(rtcp_sock), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) == 0) {
             // 成功获取到一对连续端口
-            udp_push_socket_ = rtp_sock;
-            rtcp_socket_ = rtcp_sock;
+            streamInfo.rtp_socket = rtp_sock;
+            streamInfo.rtcp_socket = rtcp_sock;
             streamInfo.server_rtp_port = rtp_port;
             streamInfo.server_rtcp_port = rtcp_port;
 
-            logInfo("UDP server sockets created: rtp_fd=" + std::to_string(udp_push_socket_) +
+            logInfo("UDP server sockets created: rtp_fd=" + std::to_string(streamInfo.rtp_socket) +
                 " rtp_port=" + std::to_string(streamInfo.server_rtp_port = rtp_port) +
-                " rtcp_fd=" + std::to_string(rtcp_socket_) +
+                " rtcp_fd=" + std::to_string(streamInfo.rtcp_socket) +
                 " rtcp_port=" + std::to_string(streamInfo.server_rtcp_port = rtcp_port
                 ));
             return true;
@@ -2272,30 +2276,37 @@ bool RtspClient::createUDPServerSocket(StreamInfo& streamInfo)
     }
 
     logError("Failed to create consecutive UDP push sockets for RTP/RTCP");
-    udp_push_socket_ = kInvalidSocket;
-    rtcp_socket_ = kInvalidSocket;
+    streamInfo.rtp_socket = kInvalidSocket;
+    streamInfo.rtcp_socket = kInvalidSocket;
     streamInfo.client_rtp_port = 0;
     streamInfo.client_rtcp_port = 0;
     return false;
 }
 void RtspClient::closeUDPSockets() {
-    if (udp_pull_socket_ != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_pull_socket_));
-        udp_pull_socket_ = kInvalidSocket;
+    if (pull_session_.rtp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(pull_session_.rtp_socket));
+        pull_session_.rtp_socket = kInvalidSocket;
     }
-    if (udp_push_socket_ != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_push_socket_));
-        udp_push_socket_ = kInvalidSocket;
-    }
-    if (rtcp_socket_ != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_socket_));
-        rtcp_socket_ = kInvalidSocket;
+    if (pull_session_.rtcp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(pull_session_.rtcp_socket));
+        pull_session_.rtcp_socket = kInvalidSocket;
     }
 
-    source_video_info_.client_rtp_port = 0;
-    source_video_info_.client_rtcp_port = 0;
-    target_video_info_.client_rtp_port = 0;
-    target_video_info_.client_rtcp_port = 0;
+
+    if (push_session_.rtp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(push_session_.rtp_socket));
+        push_session_.rtp_socket = kInvalidSocket;
+    }
+    if (push_session_.rtcp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(push_session_.rtcp_socket));
+        push_session_.rtcp_socket = kInvalidSocket;
+    }
+
+
+    pull_session_.client_rtp_port = 0;
+    pull_session_.client_rtcp_port = 0;
+    push_session_.client_rtp_port = 0;
+    push_session_.client_rtcp_port = 0;
 }
 
 bool RtspClient::configureUDPSocket(SocketHandle sock, bool is_multicast) {
@@ -2372,8 +2383,19 @@ bool RtspClient::configureUDPSocket(SocketHandle sock, bool is_multicast) {
     return true;
 }
 
-bool RtspClient::sendUDPData(const uint8_t* data, size_t size) {
-    if (udp_push_socket_ == kInvalidSocket || target_video_info_.server_rtp_port == 0) {
+bool RtspClient::sendUDPDataToSession(const uint8_t* data, size_t size, RTSP_SESSION& rtspSession) {
+    int remoteRtpPort = 0;
+    int remoteRtcpPort = 0;
+    if (rtspSession.session_type_ == CLINET_PULL || rtspSession.session_type_ == CLINET_PUSH) {
+        remoteRtpPort = rtspSession.server_rtp_port;
+        remoteRtcpPort = rtspSession.server_rtcp_port;
+    }
+    else {
+        remoteRtpPort = rtspSession.client_rtp_port;
+        remoteRtcpPort = rtspSession.client_rtcp_port;
+    }
+
+    if (rtspSession.rtp_socket == kInvalidSocket || remoteRtpPort == 0) {
         return false;
     }
 
@@ -2381,12 +2403,12 @@ bool RtspClient::sendUDPData(const uint8_t* data, size_t size) {
     struct sockaddr_in target_addr;
     memset(&target_addr, 0, sizeof(target_addr));
     target_addr.sin_family = AF_INET;
-    target_addr.sin_port = htons(target_video_info_.server_rtp_port);
+    target_addr.sin_port = htons(remoteRtpPort);
 
-    if (inet_pton(AF_INET, target_rtp_host_.c_str(), &target_addr.sin_addr) <= 0) {
-        struct hostent* server = gethostbyname(target_rtp_host_.c_str());
+    if (inet_pton(AF_INET, rtspSession.remote_host.c_str(), &target_addr.sin_addr) <= 0) {
+        struct hostent* server = gethostbyname(rtspSession.remote_host.c_str());
         if (!server) {
-            logError("Failed to resolve target host: " + target_rtp_host_);
+            logError("Failed to resolve target host: " + rtspSession.remote_host);
             std::lock_guard<std::mutex> lock(stats_mutex_);
             stats_.errors++;
             return false;
@@ -2395,9 +2417,9 @@ bool RtspClient::sendUDPData(const uint8_t* data, size_t size) {
     }
 
     // 发送UDP数据
-    int sent = sendto(static_cast<SOCKET_TYPE>(udp_push_socket_),
-                      (const char*)data, (int)size, 0,
-                      (struct sockaddr*)&target_addr, sizeof(target_addr));
+    int sent = sendto(static_cast<SOCKET_TYPE>(rtspSession.rtp_socket),
+        (const char*)data, (int)size, 0,
+        (struct sockaddr*)&target_addr, sizeof(target_addr));
 
     if (sent != static_cast<int>(size)) {
 #ifdef _WIN32
@@ -2405,9 +2427,9 @@ bool RtspClient::sendUDPData(const uint8_t* data, size_t size) {
 #else
         int err = errno;
 #endif
-        logVerbose("UDP sendto error: sent=" + std::to_string(sent) + 
-                   " expected=" + std::to_string(size) + 
-                   " err=" + std::to_string(err));
+        logVerbose("UDP sendto error: sent=" + std::to_string(sent) +
+            " expected=" + std::to_string(size) +
+            " err=" + std::to_string(err));
         std::lock_guard<std::mutex> lock(stats_mutex_);
         stats_.errors++;
         return false;
@@ -2416,15 +2438,16 @@ bool RtspClient::sendUDPData(const uint8_t* data, size_t size) {
     return true;
 }
 
+
 int RtspClient::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
-    if (udp_pull_socket_ == kInvalidSocket) {
+    if (pull_session_.rtp_socket == kInvalidSocket) {
         return -1;
     }
 
     struct sockaddr_in from_addr;
     socklen_t from_len = sizeof(from_addr);
 
-    int received = recvfrom(static_cast<SOCKET_TYPE>(udp_pull_socket_),
+    int received = recvfrom(static_cast<SOCKET_TYPE>(pull_session_.rtp_socket),
                              (char*)buffer, (int)size, 0,
                              (struct sockaddr*)&from_addr, &from_len);
 
@@ -2456,10 +2479,10 @@ int RtspClient::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip
 // SDP处理函数
 // ============================================================================
 
-bool RtspClient::parseSDP(const std::string & sdp, StreamInfo & video_info, StreamInfo & audio_info) {
+bool RtspClient::parseSDP(const std::string & sdp, RTSP_SESSION & video_info, RTSP_SESSION & audio_info) {
     std::istringstream ss(sdp);
     std::string line;
-    StreamInfo* current_info = nullptr;
+    RTSP_SESSION* current_info = nullptr;
 
     while (std::getline(ss, line)) {
         if (line.length() < 2 || line[1] != '=') continue;
@@ -2545,7 +2568,7 @@ bool RtspClient::parseSDP(const std::string & sdp, StreamInfo & video_info, Stre
     return true;
 }
 
-std::string RtspClient::generateSDP(const StreamInfo & video_info, const StreamInfo & audio_info) {
+std::string RtspClient::generateSDP(const RTSP_SESSION & video_info, const RTSP_SESSION & audio_info) {
     std::stringstream sdp;
 
     sdp << "v=0\r\n"
@@ -2645,13 +2668,55 @@ bool RtspClient::URLComponents::parse(const std::string & url, URLComponents & c
     return true;
 }
 
+void RtspClient::sendRTPPacketToClients(const RTPPacket& packet) {
+    std::vector<RtspClient::RTSP_SESSION> playClients;
+    client_sessions_mutex_.lock();
+    playClients = client_sessions_;
+    client_sessions_mutex_.unlock();
+    // 序列化RTP包
+    auto data = packet.serialize();
+
+
+    for (int i = 0; i < playClients.size(); i++) {
+		auto& client = playClients[i];
+        if (client.transport_mode == TransportMode::UDP) {
+            // UDP推流
+            if (sendUDPDataToSession(data.data(), data.size(), client)) {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                stats_.bytes_forwarded += data.size();
+                stats_.frames_forwarded++;
+            }
+        }
+        else {
+            // TCP推流：发送到目标RTSP服务器（通过RTSP控制的连接）
+            //if (target_conn_ && target_conn_->isConnected()) {
+            //    // RTP over RTSP: 插入 $ (0x24) + channel + length
+            //    uint8_t rtpOverTcp[4] = { 0x24, 0x00, 0x00, 0x00 };  // channel 0, length待定
+            //    rtpOverTcp[2] = (data.size() >> 8) & 0xFF;
+            //    rtpOverTcp[3] = data.size() & 0xFF;
+
+            //    std::vector<uint8_t> tcpPacket;
+            //    tcpPacket.insert(tcpPacket.end(), rtpOverTcp, rtpOverTcp + 4);
+            //    tcpPacket.insert(tcpPacket.end(), data.begin(), data.end());
+
+            //    int sent = target_conn_->send(tcpPacket.data(), tcpPacket.size());
+            //    if (sent > 0) {
+            //        std::lock_guard<std::mutex> lock(stats_mutex_);
+            //        stats_.bytes_forwarded += data.size();
+            //        stats_.frames_forwarded++;
+            //    }
+            //}
+        }
+    }
+}
+
 void RtspClient::forwardRTPPacket(const RTPPacket & packet) {
     // 序列化RTP包
     auto data = packet.serialize();
     
     if (config_.push_mode == TransportMode::UDP) {
         // UDP推流
-        if (sendUDPData(data.data(), data.size())) {
+        if (sendUDPDataToSession(data.data(), data.size(),push_session_)) {
             std::lock_guard<std::mutex> lock(stats_mutex_);
             stats_.bytes_forwarded += data.size();
             stats_.frames_forwarded++;
@@ -3104,11 +3169,11 @@ void RtspClient::writeNALtoFile(uint8_t nal_type,char* nal, size_t size, std::of
 
     // NAL 是 IDR（type==5）时，在写入该 NAL 前插入 SPS/PPS
     if (nal_type == NAL_TYPE_IDR) {
-        if (!rec_ctrl_.last_was_idr_ && !source_video_info_.sps.empty() && !source_video_info_.pps.empty()) {
+        if (!rec_ctrl_.last_was_idr_ && !pull_session_.sps.empty() && !pull_session_.pps.empty()) {
             ofs.write((const char*)start_code, sizeof(start_code));
-            ofs.write((const char*)source_video_info_.sps.data(), static_cast<std::streamsize>(source_video_info_.sps.size()));
+            ofs.write((const char*)pull_session_.sps.data(), static_cast<std::streamsize>(pull_session_.sps.size()));
             ofs.write((const char*)start_code, sizeof(start_code));
-            ofs.write((const char*)source_video_info_.pps.data(), static_cast<std::streamsize>(source_video_info_.pps.size()));
+            ofs.write((const char*)pull_session_.pps.data(), static_cast<std::streamsize>(pull_session_.pps.size()));
         }
         rec_ctrl_.last_was_idr_ = true;
     }
