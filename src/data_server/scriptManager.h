@@ -1,11 +1,15 @@
 #pragma once
 #include <string>
 #include <map>
+#include <mutex>
 #include "json.hpp"
-#include "tdsSession.h"
+#include "tdsRPC.h"
+//#include "tdsSession.h"
+#include "tds.h"
 #include "scriptEngine.h"
 
 using json = nlohmann::json;
+class ioDev;
 
 
 

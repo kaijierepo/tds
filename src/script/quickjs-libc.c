@@ -53,7 +53,7 @@
 #include <sys/utime.h>
  // Windows 下自定义 DIR 结构体和相关函数
 #include <io.h>
-#include <tchar.h>
+//#include "tchar.h"
 #ifndef S_IFIFO
 #define S_IFIFO _S_IFIFO // Define S_IFIFO for Windows compatibility
 #endif
