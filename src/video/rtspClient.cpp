@@ -2194,6 +2194,90 @@ bool RtspClient::createUDPPushSocket() {
     target_video_info_.client_rtcp_port = 0;
     return false;
 }
+bool RtspClient::createUDPServerSocket(StreamInfo& streamInfo)
+{
+    const int max_attempts = 10;
+
+    for (int attempt = 0; attempt < max_attempts; ++attempt) {
+        // 创建RTP socket并绑定到系统分配的端口（0）
+        SocketHandle rtp_sock = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
+        if (rtp_sock == kInvalidSocket) {
+            logError("Failed to create UDP push socket (rtp)");
+            return false;
+        }
+
+        if (!configureUDPSocket(rtp_sock, false)) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        struct sockaddr_in local_addr;
+        memset(&local_addr, 0, sizeof(local_addr));
+        local_addr.sin_family = AF_INET;
+        local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        local_addr.sin_port = htons(0); // 系统分配端口
+
+        if (::bind(static_cast<SOCKET_TYPE>(rtp_sock), (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        // 获取分配的端口
+        socklen_t len = sizeof(local_addr);
+        if (getsockname(static_cast<SOCKET_TYPE>(rtp_sock), (struct sockaddr*)&local_addr, &len) != 0) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        int rtp_port = ntohs(local_addr.sin_port);
+        int rtcp_port = rtp_port + 1;
+
+        // 创建RTCP socket并绑定到 rtp_port + 1
+        SocketHandle rtcp_sock = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
+        if (rtcp_sock == kInvalidSocket) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            continue;
+        }
+
+        if (!configureUDPSocket(rtcp_sock, false)) {
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
+            continue;
+        }
+
+        struct sockaddr_in rtcp_addr;
+        memset(&rtcp_addr, 0, sizeof(rtcp_addr));
+        rtcp_addr.sin_family = AF_INET;
+        rtcp_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        rtcp_addr.sin_port = htons(rtcp_port);
+
+        if (::bind(static_cast<SOCKET_TYPE>(rtcp_sock), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) == 0) {
+            // 成功获取到一对连续端口
+            udp_push_socket_ = rtp_sock;
+            rtcp_socket_ = rtcp_sock;
+            streamInfo.server_rtp_port = rtp_port;
+            streamInfo.server_rtcp_port = rtcp_port;
+
+            logInfo("UDP server sockets created: rtp_fd=" + std::to_string(udp_push_socket_) +
+                " rtp_port=" + std::to_string(streamInfo.server_rtp_port = rtp_port) +
+                " rtcp_fd=" + std::to_string(rtcp_socket_) +
+                " rtcp_port=" + std::to_string(streamInfo.server_rtcp_port = rtcp_port
+                ));
+            return true;
+        }
+
+        // 绑定失败，释放并重试
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+    }
+
+    logError("Failed to create consecutive UDP push sockets for RTP/RTCP");
+    udp_push_socket_ = kInvalidSocket;
+    rtcp_socket_ = kInvalidSocket;
+    streamInfo.client_rtp_port = 0;
+    streamInfo.client_rtcp_port = 0;
+    return false;
+}
 void RtspClient::closeUDPSockets() {
     if (udp_pull_socket_ != kInvalidSocket) {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(udp_pull_socket_));

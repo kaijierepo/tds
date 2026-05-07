@@ -552,6 +552,24 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	else if (method == "stopRtspClient") {
 
 	}
+	else if (method == "playWebRtc") {
+		string tag = params["tag"];
+		int preTime = params["preSeconds"].get<int>();
+		RtspClient* rc = prj.getRtspClient(tag);
+		if (rc) {
+			RtspClient::StreamInfo si = rc->source_video_info_;
+			rc->rec_ctrl_.fu_a_buffer_.clear();
+			rc->rec_ctrl_.firstWrite = true;
+			rc->rec_ctrl_.preSeconds = preTime;
+			DB_TIME now; now.setNow();
+			rc->rec_ctrl_.path = tds->conf->dbPath + "/record/" + tag + "_" + now.toStampFull() + ".h264";
+			rc->rec_ctrl_.recording = true;
+			rpcResp.result = RPC_OK;
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
+		}
+	}
 	else if (method == "startRecord") {
 		string tag = params["tag"];
 		int preTime = params["preSeconds"].get<int>();

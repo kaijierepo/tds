@@ -174,7 +174,7 @@ public:
 
     bool extractRtspAuthInfo(RtspClient::Config& config);
 
-private:
+public:
     using SocketHandle = uintptr_t;
     static constexpr SocketHandle kInvalidSocket = static_cast<SocketHandle>(-1);
 
@@ -226,6 +226,8 @@ private:
         int client_rtcp_port = 0;
 		int server_rtp_port = 0;
 		int server_rtcp_port = 0;
+		SocketHandle rtp_socket = kInvalidSocket;
+		SocketHandle rtcp_socket = kInvalidSocket;
     };
 
     // URL解析
@@ -288,6 +290,9 @@ public:
     StreamInfo source_audio_info_;
     StreamInfo source_video_info_;
     StreamInfo target_video_info_;
+
+    // 播放客户段
+	vector<StreamInfo> play_clients_;
 
     // UDP套接字（用于RTP数据传输）
     SocketHandle udp_pull_socket_ = kInvalidSocket;   // UDP拉流socket
@@ -381,6 +386,7 @@ public:
     // UDP传输相关
     bool createUDPPullSocket();   // 创建UDP拉流socket
     bool createUDPPushSocket();    // 创建UDP推流socket
+	bool createUDPServerSocket(StreamInfo& streamInfo);  // 创建UDP服务器socket,客户端拉流时
     void closeUDPSockets();
     bool configureUDPSocket(SocketHandle sock, bool is_multicast);
     bool sendUDPData(const uint8_t* data, size_t size);
