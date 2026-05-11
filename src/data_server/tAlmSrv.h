@@ -159,6 +159,7 @@ public:
 	bool isAck;
 	bool needAck;
 	std::string ackTime;
+	std::string ackType;
 	std::string ackInfo;
 	std::string ackUser;
 	std::string pic_url;
