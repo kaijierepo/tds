@@ -1396,9 +1396,8 @@ std::string TDB::getDeFilesFolder(std::string& deListFolder, DB_TIME& time) {
 	}
 	return s;
 }
-//1. std::store data element files (curves, JSON) or data element related files (images) 2. std::store data element index files or data element list files
-//1.存数据元文件(曲线、json)或存数据元相关文件(图片) 2.存数据元索引文件或数据元列表文件
-bool TDB::Insert(std::string strTag, std::string& sDe, DB_TIME* time)
+
+bool TDB::InsertByDeType(std::string strTag, std::string& sDe, const std::string& sDeType, DB_TIME* time/* = nullptr*/)
 {
 	if (!m_enableDB)
 		return false;
@@ -1411,7 +1410,7 @@ bool TDB::Insert(std::string strTag, std::string& sDe, DB_TIME* time)
 		stTime = TIME_OPT::now();
 	}
 
-	std::string deListFolderPath = getPath_dataFolder(strTag, stTime);
+	std::string deListFolderPath = getPath_dataFolder(strTag, stTime, sDeType);
 	if (!folderExist(deListFolderPath)) {
 		DB_FS::createFolderOfPath(deListFolderPath.c_str());
 	}
@@ -1457,6 +1456,8 @@ bool TDB::Insert(std::string strTag, std::string& sDe, DB_TIME* time)
 	std::string dataListPath;
 	if (fileType == "curve")
 		dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+	else if (sDeType == "statisDe" || sDeType == "statisByDay" || sDeType == "statisByMonth")
+		dataListPath = deListFolderPath + "/" + m_dbFmt.deListStatisticsName;
 	else
 		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 
@@ -1494,6 +1495,13 @@ bool TDB::Insert(std::string strTag, std::string& sDe, DB_TIME* time)
 	yyjson_doc_free(doc);
 
 	return true;
+}
+
+//1. std::store data element files (curves, JSON) or data element related files (images) 2. std::store data element index files or data element list files
+//1.存数据元文件(曲线、json)或存数据元相关文件(图片) 2.存数据元索引文件或数据元列表文件
+bool TDB::Insert(std::string strTag, std::string& sDe, DB_TIME* time)
+{
+	return InsertByDeType(strTag, sDe, "", time);
 }
 
 struct DE_TEMP {
@@ -6855,6 +6863,8 @@ std::string TDB::saveDEFile(yyjson_val* yyvFileInfo, std::string path, DB_TIME d
 	}
 	else if (type == "curve") {  //curve file is not encoded 
 		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
+	}
+	else if (type == "null") {  //fake file
 	}
 	else {
 		size_t buffLen = data.length() * 2;
