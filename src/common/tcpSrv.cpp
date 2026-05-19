@@ -39,7 +39,7 @@ namespace tcpServer {
 		return iReturn;
 	}
 
-	int calcTimePassSecond(string sTime) {
+		int calcTimePassSecond(string sTime) {
 		time_t now = time(nullptr);
 		TIME tlast;
 		tlast.fromStr(sTime);
@@ -76,12 +76,12 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		mg_iobuf_del(&c->recv, 0, c->recv.len);   // And discard it
 	}
 	else if (ev == MG_EV_CONNECT) {
-		
+
 	}
-	else if (ev == MG_EV_CLOSE) { 
+	else if (ev == MG_EV_CLOSE) {
 		tcpSession* pts = (tcpSession*)c->fn_data;
 		if (pSrv->m_pCallBackUser) {
-			pSrv->m_pCallBackUser->statusChange_tcpSrv(pts, false);			
+			pSrv->m_pCallBackUser->statusChange_tcpSrv(pts, false);
 		}
 
 		pSrv->m_csClientVectorLock.lock();
@@ -101,8 +101,8 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		char buff[50] = { 0 };
 		sprintf(buff, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 		pts->remoteIP = buff;
-		pts->sock = (int) c->fd;  
-		pts->remotePort = ntohs(c->rem.port); 
+		pts->sock = (int) c->fd;
+		pts->remotePort = ntohs(c->rem.port);
 		pts->localIP = pSrv->m_strServerIP;
 		pts->localPort = pSrv->m_iServerPort;
 		pSrv->m_csClientVectorLock.lock();
@@ -121,18 +121,17 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 
 	}
 }
-struct mg_mgr mgr;
 
-void mongoose_tcp_listen_thread(int port, tcpSrv* pSrv) {
+static void mongoose_tcp_listen_thread(int port, tcpSrv* pSrv) {
 	pSrv->m_bStarted = true;
 	for (;;) {
 		if (pSrv->m_stop) {
 			pSrv->m_pCallBackUser = nullptr;
 			break;
 		}
-		mg_mgr_poll(&mgr, 1000);
-	}// Event loop
-	mg_mgr_free(&mgr);                                // Cleanup
+		mg_mgr_poll(&pSrv->mgr, 1000);
+	}
+	mg_mgr_free(&pSrv->mgr);
 	pSrv->m_bStarted = false;
 }
 
@@ -140,6 +139,7 @@ string g_cmdListScockIP;
 string g_cmdListScockPort;
 
 bool tcpSrv::run(ICallback_tcpSrv* pUser, int port, string strLocalIP /*= ""*/) {
+	if (port == 0) return false;
 	m_strServerIP = strLocalIP;
 	m_iServerPort = port;
 	m_pCallBackUser = pUser;
@@ -155,11 +155,11 @@ bool tcpSrv::run(ICallback_tcpSrv* pUser, int port, string strLocalIP /*= ""*/) 
 	}
 
 	string url = sz;
-	mg_connection* c = mg_listen(&mgr, url.c_str() , cb, &mgr);  // Setup listener
+	mg_connection* c = mg_listen(&mgr, url.c_str(), cb, &mgr);  // Setup listener
 	mgr.userdata = this;
 
 	if(c){
-		thread t(mongoose_tcp_listen_thread, port,this);
+		thread t(mongoose_tcp_listen_thread, port, this);
 		t.detach();
 		return true;
 	}
@@ -213,7 +213,7 @@ bool tcpSession::send(char* pData, size_t iLen)
 {
 	//socket is blocking socket ,when socket is full in send buffer,this function will block
 	//could be block when send big size data
-	if (iLen == 0) 
+	if (iLen == 0)
 		return false;
 	if (sock == 0)
 		return false;

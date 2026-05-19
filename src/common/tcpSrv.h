@@ -4,6 +4,7 @@
 #include <mutex>
 #include <memory>
 #include "tds.h"
+#include "mongoose.h"
 
 using namespace std;
 
@@ -117,6 +118,7 @@ public:
 	std::string m_strServerIP;
 	int m_iServerPort;
 	int keepAliveTimeout;
+	struct mg_mgr mgr;   // mongoose event manager (member variable, not global)
 };
 
 extern fp_statisSend g_fp_tcpSrv_statisSend;
