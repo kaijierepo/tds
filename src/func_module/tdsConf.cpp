@@ -42,7 +42,7 @@ tdsConfig::tdsConfig()
 	enableOfflineAlarm = false;
 
 #ifdef TDS
-	tds->conf = this;
+	if (tds) tds->conf = this;
 #endif
 }
 

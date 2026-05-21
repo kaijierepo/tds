@@ -296,7 +296,7 @@ struct packed_u16 {
 #pragma pack(pop)
 #else
 struct __attribute__((packed)) packed_u16 {
-    uint32_t v;
+    uint16_t v;
 };
 #endif
 

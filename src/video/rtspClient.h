@@ -175,8 +175,13 @@ public:
     bool extractRtspAuthInfo(RtspClient::Config& config);
 
 public:
-    using SocketHandle = uintptr_t;
-    static constexpr SocketHandle kInvalidSocket = static_cast<SocketHandle>(-1);
+#ifdef _WIN32
+    using SocketHandle = SOCKET;
+    static constexpr SocketHandle kInvalidSocket = INVALID_SOCKET;
+#else
+    using SocketHandle = int;
+    static constexpr SocketHandle kInvalidSocket = -1;
+#endif
 
     // RTSP消息结构
     struct RTSPMessage {

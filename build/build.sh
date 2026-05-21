@@ -275,7 +275,7 @@ compile_cpp_if_needed ./io_server/proto_common.cpp ./io_server/proto_common.o
 compile_cpp_if_needed ./io_server/proto_eip.cpp ./io_server/proto_eip.o
 compile_cpp_if_needed ./io_server/proto_tb3386.cpp ./io_server/proto_tb3386.o
 compile_cpp_if_needed ./io_server/proto_ws.cpp ./io_server/proto_ws.o
-compile_cpp_if_needed ./video/rtspRelay.cpp ./video/rtspRelay.o
+compile_cpp_if_needed ./video/rtspClient.cpp ./video/rtspClient.o
 
 # ===================== 6. 链接生成可执行文件 =====================
 echo ""
@@ -362,7 +362,7 @@ obj_files="\
 ./io_server/proto_eip.o \
 ./io_server/proto_tb3386.o \
 ./io_server/proto_ws.o \
-./video/rtspRelay.o \
+./video/rtspClient.o \
 "
 
 g++ $common_flags $cpp_flags $obj_files -o $output_file $linkerflags

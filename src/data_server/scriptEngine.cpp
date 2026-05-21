@@ -1937,7 +1937,12 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
                 JS_FreeValue(ctx, global);
             }
 
-            JSValue mockRet = JS_Eval(ctx, si.envVarScript.c_str(), si.envVarScript.length(), "mock.js", JS_EVAL_TYPE_GLOBAL);
+
+            if (!si.envVarScript.empty()) {                                                                                             
+                JSValue mockRet = JS_Eval(ctx, si.envVarScript.c_str(), si.envVarScript.length(), "mock.js", JS_EVAL_TYPE_GLOBAL);      
+                JS_FreeValue(ctx, mockRet);     
+            }                                                                                    
+            // JSValue mockRet = JS_Eval(ctx, si.envVarScript.c_str(), si.envVarScript.length(), "mock.js", JS_EVAL_TYPE_GLOBAL);
 
             JSValue evalPromise;
             evalPromise = JS_Eval(ctx, m_script.c_str(), m_script.length(), "main.js", JS_EVAL_TYPE_MODULE);
