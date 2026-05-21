@@ -990,6 +990,8 @@ public:
 	bool Insert(std::string strTag, std::string& sDe,DB_TIME* stTime = nullptr );
 	// curve type internal data type of tds, save to file  123000.curve.json in the same path with db.json(datalist file)
 	bool Insert(std::string strTag, std::string& sDeIdx,std::string& sDeCurve, DB_TIME* stTime = nullptr);
+	// custom data element in json format
+	bool InsertByDeType(std::string strTag, std::string& sDe, const std::string& sDeType, DB_TIME* stTime = nullptr);
 
 
 	//db.update functions
