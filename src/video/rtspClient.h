@@ -13,6 +13,14 @@
 #include <chrono>
 #include <cstdint>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
+
 // RTP包结构
 // NAL header (1 byte) format: F(1) | NRI(2) | Type(5)
 // - F: forbidden_zero_bit
