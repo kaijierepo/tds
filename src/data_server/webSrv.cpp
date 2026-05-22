@@ -14,7 +14,7 @@
 #include "fileUploadSrv.h"
 #include "base64.h"
 #include "miniz.h"
-
+#include "video/streamServer.h"
 #include <fstream>
 #include <mutex>
 #include <map>
@@ -436,7 +436,7 @@ void thread_handleDataOverWebsocket(thread_data* data, std::shared_ptr<TDS_SESSI
 }
 
 void thread_asynOpenStream(string tag) {
-	prj.openStream(tag);
+	streamSrv.openStream(tag);
 }
 
 void thread_asynOpenChildTdsStream(ioDev* pChildTds,string tag) {

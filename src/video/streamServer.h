@@ -1,19 +1,32 @@
 #pragma once
-
-#ifdef ENABLE_GENICAM
-#include "streamSrvNode.h"
+#include "streamNode.h"
 
 
-class streamServer {
+class StreamServer {
 public:
-	//key是streamid
-	//可以是ioAddr也可以是tag
-	void pushStream(string streamId, STREAM_DATA& sd);
-	void asynPushStream(string streamId, STREAM_DATA& sd);
-	streamSrvNode* getSrvNode(string streamId);
-	map<string, streamSrvNode*> m_mapSrvNodes; 
-	bool startStream(string streamId,STREAM_INFO* si=NULL);
+	StreamServer() {};
+	~StreamServer() {};
+
+	bool handleRpc(std::string method, yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_startStreamNode(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_playWebRtc(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_startRecord(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_stopRecord(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_getStreamInfo(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
+
+	bool openStream(string tag, string pushTo = "");
+
+	bool closeStream(string tag);
+
+	StreamNode* getStreamNode(std::string tag);
+
+	map<std::string, std::unique_ptr<StreamNode>> m_mapStreamNodes;
+	map<std::string, std::unique_ptr<StreamNode>> m_mapStreamNodes_urlID;
+	mutable std::mutex m_relayMutex_urlID;
+	mutable std::mutex m_relayMutex; // 保护 m_mapStreamNodes 的互斥锁
+
+	bool m_enableZLM;
 };
 
-extern streamServer streamSrv;
-#endif
+extern StreamServer streamSrv;

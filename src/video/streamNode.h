@@ -49,7 +49,7 @@
 #define NAL_TYPE_STAP_A           24
 #define NAL_TYPE_FU_A             28
 
-class RtspClient {
+class StreamNode {
 public:
     enum State {
         IDLE = 0,
@@ -158,12 +158,12 @@ public:
     using ErrorCallback = std::function<void(const std::string& error, int code)>;
 
     // 构造函数/析构函数
-    RtspClient();
-    ~RtspClient();
+    StreamNode();
+    ~StreamNode();
 
     // 禁止拷贝
-    RtspClient(const RtspClient&) = delete;
-    RtspClient& operator=(const RtspClient&) = delete;
+    StreamNode(const StreamNode&) = delete;
+    StreamNode& operator=(const StreamNode&) = delete;
 
     // 公共接口
     bool start(const Config& config);
@@ -180,7 +180,7 @@ public:
     void setFrameCallback(FrameCallback cb);
     void setErrorCallback(ErrorCallback cb);
 
-    bool extractRtspAuthInfo(RtspClient::Config& config);
+    bool extractRtspAuthInfo(StreamNode::Config& config);
 
 public:
 #ifdef _WIN32
@@ -220,9 +220,9 @@ public:
     };
 
     enum RTSP_SESSION_TYPE {
-        CLINET_PULL,
-        CLINET_PUSH,
-        SERVER_SEND
+        CLINET_PULL,    //自身作为客户端，向媒体源服务器拉流的会话
+        CLINET_PUSH,    //自身作为客户端，对外推流的会话
+        SERVER_SEND    //自身作为流媒体服务器，向客户端发送流的会话
     };
 
     // 媒体流信息
@@ -235,7 +235,7 @@ public:
         // 如果 SDP 中包含 sprop-parameter-sets，会把解码后的 SPS/PPS 保存到这里
         std::vector<uint8_t> sps;
         std::vector<uint8_t> pps;
-
+        std::string sdp;
         RTSP_SESSION_TYPE session_type_;
 
         // 传输信息

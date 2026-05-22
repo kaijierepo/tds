@@ -27,8 +27,8 @@
 #include "ioDev_onvif.h"
 #include "rpcHandler_common.h"
 #include "mqttSrv.h"
-#include "video/RtspClient.h"
 #include "rsa_verify.h"
+#include "video/streamServer.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -475,10 +475,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 
 	bool bHandled = true;
 
-	if(method == "getStreamInfo") {
-		rpc_getStreamInfo(params, rpcResp, session);
-	}
-	else if (method == "getYsAccessInfo") {
+	if (method == "getYsAccessInfo") {
 		string tag = params["tag"];
 		MP* pmp = prj.GetMPByTag(tag, session.language);
 		if (pmp) {
@@ -498,153 +495,6 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound,"specified tag not found");
 		}
 	}
-	else if (method == "startRtspClient") {
-		string srcUrl = params["srcUrl"];
-		string destUrl = params["destUrl"];
-		{
-			std::lock_guard<std::mutex> lock(prj.m_relayMutex_urlID);
-			if (prj.m_mapRtspClients_urlID.find(srcUrl) != prj.m_mapRtspClients_urlID.end()) {
-				LOG("[流媒体] RtspClient 已在运行 for src url: %s", srcUrl.c_str());
-				return true;
-			}
-		}
-
-		// 2. 创建新的 RtspClient
-		auto relay = std::make_unique<RtspClient>();
-
-		// 设置回调
-		relay->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
-			// 可以在这里处理帧，例如存档或分析
-			});
-		relay->setStatusCallback([](RtspClient::State state, const std::string& msg) {
-			LOG("[RtspClient] Status: %d - %s", static_cast<int>(state), msg.c_str());
-			});
-		relay->setErrorCallback([](const std::string& error, int code) {
-			LOG("[RtspClient] Error (%d): %s", code, error.c_str());
-			});
-
-
-		// 3. 配置 relay
-		RtspClient::Config config;
-		config.source_url = srcUrl; // 源地址
-		// 提取用户名和密码
-		bool isSuccess = relay->extractRtspAuthInfo(config);
-
-		config.target_url = destUrl;
-		config.retry_interval = 3000;
-		config.max_retries = 0; // 无限重试
-		config.rtp_timeout = 10000;
-
-		// 4. 启动 relay
-		LOG("[流媒体] 启动 RtspClient (内置模式)，源: %s, 目标: %s",
-			config.source_url.c_str(), config.target_url.c_str());
-
-		if (relay->start(config)) {
-			std::lock_guard<std::mutex> lock(prj.m_relayMutex_urlID);
-			prj.m_mapRtspClients_urlID[srcUrl] = std::move(relay);
-		}
-		else {
-			LOG("[流媒体] 启动 RtspClient 失败 for srcUrl: %s", srcUrl.c_str());
-		}
-
-		rpcResp.result = RPC_OK;
-	}
-	else if (method == "stopRtspClient") {
-
-	}
-	else if (method == "playWebRtc") {
-		string tag = params["tag"];
-		int clientRtpPort = 0;
-		if (params["clientRtpPort"].is_number_integer()) {
-			clientRtpPort = params["clientRtpPort"].get<int>();
-		}
-		RtspClient* rc = prj.getRtspClient(tag);
-		if (rc) {
-			RtspClient::RTSP_SESSION si = rc->pull_session_;
-			si.client_rtp_port = clientRtpPort;
-			si.remote_host = session.remoteIP;
-			rc->createUDPServerSocket(si);
-			rc->client_sessions_mutex_.lock();
-			rc->client_sessions_.push_back(si);
-			rc->client_sessions_mutex_.unlock();
-
-			json j;
-			j["serverRtpPort"] = si.server_rtp_port;
-			j["serverRtspPort"] = si.server_rtcp_port;
-			j["clientRtpPort"] = si.client_rtp_port;
-			rpcResp.result = RPC_OK;
-		}
-		else {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
-		}
-	}
-	else if (method == "startRecord") {
-		string tag = params["tag"];
-		int preTime = params["preSeconds"].get<int>();
-		RtspClient* rc = prj.getRtspClient(tag);
-		if (rc) {
-			rc->rec_ctrl_.fu_a_buffer_.clear();
-			rc->rec_ctrl_.firstWrite = true;
-			rc->rec_ctrl_.preSeconds = preTime;
-			DB_TIME now; now.setNow();
-			rc->rec_ctrl_.path = tds->conf->dbPath + "/record/" + tag + "_" + now.toStampFull() + ".h264";
-			rc->rec_ctrl_.recording = true;
-			rpcResp.result = RPC_OK;
-		}
-		else {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
-		}
-		LOG("[HTTP API]startRecord, tag: %s, preSeconds: %d", tag.c_str(), preTime);
-	}
-	else if(method == "stopRecord") {
-		string tag = params["tag"];
-		RtspClient* rc = prj.getRtspClient(tag);
-		if (rc) {
-			rc->rec_ctrl_.recording = false;
-			rpcResp.result = RPC_OK;
-		}
-		else {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
-		}
-		LOG("[HTTP API]stopRecord, tag: %s", tag.c_str());
-	}
-#ifdef ENABLE_GENICAM
-	else if (method == "setStream")
-	{
-		result = rpc_setStream(params, error);
-	}
-	else if (method == "genicam.doCmd")
-	{
-	if (firstDiscoverGenicam)
-	{
-		firstDiscoverGenicam->doCmd(params["name"]);
-	}
-	}
-	else if (method == "genicam.setParam")
-	{
-	string ioAddr = params["ioAddr"];
-	ioDev* p = ioSrv.getIODev(ioAddr);
-	if (p && p->m_devType == IO_DEV_TYPE::DEV::genicam)
-	{
-		ioDev_genicam* piod = (ioDev_genicam*)p;
-
-		string name = params["name"];
-		json val = params["val"];
-		bool isEnum = false;
-		if (params["isEnum"] != nullptr && params["isEnum"].get<bool>() == true)
-			isEnum = true;
-		piod->setParam(name, val, isEnum);
-		rpcResp.result = "\"ok\"";
-	}
-	}
-	else if (method == "genicam.getParam")
-	{
-	if (firstDiscoverGenicam)
-	{
-
-	}
-	}
-#endif
 	else if (method == "startPanTilt" ||
 			 method == "stopPanTilt" ||
 			 method == "startZoom" ||
@@ -840,7 +690,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			if (params.contains("pushToUrl")) {
 				pushTo = params["pushToUrl"].get<string>();
 			}
-			bool opend = prj.openStream(tag, pushTo);
+			bool opend = streamSrv.openStream(tag, pushTo);
 
 			if (opend)
 				rpcResp.result = RPC_OK;
@@ -860,7 +710,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			rpcResp.result = "\"ok\"";
 		}
 		else if (method == "closeStream") {
-			bool opend = prj.closeStream(tag);
+			bool opend = streamSrv.closeStream(tag);
 
 			if (opend)
 				rpcResp.result = RPC_OK;
@@ -3593,72 +3443,6 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		yyjson_mut_doc_free(mut_doc);
 
 		rpcResp.result = RPC_OK;
-	}
-	else if (method == "getRtspClientList") {
-		std::lock_guard<std::mutex> lock(prj.m_relayMutex);
-		const auto& mapRtspClients = prj.m_mapRtspClients;
-
-		// 1. 创建yyjson文档和根对象（JSON数组）
-		yyjson_mut_doc* doc = yyjson_mut_doc_new(NULL);
-		yyjson_mut_val* root_arr = yyjson_mut_arr(doc);
-		yyjson_mut_doc_set_root(doc, root_arr);
-
-		// 2. 遍历map中的每个RtspClient实例
-		for (const auto& pair : mapRtspClients) {
-			const std::string& relay_key = pair.first;          // map的key（比如RTSP流标识）
-			const std::unique_ptr<RtspClient>& relay_ptr = pair.second;
-
-			// 安全检查：跳过空指针
-			if (!relay_ptr) {
-				continue;
-			}
-
-			// 3. 获取当前实例的Statistics统计信息
-			const RtspClient::Statistics& stats = relay_ptr->getStatistics();
-
-			// 4. 创建当前relay的JSON对象
-			yyjson_mut_val* relay_obj = yyjson_mut_obj(doc);
-
-			// 4.1 添加map的key（便于识别每个relay）
-			yyjson_mut_obj_add_str(doc, relay_obj, "relay_key", relay_key.c_str());
-
-			// 4.2 逐个添加Statistics的字段到JSON对象
-			// 无符号整数类型字段
-			yyjson_mut_obj_add_uint(doc, relay_obj, "frames_received", stats.frames_received);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "frames_forwarded", stats.frames_forwarded);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "bytes_received", stats.bytes_received);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "bytes_forwarded", stats.bytes_forwarded);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "reconnect_count", stats.reconnect_count);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "errors", stats.errors);
-
-			// 时间戳字段：转换为秒级整数
-			using namespace std::chrono;
-			uint64_t start_time_ms = duration_cast<seconds>(stats.start_time.time_since_epoch()).count();
-			uint64_t last_frame_time_ms = duration_cast<seconds>(stats.last_frame_time.time_since_epoch()).count();
-			yyjson_mut_obj_add_uint(doc, relay_obj, "start_time_s", start_time_ms);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "last_frame_time_s", last_frame_time_ms);
-
-			// 浮点数类型字段
-			yyjson_mut_obj_add_real(doc, relay_obj, "fps", stats.fps);
-			yyjson_mut_obj_add_real(doc, relay_obj, "bitrate_kbps", stats.bitrate);
-
-			// 4.3 将当前relay的JSON对象添加到根数组
-			yyjson_mut_arr_add_val(root_arr, relay_obj);
-		}
-
-		// 5. 将JSON文档转换为字符串（带格式化，便于阅读）
-		// 如需紧凑格式，将YYJSON_WRITE_PRETTY改为0
-		size_t len;
-		char* json_str = yyjson_mut_write(doc, YYJSON_WRITE_PRETTY, &len);
-
-		std::string result;
-		if (json_str) {
-			rpcResp.result = json_str;
-			free(json_str);  // 释放yyjson分配的字符串内存
-		}
-
-		// 6. 释放yyjson文档内存
-		yyjson_mut_doc_free(doc);
 	}
 	else {
 		bHandled = false;
@@ -6591,75 +6375,6 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error)
 
 	return "";
 }
-
-#ifdef ENABLE_GENICAM
-string rpcHandler::rpc_setStream(json params,string& error)
-{
-	string streamId = params["streamId"].get<string>();
-	
-	streamSrvNode* ssn = streamSrv.getSrvNode(streamId);
-	if (ssn && ssn->m_streamPusher)
-	{
-		int fr = params["frameRate"].get<int>();
-		ssn->m_streamPusher->m_streamInfoConf.frameRate = fr;
-		return "\"ok\"";
-	}
-
-	error = makeRPCError(TEC_STREAM_ID_NOT_FOUND, "stream id not found");
-	return "";
-}
-#endif
-
-bool rpcHandler::rpc_getStreamInfo(json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
-{
-	string streamId;
-	if (params.find("streamId") != params.end())
-		streamId = params["streamId"].get<string>();
-	if (params.find("tag") != params.end())
-	{
-		streamId = params["tag"].get<string>();
-		streamId = TAG::addRoot(streamId, session.org);
-	}
-	if (streamId == "")
-	{
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing,"param missing,streamid or tag is not specified");
-		return true;
-	}
-
-	RtspClient* rc = prj.getRtspClient(streamId);
-	if(rc == nullptr)
-	{
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_NO_STREAM_SRC, "no stream src of this tag");
-		return true;
-	}
-
-	json jSi;
-	jSi["srcUrl"] = rc->config_.source_url;
-	jSi["destUrl"] = rc->config_.target_url;
-	json jRtpBuffer;
-	jRtpBuffer["size"] = rc->rtp_buffer_.size();
-	jRtpBuffer["maxSeconds"] = rc->rtp_buffer_max_seconds_;
-	jRtpBuffer["bufferedSeconds"] = rc->getBufferedSeconds();
-	jSi["rtpBuffer"] = jRtpBuffer;
-	json jRecCtrl;
-	jRecCtrl["recording"] = rc->rec_ctrl_.recording;
-	jRecCtrl["preSeconds"] = rc->rec_ctrl_.preSeconds;
-	jSi["recordCtrl"] = jRecCtrl;
-	json jStatis;
-	RtspClient::Statistics statis = rc->getStatistics();
-	jStatis["bitrate"] = statis.bitrate;
-	jStatis["fps"] = statis.fps;
-	jStatis["frameReceived"] = statis.frames_received;
-	jStatis["frameForwarded"] = statis.frames_forwarded;
-	jStatis["bytesReceived"] = statis.bytes_received;
-	jStatis["bytesForwarded"] = statis.bytes_forwarded;
-	jStatis["reconnectCount"] = statis.reconnect_count;
-	jSi["statis"] = jStatis;
-	jSi["startTime"] = statis.start_time.time_since_epoch().count();
-	rpcResp.result = jSi.dump();
-	return true;
-}
-
 
 string rpcHandler::rpc_com_list(json params, string& error)
 {

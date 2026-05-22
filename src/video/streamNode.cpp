@@ -1,4 +1,4 @@
-#include "rtspClient.h"
+#include "StreamNode.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -117,7 +117,7 @@ static std::vector<uint8_t> base64Decode(const std::string& input) {
 }
 
 // MD5初始化
-void RtspClient::md5Init(MD5Context* context) {
+void StreamNode::md5Init(MD5Context* context) {
     context->count[0] = 0;
     context->count[1] = 0;
 
@@ -129,7 +129,7 @@ void RtspClient::md5Init(MD5Context* context) {
 }
 
 // MD5更新
-void RtspClient::md5Update(MD5Context* context, const uint8_t* data, size_t length) {
+void StreamNode::md5Update(MD5Context* context, const uint8_t* data, size_t length) {
     size_t index = (size_t)((context->count[0] >> 3) & 0x3F);
 
     // 更新位数
@@ -162,7 +162,7 @@ void RtspClient::md5Update(MD5Context* context, const uint8_t* data, size_t leng
 }
 
 // MD5结束
-void RtspClient::md5Final(MD5Context* context, uint8_t digest[16]) {
+void StreamNode::md5Final(MD5Context* context, uint8_t digest[16]) {
     static uint8_t padding[64] = {
         0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -196,7 +196,7 @@ void RtspClient::md5Final(MD5Context* context, uint8_t digest[16]) {
 }
 
 // MD5转换函数
-void RtspClient::md5Transform(uint32_t state[4], const uint8_t block[64]) {
+void StreamNode::md5Transform(uint32_t state[4], const uint8_t block[64]) {
     uint32_t a = state[0], b = state[1], c = state[2], d = state[3];
     uint32_t x[16];
 
@@ -286,7 +286,7 @@ void RtspClient::md5Transform(uint32_t state[4], const uint8_t block[64]) {
 }
 
 // MD5辅助函数
-std::string RtspClient::md5Hex(const std::string& input) {
+std::string StreamNode::md5Hex(const std::string& input) {
     MD5Context context;
     md5Init(&context);
     md5Update(&context, (const uint8_t*)input.c_str(), input.size());
@@ -303,7 +303,7 @@ std::string RtspClient::md5Hex(const std::string& input) {
 }
 
 // Base64编码辅助函数
-std::string RtspClient::base64Encode(const std::string& input) {
+std::string StreamNode::base64Encode(const std::string& input) {
     static const std::string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
@@ -397,20 +397,20 @@ size_t IsValidPkt_HTTP(std::string& strData, size_t iLen) {
 // Connection 实现
 // ============================================================================
 
-RtspClient::Connection::Connection() : sockfd_(RtspClient::kInvalidSocket) {
+StreamNode::Connection::Connection() : sockfd_(StreamNode::kInvalidSocket) {
 }
 
-RtspClient::Connection::~Connection() {
+StreamNode::Connection::~Connection() {
     disconnect();
 }
 
-bool RtspClient::Connection::connect(const std::string& host, int port, int timeout_ms) {
+bool StreamNode::Connection::connect(const std::string& host, int port, int timeout_ms) {
     disconnect();
     last_error_ = 0;
 
     // 创建socket
-    sockfd_ = static_cast<RtspClient::SocketHandle>(socket(AF_INET, SOCK_STREAM, 0));
-    if (sockfd_ == RtspClient::kInvalidSocket) {
+    sockfd_ = static_cast<StreamNode::SocketHandle>(socket(AF_INET, SOCK_STREAM, 0));
+    if (sockfd_ == StreamNode::kInvalidSocket) {
         last_error_ = SOCKET_ERROR_NUM;
         return false;
     }
@@ -431,7 +431,7 @@ bool RtspClient::Connection::connect(const std::string& host, int port, int time
         if (!server) {
             last_error_ = SOCKET_ERROR_NUM;
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
-            sockfd_ = RtspClient::kInvalidSocket;
+            sockfd_ = StreamNode::kInvalidSocket;
             return false;
         }
         memcpy(&serv_addr.sin_addr, server->h_addr, server->h_length);
@@ -441,7 +441,7 @@ bool RtspClient::Connection::connect(const std::string& host, int port, int time
     if (::connect(static_cast<SOCKET_TYPE>(sockfd_), (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
         last_error_ = SOCKET_ERROR_NUM;
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
-        sockfd_ = RtspClient::kInvalidSocket;
+        sockfd_ = StreamNode::kInvalidSocket;
         return false;
     }
 
@@ -460,22 +460,22 @@ bool RtspClient::Connection::connect(const std::string& host, int port, int time
     return true;
 }
 
-void RtspClient::Connection::disconnect() {
-    if (sockfd_ != RtspClient::kInvalidSocket) {
+void StreamNode::Connection::disconnect() {
+    if (sockfd_ != StreamNode::kInvalidSocket) {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
-        sockfd_ = RtspClient::kInvalidSocket;
+        sockfd_ = StreamNode::kInvalidSocket;
     }
     host_.clear();
     port_ = 0;
     last_error_ = 0;
 }
 
-bool RtspClient::Connection::isConnected() const {
-    return sockfd_ != RtspClient::kInvalidSocket;
+bool StreamNode::Connection::isConnected() const {
+    return sockfd_ != StreamNode::kInvalidSocket;
 }
 
-int RtspClient::Connection::send(const void* data, size_t size, int timeout_ms) {
-    if (sockfd_ == RtspClient::kInvalidSocket) return -1;
+int StreamNode::Connection::send(const void* data, size_t size, int timeout_ms) {
+    if (sockfd_ == StreamNode::kInvalidSocket) return -1;
 
     if (timeout_ms > 0) {
         setSocketTimeout(timeout_ms);
@@ -510,8 +510,8 @@ int RtspClient::Connection::send(const void* data, size_t size, int timeout_ms) 
     return static_cast<int>(total_sent);
 }
 
-int RtspClient::Connection::receive(void* buffer, size_t size, int timeout_ms) {
-    if (sockfd_ == RtspClient::kInvalidSocket) return -1;
+int StreamNode::Connection::receive(void* buffer, size_t size, int timeout_ms) {
+    if (sockfd_ == StreamNode::kInvalidSocket) return -1;
 
     if (timeout_ms > 0) {
         setSocketTimeout(timeout_ms);
@@ -533,8 +533,8 @@ int RtspClient::Connection::receive(void* buffer, size_t size, int timeout_ms) {
     return received;
 }
 
-int RtspClient::Connection::receiveHttpResp(std::string& response, int timeout_ms) {
-    if (sockfd_ == RtspClient::kInvalidSocket) return -1;
+int StreamNode::Connection::receiveHttpResp(std::string& response, int timeout_ms) {
+    if (sockfd_ == StreamNode::kInvalidSocket) return -1;
 
     int total = 0;
     char buf[1000] = { 0 };
@@ -589,8 +589,8 @@ int RtspClient::Connection::receiveHttpResp(std::string& response, int timeout_m
     return total;
 }
 
-bool RtspClient::Connection::setSocketTimeout(int timeout_ms) {
-    if (sockfd_ == RtspClient::kInvalidSocket) return false;
+bool StreamNode::Connection::setSocketTimeout(int timeout_ms) {
+    if (sockfd_ == StreamNode::kInvalidSocket) return false;
 
 #ifdef _WIN32
     DWORD tv = timeout_ms;
@@ -614,19 +614,19 @@ bool RtspClient::Connection::setSocketTimeout(int timeout_ms) {
 }
 
 // ============================================================================
-// RtspClient 实现
+// StreamNode 实现
 // ============================================================================
 
-RtspClient::RtspClient() {
+StreamNode::StreamNode() {
     stats_.start_time = std::chrono::steady_clock::now();
     stats_.last_frame_time = std::chrono::steady_clock::now();
 }
 
-RtspClient::~RtspClient() {
+StreamNode::~StreamNode() {
     stop();
 }
 
-bool RtspClient::start(const Config& config) {
+bool StreamNode::start(const Config& config) {
     if (running_) {
         return false;
     }
@@ -651,15 +651,15 @@ bool RtspClient::start(const Config& config) {
         target_auth_.password = config_.target_password;
     }
 
-    control_thread_ = std::thread(&RtspClient::controlThread, this);
+    control_thread_ = std::thread(&StreamNode::controlThread, this);
 	control_thread_.detach();
 
-    LOG("[RtspClient] RtspClient started,tag=%s,src=%s,target=%s",config_.tag.c_str(), config_.source_url.c_str(), config_.target_url.c_str());
+    LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), config_.source_url.c_str(), config_.target_url.c_str());
 
     return true;
 }
 
-void RtspClient::stop() {
+void StreamNode::stop() {
     if (!running_) return;
 
     stopping_ = true;
@@ -680,22 +680,22 @@ void RtspClient::stop() {
     setState(State::IDLE, "Stopped");
 }
 
-void RtspClient::restart() {
+void StreamNode::restart() {
     stop();
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     start(config_);
 }
 
-RtspClient::State RtspClient::getState() {
+StreamNode::State StreamNode::getState() {
     std::lock_guard<std::mutex> lock(state_mutex_);
     return state_;
 }
 
-bool RtspClient::isRunning() {
+bool StreamNode::isRunning() {
     return running_;
 }
 
-RtspClient::Statistics RtspClient::getStatistics() {
+StreamNode::Statistics StreamNode::getStatistics() {
     std::lock_guard<std::mutex> lock(stats_mutex_);
 
     // 计算实时统计
@@ -710,15 +710,15 @@ RtspClient::Statistics RtspClient::getStatistics() {
     return stats_;
 }
 
-void RtspClient::setStatusCallback(StatusCallback cb) {
+void StreamNode::setStatusCallback(StatusCallback cb) {
     status_callback_ = cb;
 }
 
-void RtspClient::setFrameCallback(FrameCallback cb) {
+void StreamNode::setFrameCallback(FrameCallback cb) {
 
 }
 
-void RtspClient::setErrorCallback(ErrorCallback cb) {
+void StreamNode::setErrorCallback(ErrorCallback cb) {
     error_callback_ = cb;
 }
 
@@ -726,12 +726,12 @@ void RtspClient::setErrorCallback(ErrorCallback cb) {
 // 认证相关函数
 // ============================================================================
 
-std::string RtspClient::calculateBasicAuth(const AuthInfo& auth) {
+std::string StreamNode::calculateBasicAuth(const AuthInfo& auth) {
     std::string credentials = auth.username + ":" + auth.password;
     return "Basic " + base64Encode(credentials);
 }
 
-std::string RtspClient::calculateDigest(const std::string& method, const std::string& uri,
+std::string StreamNode::calculateDigest(const std::string& method, const std::string& uri,
     const AuthInfo& auth) {
     // 计算HA1 = MD5(username:realm:password)
     std::string ha1_input = auth.username + ":" + auth.realm + ":" + auth.password;
@@ -748,7 +748,7 @@ std::string RtspClient::calculateDigest(const std::string& method, const std::st
     return response;
 }
 
-bool RtspClient::parseWWWAuthenticate(const std::string& response, AuthInfo& auth) {
+bool StreamNode::parseWWWAuthenticate(const std::string& response, AuthInfo& auth) {
     // 查找WWW-Authenticate头
     size_t www_auth_pos = response.find("WWW-Authenticate: ");
     if (www_auth_pos == std::string::npos) {
@@ -811,7 +811,7 @@ bool RtspClient::parseWWWAuthenticate(const std::string& response, AuthInfo& aut
     return false;
 }
 
-void RtspClient::updateAuthHeader(AuthInfo& auth, const std::string& method, const std::string& uri) {
+void StreamNode::updateAuthHeader(AuthInfo& auth, const std::string& method, const std::string& uri) {
     if (!auth.hasCredentials()) {
         auth.authorization_header.clear();
         return;
@@ -843,7 +843,7 @@ void RtspClient::updateAuthHeader(AuthInfo& auth, const std::string& method, con
 // RTSP协议函数
 // ============================================================================
 
-bool RtspClient::rtspDescribe(Connection& conn, const std::string& url,
+bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
     std::string& sdp, std::string& session) {
     URLComponents url_components;
     if (!URLComponents::parse(url, url_components)) {
@@ -871,7 +871,7 @@ bool RtspClient::rtspDescribe(Connection& conn, const std::string& url,
             std::stringstream request;
             request << "DESCRIBE " << request_uri << " RTSP/1.0\r\n"
                 << "CSeq: " << generateCSeq() << "\r\n"
-                << "User-Agent: RtspClient/1.0\r\n";
+                << "User-Agent: StreamNode/1.0\r\n";
 
             if (include_host) {
                 request << "Host: " << host_header << "\r\n";
@@ -947,7 +947,7 @@ bool RtspClient::rtspDescribe(Connection& conn, const std::string& url,
                 return false;
             }
             else {
-                LOG("[RtspClient]tag=%s,DESCRIBE failed:%s",config_.tag.c_str(),response.substr(0, 200).c_str());
+                LOG("[StreamNode]tag=%s,DESCRIBE failed:%s",config_.tag.c_str(),response.substr(0, 200).c_str());
                 return false;
             }
         };
@@ -997,7 +997,7 @@ bool RtspClient::rtspDescribe(Connection& conn, const std::string& url,
     return false;
 }
 
-bool RtspClient::rtspSetup(Connection& conn, const std::string& url,
+bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
     std::string& session, RTSP_SESSION& stream, bool record_mode) {
     URLComponents url_components;
     std::string host_header;
@@ -1060,7 +1060,7 @@ bool RtspClient::rtspSetup(Connection& conn, const std::string& url,
     std::stringstream request;
     request << "SETUP " << setup_url << " RTSP/1.0\r\n"
         << "CSeq: " << generateCSeq() << "\r\n"
-        << "User-Agent: RtspClient/1.0\r\n";
+        << "User-Agent: StreamNode/1.0\r\n";
 
     // 注意：SETUP 请求中通常不需要 Host 头，RTSP 服务器通过 URL 获取主机信息
     // 移除 Host 头，避免某些服务器拒绝请求
@@ -1169,7 +1169,7 @@ bool RtspClient::rtspSetup(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RtspClient::rtspPlay(Connection& conn, const std::string& url,
+bool StreamNode::rtspPlay(Connection& conn, const std::string& url,
     const std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1193,7 +1193,7 @@ bool RtspClient::rtspPlay(Connection& conn, const std::string& url,
     std::stringstream request;
     request << "PLAY " << url << " RTSP/1.0\r\n"
         << "CSeq: " << generateCSeq() << "\r\n"
-        << "User-Agent: RtspClient/1.0\r\n"
+        << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
@@ -1232,7 +1232,7 @@ bool RtspClient::rtspPlay(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RtspClient::rtspTeardown(Connection& conn, const std::string& url,
+bool StreamNode::rtspTeardown(Connection& conn, const std::string& url,
     const std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1256,7 +1256,7 @@ bool RtspClient::rtspTeardown(Connection& conn, const std::string& url,
     std::stringstream request;
     request << "TEARDOWN " << url << " RTSP/1.0\r\n"
         << "CSeq: " << generateCSeq() << "\r\n"
-        << "User-Agent: RtspClient/1.0\r\n"
+        << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
@@ -1284,7 +1284,7 @@ bool RtspClient::rtspTeardown(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RtspClient::rtspAnnounce(Connection& conn, const std::string& url,
+bool StreamNode::rtspAnnounce(Connection& conn, const std::string& url,
     const std::string& sdp, std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1305,7 +1305,7 @@ bool RtspClient::rtspAnnounce(Connection& conn, const std::string& url,
     std::stringstream request;
     request << "ANNOUNCE " << url << " RTSP/1.0\r\n"
         << "CSeq: " << generateCSeq() << "\r\n"
-        << "User-Agent: RtspClient/1.0\r\n"
+        << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
@@ -1347,7 +1347,7 @@ bool RtspClient::rtspAnnounce(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RtspClient::rtspRecord(Connection& conn, const std::string& url,
+bool StreamNode::rtspRecord(Connection& conn, const std::string& url,
     const std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1368,7 +1368,7 @@ bool RtspClient::rtspRecord(Connection& conn, const std::string& url,
     std::stringstream request;
     request << "RECORD " << url << " RTSP/1.0\r\n"
         << "CSeq: " << generateCSeq() << "\r\n"
-        << "User-Agent: RtspClient/1.0\r\n"
+        << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
@@ -1407,7 +1407,7 @@ bool RtspClient::rtspRecord(Connection& conn, const std::string& url,
     return true;
 }
 
-bool RtspClient::rtspGetParameter(Connection& conn, const std::string& url,
+bool StreamNode::rtspGetParameter(Connection& conn, const std::string& url,
     const std::string& session) {
     URLComponents url_components;
     std::string host_header;
@@ -1431,7 +1431,7 @@ bool RtspClient::rtspGetParameter(Connection& conn, const std::string& url,
     std::stringstream request;
     request << "GET_PARAMETER " << url << " RTSP/1.0\r\n"
         << "CSeq: " << generateCSeq() << "\r\n"
-        << "User-Agent: RtspClient/1.0\r\n"
+        << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
@@ -1474,7 +1474,7 @@ bool RtspClient::rtspGetParameter(Connection& conn, const std::string& url,
 // 工作线程
 // ============================================================================
 
-int RtspClient::getBufferedSeconds()
+int StreamNode::getBufferedSeconds()
 {
     // 计算当前 rtp_buffer_ 中的数据覆盖的大致秒数
     std::lock_guard<std::mutex> lock(queue_mutex_);
@@ -1496,7 +1496,7 @@ int RtspClient::getBufferedSeconds()
     return seconds;
 }
 
-void RtspClient::addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt)
+void StreamNode::addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt)
 {
     // 校验输入
     if (!pPkt) return;
@@ -1556,16 +1556,16 @@ void RtspClient::addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt)
     }
 }
 
-void RtspClient::rtpHandleThread() {
-    RtspClient::doRtpRecv();
+void StreamNode::rtpHandleThread() {
+    StreamNode::doRtpRecv();
 }
 
-void RtspClient::controlThread() {
+void StreamNode::controlThread() {
     while (running_ && !stopping_) {
             // 启动拉流与推流
             if (isPulling_ == false) {
                 if (doStreamPull()) {
-                    rtp_handle_thread_ = std::thread(&RtspClient::rtpHandleThread,this);
+                    rtp_handle_thread_ = std::thread(&StreamNode::rtpHandleThread,this);
                     rtp_handle_thread_.detach();
                     isPulling_ = true;
                 }
@@ -1604,7 +1604,7 @@ void RtspClient::controlThread() {
     }
 }
 
-bool RtspClient::doStreamPush() {
+bool StreamNode::doStreamPush() {
     // 连接到目标服务器
     URLComponents target_url;
     if (!URLComponents::parse(config_.target_url, target_url)) {
@@ -1710,12 +1710,12 @@ bool RtspClient::doStreamPush() {
         return false;
     }
 
-	LOG("[keyinfo][RtspClient]tag=%s,stream forward success,pushToUrl:%s", config_.tag.c_str(), config_.target_url.c_str());
+	LOG("[keyinfo][StreamNode]tag=%s,stream forward success,pushToUrl:%s", config_.tag.c_str(), config_.target_url.c_str());
 
     return true;
 }
 
-bool RtspClient::doStreamPull() {
+bool StreamNode::doStreamPull() {
     setState(State::CONNECTING, "Connecting to source");
 
     // 解析源URL
@@ -1732,7 +1732,7 @@ bool RtspClient::doStreamPull() {
         return false;
     }
 
-    LOG("[RtspClient]tag=%s,Connect to source success,%s",config_.tag.c_str(),(src_url.host + ":" + std::to_string(src_url.port)).c_str());
+    LOG("[StreamNode]tag=%s,Connect to source success,%s",config_.tag.c_str(),(src_url.host + ":" + std::to_string(src_url.port)).c_str());
 
     // 发送DESCRIBE
     std::string sdp;
@@ -1751,7 +1751,7 @@ bool RtspClient::doStreamPull() {
     std::string sdp_for_log = sdp;
     std::replace(sdp_for_log.begin(), sdp_for_log.end(), '\r', '~');
     std::replace(sdp_for_log.begin(), sdp_for_log.end(), '\n', '~');
-    LOG("[RtspClient]tag=%s, sdp received: %s,streamInfo:%s,audioControl:%s",
+    LOG("[StreamNode]tag=%s, sdp received: %s,streamInfo:%s,audioControl:%s",
         config_.tag.c_str(), 
         sdp_for_log.c_str(),
         pull_session_.control_url.c_str(),
@@ -1781,7 +1781,7 @@ bool RtspClient::doStreamPull() {
         pull_session_.client_port = "0-0";  // TCP模式不需要client_port
     }
 
-    LOG("[RtspClient]tag=%s,SETUP,mode=%s,local rtp/rtcp port=%s",
+    LOG("[StreamNode]tag=%s,SETUP,mode=%s,local rtp/rtcp port=%s",
         config_.tag.c_str(),
         pullUseUDP ? "udp" : "tcp",
         pull_session_.client_port.c_str()
@@ -1814,7 +1814,7 @@ bool RtspClient::doStreamPull() {
     }
 
 
-    LOG("[RtspClient]tag=%s,SETUP success,mode=%s,server port=%s",
+    LOG("[StreamNode]tag=%s,SETUP success,mode=%s,server port=%s",
         config_.tag.c_str(),
         pullUseUDP ? "udp" : "tcp",
         pull_session_.server_port.c_str()
@@ -1829,10 +1829,10 @@ bool RtspClient::doStreamPull() {
     return true;
 }
 
-void RtspClient::doRtpRecv() {
+void StreamNode::doRtpRecv() {
     setState(State::PLAYING, "Streaming started");
     bool pullUDP = (config_.pull_mode == TransportMode::UDP);
-    LOG("[keyinfo][RtspClient]tag=%s,Pull Success,rtp handle thread start,mode:%s",config_.tag.c_str(),pullUDP ? "UDP" : "TCP");
+    LOG("[keyinfo][StreamNode]tag=%s,Pull Success,rtp handle thread start,mode:%s",config_.tag.c_str(),pullUDP ? "UDP" : "TCP");
 
     std::vector<uint8_t> buffer(config_.buffer_size);
     std::string src_ip;
@@ -1961,7 +1961,7 @@ void RtspClient::doRtpRecv() {
             }
         }
         else if (received > 0 && received<=12) {
-            printf("[RtspClient]rtp handle thread,wrong recv len");
+            printf("[StreamNode]rtp handle thread,wrong recv len");
         }
         else {
             // 检查RTP超时
@@ -1980,10 +1980,10 @@ void RtspClient::doRtpRecv() {
         }
     }
 
-    LOG("[RtspClient]Pull thread stopped,tag=",config_.tag);
+    LOG("[StreamNode]Pull thread stopped,tag=",config_.tag);
 }
 
-void RtspClient::teardown() {
+void StreamNode::teardown() {
     if (source_conn_ && !source_session_.empty()) {
         rtspTeardown(*source_conn_, config_.source_url, source_session_);
     }
@@ -2026,7 +2026,7 @@ void RtspClient::teardown() {
 // UDP传输函数
 // ============================================================================
 
-bool RtspClient::createUDPPullSocket() {
+bool StreamNode::createUDPPullSocket() {
     // 我们需要为 RTP 和 RTCP 创建一对连续的端口以便向服务器声明 "client_port=RTP-RTCP"
     // 尝试多次分配以找到一对可用的连续端口
     const int max_attempts = 10;
@@ -2112,7 +2112,7 @@ bool RtspClient::createUDPPullSocket() {
 }
 
 // 修改 createUDPPushSocket()：分配并 bind 一对连续端口（RTP/RTCP）
-bool RtspClient::createUDPPushSocket() {
+bool StreamNode::createUDPPushSocket() {
     const int max_attempts = 10;
 
     for (int attempt = 0; attempt < max_attempts; ++attempt) {
@@ -2194,7 +2194,7 @@ bool RtspClient::createUDPPushSocket() {
     push_session_.client_rtcp_port = 0;
     return false;
 }
-bool RtspClient::createUDPServerSocket(RTSP_SESSION& streamInfo)
+bool StreamNode::createUDPServerSocket(RTSP_SESSION& streamInfo)
 {
     const int max_attempts = 10;
 
@@ -2278,7 +2278,7 @@ bool RtspClient::createUDPServerSocket(RTSP_SESSION& streamInfo)
     streamInfo.client_rtcp_port = 0;
     return false;
 }
-void RtspClient::closeUDPSockets() {
+void StreamNode::closeUDPSockets() {
     if (pull_session_.rtp_socket != kInvalidSocket) {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(pull_session_.rtp_socket));
         pull_session_.rtp_socket = kInvalidSocket;
@@ -2305,7 +2305,7 @@ void RtspClient::closeUDPSockets() {
     push_session_.client_rtcp_port = 0;
 }
 
-bool RtspClient::configureUDPSocket(SocketHandle sock, bool is_multicast) {
+bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast) {
     if (sock == kInvalidSocket) return false;
 
 #ifdef _WIN32
@@ -2379,7 +2379,7 @@ bool RtspClient::configureUDPSocket(SocketHandle sock, bool is_multicast) {
     return true;
 }
 
-bool RtspClient::sendUDPDataToSession(const uint8_t* data, size_t size, RTSP_SESSION& rtspSession) {
+bool StreamNode::sendUDPDataToSession(const uint8_t* data, size_t size, RTSP_SESSION& rtspSession) {
     int remoteRtpPort = 0;
     int remoteRtcpPort = 0;
     if (rtspSession.session_type_ == CLINET_PULL || rtspSession.session_type_ == CLINET_PUSH) {
@@ -2435,7 +2435,7 @@ bool RtspClient::sendUDPDataToSession(const uint8_t* data, size_t size, RTSP_SES
 }
 
 
-int RtspClient::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
+int StreamNode::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
     if (pull_session_.rtp_socket == kInvalidSocket) {
         return -1;
     }
@@ -2475,7 +2475,7 @@ int RtspClient::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip
 // SDP处理函数
 // ============================================================================
 
-bool RtspClient::parseSDP(const std::string & sdp, RTSP_SESSION & video_info, RTSP_SESSION & audio_info) {
+bool StreamNode::parseSDP(const std::string & sdp, RTSP_SESSION & video_info, RTSP_SESSION & audio_info) {
     std::istringstream ss(sdp);
     std::string line;
     RTSP_SESSION* current_info = nullptr;
@@ -2564,7 +2564,7 @@ bool RtspClient::parseSDP(const std::string & sdp, RTSP_SESSION & video_info, RT
     return true;
 }
 
-std::string RtspClient::generateSDP(const RTSP_SESSION & video_info, const RTSP_SESSION & audio_info) {
+std::string StreamNode::generateSDP(const RTSP_SESSION & video_info, const RTSP_SESSION & audio_info) {
     std::stringstream sdp;
 
     sdp << "v=0\r\n"
@@ -2593,7 +2593,7 @@ std::string RtspClient::generateSDP(const RTSP_SESSION & video_info, const RTSP_
 // 工具函数
 // ============================================================================
 
-bool RtspClient::URLComponents::parse(const std::string & url, URLComponents & components) {
+bool StreamNode::URLComponents::parse(const std::string & url, URLComponents & components) {
     URLComponents out;
 
     size_t protocol_end = url.find("://");
@@ -2664,8 +2664,8 @@ bool RtspClient::URLComponents::parse(const std::string & url, URLComponents & c
     return true;
 }
 
-void RtspClient::sendRTPPacketToClients(const RTPPacket& packet) {
-    std::vector<RtspClient::RTSP_SESSION> playClients;
+void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
+    std::vector<StreamNode::RTSP_SESSION> playClients;
     client_sessions_mutex_.lock();
     playClients = client_sessions_;
     client_sessions_mutex_.unlock();
@@ -2706,7 +2706,7 @@ void RtspClient::sendRTPPacketToClients(const RTPPacket& packet) {
     }
 }
 
-void RtspClient::forwardRTPPacket(const RTPPacket & packet) {
+void StreamNode::forwardRTPPacket(const RTPPacket & packet) {
     // 序列化RTP包
     auto data = packet.serialize();
     
@@ -2740,7 +2740,7 @@ void RtspClient::forwardRTPPacket(const RTPPacket & packet) {
     }
 }
 
-bool RtspClient::RTPPacket::parse(const uint8_t * data, size_t size) {
+bool StreamNode::RTPPacket::parse(const uint8_t * data, size_t size) {
     // RTP 数据包格式（简要）：
     // 0               1               2               3
     // 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -2783,7 +2783,7 @@ bool RtspClient::RTPPacket::parse(const uint8_t * data, size_t size) {
     return true;
 }
 
-std::vector<uint8_t> RtspClient::RTPPacket::serialize() const {
+std::vector<uint8_t> StreamNode::RTPPacket::serialize() const {
     std::vector<uint8_t> data(12 + csrc_count * 4 + payload.size());
 
     data[0] = (version << 6) | (padding << 5) | (extension << 4) | csrc_count;
@@ -2810,7 +2810,7 @@ std::vector<uint8_t> RtspClient::RTPPacket::serialize() const {
     return data;
 }
 
-std::string RtspClient::extractSessionID(const std::string & response) {
+std::string StreamNode::extractSessionID(const std::string & response) {
     size_t pos = response.find("Session: ");
     if (pos == std::string::npos) return "";
 
@@ -2827,7 +2827,7 @@ std::string RtspClient::extractSessionID(const std::string & response) {
     return session;
 }
 
-std::string RtspClient::extractTransport(const std::string & response) {
+std::string StreamNode::extractTransport(const std::string & response) {
     size_t pos = response.find("Transport: ");
     if (pos == std::string::npos) return "";
 
@@ -2835,12 +2835,12 @@ std::string RtspClient::extractTransport(const std::string & response) {
     return response.substr(pos + 11, end - pos - 11);
 }
 
-std::string RtspClient::generateCSeq() {
+std::string StreamNode::generateCSeq() {
     static std::atomic<int> counter{ 1 };
     return std::to_string(counter++);
 }
 
-void RtspClient::setError(const std::string & error, int code) {
+void StreamNode::setError(const std::string & error, int code) {
     //logError("Error [" + std::to_string(code) + "]: " + error);
 
     {
@@ -2855,7 +2855,7 @@ void RtspClient::setError(const std::string & error, int code) {
     setState(State::S_ERROR, error);
 }
 
-void RtspClient::setState(State new_state, const std::string & msg) {
+void StreamNode::setState(State new_state, const std::string & msg) {
     {
         std::lock_guard<std::mutex> lock(state_mutex_);
         state_ = new_state;
@@ -2869,7 +2869,7 @@ void RtspClient::setState(State new_state, const std::string & msg) {
     cv_.notify_all();
 }
 
-bool RtspClient::shouldReconnect() const {
+bool StreamNode::shouldReconnect() const {
     if (config_.max_retries > 0 && retry_count_ >= config_.max_retries) {
         return false;
     }
@@ -2882,7 +2882,7 @@ bool RtspClient::shouldReconnect() const {
     return true;
 }
 
-void RtspClient::doReconnect() {
+void StreamNode::doReconnect() {
     retry_count_++;
     last_reconnect_time_ = std::chrono::steady_clock::now();
 
@@ -2903,21 +2903,21 @@ void RtspClient::doReconnect() {
     std::this_thread::sleep_for(std::chrono::milliseconds(config_.retry_interval));
 }
 
-void RtspClient::logInfo(const std::string & msg) const {
+void StreamNode::logInfo(const std::string & msg) const {
     std::cout << "[INFO] " << msg << std::endl;
 }
 
-void RtspClient::logError(const std::string & msg) const {
+void StreamNode::logError(const std::string & msg) const {
     std::cerr << "[ERROR] " << msg << std::endl;
 }
 
-void RtspClient::logDebug(const std::string & msg) const {
+void StreamNode::logDebug(const std::string & msg) const {
     if (config_.verbose) {
         std::cout << "[DEBUG] " << msg << std::endl;
     }
 }
 
-void RtspClient::logVerbose(const std::string & msg) const {
+void StreamNode::logVerbose(const std::string & msg) const {
     if (config_.verbose) {
         std::cout << "[VERBOSE] " << msg << std::endl;
     }
@@ -2930,7 +2930,7 @@ void RtspClient::logVerbose(const std::string & msg) const {
  * @return 解析成功返回true，失败返回false
  */
 
-bool RtspClient::extractRtspAuthInfo(RtspClient::Config& config) {
+bool StreamNode::extractRtspAuthInfo(StreamNode::Config& config) {
     // 正则表达式匹配RTSP URL格式：rtsp://[user:pass@]host[:port]/path
     // 分组说明：
     // 1: 用户名  2: 密码  3: 剩余部分（IP/端口/路径）
@@ -3068,7 +3068,7 @@ std::string getNALTypeDesc(unsigned char nal_type) {
 }
 
 // h264文件分析工具 https://nalu.qer.im/
-void RtspClient::recordRTPPacket(std::shared_ptr<RTPPacket> pPkt) {
+void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> pPkt) {
     if (!rec_ctrl_.recording || rec_ctrl_.path.empty()) return;
 
     std::vector<std::shared_ptr<RTPPacket>> to_write;
@@ -3151,7 +3151,7 @@ void RtspClient::recordRTPPacket(std::shared_ptr<RTPPacket> pPkt) {
     ofs.flush();
 }
 
-void RtspClient::writeNALtoFile(uint8_t nal_type,char* nal, size_t size, std::ofstream& ofs) {
+void StreamNode::writeNALtoFile(uint8_t nal_type,char* nal, size_t size, std::ofstream& ofs) {
     //此处不要使用 ofstream 的 tellp获得长度，不准确
     if (rec_ctrl_.firstWrite && nal_type != NAL_TYPE_IDR) {
         return;

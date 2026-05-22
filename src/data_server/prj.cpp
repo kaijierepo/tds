@@ -7,7 +7,7 @@
 #include "logger.h"
 #include "yyjson.h"
 #include "rpcHandler.h"
-#include "../video/RtspClient.h"
+#include "../video/StreamNode.h"
 
 project prj;
 
@@ -372,130 +372,6 @@ void project::getAllVarExpScript()
 		}
 	}
 	scriptManager.updateVarExpScript(expScripts);
-}
-
-bool project::openStream(string tag, string pushTo)
-{
-	m_enableZLM = tds->conf->getInt("enableZLM", 0) != 0;
-	MP* pmp = prj.GetMPByTag(tag, "zh");
-	if (!pmp) {
-		LOG("[流媒体] 请求的位号不存在, tag=" + tag);
-		return false;
-	}
-
-	if (pmp->m_isOpenningStream) {
-		LOG("[流媒体] 当前正在打开媒体源，收到重复打开请求，忽略, 位号:%s, 当前配置地址:%s",
-			tag.c_str(), pmp->m_mediaUrl.c_str());
-		return false;
-	}
-
-	pmp->m_isOpenningStream = true;
-
-	// 如果拉流地址变更，先关闭旧流
-	if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl && pmp->m_mpStatus.m_pullingSrcUrl != "") {
-		LOG("[流媒体] 监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s, 配置地址:%s",
-			pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
-
-		closeStream(tag);
-	}
-
-	bool ret = false;
-	if (m_enableZLM) {
-		bool retPull = pmp->startStreamPull();   //zlm  addStreamProxy
-		bool pushRet = false;
-		if (pushTo != "") {
-			if (retPull) {
-				timeopt::sleepMilli(500);
-				pushRet = pmp->startStreamPush(pushTo);  //zlm  addStreamPusherProxy
-				LOG("[流媒体] 向上级服务推流（ZLM模式），url=%s", pushTo.c_str());
-				ret = pushRet;
-			}
-		}
-		else {
-			ret = retPull;
-		}
-	}
-	else {
-		RtspClient* rc = prj.getRtspClient(tag);
-		if (rc) {
-			LOG("[流媒体] RtspClient 已在运行 for tag: %s", tag.c_str());
-			if (rc->config_.target_url == "" && pushTo != "") {
-				rc->config_.target_url = pushTo;
-				LOG("[流媒体] RtspClient is pulling for tag: %s, start push to %s", tag.c_str(),pushTo.c_str());
-			}
-			pmp->m_isOpenningStream = false;
-			return true;
-		}
-
-		// 创建新的 RtspClient
-		auto rtspClt = std::make_unique<RtspClient>();
-
-		// 3. 配置 relay
-		RtspClient::Config config;
-		config.source_url = pmp->m_mediaUrl; // 源地址
-		// 提取用户名和密码
-		bool isSuccess = rtspClt->extractRtspAuthInfo(config);
-
-		config.target_url = pushTo; // 目标地址
-		config.retry_interval = 3000;
-		config.max_retries = 0; // 无限重试
-		config.rtp_timeout = 10000;
-		config.tag = tag;
-
-		if (rtspClt->start(config)) {
-			std::lock_guard<std::mutex> lock(m_relayMutex);
-			m_mapRtspClients[tag] = std::move(rtspClt);
-			ret = true;
-		}
-		else {
-			ret = false;
-		}
-	}
-
-	pmp->m_isOpenningStream = false;
-	return ret;
-}
-
-bool project::closeStream(string tag)
-{
-	if (m_enableZLM) {
-		MP* pmp = prj.GetMPByTag(tag, "zh");
-		if (pmp) {
-			pmp->stopStreamPush();
-			pmp->stopStreamPull(tag);
-		}
-	}
-	else {
-		// 再尝试关闭 RtspClient
-		std::unique_ptr<RtspClient> relayToStop;
-		{
-			std::lock_guard<std::mutex> lock(m_relayMutex);
-			auto it = m_mapRtspClients.find(tag);
-			if (it != m_mapRtspClients.end()) {
-				relayToStop = std::move(it->second);
-				m_mapRtspClients.erase(it);
-				LOG("[流媒体] 正在停止 RtspClient for tag: %s", tag.c_str());
-			}
-		}
-
-		// 在锁外停止 relay，避免潜在死锁
-		if (relayToStop) {
-			relayToStop->stop();
-			LOG("[流媒体] RtspClient 已停止 for tag: %s", tag.c_str());
-		}
-	}
-
-	return true;
-}
-
-RtspClient* project::getRtspClient(std::string tag)
-{
-	std::lock_guard<std::mutex> lock(m_relayMutex);
-	auto it = m_mapRtspClients.find(tag);
-	if (it != m_mapRtspClients.end()) {
-		return it->second.get();
-	}
-	return nullptr;
 }
 
 

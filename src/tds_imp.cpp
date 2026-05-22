@@ -47,6 +47,7 @@ SOFTWARE.
 #include "common.h"
 #include "rpcHandler_common.h"
 #include "mqttSrv.h"
+#include "video/streamServer.h"
 
 #include "as_interface.h"
 #ifdef _WIN32
@@ -566,7 +567,7 @@ void openAllStream() {
 		MP* pmp = pair.second;
 		if (pmp && pmp->m_mediaUrl != "") {
 			string tag = pmp->getTag();
-			prj.openStream(tag);
+			streamSrv.openStream(tag);
 		}
 	}
 }
