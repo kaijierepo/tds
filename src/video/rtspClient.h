@@ -324,10 +324,10 @@ public:
 
     // 数据队列
     int getBufferedSeconds();
-    void addToRtpBuffer(RTPPacket* pPkt);
+    void addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt);
     int rtp_buffer_max_seconds_ = 60; 
-    std::vector<RTPPacket*> rtp_buffer_;
-    std::vector<RTPPacket*> record_batch_buffer_;
+    std::vector<std::shared_ptr<RTPPacket>> rtp_buffer_;
+    std::vector<std::shared_ptr<RTPPacket>> record_batch_buffer_;
     size_t max_queue_size_ = 50000;
 
     // 统计
@@ -377,7 +377,7 @@ public:
     std::string generateSDP(const RTSP_SESSION& video_info, const RTSP_SESSION& audio_info);
     void sendRTPPacketToClients(const RTPPacket& packet);
     void forwardRTPPacket(const RTPPacket& packet);
-    void recordRTPPacket(RTPPacket* pPkt);
+    void recordRTPPacket(std::shared_ptr<RTPPacket> pPkt);
     void writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs);
     std::string extractSessionID(const std::string& response);
     std::string extractTransport(const std::string& response);

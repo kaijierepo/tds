@@ -1496,19 +1496,15 @@ int RtspClient::getBufferedSeconds()
     return seconds;
 }
 
-void RtspClient::addToRtpBuffer(RTPPacket* pPkt)
+void RtspClient::addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt)
 {
     // 校验输入
     if (!pPkt) return;
 
-    // 将传入的 RTPPacket 拷贝到内部堆上。调用者可能在此函数返回后释放其指针，
-    // 因此内部保存一份拷贝以保证缓冲区数据的有效性。
-    RTPPacket* copy = new RTPPacket(*pPkt);
-
-    // 使用队列互斥锁保护对 rtp_buffer_ 的访问，因为此函数可能由 RTP 接收
-    // 线程调用，同时其他线程可能读取或修剪缓冲区。
+    // 使用共享指针直接保存引用，无需深拷贝对象。调用者共享同一份数据，
+    // 引用计数自动管理生命周期，可安全地在多个消费者间传递。
     std::lock_guard<std::mutex> lock(queue_mutex_);
-    rtp_buffer_.push_back(copy);
+    rtp_buffer_.push_back(pPkt);
 
     // 根据 rtp_buffer_max_seconds_ 修剪缓冲区，尽量保持约定秒数的媒体数据。
     // 这里使用 RTP timestamp 来估算时长（timestamp 表示媒体时钟刻度，不是
@@ -1531,7 +1527,7 @@ void RtspClient::addToRtpBuffer(RTPPacket* pPkt)
 
         // 当最旧包到最新包的时间差超过配置的秒数窗口时，逐个删除最旧包。
         while (!rtp_buffer_.empty()) {
-            RTPPacket* oldest = rtp_buffer_.front();
+            auto oldest = rtp_buffer_.front();
             uint32_t oldest_ts = oldest->timestamp;
 
             // 无符号相减可以按模 2^32 处理 timestamp 回绕情况。
@@ -1541,8 +1537,8 @@ void RtspClient::addToRtpBuffer(RTPPacket* pPkt)
             uint32_t seconds = diff / clock;
 
             if (seconds > static_cast<uint32_t>(rtp_buffer_max_seconds_)) {
-                // 包已超出时间窗口 -> 释放并从缓冲中移除。
-                delete oldest;
+                // 包已超出时间窗口 -> 从缓冲中移除。
+                // shared_ptr 引用计数减1，若无人再持有则自动析构。
                 rtp_buffer_.erase(rtp_buffer_.begin());
             }
             else {
@@ -1555,7 +1551,7 @@ void RtspClient::addToRtpBuffer(RTPPacket* pPkt)
     // 额外的保护：强制限制缓冲包数量到 max_queue_size_，以防 timestamp
     // 逻辑失效或时钟信息错误导致内存无限增长。
     while (rtp_buffer_.size() > max_queue_size_) {
-        delete rtp_buffer_.front();
+        // shared_ptr 自动管理生命周期，erase 后若无其他引用则析构。
         rtp_buffer_.erase(rtp_buffer_.begin());
     }
 }
@@ -1919,7 +1915,7 @@ void RtspClient::doRtpRecv() {
             }
 
             // 解析RTP包
-            RTPPacket* pPkt = new RTPPacket();
+            auto pPkt = std::make_shared<RTPPacket>();
             RTPPacket& packet = *pPkt;
             if (packet.parse(buffer.data(), received)) {
                 // 放入缓存
@@ -1938,7 +1934,7 @@ void RtspClient::doRtpRecv() {
                 if (rec_ctrl_.recording) {
                     if (rec_ctrl_.firstWrite) {
                         //从rtp_buffer_取出rec_ctrl_.preSeconds的数据并录制
-                        std::vector<RTPPacket*> pre_packets;
+                        std::vector<std::shared_ptr<RTPPacket>> pre_packets;
                         {
                             std::lock_guard<std::mutex> lock(queue_mutex_);
                             for (auto it = rtp_buffer_.rbegin(); it != rtp_buffer_.rend(); ++it) {
@@ -3072,10 +3068,10 @@ std::string getNALTypeDesc(unsigned char nal_type) {
 }
 
 // h264文件分析工具 https://nalu.qer.im/
-void RtspClient::recordRTPPacket(RTPPacket* pPkt) {
+void RtspClient::recordRTPPacket(std::shared_ptr<RTPPacket> pPkt) {
     if (!rec_ctrl_.recording || rec_ctrl_.path.empty()) return;
 
-    std::vector<RTPPacket*> to_write;
+    std::vector<std::shared_ptr<RTPPacket>> to_write;
     record_batch_buffer_.push_back(pPkt);
     if (record_batch_buffer_.size() < 20) {
         return;
@@ -3088,7 +3084,7 @@ void RtspClient::recordRTPPacket(RTPPacket* pPkt) {
     std::ofstream ofs(rec_ctrl_.path, std::ios::binary | std::ios::app);
     if (!ofs) {
         logError("Failed to open record file: " + rec_ctrl_.path);
-        for (auto p : to_write) delete p;
+        // to_write 析构时 shared_ptr 引用计数自动递减，无需手动 delete
         return;
     }
 
@@ -3151,10 +3147,7 @@ void RtspClient::recordRTPPacket(RTPPacket* pPkt) {
         }
     }
 
-    for (auto p : to_write) {
-        delete p;
-    }
-
+    // to_write 析构：shared_ptr 引用计数递减，交由 rtp_buffer_ 继续管理
     ofs.flush();
 }
 
