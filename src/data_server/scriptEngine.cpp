@@ -207,9 +207,9 @@ static bool readFile(std::string path, std::string& data)
         long len = ftell(fp);
         data.resize(len);
         fseek(fp, 0, SEEK_SET);
-        fread((void*)data.data(), 1, len, fp);
+        size_t ret = fread((void*)data.data(), 1, len, fp);
         fclose(fp);
-        return true;
+        return ret == (size_t)len;  // 校验实际读取字节数，确保文件完整读入
     }
     return false;
 }
@@ -1626,7 +1626,8 @@ bool is_integer(double x) {
 }
 
 mutex g_mutexScriptFileBuff;
-std::map<std::string, std::string> g_mapScriptFileBuff;
+std::map<std::string, std::string> g_mapScriptFileBuff;                          // 脚本文件内容缓存（路径→内容）
+std::map<std::string, stdfs::file_time_type> g_mapScriptFileTime;                // 脚本文件修改时间缓存（路径→mtime），用于校验内容缓存是否过期
 
 void thread_reloadFile(std::string filePath) {
     if (filePath.empty()) {
@@ -1640,6 +1641,9 @@ void thread_reloadFile(std::string filePath) {
     if (readFile(filePath, file_data)) {
         g_mutexScriptFileBuff.lock();
         g_mapScriptFileBuff[filePath] = file_data;
+        try {
+            g_mapScriptFileTime[filePath] = stdfs::last_write_time(filePath);  // 同步保存文件修改时间，供后续 mtime 校验使用
+        } catch (...) {}
         g_mutexScriptFileBuff.unlock();
 	}
 }
@@ -1737,89 +1741,168 @@ void thread_watchScriptFile(std::string scriptPath) {
     delete[] buffer;
     CloseHandle(h_dir);
 #else
-    // 1. 创建inotify实例
-    int inotify_fd = inotify_init1(IN_NONBLOCK); // 非阻塞模式
-    if (inotify_fd == -1) {
-        LOG("脚本目录inotify_init1 失败，错误码: %d", GetLastError());
-        return;
-    }
-
-    // 2. 添加监控目录（监控文件修改事件）
-    int watch_fd = inotify_add_watch(
-        inotify_fd,
-        scriptPath.c_str(),
-        IN_MODIFY // 监控文件修改（对应Windows的FILE_NOTIFY_CHANGE_LAST_WRITE）
-    );
-    if (watch_fd == -1) {
-        LOG("脚本目录inotify_add_watch 失败，错误码: %d", GetLastError());
-        close(inotify_fd);
-        return;
-    }
-
-    // 3. 事件缓冲区（inotify事件结构大小固定，1024足够）
-    const int BUFFER_SIZE = 1024 * (sizeof(inotify_event) + 256);
-    char* buffer = new char[BUFFER_SIZE];
-    memset(buffer, 0, BUFFER_SIZE);
+    // 外层循环：目录不存在或监控出错时自动重试
+    const int RETRY_INTERVAL_SEC = 5;
 
     while (true) {
-        // 4. 非阻塞读取事件（无事件时返回-1，errno=EAGAIN）
-        ssize_t len = read(inotify_fd, buffer, BUFFER_SIZE);
-        if (len == -1) {
-            if (errno == EAGAIN) {
-                // 无事件时休眠100ms，避免空轮询
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                continue;
-            }
-            LOG("脚本目录read inotify 失败，错误码: %d", GetLastError());
-            break;
+        // 等待 scripts 目录被创建
+        while (!stdfs::exists(scriptPath)) {
+            LOG("脚本目录不存在，等待创建: " + scriptPath);
+            std::this_thread::sleep_for(std::chrono::seconds(RETRY_INTERVAL_SEC));
         }
 
-        // 5. 解析所有事件
-        char* ptr = buffer;
-        while (ptr < buffer + len) {
-            inotify_event* event = (inotify_event*)ptr;
+        // 1. 创建inotify实例
+        int inotify_fd = inotify_init1(IN_NONBLOCK);
+        if (inotify_fd == -1) {
+            LOG("脚本目录inotify_init1 失败，错误码: %d", GetLastError());
+            std::this_thread::sleep_for(std::chrono::seconds(RETRY_INTERVAL_SEC));
+            continue;
+        }
 
-            // 仅处理文件修改事件（排除目录、排除空文件名）
-            if (event->mask & IN_MODIFY && event->len > 0) {
-                std::string file_name = event->name;
-                file_name = str::replace(file_name, "\\", "/");
-                std::string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
-                LOG("[keyinfo]脚本目录检测到脚本文件改变:" + file_path);
+        // 2. 管理已监控目录
+        std::map<std::string, int> watched_dirs;    // 目录路径 → watch fd，防止重复添加
+        std::map<int, std::string> fd_to_path;      // watch fd → 目录路径，事件回调时反查目录
 
-                // 异步热加载脚本（和Windows逻辑一致）
-                std::thread th(thread_reloadFile, file_path);
-                th.detach();
+        auto add_watch_dir = [&](const std::string& dir_path) {
+            if (!stdfs::exists(dir_path)) {
+                return;
+            }
+            int wd = inotify_add_watch(inotify_fd, dir_path.c_str(),
+                IN_CLOSE_WRITE | IN_CREATE | IN_DELETE);
+            if (wd != -1) {
+                watched_dirs[dir_path] = wd;
+                fd_to_path[wd] = dir_path;
+            }
+            else {
+                LOG("inotify_add_watch 失败, dir=%s, 错误码: %d", dir_path.c_str(), GetLastError());
+            }
+        };
+
+        // 3. 初始扫描：监控 ScriptFolder 及其所有现有子目录
+        add_watch_dir(scriptPath);
+
+        try {
+            for (const auto& entry : stdfs::directory_iterator(scriptPath)) {
+                if (entry.is_directory()) {
+                    add_watch_dir(entry.path().string());
+                }
+            }
+        } catch (const std::exception& e) {
+            LOG("inotify 扫描子目录异常: %s", e.what());
+        }
+
+        // 4. 事件缓冲区
+        const int BUFFER_SIZE = 1024 * (sizeof(inotify_event) + 256);
+        std::vector<char> buffer(BUFFER_SIZE);
+
+        // 5. 事件循环
+        bool need_restart = false;
+        while (!need_restart) {
+            ssize_t len = read(inotify_fd, buffer.data(), BUFFER_SIZE);
+            if (len == -1) {
+                if (errno == EAGAIN) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    continue;
+                }
+                LOG("脚本目录read inotify 失败，错误码: %d", GetLastError());
+                break;
             }
 
-            // 移动到下一个事件
-            ptr += sizeof(inotify_event) + event->len;
+            // 解析所有事件
+            char* ptr = buffer.data();
+            while (ptr < buffer.data() + len) {
+                inotify_event* event = (inotify_event*)ptr;
+
+                if (event->len > 0) {
+                    std::string file_name = event->name;
+                    file_name = str::replace(file_name, "\\", "/");
+
+                    // 通过 watch_fd 查找文件所属的目录路径
+                    auto it = fd_to_path.find(event->wd);
+                    if (it == fd_to_path.end()) {
+                        ptr += sizeof(inotify_event) + event->len;
+                        continue;
+                    }
+                    std::string dir_path = it->second;
+                    std::string full_path = dir_path + "/" + file_name;
+
+                    // 处理文件修改事件（文件关闭写入后触发，比 IN_MODIFY 更可靠）
+                    if ((event->mask & IN_CLOSE_WRITE) && !(event->mask & IN_ISDIR)) {
+                        LOG("[keyinfo]脚本目录检测到脚本文件改变:" + full_path);
+                        std::thread th(thread_reloadFile, full_path);
+                        th.detach();
+                    }
+
+                    // 处理子目录创建事件（自动为新目录添加监控）
+                    if ((event->mask & IN_CREATE) && (event->mask & IN_ISDIR)) {
+                        add_watch_dir(full_path);
+                    }
+
+                    // 处理子目录删除事件（自动移除已删除目录的监控）
+                    if ((event->mask & IN_DELETE) && (event->mask & IN_ISDIR)) {
+                        auto wit = watched_dirs.find(full_path);
+                        if (wit != watched_dirs.end()) {
+                            inotify_rm_watch(inotify_fd, wit->second);
+                            fd_to_path.erase(wit->second);
+                            watched_dirs.erase(wit);
+                        }
+                    }
+                }
+
+                ptr += sizeof(inotify_event) + event->len;
+            }
         }
+
+        // 6. 释放资源（清理所有监控）
+        for (auto& kv : watched_dirs) {
+            inotify_rm_watch(inotify_fd, kv.second);
+        }
+        close(inotify_fd);
+
+        std::this_thread::sleep_for(std::chrono::seconds(RETRY_INTERVAL_SEC));
     }
-
-    // 6. 释放资源
-    inotify_rm_watch(inotify_fd, watch_fd);
-    close(inotify_fd);
-    delete[] buffer;
 #endif
 }
 
 bool loadScriptFile(std::string path, std::string& script) {
     lock_guard<mutex> g(g_mutexScriptFileBuff);
-    std::map<std::string, std::string>::iterator iter = g_mapScriptFileBuff.find(path);
-    if (iter != g_mapScriptFileBuff.end()) {
-        script = iter->second;
-        return true;
-    }
-    else {
-        if (!readFile(path, script)) {
-            g_mapScriptFileBuff.erase(path);
-            return false;
+
+    // 检查文件修改时间，确定内容缓存是否仍有效
+    // 即使 inotify 未触发，此校验也能保证下次执行时加载最新内容
+    bool bFileChanged = true;
+    try {
+        if (stdfs::exists(path)) {
+            auto ftime = stdfs::last_write_time(path);              // 获取文件当前修改时间
+            auto it = g_mapScriptFileTime.find(path);
+            if (it != g_mapScriptFileTime.end() && it->second == ftime) {  // 与缓存的时间戳对比
+                bFileChanged = false;                               // 时间一致，缓存未过期
+            }
         }
-        else{
-            g_mapScriptFileBuff[path] = script;
+    } catch (const std::exception&) {
+        bFileChanged = true;                                        // 异常时保守处理，重新加载
+    }
+
+    if (!bFileChanged) {                                            // 缓存有效，直接返回缓存内容
+        auto iter = g_mapScriptFileBuff.find(path);
+        if (iter != g_mapScriptFileBuff.end()) {
+            script = iter->second;
             return true;
         }
     }
+
+    // 文件已变更或不在缓存中，从磁盘重新加载
+    if (!readFile(path, script)) {
+        g_mapScriptFileBuff.erase(path);                            // 读取失败时同时清理内容缓存和时间缓存
+        g_mapScriptFileTime.erase(path);
+        return false;
+    }
+
+    g_mapScriptFileBuff[path] = script;                             // 更新内容缓存
+    try {
+        g_mapScriptFileTime[path] = stdfs::last_write_time(path);   // 更新修改时间缓存，使下次校验能够命中
+    } catch (const std::exception&) {
+    }
+    return true;
 }
 
 JSModuleDef* qjs_module_loader(JSContext* ctx, const char* module_name, void* opaque) {
@@ -1879,7 +1962,8 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
             if (si.folderPath == "")
                 si.folderPath = ScriptEngine::ScriptFolder + "/" + si.name;
         }
-        loadScriptFile(scriptPath, m_script);
+        loadScriptFile(scriptPath, m_script);   // 通过缓存层加载脚本（含 mtime 校验，支持热加载）
+        // loadFile(scriptPath, m_script);      // 旧接口：直读磁盘无缓存，已被 loadScriptFile 替代
     }
     else {
         m_script = si.script;
