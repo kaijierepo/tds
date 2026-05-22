@@ -9,7 +9,7 @@ StreamServer streamSrv;
 
 StreamNode* StreamServer::getStreamNode(std::string tag)
 {
-	std::lock_guard<std::mutex> lock(m_relayMutex);
+	std::lock_guard<std::mutex> lock(nodeLock_);
 	auto it = m_mapStreamNodes.find(tag);
 	if (it != m_mapStreamNodes.end()) {
 		return it->second.get();
@@ -56,7 +56,7 @@ bool StreamServer::rpc_startStreamNode(yyjson_val* params, RPC_RESP& rpcResp, RP
 	if(yyv)
 		 destUrl = yyjson_get_str(yyv);
 	{
-		std::lock_guard<std::mutex> lock(m_relayMutex_urlID);
+		std::lock_guard<std::mutex> lock(nodeLock_url_);
 		if (m_mapStreamNodes_urlID.find(srcUrl) != m_mapStreamNodes_urlID.end()) {
 			LOG("[流媒体] StreamNode 已在运行 for src url: %s", srcUrl.c_str());
 			return true;
@@ -94,7 +94,7 @@ bool StreamServer::rpc_startStreamNode(yyjson_val* params, RPC_RESP& rpcResp, RP
 		config.source_url.c_str(), config.target_url.c_str());
 
 	if (relay->start(config)) {
-		std::lock_guard<std::mutex> lock(m_relayMutex_urlID);
+		std::lock_guard<std::mutex> lock(nodeLock_url_);
 		m_mapStreamNodes_urlID[srcUrl] = std::move(relay);
 	}
 	else {
@@ -285,7 +285,7 @@ bool StreamServer::rpc_getStreamInfo(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 
 bool StreamServer::rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	std::lock_guard<std::mutex> lock(m_relayMutex);
+	std::lock_guard<std::mutex> lock(nodeLock_);
 	const auto& mapStreamNodes = m_mapStreamNodes;
 
 	// 1. 创建yyjson文档和根对象（JSON数组）
@@ -422,7 +422,7 @@ bool StreamServer::openStream(string tag, string pushTo)
 		config.tag = tag;
 
 		if (rtspClt->start(config)) {
-			std::lock_guard<std::mutex> lock(m_relayMutex);
+			std::lock_guard<std::mutex> lock(nodeLock_);
 			m_mapStreamNodes[tag] = std::move(rtspClt);
 			ret = true;
 		}
@@ -448,7 +448,7 @@ bool StreamServer::closeStream(string tag)
 		// 再尝试关闭 StreamNode
 		std::unique_ptr<StreamNode> relayToStop;
 		{
-			std::lock_guard<std::mutex> lock(m_relayMutex);
+			std::lock_guard<std::mutex> lock(nodeLock_);
 			auto it = m_mapStreamNodes.find(tag);
 			if (it != m_mapStreamNodes.end()) {
 				relayToStop = std::move(it->second);

@@ -273,7 +273,7 @@
     <ClCompile Include="..\src\test.cpp">
       <Filter>framework</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\video\rtspClient.cpp">
+    <ClCompile Include="..\src\video\streamNode.cpp">
       <Filter>video</Filter>
     </ClCompile>
     <ClCompile Include="..\src\func_module\tdsConf.cpp">
@@ -282,11 +282,11 @@
     <ClCompile Include="..\src\data_server\prj.cpp">
       <Filter>framework</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\video\streamServer.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\common\httplib.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\common\json.hpp">
       <Filter>common</Filter>
     </ClInclude>
@@ -494,9 +494,6 @@
     <ClInclude Include="..\src\common\rsa_verify.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="test.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\script\cutils.h">
       <Filter>script\quickjs</Filter>
     </ClInclude>
@@ -566,7 +563,7 @@
     <ClInclude Include="..\src\include\tdsRPC.h">
       <Filter>framework</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\video\rtspClient.h">
+    <ClInclude Include="..\src\video\streamNode.h">
       <Filter>video</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\tdsConf.h">
@@ -574,6 +571,9 @@
     </ClInclude>
     <ClInclude Include="..\src\data_server\prj.h">
       <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\video\streamServer.h">
+      <Filter>video</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

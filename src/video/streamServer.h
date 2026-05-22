@@ -23,8 +23,8 @@ public:
 
 	map<std::string, std::unique_ptr<StreamNode>> m_mapStreamNodes;
 	map<std::string, std::unique_ptr<StreamNode>> m_mapStreamNodes_urlID;
-	mutable std::mutex m_relayMutex_urlID;
-	mutable std::mutex m_relayMutex; // 保护 m_mapStreamNodes 的互斥锁
+	mutable std::mutex nodeLock_url_;
+	mutable std::mutex nodeLock_; // 保护 m_mapStreamNodes 的互斥锁
 
 	bool m_enableZLM;
 };
