@@ -3495,6 +3495,9 @@ bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& r
 	else if (scriptManager.handleRpc(method, params, rpcResp, session)) {
 		bHandled = true;
 	}
+	else if (streamSrv.handleRpc(method, params, rpcResp, session)) {
+		bHandled = true;
+	}
 	else {
 		bHandled = false;
 	}
