@@ -219,14 +219,14 @@ public:
         std::vector<uint8_t> serialize() const;
     };
 
-    enum RTSP_SESSION_TYPE {
+    enum STREAM_SESSION_TYPE {
         CLINET_PULL,    //自身作为客户端，向媒体源服务器拉流的会话
         CLINET_PUSH,    //自身作为客户端，对外推流的会话
         SERVER_SEND    //自身作为流媒体服务器，向客户端发送流的会话
     };
 
     // 媒体流信息
-    struct RTSP_SESSION {
+    struct STREAM_SESSION {
         std::string control_url;
         std::string codec = "H264";
         int payload_type = 96;
@@ -236,7 +236,7 @@ public:
         std::vector<uint8_t> sps;
         std::vector<uint8_t> pps;
         std::string sdp;
-        RTSP_SESSION_TYPE session_type_;
+        STREAM_SESSION_TYPE session_type_;
 
         // 传输信息
         TransportMode transport_mode = TransportMode::UDP;
@@ -250,6 +250,11 @@ public:
 		int server_rtcp_port = 0;
 		SocketHandle rtp_socket = kInvalidSocket;
 		SocketHandle rtcp_socket = kInvalidSocket;
+
+        // ICE-Lite (WebRTC) 字段
+        bool is_webrtc = false;
+        std::string ice_ufrag;
+        std::string ice_pwd;
     };
 
     // URL解析
@@ -309,12 +314,12 @@ public:
     std::string target_session_;
 
     // 流信息
-    RTSP_SESSION pull_session_;
-    RTSP_SESSION pull_audio_session_;
-    RTSP_SESSION push_session_;
+    STREAM_SESSION pull_session_;
+    STREAM_SESSION pull_audio_session_;
+    STREAM_SESSION push_session_;
 
     // 播放客户段
-	std::vector<RTSP_SESSION> client_sessions_;
+	std::vector<STREAM_SESSION> client_sessions_;
 	std::mutex client_sessions_mutex_;
 
 
@@ -365,7 +370,7 @@ public:
     bool rtspDescribe(Connection& conn, const std::string& url,
         std::string& sdp, std::string& session);
     bool rtspSetup(Connection& conn, const std::string& url,
-        std::string& session, RTSP_SESSION& stream, bool record_mode = false);
+        std::string& session, STREAM_SESSION& stream, bool record_mode = false);
     bool rtspPlay(Connection& conn, const std::string& url,
         const std::string& session);
     bool rtspTeardown(Connection& conn, const std::string& url,
@@ -381,8 +386,8 @@ public:
 
 
     // SDP处理
-    bool parseSDP(const std::string& sdp, RTSP_SESSION& video_info, RTSP_SESSION& audio_info);
-    std::string generateSDP(const RTSP_SESSION& video_info, const RTSP_SESSION& audio_info);
+    bool parseSDP(const std::string& sdp, STREAM_SESSION& video_info, STREAM_SESSION& audio_info);
+    std::string generateSDP(const STREAM_SESSION& video_info, const STREAM_SESSION& audio_info);
     void sendRTPPacketToClients(const RTPPacket& packet);
     void forwardRTPPacket(const RTPPacket& packet);
     void recordRTPPacket(std::shared_ptr<RTPPacket> pPkt);
@@ -407,12 +412,16 @@ public:
     // UDP传输相关
     bool createUDPPullSocket();   // 创建UDP拉流socket
     bool createUDPPushSocket();    // 创建UDP推流socket
-	bool createUDPServerSocket(RTSP_SESSION& streamInfo);  // 创建UDP服务器socket,客户端拉流时
+	bool createUDPServerSocket(STREAM_SESSION& streamInfo);  // 创建UDP服务器socket,客户端拉流时
     void closeUDPSockets();
     bool configureUDPSocket(SocketHandle sock, bool is_multicast);
-    bool sendUDPDataToSession(const uint8_t* data, size_t size,RTSP_SESSION& rtspSession);
+    bool sendUDPDataToSession(const uint8_t* data, size_t size,STREAM_SESSION& rtspSession);
     bool sendUDPData(const uint8_t* data, size_t size);
     int receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port);
+
+    // ICE-Lite (WebRTC) — 每客户端一线程处理 STUN 请求
+    void startIceHandleThread(STREAM_SESSION& session);
+    void stopAllIceThreads();
 
     // 日志
     void logInfo(const std::string& msg) const;
@@ -434,4 +443,17 @@ private:
     static void md5Transform(uint32_t state[4], const uint8_t block[64]);
     static std::string md5Hex(const std::string& input);
     static std::string base64Encode(const std::string& input);
+
+    // ICE-Lite 线程上下文
+    struct IceThreadCtx {
+        SocketHandle sock;
+        std::string ice_ufrag;
+        std::string ice_pwd;
+        std::atomic<bool> running{true};
+        std::thread thread;
+    };
+
+    void iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx);
+    std::vector<std::shared_ptr<IceThreadCtx>> ice_contexts_;
+    std::mutex ice_contexts_mutex_;
 };

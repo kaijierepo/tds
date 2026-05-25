@@ -118,7 +118,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	}
 	StreamNode* rc = getStreamNode(tag);
 	if (rc) {
-		StreamNode::RTSP_SESSION si = rc->pull_session_;
+		StreamNode::STREAM_SESSION si = rc->pull_session_;
 		si.session_type_ = StreamNode::SERVER_SEND;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
@@ -139,6 +139,11 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			for (int i = 0; i < 8; i++) iceUfrag += alphanum[dist(rng)];
 			for (int i = 0; i < 22; i++) icePwd += alphanum[dist(rng)];
 		}
+
+		// 标记为 WebRTC 会话并写入 ICE 凭据
+		si.is_webrtc = true;
+		si.ice_ufrag = iceUfrag;
+		si.ice_pwd = icePwd;
 
 		// TODO: 接入 DTLS 模块后替换为真实证书指纹
 		std::string fingerprint = "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:"
@@ -170,6 +175,9 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		rc->client_sessions_mutex_.lock();
 		rc->client_sessions_.push_back(si);
 		rc->client_sessions_mutex_.unlock();
+
+		// 启动 ICE-Lite 线程，监听该会话的 UDP 端口并响应 STUN Binding Request
+		rc->startIceHandleThread(si);
 
 		json j;
 		j["sdp"] = si.sdp;
