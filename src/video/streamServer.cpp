@@ -201,7 +201,12 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 		rc->rec_ctrl_.firstWrite = true;
 		rc->rec_ctrl_.preSeconds = preTime;
 		DB_TIME now; now.setNow();
-		rc->rec_ctrl_.path = tds->conf->dbPath + "/record/" + tag + "_" + now.toStampFull() + ".h264";
+		std::string ts = str::format("%04d%02d%02d_%02d%02d%02d",
+			now.wYear, now.wMonth, now.wDay,
+			now.wHour, now.wMinute, now.wSecond);
+		rc->rec_ctrl_.path = tds->conf->dbPath + "/record/"
+			+ tag + "_" + ts + ".h264";
+		rc->rec_ctrl_.startTime = std::chrono::steady_clock::now();
 		rc->rec_ctrl_.recording = true;
 		rpcResp.result = RPC_OK;
 	}
@@ -220,8 +225,32 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		tag = yyjson_get_str(yyv);
 	StreamNode* rc = getStreamNode(tag);
 	if (rc) {
-		rc->rec_ctrl_.recording = false;
-		rpcResp.result = RPC_OK;
+		if (rc->rec_ctrl_.recording == true)
+		{
+			rc->rec_ctrl_.recording = false;
+
+			// 计算 duration（秒）
+			auto now = std::chrono::steady_clock::now();
+			int duration = static_cast<int>(
+				std::chrono::duration_cast<std::chrono::seconds>(
+					now - rc->rec_ctrl_.startTime).count());
+
+			// fileUrl 用相对路径
+			std::string filePath = rc->rec_ctrl_.path;
+			size_t pos = filePath.find_last_of("/\\");
+			std::string fileName = (pos != std::string::npos) ? filePath.substr(pos + 1) : filePath;
+			std::string fileUrl = "/db/record/" + fileName;
+
+			json j;
+			j["fileUrl"] = fileUrl;
+			j["duration"] = duration;
+			j["preSeconds"] = rc->rec_ctrl_.preSeconds;
+			rpcResp.result = j.dump();
+		}
+		else
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "record is not start");
+		}
 	}
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");

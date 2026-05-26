@@ -81,6 +81,7 @@ public:
         std::vector<char> fu_a_buffer_; // FU-A分片缓存
         // 记录上一个写入的是否为 IDR，用于判断连续的 IDR
         bool last_was_idr_ = false;
+        std::chrono::steady_clock::time_point startTime;  // 录像开始时间，用于计算 duration
 	};
 
     // 配置结构
