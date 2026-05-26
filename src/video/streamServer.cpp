@@ -18,6 +18,22 @@ StreamNode* StreamServer::getStreamNode(std::string tag)
 }
 
 
+StreamNode* StreamServer::getStreamNodeByIp(const std::string& ip)
+{
+	std::lock_guard<std::mutex> lock(nodeLock_);
+	for (const auto& pair : m_mapStreamNodes) 
+	{
+		if (pair.second &&
+			pair.second->config_.source_url.find(ip) != std::string::npos) 
+		{
+			return pair.second.get();
+		}
+	}
+	return nullptr;
+}
+
+
+
 bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session) {
 	bool bHandled = true;
 
@@ -38,6 +54,9 @@ bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& r
 	}
 	else if (method == "stopRecord") {
 		rpc_stopRecord(params, rpcResp, session);
+	}
+	else if (method == "removeRecordFile") {
+		rpc_removeRecordFile(params, rpcResp, session);
 	}
 	else {
 		bHandled = false;
@@ -188,14 +207,23 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string tag;
+	string ip;
 	yyjson_val* yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "ip");
+	if (yyv)
+		ip = yyjson_get_str(yyv);
 	int preTime;
 	yyv = yyjson_obj_get(params, "preSeconds");
 	if (yyv)
 		preTime = yyjson_get_int(yyv);
-	StreamNode* rc = getStreamNode(tag);
+	StreamNode* rc = nullptr;
+	if (!ip.empty()) {
+		rc = getStreamNodeByIp(ip);
+	} else if (!tag.empty()) {
+		rc = getStreamNode(tag);
+	}
 	if (rc) {
 		rc->rec_ctrl_.fu_a_buffer_.clear();
 		rc->rec_ctrl_.firstWrite = true;
@@ -205,25 +233,34 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 			now.wYear, now.wMonth, now.wDay,
 			now.wHour, now.wMinute, now.wSecond);
 		rc->rec_ctrl_.path = tds->conf->dbPath + "/record/"
-			+ tag + "_" + ts + ".h264";
+			+ rc->config_.tag + "_" + ts + ".h264";
 		rc->rec_ctrl_.startTime = std::chrono::steady_clock::now();
 		rc->rec_ctrl_.recording = true;
 		rpcResp.result = RPC_OK;
 	}
 	else {
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag or ip not found");
 	}
-	LOG("[HTTP API]startRecord, tag: %s, preSeconds: %d", tag.c_str(), preTime);
+	LOG("[HTTP API]startRecord, tag: %s, ip: %s, preSeconds: %d", tag.c_str(), ip.c_str(), preTime);
 	return true;
 }
 
 bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string tag;
+	string ip;
 	yyjson_val* yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
-	StreamNode* rc = getStreamNode(tag);
+	yyv = yyjson_obj_get(params, "ip");
+	if (yyv)
+		ip = yyjson_get_str(yyv);
+	StreamNode* rc = nullptr;
+	if (!ip.empty()) {
+		rc = getStreamNodeByIp(ip);
+	} else if (!tag.empty()) {
+		rc = getStreamNode(tag);
+	}
 	if (rc) {
 		if (rc->rec_ctrl_.recording == true)
 		{
@@ -253,12 +290,33 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		}
 	}
 	else {
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag or ip not found");
 	}
-	LOG("[HTTP API]stopRecord, tag: %s", tag.c_str());
+	LOG("[HTTP API]stopRecord, tag: %s, ip: %s", tag.c_str(), ip.c_str());
 	return true;
 }
 
+bool StreamServer::rpc_removeRecordFile(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string fileUrl;
+	yyjson_val* yyv = yyjson_obj_get(params, "fileUrl");
+	if (yyv)
+		fileUrl = yyjson_get_str(yyv);
+	if (fileUrl.empty())
+	{
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param missing, fileUrl is not specified");
+		return true;
+	}
+	std::string filePath = tds->conf->dbPath + fileUrl.substr(std::string("/db").length());
+	if (std::remove(filePath.c_str()) == 0) {
+		rpcResp.result = RPC_OK;
+	}
+	else {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::OS_fileNotExist, "file not exist or failed to delete");
+	}
+	LOG("[HTTP API]removeRecordFile, fileUrl: %s", fileUrl.c_str());
+	return true;
+}
 
 bool StreamServer::rpc_getStreamInfo(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
