@@ -64,7 +64,7 @@
     <ProjectGuid>{544c442e-fcb4-4cfa-82d0-261ff1f58b8b}</ProjectGuid>
     <RootNamespace>tds</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>tds Pro</ProjectName>
+    <ProjectName>tds</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'" Label="Configuration">
@@ -391,13 +391,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_ALM_SRV_HOOK_SCRIPT;ENABLE_QJS;UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/script/;../src/3rdparty/jerryscript/include/;../src/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/common/crypto/include;../src/common/crypto/psa/drivers/builtin/include;../src/common/crypto/psa/core;../src/common/crypto/psa/drivers/builtin/src;../src/common/crypto/psa/platform;../src/common/crypto/psa/utilities;../src/common/crypto/psa/extras;../src/script/;../src/3rdparty/jerryscript/include/;../src/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PreprocessorDefinitions>MBEDTLS_CONFIG_FILE="mbedtls/mbedtls_config.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -416,7 +417,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_QJS_HTTP;ENABLE_ALM_SRV_HOOK_SCRIPT;CONFIG_VERSION="2025-04-26";UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_QJS;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;CONF_FILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../src/script;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/include;../src;../src/common;../src/io_server;../src/data_server;../src/func_module;../src/script;../src/mongoose;../src/common/crypto/include;../src/common/crypto/psa/drivers/builtin/include;../src/common/crypto/psa/core;../src/common/crypto/psa/drivers/builtin/src;../src/common/crypto/psa/platform;../src/common/crypto/psa/utilities;../src/common/crypto/psa/extras</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -443,7 +444,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_ALM_SRV_HOOK_SCRIPT;UTF8;TDS;ENABLE_SERIAL;ENABLE_QJS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=MG_TLS_BUILTIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/ssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module;../src/script/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/common/crypto/include;../src/common/crypto/psa/drivers/builtin/include;../src/common/crypto/psa/core;../src/common/crypto/psa/drivers/builtin/src;../src/common/crypto/psa/platform;../src/common/crypto/psa/utilities;../src/common/crypto/psa/extras;../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/ssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module;../src/script/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -476,7 +477,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_ALM_SRV_HOOK_SCRIPT;ENABLE_QJS;ENABLE_QJS_HTTP;UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;CONF_FILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/include;../src/script;../src;../src/common;../src/io_server;../src/data_server;../src/func_module;../src/mongoose</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/common/crypto/include;../src/common/crypto/psa/drivers/builtin/include;../src/common/crypto/psa/core;../src/common/crypto/psa/drivers/builtin/src;../src/common/crypto/psa/platform;../src/common/crypto/psa/utilities;../src/common/crypto/psa/extras;../src/include;../src/script;../src;../src/common;../src/io_server;../src/data_server;../src/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -509,7 +510,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_ALM_SRV_HOOK_SCRIPT;ENABLE_QJS;ENABLE_QJS_HTTP;UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;CONF_FILE;TDSDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/include;../src/script;../src;../src/common;../src/io_server;../src/data_server;../src/func_module;../src/mongoose</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/common/crypto/include;../src/common/crypto/psa/drivers/builtin/include;../src/common/crypto/psa/core;../src/common/crypto/psa/drivers/builtin/src;../src/common/crypto/psa/platform;../src/common/crypto/psa/utilities;../src/common/crypto/psa/extras;../src/include;../src/script;../src;../src/common;../src/io_server;../src/data_server;../src/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -592,20 +593,32 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\CDataSimu.cpp" />
-    <ClCompile Include="..\src\common\base64.c" />
-    <ClCompile Include="..\src\common\bignum.c" />
+    <ClCompile Include="..\src\common\base64.c">
+      <ObjectFileName>$(IntDir)app_base64.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\src\common\bignum.c">
+      <ObjectFileName>$(IntDir)app_bignum.obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\src\common\common.cpp" />
     <ClCompile Include="..\src\common\dtwrecoge.cpp" />
     <ClCompile Include="..\src\common\kvIni.cpp" />
     <ClCompile Include="..\src\common\logger.cpp" />
-    <ClCompile Include="..\src\common\md5.cpp" />
+    <ClCompile Include="..\src\common\md5.cpp">
+      <ObjectFileName>$(IntDir)app_md5.obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\src\common\memDiag.cpp" />
     <ClCompile Include="..\src\common\miniz.c" />
-    <ClCompile Include="..\src\common\rsa.c" />
+    <ClCompile Include="..\src\common\rsa.c">
+      <ObjectFileName>$(IntDir)app_rsa.obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\src\common\rsa_verify.cpp" />
     <ClCompile Include="..\src\common\secure.cpp" />
-    <ClCompile Include="..\src\common\sha1.cpp" />
-    <ClCompile Include="..\src\common\sha256.cpp" />
+    <ClCompile Include="..\src\common\sha1.cpp">
+      <ObjectFileName>$(IntDir)app_sha1.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\src\common\sha256.cpp">
+      <ObjectFileName>$(IntDir)app_sha256.obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\src\common\stream2pkt.cpp" />
     <ClCompile Include="..\src\common\tcpClt.cpp" />
     <ClCompile Include="..\src\common\tcpSrv.cpp" />
@@ -675,6 +688,114 @@
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\video\streamNode.cpp" />
     <ClCompile Include="..\src\video\streamServer.cpp" />
+    <ClCompile Include="..\src\video\dtls_transport.cpp" />
+    <ClCompile Include="..\src\video\srtp_protect.cpp" />
+    <!-- === mbedtls SSL/X.509 library === -->
+    <ClCompile Include="..\src\common\crypto\library\debug.c" />
+    <ClCompile Include="..\src\common\crypto\library\error.c" />
+    <ClCompile Include="..\src\common\crypto\library\version.c" />
+    <ClCompile Include="..\src\common\crypto\library\version_features.c" />
+    <ClCompile Include="..\src\common\crypto\library\net_sockets.c" />
+    <ClCompile Include="..\src\common\crypto\library\timing.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_tls.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_msg.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_client.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_tls12_server.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_tls12_client.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_tls13_server.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_tls13_client.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_tls13_generic.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_tls13_keys.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_ciphersuites.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_cookie.c" />
+    <ClCompile Include="..\src\common\crypto\library\ssl_debug_helpers_generated.c" />
+    <ClCompile Include="..\src\common\crypto\library\x509.c" />
+    <ClCompile Include="..\src\common\crypto\library\x509_crt.c" />
+    <ClCompile Include="..\src\common\crypto\library\x509_create.c" />
+    <ClCompile Include="..\src\common\crypto\library\x509_crl.c" />
+    <ClCompile Include="..\src\common\crypto\library\x509_csr.c" />
+    <ClCompile Include="..\src\common\crypto\library\x509_oid.c" />
+    <ClCompile Include="..\src\common\crypto\library\x509write.c" />
+    <ClCompile Include="..\src\common\crypto\library\x509write_crt.c" />
+    <ClCompile Include="..\src\common\crypto\library\mps_reader.c" />
+    <ClCompile Include="..\src\common\crypto\library\mps_trace.c" />
+    <ClCompile Include="..\src\common\crypto\library\mbedtls_config.c" />
+    <!-- === PSA Crypto core === -->
+    <ClCompile Include="..\src\common\crypto\psa\core\psa_crypto.c" />
+    <ClCompile Include="..\src\common\crypto\psa\core\psa_crypto_client.c" />
+    <ClCompile Include="..\src\common\crypto\psa\core\psa_crypto_random.c" />
+    <ClCompile Include="..\src\common\crypto\psa\core\psa_crypto_slot_management.c" />
+    <ClCompile Include="..\src\common\crypto\psa\core\psa_crypto_storage.c" />
+    <ClCompile Include="..\src\common\crypto\psa\core\psa_its_file.c" />
+    <ClCompile Include="..\src\common\crypto\psa\core\psa_util.c" />
+    <ClCompile Include="..\src\common\crypto\psa\core\tf_psa_crypto_config.c" />
+    <ClCompile Include="..\src\common\crypto\psa\core\tf_psa_crypto_version.c" />
+    <ClCompile Include="..\src\common\crypto\psa\core\psa_crypto_driver_wrappers_no_static.c" />
+    <!-- === PSA Crypto builtin drivers === -->
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\aes.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\aesni.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\bignum.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\bignum_core.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\bignum_mod.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\bignum_mod_raw.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\block_cipher.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\ccm.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\gcm.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\cipher.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\cipher_wrap.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\ctr_drbg.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\hmac_drbg.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\ecdsa.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\ecp.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\ecp_curves.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\ecp_curves_new.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\entropy.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\entropy_poll.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\md5.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\sha1.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\sha256.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\sha512.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_crypto_aead.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_crypto_cipher.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_crypto_ecp.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_crypto_hash.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_crypto_mac.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_util_internal.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\chacha20.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\chachapoly.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\cmac.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\sha3.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\ripemd160.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_crypto_rsa.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_crypto_xof.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_crypto_pake.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\psa_crypto_ffdh.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\rsa.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\rsa_alt_helpers.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\ecjpake.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\poly1305.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\camellia.c" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\aria.c" />
+    <!-- === PSA Crypto platform === -->
+    <ClCompile Include="..\src\common\crypto\psa\platform\platform.c" />
+    <ClCompile Include="..\src\common\crypto\psa\platform\platform_util.c" />
+    <!-- === PSA Crypto utilities === -->
+    <ClCompile Include="..\src\common\crypto\psa\utilities\asn1parse.c" />
+    <ClCompile Include="..\src\common\crypto\psa\utilities\asn1write.c" />
+    <ClCompile Include="..\src\common\crypto\psa\utilities\base64.c" />
+    <ClCompile Include="..\src\common\crypto\psa\utilities\constant_time.c" />
+    <ClCompile Include="..\src\common\crypto\psa\utilities\oid.c" />
+    <ClCompile Include="..\src\common\crypto\psa\utilities\pem.c" />
+    <ClCompile Include="..\src\common\crypto\psa\utilities\pkcs5.c" />
+    <!-- === PSA Crypto extras (backward compat layers) === -->
+    <ClCompile Include="..\src\common\crypto\psa\extras\md.c" />
+    <ClCompile Include="..\src\common\crypto\psa\extras\pk.c" />
+    <ClCompile Include="..\src\common\crypto\psa\extras\pkparse.c" />
+    <ClCompile Include="..\src\common\crypto\psa\extras\pkwrite.c" />
+    <ClCompile Include="..\src\common\crypto\psa\extras\pk_wrap.c" />
+    <ClCompile Include="..\src\common\crypto\psa\extras\pk_ecc.c" />
+    <ClCompile Include="..\src\common\crypto\psa\extras\pk_rsa.c" />
+    <!-- === New video headers === -->
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CDataSimu.h" />
@@ -773,6 +894,8 @@
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\video\streamNode.h" />
     <ClInclude Include="..\src\video\streamServer.h" />
+    <ClInclude Include="..\src\video\dtls_transport.h" />
+    <ClInclude Include="..\src\video\srtp_protect.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />
