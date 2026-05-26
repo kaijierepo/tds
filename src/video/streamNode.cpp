@@ -667,6 +667,9 @@ void StreamNode::stop() {
 
     cv_.notify_all();
 
+    // 停止所有 ICE 线程
+    stopAllIceThreads();
+
     if (rtp_handle_thread_.joinable()) {
         rtp_handle_thread_.join();
     }
@@ -998,7 +1001,7 @@ bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
 }
 
 bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
-    std::string& session, RTSP_SESSION& stream, bool record_mode) {
+    std::string& session, STREAM_SESSION& stream, bool record_mode) {
     URLComponents url_components;
     std::string host_header;
     if (URLComponents::parse(url, url_components)) {
@@ -1638,7 +1641,7 @@ bool StreamNode::doStreamPush() {
         push_session_.control_url = track_control;
     }
 
-    std::string target_sdp = generateSDP(push_session_, RTSP_SESSION());
+    std::string target_sdp = generateSDP(push_session_, STREAM_SESSION());
 
     // 发送ANNOUNCE到目标
     if (!rtspAnnounce(*target_conn_, config_.target_url, target_sdp, target_session_)) {
@@ -2194,7 +2197,7 @@ bool StreamNode::createUDPPushSocket() {
     push_session_.client_rtcp_port = 0;
     return false;
 }
-bool StreamNode::createUDPServerSocket(RTSP_SESSION& streamInfo)
+bool StreamNode::createUDPServerSocket(STREAM_SESSION& streamInfo)
 {
     const int max_attempts = 10;
 
@@ -2379,7 +2382,7 @@ bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast) {
     return true;
 }
 
-bool StreamNode::sendUDPDataToSession(const uint8_t* data, size_t size, RTSP_SESSION& rtspSession) {
+bool StreamNode::sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_SESSION& rtspSession) {
     int remoteRtpPort = 0;
     int remoteRtcpPort = 0;
     if (rtspSession.session_type_ == CLINET_PULL || rtspSession.session_type_ == CLINET_PUSH) {
@@ -2475,10 +2478,10 @@ int StreamNode::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip
 // SDP处理函数
 // ============================================================================
 
-bool StreamNode::parseSDP(const std::string & sdp, RTSP_SESSION & video_info, RTSP_SESSION & audio_info) {
+bool StreamNode::parseSDP(const std::string & sdp, STREAM_SESSION & video_info, STREAM_SESSION & audio_info) {
     std::istringstream ss(sdp);
     std::string line;
-    RTSP_SESSION* current_info = nullptr;
+    STREAM_SESSION* current_info = nullptr;
 
     while (std::getline(ss, line)) {
         if (line.length() < 2 || line[1] != '=') continue;
@@ -2564,7 +2567,7 @@ bool StreamNode::parseSDP(const std::string & sdp, RTSP_SESSION & video_info, RT
     return true;
 }
 
-std::string StreamNode::generateSDP(const RTSP_SESSION & video_info, const RTSP_SESSION & audio_info) {
+std::string StreamNode::generateSDP(const STREAM_SESSION & video_info, const STREAM_SESSION & audio_info) {
     std::stringstream sdp;
 
     sdp << "v=0\r\n"
@@ -2665,7 +2668,7 @@ bool StreamNode::URLComponents::parse(const std::string & url, URLComponents & c
 }
 
 void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
-    std::vector<StreamNode::RTSP_SESSION> playClients;
+    std::vector<StreamNode::STREAM_SESSION> playClients;
     client_sessions_mutex_.lock();
     playClients = client_sessions_;
     client_sessions_mutex_.unlock();
@@ -3176,4 +3179,145 @@ void StreamNode::writeNALtoFile(uint8_t nal_type,char* nal, size_t size, std::of
 
     ofs.write((const char*)start_code, sizeof(start_code));
     ofs.write((const char*)nal, size);
+}
+
+// ============================================================================
+// ICE-Lite (WebRTC) 实现 — 每客户端一线程
+// ============================================================================
+
+void StreamNode::startIceHandleThread(STREAM_SESSION& session) {
+    if (session.rtp_socket == kInvalidSocket || !session.is_webrtc) {
+        return;
+    }
+
+    auto ctx = std::make_shared<IceThreadCtx>();
+    ctx->sock = session.rtp_socket;
+    ctx->ice_ufrag = session.ice_ufrag;
+    ctx->ice_pwd = session.ice_pwd;
+
+    // 设置 socket 接收超时为 1 秒，保证 stop 时能及时退出
+#ifdef _WIN32
+    int timeout_ms = 1000;
+    setsockopt(static_cast<SOCKET_TYPE>(ctx->sock), SOL_SOCKET, SO_RCVTIMEO,
+               (const char*)&timeout_ms, sizeof(timeout_ms));
+#else
+    struct timeval tv = {1, 0};
+    setsockopt(ctx->sock, SOL_SOCKET, SO_RCVTIMEO,
+               (const char*)&tv, sizeof(tv));
+#endif
+
+    ctx->thread = std::thread(&StreamNode::iceHandleLoop, this, ctx);
+
+    std::lock_guard<std::mutex> lock(ice_contexts_mutex_);
+    ice_contexts_.push_back(ctx);
+
+    logInfo("ICE thread started for socket fd=" + std::to_string(ctx->sock)
+            + " ufrag=" + ctx->ice_ufrag);
+}
+
+void StreamNode::stopAllIceThreads() {
+    std::vector<std::shared_ptr<IceThreadCtx>> contexts;
+    {
+        std::lock_guard<std::mutex> lock(ice_contexts_mutex_);
+        contexts.swap(ice_contexts_);
+    }
+
+    for (auto& ctx : contexts) {
+        ctx->running = false;
+        if (ctx->thread.joinable()) {
+            ctx->thread.join();
+        }
+        logInfo("ICE thread stopped for socket fd=" + std::to_string(ctx->sock));
+    }
+}
+
+void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
+    uint8_t buf[2048];
+
+    while (ctx->running) {
+        struct sockaddr_in peer;
+        socklen_t peerLen = sizeof(peer);
+        int len = recvfrom(static_cast<SOCKET_TYPE>(ctx->sock),
+                           (char*)buf, sizeof(buf), 0,
+                           (struct sockaddr*)&peer, &peerLen);
+
+        if (len < 0) {
+            // 超时或错误，继续循环检查 running 标志
+            continue;
+        }
+
+        if (len < 20) continue;   // STUN 头至少 20 字节
+
+        // 首字节分流：STUN 消息以 0x00 或 0x01 开头
+        uint8_t firstByte = buf[0];
+        if (firstByte != 0x00 && firstByte != 0x01) {
+            continue;   // 非 STUN（可能是 DTLS/SRTP），忽略
+        }
+
+        // 解析 STUN Binding Request，构造并回复 Binding Success Response
+        if (len < 20) continue;
+
+        uint16_t msgType = (buf[0] << 8) | buf[1];
+        uint16_t msgLen  = (buf[2] << 8) | buf[3];
+
+        // 校验 Magic Cookie (0x2112A442)
+        uint32_t magic = ((uint32_t)buf[4] << 24) | ((uint32_t)buf[5] << 16)
+                       | ((uint32_t)buf[6] << 8)  | (uint32_t)buf[7];
+        if (magic != 0x2112A442) continue;
+
+        // 仅处理 Binding Request (0x0001)
+        if (msgType != 0x0001) continue;
+
+        // 提取 Transaction ID (96 bits, bytes 8-19)
+        uint8_t tid[12];
+        memcpy(tid, buf + 8, 12);
+
+        // 可选：校验 USERNAME 属性中的 ufrag（如果浏览器携带）
+        // 浏览器 ICE-Lite 场景下通常省略此校验，此处保留扩展点
+
+        // 构造 Binding Success Response (type=0x0101) + XOR-MAPPED-ADDRESS
+        // Header(20) + XOR-MAPPED-ADDRESS attribute(12) = 32 bytes
+        uint8_t response[32];
+        memset(response, 0, sizeof(response));
+
+        // STUN Type: Binding Success Response = 0x0101
+        response[0] = 0x01;
+        response[1] = 0x01;
+        // Message Length: 12 (one XOR-MAPPED-ADDRESS attribute for IPv4)
+        response[2] = 0x00;
+        response[3] = 12;
+        // Magic Cookie
+        response[4] = 0x21;
+        response[5] = 0x12;
+        response[6] = 0xA4;
+        response[7] = 0x42;
+        // Transaction ID (copy from request)
+        memcpy(response + 8, tid, 12);
+
+        // XOR-MAPPED-ADDRESS attribute (RFC 5389 §15.2)
+        // Attribute Type: 0x0020
+        response[20] = 0x00;
+        response[21] = 0x20;
+        // Attribute Length: 8 (IPv4: 1 reserved + 1 family + 2 port + 4 addr)
+        response[22] = 0x00;
+        response[23] = 8;
+        // Reserved (0x00)
+        response[24] = 0x00;
+        // Family: IPv4 (0x01)
+        response[25] = 0x01;
+        // XOR-Port = peer port ^ (magic >> 16)
+        uint16_t xorPort = ntohs(peer.sin_port) ^ (0x2112);
+        response[26] = (xorPort >> 8) & 0xFF;
+        response[27] = xorPort & 0xFF;
+        // XOR-Address = peer addr ^ magic
+        uint32_t xorAddr = ntohl(peer.sin_addr.s_addr) ^ 0x2112A442;
+        response[28] = (xorAddr >> 24) & 0xFF;
+        response[29] = (xorAddr >> 16) & 0xFF;
+        response[30] = (xorAddr >> 8)  & 0xFF;
+        response[31] = xorAddr & 0xFF;
+
+        sendto(static_cast<SOCKET_TYPE>(ctx->sock),
+               (const char*)response, sizeof(response), 0,
+               (struct sockaddr*)&peer, sizeof(peer));
+    }
 }
