@@ -690,6 +690,8 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			if (params.contains("pushToUrl")) {
 				pushTo = params["pushToUrl"].get<string>();
 			}
+			// 首次打开流时初始化 DTLS 证书
+			streamSrv.initDtlsCertificate();
 			bool opend = streamSrv.openStream(tag, pushTo);
 
 			if (opend)

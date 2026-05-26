@@ -1,11 +1,40 @@
 #include "pch.h"
 #include "streamServer.h"
+#include "dtls_transport.h"
 #include "logger.h"
 #include <sstream>
 #include <random>
 #include "prj.h"
 
 StreamServer streamSrv;
+
+// ============================================================================
+// DTLS 证书初始化
+// ============================================================================
+void StreamServer::initDtlsCertificate() {
+    // 幂等：已初始化则跳过
+    if (!m_dtlsCertPem.empty()) return;
+
+    // 生成自签 ECDSA P-256 证书（仅内存，不写盘）
+    auto [certPem, keyPem] = DtlsTransport::generateSelfSignedCert("TDS WebRTC Server");
+
+    m_dtlsCertPem = certPem;
+    m_dtlsKeyPem = keyPem;
+
+    // 计算 SHA-256 指纹用于 SDP
+    if (!certPem.empty()) {
+        mbedtls_x509_crt cert;
+        mbedtls_x509_crt_init(&cert);
+        int ret = mbedtls_x509_crt_parse(&cert,
+            (const unsigned char*)certPem.c_str(), certPem.size() + 1);
+        if (ret == 0) {
+            m_dtlsFingerprint = DtlsTransport::getFingerprint(cert);
+        }
+        mbedtls_x509_crt_free(&cert);
+    }
+
+    LOG("[DTLS] Certificate initialized, fingerprint: %s", m_dtlsFingerprint.c_str());
+}
 
 StreamNode* StreamServer::getStreamNode(std::string tag)
 {
@@ -164,9 +193,11 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		si.ice_ufrag = iceUfrag;
 		si.ice_pwd = icePwd;
 
-		// TODO: 接入 DTLS 模块后替换为真实证书指纹
-		std::string fingerprint = "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:"
-			"00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00";
+		// 使用自签证书的真实 SHA-256 指纹
+		std::string fingerprint = m_dtlsFingerprint.empty()
+			? "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:"
+			  "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+			: m_dtlsFingerprint;
 
 		std::ostringstream sdp;
 		sdp << "v=0\r\n";

@@ -1,4 +1,7 @@
 #include "StreamNode.h"
+#include "streamServer.h"
+#include "dtls_transport.h"
+#include "srtp_protect.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -13,30 +16,7 @@
 #include <regex>
 #include <logger.h>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#define SOCKET_ERROR_NUM WSAGetLastError()
-#define CLOSE_SOCKET closesocket
-#define SOCKET_TYPE SOCKET
-#define INVALID_SOCKET_VALUE INVALID_SOCKET
-#else
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <regex>
-#define SOCKET_ERROR_NUM errno
-#define CLOSE_SOCKET close
-#define SOCKET_TYPE int
-#define INVALID_SOCKET_VALUE -1
-#endif
+
 
 // 静态初始化
 #ifdef _WIN32
@@ -3182,8 +3162,16 @@ void StreamNode::writeNALtoFile(uint8_t nal_type,char* nal, size_t size, std::of
 }
 
 // ============================================================================
-// ICE-Lite (WebRTC) 实现 — 每客户端一线程
+// ICE-Lite + DTLS + SRTP (WebRTC) 实现 — 每客户端一线程
 // ============================================================================
+
+// 每个 session 独有的 DTLS/SRTP 状态
+struct SessionDtlsState {
+    DtlsTransport dtls;
+    SrptProtect::Context srtp_ctx;
+    bool dtls_initialized = false;
+    bool srtp_ready = false;
+};
 
 void StreamNode::startIceHandleThread(STREAM_SESSION& session) {
     if (session.rtp_socket == kInvalidSocket || !session.is_webrtc) {
@@ -3194,6 +3182,7 @@ void StreamNode::startIceHandleThread(STREAM_SESSION& session) {
     ctx->sock = session.rtp_socket;
     ctx->ice_ufrag = session.ice_ufrag;
     ctx->ice_pwd = session.ice_pwd;
+    ctx->session = &session;
 
     // 设置 socket 接收超时为 1 秒，保证 stop 时能及时退出
 #ifdef _WIN32
@@ -3227,12 +3216,38 @@ void StreamNode::stopAllIceThreads() {
         if (ctx->thread.joinable()) {
             ctx->thread.join();
         }
+        // 清理 DTLS 状态
+        if (ctx->session && ctx->session->dtls_transport_) {
+            delete static_cast<SessionDtlsState*>(ctx->session->dtls_transport_);
+            ctx->session->dtls_transport_ = nullptr;
+            ctx->session->srtp_context_   = nullptr;
+        }
         logInfo("ICE thread stopped for socket fd=" + std::to_string(ctx->sock));
     }
 }
 
 void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
     uint8_t buf[2048];
+
+    // 初始化本会话的 DTLS 状态
+    auto* dtls_state = new SessionDtlsState();
+    ctx->session->dtls_transport_ = dtls_state;
+    ctx->session->srtp_context_   = &dtls_state->srtp_ctx;
+
+    // 使用 StreamServer 的共享证书初始化 DTLS
+    extern StreamServer streamSrv;
+    if (streamSrv.m_dtlsCertPem.empty() || streamSrv.m_dtlsKeyPem.empty()) {
+        LOG("[ICE] WARNING: No DTLS cert configured, DTLS disabled");
+        // 暂不初始化 DTLS，只处理 STUN
+    } else {
+        dtls_state->dtls_initialized = dtls_state->dtls.init(
+            streamSrv.m_dtlsCertPem, streamSrv.m_dtlsKeyPem);
+        if (dtls_state->dtls_initialized) {
+            dtls_state->dtls.setSocket(ctx->sock, {}); // peer 会在首包时由 recvfrom 设置
+            dtls_state->dtls.startHandshake();
+            ctx->session->ice_valid = 1; // ICE done, DTLS starting
+        }
+    }
 
     while (ctx->running) {
         struct sockaddr_in peer;
@@ -3242,82 +3257,114 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
                            (struct sockaddr*)&peer, &peerLen);
 
         if (len < 0) {
-            // 超时或错误，继续循环检查 running 标志
-            continue;
+            continue;  // 超时，继续循环
         }
+        if (len < 1) continue;
 
-        if (len < 20) continue;   // STUN 头至少 20 字节
-
-        // 首字节分流：STUN 消息以 0x00 或 0x01 开头
         uint8_t firstByte = buf[0];
-        if (firstByte != 0x00 && firstByte != 0x01) {
-            continue;   // 非 STUN（可能是 DTLS/SRTP），忽略
+
+        // ---- 协议分流 ----
+        // STUN:  0x00 (Binding Request) 或 0x01 (Binding Success/Error)
+        // DTLS:  0x14 (ChangeCipherSpec), 0x15 (Alert), 0x16 (Handshake), 0x17 (AppData)
+        // SRTP:  首字节 0x80 (RTP version 2, 无扩展/CSRC)
+
+        // === STUN ===
+        if (firstByte == 0x00 || firstByte == 0x01) {
+            if (len < 20) continue;
+
+            uint16_t msgType = (buf[0] << 8) | buf[1];
+            uint32_t magic = ((uint32_t)buf[4] << 24) | ((uint32_t)buf[5] << 16)
+                           | ((uint32_t)buf[6] << 8)  | (uint32_t)buf[7];
+            if (magic != 0x2112A442) continue;
+            if (msgType != 0x0001) continue;  // 仅处理 Binding Request
+
+            uint8_t tid[12];
+            memcpy(tid, buf + 8, 12);
+
+            // 构造 Binding Success Response
+            uint8_t response[32] = {};
+            response[0] = 0x01; response[1] = 0x01;  // type = 0x0101
+            response[2] = 0x00; response[3] = 12;     // length
+            response[4] = 0x21; response[5] = 0x12;   // magic cookie
+            response[6] = 0xA4; response[7] = 0x42;
+            memcpy(response + 8, tid, 12);
+            // XOR-MAPPED-ADDRESS
+            response[20] = 0x00; response[21] = 0x20;  // attr type
+            response[22] = 0x00; response[23] = 8;     // attr len
+            response[24] = 0x00;                        // reserved
+            response[25] = 0x01;                        // IPv4
+            uint16_t xorPort = ntohs(peer.sin_port) ^ 0x2112;
+            response[26] = (xorPort >> 8) & 0xFF;
+            response[27] = xorPort & 0xFF;
+            uint32_t xorAddr = ntohl(peer.sin_addr.s_addr) ^ 0x2112A442;
+            response[28] = (xorAddr >> 24) & 0xFF;
+            response[29] = (xorAddr >> 16) & 0xFF;
+            response[30] = (xorAddr >> 8)  & 0xFF;
+            response[31] = xorAddr & 0xFF;
+
+            sendto(static_cast<SOCKET_TYPE>(ctx->sock),
+                   (const char*)response, sizeof(response), 0,
+                   (struct sockaddr*)&peer, sizeof(peer));
+
+            // ICE 交互完成，标记并准备 DTLS（若尚未初始化）
+            if (ctx->session->ice_valid < 1) {
+                ctx->session->ice_valid = 1;
+            }
         }
+        // === DTLS ===
+        else if (firstByte >= 0x14 && firstByte <= 0x18) {
+            if (!dtls_state->dtls_initialized) continue;
 
-        // 解析 STUN Binding Request，构造并回复 Binding Success Response
-        if (len < 20) continue;
+            // 更新对端地址（首包时绑定）
+            dtls_state->dtls.setSocket(ctx->sock, peer);
 
-        uint16_t msgType = (buf[0] << 8) | buf[1];
-        uint16_t msgLen  = (buf[2] << 8) | buf[3];
+            // mbedtls 会通过 bio_recv 读取，这里只需驱动握手步骤
+            int ret = dtls_state->dtls.doHandshakeStep();
 
-        // 校验 Magic Cookie (0x2112A442)
-        uint32_t magic = ((uint32_t)buf[4] << 24) | ((uint32_t)buf[5] << 16)
-                       | ((uint32_t)buf[6] << 8)  | (uint32_t)buf[7];
-        if (magic != 0x2112A442) continue;
+            if (ret == 0) {
+                // 握手成功！导出 SRTP 密钥
+                dtls_state->srtp_ready = true;
+                ctx->session->ice_valid = 2; // DTLS 完成
 
-        // 仅处理 Binding Request (0x0001)
-        if (msgType != 0x0001) continue;
+                // 初始化 SRTP 上下文（服务端使用 server_write_key）
+                const auto& keys = dtls_state->dtls.getKeyingMaterial();
+                if (keys.ready) {
+                    dtls_state->srtp_ctx = SrptProtect::initFromDtls(
+                        keys, true, /* is_server */
+                        0);         // ssrc 将在发送时设置
 
-        // 提取 Transaction ID (96 bits, bytes 8-19)
-        uint8_t tid[12];
-        memcpy(tid, buf + 8, 12);
+                    ctx->session->ice_valid = 3; // SRTP 激活
+                    LOG("[ICE] DTLS handshake + SRTP keys ready for socket fd="
+                        + std::to_string(ctx->sock));
+                }
+            } else if (ret != MBEDTLS_ERR_SSL_WANT_READ &&
+                       ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+                // 握手失败，重置以便重试
+                char errbuf[128];
+                mbedtls_strerror(ret, errbuf, sizeof(errbuf));
+                LOG("[ICE] DTLS error: %s (0x%04X), will retry", errbuf, -ret);
+                // 浏览器可能重新发起握手，不退出循环
+            }
+        }
+        // === SRTP (来自客户端的加密 RTP) ===
+        else if (firstByte == 0x80 && dtls_state->srtp_ready) {
+            std::vector<uint8_t> srtpPkt(buf, buf + len);
+            std::vector<uint8_t> rtpPkt;
+            int ur = SrptProtect::unprotect(dtls_state->srtp_ctx, srtpPkt, rtpPkt);
+            if (ur == 0) {
+                // 解密成功，RTCP 或 RTCP 回传处理
+                // 对于 WebRTC 服务端，客户端通常不发送 RTP，这里忽略
+            }
+        }
+        else {
+            // 未知协议，忽略
+        }
+    }
 
-        // 可选：校验 USERNAME 属性中的 ufrag（如果浏览器携带）
-        // 浏览器 ICE-Lite 场景下通常省略此校验，此处保留扩展点
-
-        // 构造 Binding Success Response (type=0x0101) + XOR-MAPPED-ADDRESS
-        // Header(20) + XOR-MAPPED-ADDRESS attribute(12) = 32 bytes
-        uint8_t response[32];
-        memset(response, 0, sizeof(response));
-
-        // STUN Type: Binding Success Response = 0x0101
-        response[0] = 0x01;
-        response[1] = 0x01;
-        // Message Length: 12 (one XOR-MAPPED-ADDRESS attribute for IPv4)
-        response[2] = 0x00;
-        response[3] = 12;
-        // Magic Cookie
-        response[4] = 0x21;
-        response[5] = 0x12;
-        response[6] = 0xA4;
-        response[7] = 0x42;
-        // Transaction ID (copy from request)
-        memcpy(response + 8, tid, 12);
-
-        // XOR-MAPPED-ADDRESS attribute (RFC 5389 §15.2)
-        // Attribute Type: 0x0020
-        response[20] = 0x00;
-        response[21] = 0x20;
-        // Attribute Length: 8 (IPv4: 1 reserved + 1 family + 2 port + 4 addr)
-        response[22] = 0x00;
-        response[23] = 8;
-        // Reserved (0x00)
-        response[24] = 0x00;
-        // Family: IPv4 (0x01)
-        response[25] = 0x01;
-        // XOR-Port = peer port ^ (magic >> 16)
-        uint16_t xorPort = ntohs(peer.sin_port) ^ (0x2112);
-        response[26] = (xorPort >> 8) & 0xFF;
-        response[27] = xorPort & 0xFF;
-        // XOR-Address = peer addr ^ magic
-        uint32_t xorAddr = ntohl(peer.sin_addr.s_addr) ^ 0x2112A442;
-        response[28] = (xorAddr >> 24) & 0xFF;
-        response[29] = (xorAddr >> 16) & 0xFF;
-        response[30] = (xorAddr >> 8)  & 0xFF;
-        response[31] = xorAddr & 0xFF;
-
-        sendto(static_cast<SOCKET_TYPE>(ctx->sock),
-               (const char*)response, sizeof(response), 0,
-               (struct sockaddr*)&peer, sizeof(peer));
+    // 清理本会话的 DTLS 状态
+    if (dtls_state) {
+        delete dtls_state;
+        ctx->session->dtls_transport_ = nullptr;
+        ctx->session->srtp_context_   = nullptr;
     }
 }

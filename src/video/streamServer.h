@@ -1,5 +1,7 @@
 #pragma once
 #include "streamNode.h"
+#include "yyjson.h"
+#include "tdsRPC.h"
 
 
 class StreamServer {
@@ -29,6 +31,13 @@ public:
 	mutable std::mutex nodeLock_; // 保护 m_mapStreamNodes 的互斥锁
 
 	bool m_enableZLM;
+
+	// DTLS 证书（所有 WebRTC 会话共用）
+	std::string m_dtlsCertPem;
+	std::string m_dtlsKeyPem;
+	std::string m_dtlsFingerprint;  // SHA-256, 用于 SDP
+
+	void initDtlsCertificate();
 };
 
 extern StreamServer streamSrv;

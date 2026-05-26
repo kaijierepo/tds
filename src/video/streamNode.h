@@ -16,10 +16,32 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+#define SOCKET_ERROR_NUM WSAGetLastError()
+#define CLOSE_SOCKET closesocket
+#define SOCKET_TYPE SOCKET
+#define INVALID_SOCKET_VALUE INVALID_SOCKET
 #else
+#include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <regex>
+#define SOCKET_ERROR_NUM errno
+#define CLOSE_SOCKET close
+#define SOCKET_TYPE int
+#define INVALID_SOCKET_VALUE -1
 #endif
+
+// 前向声明 DTLS/SRTP 类型（避免头文件循环依赖）
+class DtlsTransport;
+class SrptProtect;
+struct SrptContext;
 
 // RTP包结构
 // NAL header (1 byte) format: F(1) | NRI(2) | Type(5)
@@ -256,6 +278,11 @@ public:
         bool is_webrtc = false;
         std::string ice_ufrag;
         std::string ice_pwd;
+        int           ice_valid = 0;      // 1=ICE完成, 2=DTLS完成, 3=SRTP激活
+
+        // DTLS/SRTP 状态（per-session，由 ice 线程管理）
+        void* dtls_transport_ = nullptr;  // 指向 DtlsTransport 实例
+        void* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
     };
 
     // URL解析
@@ -450,6 +477,7 @@ private:
         SocketHandle sock;
         std::string ice_ufrag;
         std::string ice_pwd;
+        STREAM_SESSION* session = nullptr;  // 关联的会话
         std::atomic<bool> running{true};
         std::thread thread;
     };
