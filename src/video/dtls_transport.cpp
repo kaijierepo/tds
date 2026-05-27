@@ -274,8 +274,7 @@ std::string DtlsTransport::getFingerprint(const mbedtls_x509_crt& cert) {
 }
 
 // ---- 自签证书生成 ----------------------------------------------------------
-std::pair<std::string, std::string>
-DtlsTransport::generateSelfSignedCert(const std::string& cn) {
+void DtlsTransport::generateSelfSignedCert(string cn, std::string cert_str,std::string key_str) {
     mbedtls_pk_context       key;
     mbedtls_entropy_context  entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -288,10 +287,6 @@ DtlsTransport::generateSelfSignedCert(const std::string& cn) {
 
     int ret = 0;
     const char* pers = "tds_cert_gen";
-
-    // Result strings — declared before goto target
-    std::string cert_str;
-    std::string key_str;
 
     ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                  (const unsigned char*)pers, strlen(pers));
@@ -413,8 +408,6 @@ cleanup:
     if (ret != 0) {
         LOG("[DTLS] WARNING: Certificate generation failed, returning empty");
     }
-
-    return {cert_str, key_str};
 }
 
 // ---- Socket 绑定 -----------------------------------------------------------

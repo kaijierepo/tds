@@ -29,6 +29,7 @@
 #include "mqttSrv.h"
 #include "rsa_verify.h"
 #include "video/streamServer.h"
+#include "video/dtls_transport.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -690,8 +691,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			if (params.contains("pushToUrl")) {
 				pushTo = params["pushToUrl"].get<string>();
 			}
-			// 首次打开流时初始化 DTLS 证书
-			streamSrv.initDtlsCertificate();
+
 			bool opend = streamSrv.openStream(tag, pushTo);
 
 			if (opend)
@@ -2032,6 +2032,57 @@ string getRefCurvePath(json& params) {
 
 bool rpcHandler::handleMethodCall_utils(const string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	bool bHandled = true;
+
+	if (method == "generateWebRtcKeyPair") {
+		// 在配置目录的 webRtcKey 子目录下生成私钥和证书
+		std::string keyDir = tds->conf->confPath + "/webRtcKey";
+		std::string certPath = keyDir + "/cert.pem";
+		std::string keyPath = keyDir + "/key.pem";
+
+		// 创建目录（如不存在）
+		fs::createFolderOfPath(keyDir + "/.placeholder");
+
+		// 生成 ECDSA P-256 自签证书
+		string certPem, keyPem;
+		DtlsTransport::generateSelfSignedCert("TDS WebRTC Server", certPem, keyPem);
+
+		if (certPem.empty() || keyPem.empty()) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "Certificate generation failed");
+			return true;
+		}
+
+		// 写入证书文件
+		bool certOk = fs::writeFile(certPath,certPem);
+		bool keyOk = fs::writeFile(keyPath, keyPem);
+
+		if (!certOk || !keyOk) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "Failed to write key files");
+			return true;
+		}
+
+		// 计算指纹用于确认
+		mbedtls_x509_crt cert;
+		mbedtls_x509_crt_init(&cert);
+		std::string fingerprint;
+		int ret = mbedtls_x509_crt_parse(&cert,
+			(const unsigned char*)certPem.c_str(), certPem.size() + 1);
+		if (ret == 0) {
+			fingerprint = DtlsTransport::getFingerprint(cert);
+		}
+		mbedtls_x509_crt_free(&cert);
+
+		json jResult;
+		jResult["status"] = "ok";
+		jResult["dir"] = keyDir;
+		jResult["fingerprint"] = fingerprint;
+		rpcResp.result = jResult.dump();
+
+		LOG("[WebRTC] generateWebRtcKeyPair: cert=%s, key=%s, fingerprint=%s",
+			certPath.c_str(), keyPath.c_str(), fingerprint.c_str());
+
+		return true;
+	}
+
 	return false;
 }
 
@@ -3498,6 +3549,9 @@ bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& r
 		bHandled = true;
 	}
 	else if (streamSrv.handleRpc(method, params, rpcResp, session)) {
+		bHandled = true;
+	}
+	else if (handleMethodCall_utils(method, params, rpcResp, session)) {
 		bHandled = true;
 	}
 	else {

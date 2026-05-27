@@ -3,6 +3,7 @@
 #include "dtls_transport.h"
 #include "logger.h"
 #include <sstream>
+#include <fstream>
 #include <random>
 #include "prj.h"
 
@@ -15,8 +16,34 @@ void StreamServer::initDtlsCertificate() {
     // 幂等：已初始化则跳过
     if (!m_dtlsCertPem.empty()) return;
 
-    // 生成自签 ECDSA P-256 证书（仅内存，不写盘）
-    auto [certPem, keyPem] = DtlsTransport::generateSelfSignedCert("TDS WebRTC Server");
+    std::string certPem, keyPem;
+
+    // 1. 优先从配置目录 webRtcKey 下加载持久化的证书和私钥
+    std::string keyDir = tds->conf->confPath + "/webRtcKey";
+    std::string certPath = keyDir + "/cert.pem";
+    std::string keyPath = keyDir + "/key.pem";
+
+    std::ifstream certFile(certPath);
+    std::ifstream keyFile(keyPath);
+    if (certFile.is_open() && keyFile.is_open()) {
+        std::stringstream certBuf, keyBuf;
+        certBuf << certFile.rdbuf();
+        keyBuf << keyFile.rdbuf();
+        certPem = certBuf.str();
+        keyPem = keyBuf.str();
+        if (!certPem.empty() && !keyPem.empty()) {
+            LOG("[DTLS] Certificate loaded from disk: %s", certPath.c_str());
+        }
+    }
+
+    // 2. 兜底：如果文件不存在，运行时生成自签证书（仅内存，不写盘）
+    if (certPem.empty() || keyPem.empty()) {
+		string genCert, genKey;
+		DtlsTransport::generateSelfSignedCert("TDS WebRTC Server",genCert,genKey);
+        certPem = genCert;
+        keyPem = genKey;
+        LOG("[DTLS] Certificate generated in memory (no files on disk)");
+    }
 
     m_dtlsCertPem = certPem;
     m_dtlsKeyPem = keyPem;
@@ -220,6 +247,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		if (!si.fmtp.empty()) {
 			sdp << "a=fmtp:" << si.payload_type << " " << si.fmtp << "\r\n";
 		}
+		sdp << "a=sendonly\r\n";                         // 服务端仅发送视频（匹配浏览器 recvonly）
 		sdp << "a=setup:active\r\n";                      // 服务端主动发起 DTLS
 		sdp << "a=ice-lite\r\n";                           // ICE-Lite 模式
 		sdp << "a=ice-ufrag:" << iceUfrag << "\r\n";

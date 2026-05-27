@@ -93,8 +93,7 @@ public:
     static std::string getFingerprint(const mbedtls_x509_crt& cert);
 
     /// 生成自签 ECDSA P-256 证书（返回 pair<cert_pem, key_pem>）
-    static std::pair<std::string, std::string>
-        generateSelfSignedCert(const std::string& cn = "TDS WebRTC Server");
+    static void generateSelfSignedCert(string cn, std::string cert_str, std::string key_str);
 
     /// 设置 socket 和对端地址（在 ice 线程中绑定）
     void setSocket(StreamNode::SocketHandle sock,

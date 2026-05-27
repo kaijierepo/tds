@@ -810,6 +810,8 @@ bool TDS_imp::run(string cmdline) {
 	prj.loadRtDB();
 	prj.runRtDB();
 
+	streamSrv.initDtlsCertificate();
+
 	//create browser window
 	if (conf->uiMode == "chrome") {
 		createChromeWnd();
