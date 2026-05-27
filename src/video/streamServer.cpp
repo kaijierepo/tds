@@ -156,9 +156,17 @@ bool StreamServer::rpc_startStreamNode(yyjson_val* params, RPC_RESP& rpcResp, RP
 bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string tag;
-	yyjson_val* yyv = yyjson_obj_get(params, "srcUrl");
+	yyjson_val* yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
+
+	// 提取浏览器生成的 SDP Offer（后续可用于协商编解码参数等）
+	string sdpOffer;
+	yyv = yyjson_obj_get(params, "sdpOffer");
+	if (yyv)
+		sdpOffer = yyjson_get_str(yyv);
+	LOG("[WebRTC] playWebRtc tag=%s, sdpOffer=%zu bytes", tag.c_str(), sdpOffer.size());
+
 	int clientRtpPort = 0;
 	yyv = yyjson_obj_get(params, "clientRtpPort");
 	if (yyjson_is_int(yyv)) {
@@ -229,12 +237,13 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		// 启动 ICE-Lite 线程，监听该会话的 UDP 端口并响应 STUN Binding Request
 		rc->startIceHandleThread(si);
 
+		Sleep(1000);
 		json j;
-		j["sdp"] = si.sdp;
+		j["sdpAnswer"] = si.sdp;
 		j["serverRtpPort"] = si.server_rtp_port;
 		j["serverRtspPort"] = si.server_rtcp_port;
 		j["clientRtpPort"] = si.client_rtp_port;
-		rpcResp.result = RPC_OK;
+		rpcResp.result = j.dump();
 	}
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");

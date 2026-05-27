@@ -600,6 +600,7 @@
       <ObjectFileName>$(IntDir)app_bignum.obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\src\common\common.cpp" />
+    <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\aesce.c" />
     <ClCompile Include="..\src\common\dtwrecoge.cpp" />
     <ClCompile Include="..\src\common\kvIni.cpp" />
     <ClCompile Include="..\src\common\logger.cpp" />
@@ -702,10 +703,6 @@
     <ClCompile Include="..\src\common\crypto\library\ssl_client.c" />
     <ClCompile Include="..\src\common\crypto\library\ssl_tls12_server.c" />
     <ClCompile Include="..\src\common\crypto\library\ssl_tls12_client.c" />
-    <ClCompile Include="..\src\common\crypto\library\ssl_tls13_server.c" />
-    <ClCompile Include="..\src\common\crypto\library\ssl_tls13_client.c" />
-    <ClCompile Include="..\src\common\crypto\library\ssl_tls13_generic.c" />
-    <ClCompile Include="..\src\common\crypto\library\ssl_tls13_keys.c" />
     <ClCompile Include="..\src\common\crypto\library\ssl_ciphersuites.c" />
     <ClCompile Include="..\src\common\crypto\library\ssl_cookie.c" />
     <ClCompile Include="..\src\common\crypto\library\ssl_debug_helpers_generated.c" />
