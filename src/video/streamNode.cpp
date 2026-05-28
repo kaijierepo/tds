@@ -2,6 +2,7 @@
 #include "streamServer.h"
 #include "dtls_transport.h"
 #include "srtp_protect.h"
+#include <psa/crypto.h>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -3245,7 +3246,7 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
         if (dtls_state->dtls_initialized) {
             dtls_state->dtls.setSocket(ctx->sock, {}); // peer 会在首包时由 recvfrom 设置
             dtls_state->dtls.startHandshake();
-            ctx->session->ice_valid = 1; // ICE done, DTLS starting
+            // conn_state 将在收到 STUN Binding Request 并回复后置 1，不在此处提前标记
         }
     }
 
@@ -3281,35 +3282,169 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
             uint8_t tid[12];
             memcpy(tid, buf + 8, 12);
 
-            // 构造 Binding Success Response
-            uint8_t response[32] = {};
-            response[0] = 0x01; response[1] = 0x01;  // type = 0x0101
-            response[2] = 0x00; response[3] = 12;     // length
-            response[4] = 0x21; response[5] = 0x12;   // magic cookie
-            response[6] = 0xA4; response[7] = 0x42;
-            memcpy(response + 8, tid, 12);
-            // XOR-MAPPED-ADDRESS
-            response[20] = 0x00; response[21] = 0x20;  // attr type
-            response[22] = 0x00; response[23] = 8;     // attr len
-            response[24] = 0x00;                        // reserved
-            response[25] = 0x01;                        // IPv4
+            LOG("[STUN] Received Binding Request from %s:%d (peer.sin_port=%d)",
+                inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), (int)peer.sin_port);
+
+            // ---- 构造 Binding Success Response（含 MESSAGE-INTEGRITY） ----
+            // ICE 要求 Success Response 必须包含 MESSAGE-INTEGRITY，
+            // 否则浏览器会丢弃响应并持续重试。
+            uint8_t response[128] = {};
+            int pos = 0;
+            // STUN Header (20 bytes)
+            response[pos++] = 0x01; response[pos++] = 0x01;  // Binding Success Response
+            // Length 占位，后面回填
+            int lenPos = pos; pos += 2;
+            response[pos++] = 0x21; response[pos++] = 0x12;  // Magic Cookie
+            response[pos++] = 0xA4; response[pos++] = 0x42;
+            memcpy(response + pos, tid, 12); pos += 12;
+
+            // XOR-MAPPED-ADDRESS (12 bytes)
+            response[pos++] = 0x00; response[pos++] = 0x20;  // attr type
+            response[pos++] = 0x00; response[pos++] = 0x08;  // attr len = 8
+            response[pos++] = 0x00;                          // reserved
+            response[pos++] = 0x01;                          // IPv4
             uint16_t xorPort = ntohs(peer.sin_port) ^ 0x2112;
-            response[26] = (xorPort >> 8) & 0xFF;
-            response[27] = xorPort & 0xFF;
+            response[pos++] = (xorPort >> 8) & 0xFF;
+            response[pos++] = xorPort & 0xFF;
             uint32_t xorAddr = ntohl(peer.sin_addr.s_addr) ^ 0x2112A442;
-            response[28] = (xorAddr >> 24) & 0xFF;
-            response[29] = (xorAddr >> 16) & 0xFF;
-            response[30] = (xorAddr >> 8)  & 0xFF;
-            response[31] = xorAddr & 0xFF;
+            response[pos++] = (xorAddr >> 24) & 0xFF;
+            response[pos++] = (xorAddr >> 16) & 0xFF;
+            response[pos++] = (xorAddr >> 8)  & 0xFF;
+            response[pos++] = xorAddr & 0xFF;
+
+            // MESSAGE-INTEGRITY (24 bytes: type 2 + len 2 + hmac 20)
+            int miPos = pos;
+            response[pos++] = 0x00; response[pos++] = 0x08;  // attr type = 0x0008
+            response[pos++] = 0x00; response[pos++] = 0x14;  // attr len = 20
+            pos += 20;  // HMAC-SHA1 占位
+
+            // 回填长度（不含 20 字节 STUN 头部，含 MI 属性）
+            int attrLen = pos - 20;
+            response[lenPos]     = (attrLen >> 8) & 0xFF;
+            response[lenPos + 1] = attrLen & 0xFF;
+
+            // 计算 HMAC-SHA1：key = ice_pwd（mbedTLS 4.x 使用 PSA MAC API）
+            const std::string& icePwd = ctx->session->ice_pwd;
+            if (!icePwd.empty()) {
+                psa_mac_operation_t macOp = psa_mac_operation_init();
+                psa_key_attributes_t keyAttr = PSA_KEY_ATTRIBUTES_INIT;
+                psa_set_key_usage_flags(&keyAttr, PSA_KEY_USAGE_SIGN_MESSAGE);
+                psa_set_key_algorithm(&keyAttr, PSA_ALG_HMAC(PSA_ALG_SHA_1));
+                psa_set_key_type(&keyAttr, PSA_KEY_TYPE_HMAC);
+
+                psa_key_id_t keyId = PSA_KEY_ID_NULL;
+                psa_status_t ps = psa_import_key(&keyAttr,
+                    (const uint8_t*)icePwd.data(), icePwd.size(), &keyId);
+                psa_reset_key_attributes(&keyAttr);
+
+                if (ps == PSA_SUCCESS) {
+                    ps = psa_mac_sign_setup(&macOp, keyId, PSA_ALG_HMAC(PSA_ALG_SHA_1));
+                    if (ps == PSA_SUCCESS) {
+                        psa_mac_update(&macOp, response, miPos);
+                        size_t macLen = 20;
+                        psa_status_t ps2 = psa_mac_sign_finish(&macOp, response + miPos + 4, 20, &macLen);
+                        if (ps2 != PSA_SUCCESS) {
+                            LOG("[STUN] psa_mac_sign_finish failed: %d", (int)ps2);
+                        } else {
+                            // 打印 HMAC 用于调试
+                            char hmacHex[41] = {};
+                            for (int i = 0; i < 20; i++) {
+                                sprintf(hmacHex + i * 2, "%02x", response[miPos + 4 + i]);
+                            }
+                            LOG("[STUN] MI computed, key='%s', hmac=%s", icePwd.c_str(), hmacHex);
+                        }
+                    } else {
+                        LOG("[STUN] psa_mac_sign_setup failed: %d", (int)ps);
+                    }
+                    psa_destroy_key(keyId);
+                } else {
+                    LOG("[STUN] psa_import_key failed: %d", (int)ps);
+                }
+            } else {
+                LOG("[STUN] WARNING: ice_pwd is empty, MI not computed");
+            }
+
+            // ---- 添加 FINGERPRINT（CRC-32，必须放在最后）----
+            // 某些浏览器（Chrome）依赖 FINGERPRINT 区分 STUN 与其他协议
+            {
+                // 先记录 FINGERPRINT 开始位置，CRC 计算到此为止（不含 FINGERPRINT 本身）
+                int fpPos = pos;
+                response[pos++] = 0x80; response[pos++] = 0x28;  // attr type = 0x8028
+                response[pos++] = 0x00; response[pos++] = 0x04;  // attr len = 4
+                int fpValuePos = pos;  // CRC 值写入位置
+                pos += 4;              // CRC 值占位
+                // 先更新 Length 为最终值（包含 FINGERPRINT），因为 CRC 要覆盖正确的 Length
+                int finalAttrLen = pos - 20;
+                response[lenPos]     = (finalAttrLen >> 8) & 0xFF;
+                response[lenPos + 1] = finalAttrLen & 0xFF;
+                // 计算 CRC-32（覆盖整个 STUN 消息，不含 FINGERPRINT 属性本身）
+                // 即：header + 所有属性（不含 FINGERPRINT 的 type/length/value）
+                static const uint32_t crcTable[256] = {
+                    0x00000000,0x77073096,0xee0e612c,0x990951ba,0x076dc419,0x706af48f,0xe963a535,0x9e6495a3,
+                    0x0edb8832,0x79dcb8a4,0xe0d5e91e,0x97d2d988,0x09b64c2b,0x7eb17cbd,0xe7b82d07,0x90bf1d91,
+                    0x1db71064,0x6ab020f2,0xf3b97148,0x84be41de,0x1adad47d,0x6ddde4eb,0xf4d4b551,0x83d385c7,
+                    0x136c9856,0x646ba8c0,0xfd62f97a,0x8a65c9ec,0x14015c4f,0x63066cd9,0xfa0f3d63,0x8d080df5,
+                    0x3b6e20c8,0x4c69105e,0xd56041e4,0xa2677172,0x3c03e4d1,0x4b04d447,0xd20d85fd,0xa50ab56b,
+                    0x35b5a8fa,0x42b2986c,0xdbbbc9d6,0xacbcf940,0x32d86ce3,0x45df5c75,0xdcd60dcf,0xabd13d59,
+                    0x26d930ac,0x51de003a,0xc8d75180,0xbfd06116,0x21b4f4b5,0x56b3c423,0xcfba9599,0xb8bda50f,
+                    0x2802b89e,0x5f058808,0xc60cd9b2,0xb10be924,0x2f6f7c87,0x58684c11,0xc1611dab,0xb6662d3d,
+                    0x76dc4190,0x01db7106,0x98d220bc,0xefd5102a,0x71b18589,0x06b6b51f,0x9fbfe4a5,0xe8b8d433,
+                    0x7807c9a2,0x0f00f934,0x9609a88e,0xe10e9818,0x7f6a0dbb,0x086d3d2d,0x91646c97,0xe6635c01,
+                    0x6b6b51f4,0x1c6c6162,0x856530d8,0xf262004e,0x6c0695ed,0x1b01a57b,0x8208f4c1,0xf50fc457,
+                    0x65b0d9c6,0x12b7e950,0x8bbeb8ea,0xfcb9887c,0x62dd1ddf,0x15da2d49,0x8cd37cf3,0xfbd44c65,
+                    0x4db26158,0x3ab551ce,0xa3bc0074,0xd4bb30e2,0x4adfa541,0x3dd895d7,0xa4d1c46d,0xd3d6f4fb,
+                    0x4369e96a,0x346ed9fc,0xad678846,0xda60b8d0,0x44042d73,0x33031de5,0xaa0a4c5f,0xdd0d7cc9,
+                    0x5005713c,0x270241aa,0xbe0b1010,0xc90c2086,0x5768b525,0x206f85b3,0xb966d409,0xce61e49f,
+                    0x5edef90e,0x29d9c998,0xb0d09822,0xc7d7a8b4,0x59b33d17,0x2eb40d81,0xb7bd5c3b,0xc0ba6cad,
+                    0xedb88320,0x9abfb3b6,0x03b6e20c,0x74b1d29a,0xead54739,0x9dd277af,0x04db2615,0x73dc1683,
+                    0xe3630b12,0x94643b84,0x0d6d6a3e,0x7a6a5aa8,0xe40ecf0b,0x9309ff9d,0x0a00ae27,0x7d079eb1,
+                    0xf00f9344,0x8708a3d2,0x1e01f268,0x6906c2fe,0xf762575d,0x806567cb,0x196c3671,0x6e6b06e7,
+                    0xfed41b76,0x89d32be0,0x10da7a5a,0x67dd4acc,0xf9b9df6f,0x8ebeeff9,0x17b7be43,0x60b08ed5,
+                    0xd6d6a3e8,0xa1d1937e,0x38d8c2c4,0x4fdff252,0xd1bb67f1,0xa6bc5767,0x3fb506dd,0x48b2364b,
+                    0xd80d2bda,0xaf0a1b4c,0x36034af6,0x41047a60,0xdf60efc3,0xa867df55,0x316e8eef,0x4669be79,
+                    0xcb61b38c,0xbc66831a,0x256fd2a0,0x5268e236,0xcc0c7795,0xbb0b4703,0x220216b9,0x5505262f,
+                    0xc5ba3bbe,0xb2bd0b28,0x2bb45a92,0x5cb36a04,0xc2d7ffa7,0xb5d0cf31,0x2cd99e8b,0x5bdeae1d,
+                    0x9b64c2b0,0xec63f226,0x756aa39c,0x026d930a,0x9c0906a9,0xeb0e363f,0x72076785,0x05005713,
+                    0x95bf4a82,0xe2b87a14,0x7bb12bae,0x0cb61b38,0x92d28e9b,0xe5d5be0d,0x7cdcefb7,0x0bdbdf21,
+                    0x86d3d2d4,0xf1d4e242,0x68ddb3f8,0x1fda836e,0x81be16cd,0xf6b9265b,0x6fb077e1,0x18b74777,
+                    0x88085ae6,0xff0f6a70,0x66063bca,0x11010b5c,0x8f659eff,0xf862ae69,0x616bffd3,0x166ccf45,
+                    0xa00ae278,0xd70dd2ee,0x4e048354,0x3903b3c2,0xa7672661,0xd06016f7,0x4969474d,0x3e6e77db,
+                    0xaed16a4a,0xd9d65adc,0x40df0b66,0x37d83bf0,0xa9bcae53,0xdebb9ec5,0x47b2cf7f,0x30b5ffe9,
+                    0xbdbdf21c,0xcabac28a,0x53b39330,0x24b4a3a6,0xbad03605,0xcdd70693,0x54de5729,0x23d967bf,
+                    0xb3667a2e,0xc4614ab8,0x5d681b02,0x2a6f2b94,0xb40bbe37,0xc30c8ea1,0x5a05df1b,0x2d02ef8d
+                };
+                auto crc32 = [&](const uint8_t* data, size_t len) -> uint32_t {
+                    uint32_t crc = 0xFFFFFFFF;
+                    for (size_t i = 0; i < len; i++)
+                        crc = crcTable[(crc ^ data[i]) & 0xFF] ^ (crc >> 8);
+                    return ~crc;
+                };
+                // CRC 覆盖范围：STUN header + 所有属性（不含 FINGERPRINT 本身）
+                uint32_t crc = crc32(response, fpPos);
+                crc ^= 0x5354554E;  // XOR with "STUN" per RFC 5389
+                response[fpValuePos++] = (crc >> 24) & 0xFF;
+                response[fpValuePos++] = (crc >> 16) & 0xFF;
+                response[fpValuePos++] = (crc >> 8)  & 0xFF;
+                response[fpValuePos++] = crc & 0xFF;
+            }
+
+            // 打印调试信息
+            {
+                char dbg[256] = {};
+                int n = 0;
+                for (int i = 0; i < pos && n < 200; i++) {
+                    n += sprintf(dbg + n, "%02x", response[i]);
+                }
+                LOG("[STUN] Response sent to %s:%d, len=%d, hex=%s",
+                    inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), pos, dbg);
+            }
 
             sendto(static_cast<SOCKET_TYPE>(ctx->sock),
-                   (const char*)response, sizeof(response), 0,
+                   (const char*)response, pos, 0,
                    (struct sockaddr*)&peer, sizeof(peer));
 
-            // ICE 交互完成，标记并准备 DTLS（若尚未初始化）
-            if (ctx->session->ice_valid < 1) {
-                ctx->session->ice_valid = 1;
-            }
+            // ICE 连通性确认：收到 Binding Request 并回复 Response
+            ctx->session->conn_state = 1;
         }
         // === DTLS ===
         else if (firstByte >= 0x14 && firstByte <= 0x18) {
@@ -3324,7 +3459,7 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
             if (ret == 0) {
                 // 握手成功！导出 SRTP 密钥
                 dtls_state->srtp_ready = true;
-                ctx->session->ice_valid = 2; // DTLS 完成
+                ctx->session->conn_state = 2; // DTLS 完成
 
                 // 初始化 SRTP 上下文（服务端使用 server_write_key）
                 const auto& keys = dtls_state->dtls.getKeyingMaterial();
@@ -3333,7 +3468,7 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
                         keys, true, /* is_server */
                         0);         // ssrc 将在发送时设置
 
-                    ctx->session->ice_valid = 3; // SRTP 激活
+                    ctx->session->conn_state = 3; // SRTP 激活
                     LOG("[ICE] DTLS handshake + SRTP keys ready for socket fd="
                         + std::to_string(ctx->sock));
                 }

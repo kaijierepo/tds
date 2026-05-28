@@ -242,11 +242,14 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		sdp << "m=video " << si.server_rtp_port
 			<< " UDP/TLS/RTP/SAVPF " << si.payload_type << "\r\n";
 		sdp << "c=IN IP4 " << serverIp << "\r\n";
+		sdp << "a=mid:0\r\n";                             // 媒体流标识（匹配浏览器 Offer）
 		sdp << "a=rtpmap:" << si.payload_type
 			<< " " << si.codec << "/" << si.clock_rate << "\r\n";
 		if (!si.fmtp.empty()) {
 			sdp << "a=fmtp:" << si.payload_type << " " << si.fmtp << "\r\n";
 		}
+		sdp << "a=rtcp-mux\r\n";                          // RTCP 复用 RTP 端口（匹配浏览器 rtcp-mux）
+		sdp << "a=rtcp-rsize\r\n";                        // 精简 RTCP（匹配浏览器 rtcp-rsize）
 		sdp << "a=sendonly\r\n";                         // 服务端仅发送视频（匹配浏览器 recvonly）
 		sdp << "a=setup:active\r\n";                      // 服务端主动发起 DTLS
 		sdp << "a=ice-lite\r\n";                           // ICE-Lite 模式
@@ -258,12 +261,14 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 
 		si.sdp = sdp.str();
 
+		// 先推入列表，再从列表中取引用传给 ICE 线程（确保生命周期与 StreamNode 一致）
 		rc->client_sessions_mutex_.lock();
 		rc->client_sessions_.push_back(si);
+		StreamNode::STREAM_SESSION& sessionRef = rc->client_sessions_.back();
 		rc->client_sessions_mutex_.unlock();
 
 		// 启动 ICE-Lite 线程，监听该会话的 UDP 端口并响应 STUN Binding Request
-		rc->startIceHandleThread(si);
+		rc->startIceHandleThread(sessionRef);
 
 		Sleep(1000);
 		json j;

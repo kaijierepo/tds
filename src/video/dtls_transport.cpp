@@ -274,7 +274,7 @@ std::string DtlsTransport::getFingerprint(const mbedtls_x509_crt& cert) {
 }
 
 // ---- 自签证书生成 ----------------------------------------------------------
-void DtlsTransport::generateSelfSignedCert(string cn, std::string cert_str,std::string key_str) {
+void DtlsTransport::generateSelfSignedCert(string cn, std::string& cert_str, std::string& key_str) {
     mbedtls_pk_context       key;
     mbedtls_entropy_context  entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -295,7 +295,17 @@ void DtlsTransport::generateSelfSignedCert(string cn, std::string cert_str,std::
         goto cleanup;
     }
 
-    // 使用 PSA 生成 ECDSA P-256 密钥对
+    // 初始化 PSA Crypto（mbedTLS 4.x DTLS 内部需要）
+    {
+        psa_status_t psa_init_status = psa_crypto_init();
+        if (psa_init_status != PSA_SUCCESS) {
+            LOG("[DTLS] cert gen: psa_crypto_init failed: %d", (int)psa_init_status);
+            ret = -1;
+            goto cleanup;
+        }
+    }
+
+    // 使用 PSA 生成 ECDSA P-256 密钥对，通过 pk_copy_from_psa 导入
     {
         psa_key_attributes_t attr = PSA_KEY_ATTRIBUTES_INIT;
         psa_set_key_usage_flags(&attr, PSA_KEY_USAGE_SIGN_HASH | PSA_KEY_USAGE_EXPORT);
@@ -313,21 +323,12 @@ void DtlsTransport::generateSelfSignedCert(string cn, std::string cert_str,std::
             goto cleanup;
         }
 
-        // Export DER 格式密钥 → pk_parse_key 导入
-        uint8_t der[256];
-        size_t der_len = 0;
-        status = psa_export_key(kid, der, sizeof(der), &der_len);
-        if (status != PSA_SUCCESS) {
-            LOG("[DTLS] cert gen: psa_export_key failed: %d", (int)status);
-            psa_destroy_key(kid);
-            ret = -1;
-            goto cleanup;
-        }
+        // mbedTLS 4.x: 用 pk_copy_from_psa 将 PSA key 导入 pk_context
+        ret = mbedtls_pk_copy_from_psa(kid, &key);
         psa_destroy_key(kid);
 
-        ret = mbedtls_pk_parse_key(&key, der, der_len, nullptr, 0);
         if (ret != 0) {
-            LOG("[DTLS] cert gen: pk_parse_key failed: %d", ret);
+            LOG("[DTLS] cert gen: pk_copy_from_psa failed: %d", ret);
             goto cleanup;
         }
     }

@@ -278,7 +278,7 @@ public:
         bool is_webrtc = false;
         std::string ice_ufrag;
         std::string ice_pwd;
-        int           ice_valid = 0;      // 1=ICE完成, 2=DTLS完成, 3=SRTP激活
+        int           conn_state = 0;     // 0=等待ICE, 1=ICE连通, 2=DTLS完成, 3=SRTP激活
 
         // DTLS/SRTP 状态（per-session，由 ice 线程管理）
         void* dtls_transport_ = nullptr;  // 指向 DtlsTransport 实例
