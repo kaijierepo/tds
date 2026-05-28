@@ -286,6 +286,8 @@ public:
         // DTLS/SRTP 状态（per-session，由 ice 线程管理）
         void* dtls_transport_ = nullptr;  // 指向 DtlsTransport 实例
         void* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
+
+		bool last_was_idr_ = false; // 记录上一个处理的是否为 IDR，用于判断连续的 IDR
     };
 
     // URL解析

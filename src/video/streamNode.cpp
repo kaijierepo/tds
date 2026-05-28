@@ -2678,7 +2678,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     auto data = packet.serialize();
 
     for (int i = 0; i < playClients.size(); i++) {
-		auto& client = playClients[i];
+        StreamNode::STREAM_SESSION& client = playClients[i];
         if (client.transport_mode == TransportMode::UDP) {
             // UDP推流（RTSP 明文）
             if (sendUDPDataToSession(data.data(), data.size(), client)) {
@@ -2723,7 +2723,9 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                 // FU-A: 第二个字节是 FU header，其中低 5 位是 NAL type
                 uint8_t fuHeader = packet.payload[1];
                 uint8_t fuNalType = fuHeader & 0x1F;
-                if (fuNalType == NAL_TYPE_IDR) {
+                bool start = (fuHeader & 0x80) != 0; // S 位
+                bool end = (fuHeader & 0x40) != 0;   // E 位
+				if (fuNalType == NAL_TYPE_IDR && start) { // 只有 FU-A 的第一个包（S=1）才算是 IDR 的开始
                     isIdr = true;
                 }
             } else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 2) {
@@ -2759,10 +2761,8 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             }
 
             // 如果当前包是 IDR 且 session 有 SPS/PPS，先发送 SPS/PPS RTP 包
-            if (isIdr && !ctx->session->sps.empty() && !ctx->session->pps.empty()
-                && !dtlsState->sps_pps_injected) {
-                dtlsState->sps_pps_injected = true;
-
+            if (!ctx->session->last_was_idr_ && isIdr 
+                && !ctx->session->sps.empty() && !ctx->session->pps.empty()) {
                 // 辅助函数：发送单个 NAL 的 RTP 包，使用 per-session 独立序列号
                 auto sendSingleNalRtp = [&](const std::vector<uint8_t>& nal) {
                     std::vector<uint8_t> nalData(12 + nal.size());
@@ -2800,6 +2800,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                     ctx->session->pps.empty() ? 0 : (ctx->session->pps[0] & 0x1F),
                     dtlsState->local_seq - 2);
             }
+            ctx->session->last_was_idr_ = isIdr;
 
             // 用 per-session 独立序列号替换原始 seq 后发送
             // 注意：需要修改 rtpVec 中的序列号字节（byte[2], byte[3]）
