@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "ioSrv.h"
 #include <thread>
 #include "obj.h"
@@ -1409,20 +1409,23 @@ bool ioServer::runAsCloud() {
 	if(iq60Port) LOG("[IO服务    ] 监听地址:"     + m_ioSrvIP + ":" + str::fromInt(iq60Port)  + " 设备协议 IQ60");
 	if(jepPort)  LOG("[IO服务    ] 监听地址:"     + m_ioSrvIP + ":" + str::fromInt(jepPort)   + "设备协议 JEP");
 
-	//io服务 6011 JEP
-	m_tcpSrv_jep = new tcpSrv();
-	m_tcpSrv_jep->m_strName = "jep";
-	m_tcpSrv_jep->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+		//io服务 6011 JEP
+	if (jepPort) {
+		m_tcpSrv_jep = new tcpSrv();
+		m_tcpSrv_jep->m_strName = "jep";
+		m_tcpSrv_jep->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 
-	if (m_tcpSrv_jep->run(this, jepPort, m_ioSrvIP)){
-	}
-	else {
+		if (m_tcpSrv_jep->run(this, jepPort, m_ioSrvIP)){
+		}
+		else {
 #ifndef _WIN32
-		LOG("[error]linux need sudo to bind port under 1024,run this cmd to allow to bind without sudo\nsudo setcap 'cap_net_bind_service=+ep' .\\tds");
+			LOG("[error]linux need sudo to bind port under 1024,run this cmd to allow to bind without sudo\nsudo setcap 'cap_net_bind_service=+ep' .\\tds");
 #endif
 
-		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(jepPort));
+			LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(jepPort));
+		}
 	}
+
 
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();

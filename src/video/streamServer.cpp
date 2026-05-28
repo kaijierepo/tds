@@ -347,7 +347,7 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 	yyjson_val* yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
-	yyv = yyjson_obj_get(params, "ip");
+	yyv = yyjson_obj_get(params, "camera_ip");
 	if (yyv)
 		ip = yyjson_get_str(yyv);
 	int preTime;
@@ -377,7 +377,7 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag or ip not found");
 	}
-	LOG("[HTTP API]startRecord, tag: %s, ip: %s, preSeconds: %d", tag.c_str(), ip.c_str(), preTime);
+	LOG("[HTTP API]startRecord, tag: %s, camera_ip: %s, preSeconds: %d", tag.c_str(), ip.c_str(), preTime);
 	return true;
 }
 
@@ -388,7 +388,7 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	yyjson_val* yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
-	yyv = yyjson_obj_get(params, "ip");
+	yyv = yyjson_obj_get(params, "camera_ip");
 	if (yyv)
 		ip = yyjson_get_str(yyv);
 	StreamNode* rc = nullptr;
@@ -428,7 +428,7 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag or ip not found");
 	}
-	LOG("[HTTP API]stopRecord, tag: %s, ip: %s", tag.c_str(), ip.c_str());
+	LOG("[HTTP API]stopRecord, tag: %s, camera_ip: %s", tag.c_str(), ip.c_str());
 	return true;
 }
 
