@@ -3476,7 +3476,10 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
                    (struct sockaddr*)&peer, sizeof(peer));
 
             // ICE 连通性确认：收到 Binding Request 并回复 Response
-            ctx->session->conn_state = 1;
+            // 只在初始状态(0)时升级为1，避免 keep-alive Binding Request 把 SRTP 激活(3)降级
+            if (ctx->session->conn_state == 0) {
+                ctx->session->conn_state = 1;
+            }
         }
         // === DTLS ===
         else if (firstByte >= 0x14 && firstByte <= 0x18) {

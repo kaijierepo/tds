@@ -2,53 +2,27 @@
 #include "srtp_protect.h"
 #include "logger.h"
 #include <algorithm>
+#include <cstdio>
 #include <mbedtls/private/sha1.h>
 #include <mbedtls/private/aes.h>
 
 // ============================================================================
-// RFC 3711 §4.2.3: SRTP KDF — 从 master_key + master_salt 派生
-//   auth_key (160 bits = 20 bytes) 用于 HMAC-SHA1 认证
-//   加密密钥和 salt 直接使用 DTLS 导出的值（不再重复派生）
+// SRTP Key Material 处理 (RFC 3711 + RFC 5764)
 //
-// SRTP Key Derivation:
-//   k_e (encryption) = F (master_key, master_salt, 0x00, ..)  -- 16 bytes
-//   a_e (auth)       = F (master_key, master_salt, 0x01, ..)  -- 20 bytes
-//   k_s (salt)       = F (master_key, master_salt, 0x02, ..)  -- 14 bytes
-// 其中 F() 是 PRF-xor (AES-CM 或类似)，但实际实现中：
-//   DTLS exporter 已经给出了 r = key(16) || key'(16) || salt(14) || salt'(14)
-//   我们需要用 r 作为输入来派生 session keys
+// RFC 5764 §4.2: DTLS-SRTP 通过 DTLS exporter("EXTRACTOR-dtls_srtp") 导出 60 字节:
+//   client_write_key[16] | server_write_key[16] |
+//   client_write_salt[14] | server_write_salt[14]
+//
+// RFC 3711 §4.3: 当 key_derivation_rate = 0 (WebRTC 默认):
+//   session keys 直接由 master key + master salt 构成，不需要 KDF:
+//
+//   k_e (encryption key) = k_master 的前 16 字节
+//   k_a (auth key)       = k_master 填充到 20 字节 (末尾补 0x00)
+//   k_s (salting key)    = master_salt 的前 14 字节
+//
+// 注意: key_derivation_rate = 0 意味着 encrypt_key 和 auth_key
+//       的前 16 字节相同，这与 libsrtp (浏览器) 的行为一致。
 // ============================================================================
-
-namespace {
-/**
- * @brief SRTP PRF-n (RFC 3711 §4.2.3)
- *
- * 使用简单的 XOR 派生方式（与 libsrtp 一致）：
- *   k = r XOR (salt << n)
- * 然后取前 needed 位
- */
-void srtp_kdf(const uint8_t* master_key, size_t mk_len,
-              const uint8_t* master_salt, size_t ms_len,
-              uint8_t label,
-              uint8_t* out, size_t out_len) {
-    // div = 00 00 || 00 00 00 00 || 0000 0000 || label
-    uint8_t div[16] = {};
-    div[sizeof(div) - 1] = label;
-
-    // mask = master_salt || div  （截断到合适长度）
-    size_t xlen = (mk_len < out_len) ? out_len : mk_len;
-    for (size_t i = 0; i < out_len; i++) {
-        size_t si = i % ms_len;
-        size_t di = i % sizeof(div);
-        if (i < mk_len) {
-            out[i] = master_key[i] ^ (master_salt[si] ^ div[di]);
-        } else {
-            // 超过 master_key 长度的部分继续 XOR
-            out[i] = 0 ^ (master_salt[si] ^ div[di]);
-        }
-    }
-}
-}  // namespace
 
 // ============================================================================
 // SrptProtect 实现
@@ -64,26 +38,33 @@ SrptProtect::initFromDtls(const DtlsTransport::SrptKeyingMaterial& keys,
 
     // 服务端: server_write_key/salt 用于加密发给客户端的包
     //        client_write_key/salt 用于解密来自客户端的包
-    const uint8_t* enc_key  = is_server ? keys.server_write_key : keys.client_write_key;
-    const uint8_t* enc_salt = is_server ? keys.server_write_salt : keys.client_write_salt;
+    const uint8_t* master_key  = is_server ? keys.server_write_key : keys.client_write_key;
+    const uint8_t* master_salt = is_server ? keys.server_write_salt : keys.client_write_salt;
 
-    // 派生 session 密钥 (RFC 3711 §4.2.3)
-    // label 0x00 → encryption key (16 bytes)
-    // label 0x01 → authentication key (20 bytes)  
-    // label 0x02 → salting key (14 bytes)
+    // RFC 3711 §4.3, key_derivation_rate = 0 (WebRTC 默认):
+    //   session keys 直接使用 master key 和 master salt
+    //
+    // k_e = master_key (16 bytes)
+    memcpy(ctx.encrypt_key, master_key, 16);
 
-    // 加密密钥: k_e = F(master_key, master_salt, 0x00), 取前 16 字节
-    srtp_kdf(enc_key, 16, enc_salt, 14, 0x00, ctx.encrypt_key, 16);
+    // k_a = master_key 填充到 20 bytes (HMAC-SHA1 需要 20 bytes)
+    // 前 16 字节与 encrypt_key 相同，后 4 字节补 0x00
+    memcpy(ctx.auth_key, master_key, 16);
+    memset(ctx.auth_key + 16, 0, 4);
 
-    // 认证密钥: a_e = F(master_key, master_salt, 0x01), 取前 20 字节
-    // 这就是 HMAC-SHA1 需要的独立认证密钥！
-    srtp_kdf(enc_key, 16, enc_salt, 14, 0x01, ctx.auth_key, 20);
+    // k_s = master_salt (14 bytes)
+    memcpy(ctx.encrypt_salt, master_salt, 14);
 
-    // Salt: k_s = F(master_key, master_salt, 0x02), 取前 14 字节
-    srtp_kdf(enc_key, 16, enc_salt, 14, 0x02, ctx.encrypt_salt, 14);
+    // 诊断日志: 打印 key material 的前几个字节用于对比
+    char hex_buf[128];
+    snprintf(hex_buf, sizeof(hex_buf),
+        "SRTP init key[0..3]=%02x%02x%02x%02x salt[0..3]=%02x%02x%02x%02x",
+        ctx.encrypt_key[0], ctx.encrypt_key[1], ctx.encrypt_key[2], ctx.encrypt_key[3],
+        ctx.encrypt_salt[0], ctx.encrypt_salt[1], ctx.encrypt_salt[2], ctx.encrypt_salt[3]);
+    LOG("%s", hex_buf);
 
-    // 重放窗口初始化
-    ctx.highest_seq = 0xFFFF;  // 第一个包总是能通过
+    // 重放窗口初始化 — 0xFFFF 确保第一个包总是能通过重放检测
+    ctx.highest_seq = 0xFFFF;
 
     ctx.initialized = true;
     return ctx;
@@ -100,18 +81,21 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
 
     // 提取序号
     uint16_t seq = ((uint16_t)rtp[2] << 8) | rtp[3];
+
+    // 检测序号回绕 (seq wraparound):
+    //   highest_seq 初始为 0xFFFF，第一个包总是 newest
+    //   如果 seq << (highest_seq & 0xFFFF) 且差距 > 0x8000 → 回绕
+    if (ctx.highest_seq != 0xFFFF) {
+        uint16_t prev_seq = ctx.highest_seq & 0xFFFF;
+        if (seq < prev_seq && prev_seq - seq > 0x8000) {
+            ctx.rollover_counter++;
+        }
+    }
     uint32_t index = ((uint32_t)ctx.rollover_counter << 16) | seq;
 
-    // 更新 ROC: 如果 seq 回绕，递增 rollover_counter
-    if (ctx.initialized && (ctx.highest_seq & 0xFFFF) > 0
-        && seq < (ctx.highest_seq & 0xFFFF)
-        && (ctx.highest_seq & 0xFFFF) - seq > 0x8000) {
-        ctx.rollover_counter++;
-        index = ((uint32_t)ctx.rollover_counter << 16) | seq;
-    }
     // 更新最高序号
     uint32_t full_seq = (ctx.rollover_counter << 16) | seq;
-    if (!ctx.initialized || full_seq > ctx.highest_seq) {
+    if (ctx.highest_seq == 0xFFFF || full_seq > ctx.highest_seq) {
         ctx.highest_seq = full_seq;
     }
 
@@ -129,11 +113,40 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
     aesCtrCrypt(ctx.encrypt_key, 16, iv, 16,
                 encrypted.data() + 12, payload_len);
 
+    // 诊断日志: 前 5 个包打印关键参数
+    static int pkt_count = 0;
+    if (pkt_count < 5) {
+        char hex_buf[256];
+        snprintf(hex_buf, sizeof(hex_buf),
+            "SRTP protect #%d: SSRC=0x%08x seq=%u ROC=%u index=0x%08x "
+            "pkt_size=%zu iv[4..9]=%02x%02x%02x%02x%02x%02x "
+            "rtp[0..3]=%02x%02x%02x%02x",
+            pkt_count, pkt_ssrc, seq, ctx.rollover_counter, index,
+            rtp.size(),
+            iv[4], iv[5], iv[6], iv[7], iv[8], iv[9],
+            rtp[0], rtp[1], rtp[2], rtp[3]);
+        LOG("%s", hex_buf);
+        pkt_count++;
+    }
+
     // HMAC-SHA1 认证标签（截断至 80 bits = 10 bytes）
-    // ★ 使用独立的 auth_key，而非 encrypt_key！
+    // RFC 3711 §4.2: HMAC 输入 = 认证部分 (RTP header + encrypted payload) || ROC
+    // ROC (Rollover Counter) 以大端 4 字节形式追加到认证数据后
     uint8_t auth_tag[20];
+    uint8_t roc_be[4] = {
+        (uint8_t)(ctx.rollover_counter >> 24),
+        (uint8_t)(ctx.rollover_counter >> 16),
+        (uint8_t)(ctx.rollover_counter >> 8),
+        (uint8_t)(ctx.rollover_counter)
+    };
+
+    // 构建 HMAC 输入: header + encrypted_payload + ROC(4 bytes BE)
+    std::vector<uint8_t> hmac_input(12 + payload_len + 4);
+    memcpy(hmac_input.data(), encrypted.data(), 12 + payload_len);
+    memcpy(hmac_input.data() + 12 + payload_len, roc_be, 4);
+
     hmacSha1(ctx.auth_key, 20,
-             encrypted.data(), 12 + payload_len,
+             hmac_input.data(), hmac_input.size(),
              auth_tag);
     memcpy(encrypted.data() + 12 + payload_len, auth_tag, 10);
 
@@ -172,9 +185,20 @@ int SrptProtect::unprotect(Context& ctx,
     }
 
     // 验证 HMAC — 使用独立的 auth_key！
+    // RFC 3711 §4.2: HMAC 输入 = 认证部分 (RTP header + encrypted payload) || ROC
+    uint8_t roc_be[4] = {
+        (uint8_t)(roc >> 24),
+        (uint8_t)(roc >> 16),
+        (uint8_t)(roc >> 8),
+        (uint8_t)(roc)
+    };
     uint8_t expected_tag[20];
+    std::vector<uint8_t> hmac_input(12 + payload_len + 4);
+    memcpy(hmac_input.data(), srtp.data(), 12 + payload_len);
+    memcpy(hmac_input.data() + 12 + payload_len, roc_be, 4);
+
     hmacSha1(ctx.auth_key, 20,
-             srtp.data(), 12 + payload_len,
+             hmac_input.data(), hmac_input.size(),
              expected_tag);
 
     if (memcmp(srtp.data() + 12 + payload_len, expected_tag, 10) != 0) {
@@ -235,40 +259,47 @@ void SrptProtect::aesCtrCrypt(const uint8_t* key, size_t key_len,
 /* ---------- SRTP IV 构建 (RFC 3711 §4.1.1) ---------- */
 void SrptProtect::buildIv(uint8_t iv[16], const uint8_t* salt,
                            uint32_t ssrc, uint32_t index) {
-    // RFC 3711 §4.1.1: IV = salt || 0x00 || 0x00  然后与 SSRC||index XOR
+    // RFC 3711 §4.1.1: IV = (k_s * 2^16) XOR (SSRC * 2^64) XOR (i * 2^16)
     //
-    // 完整 16 字节 IV 布局:
-    //   bits 0-87:   salt[0..10]        (11 bytes, 不被 index 覆盖的部分)
-    //   bits 88-95:  salt[11] XOR index_high
-    //   bits 96-103: salt[12] XOR index_mid
-    //   bits 104-111:salt[13] XOR index_low
-    //   bits 112-127: 0x0000             (2 bytes zero)
+    // 展开到 16 字节 (128 bits):
     //
-    // 简化写法: iv = [salt(14 bytes)] [0x00] [0x00]
-    //           然后 XOR SSRC 到 [4..7], XOR index 到 [6..13]
+    //   k_s * 2^16:   [salt[0..13]] [0x00] [0x00]
+    //   SSRC * 2^64:  [0x00]*4 [SSRC] [0x00]*8
+    //   i * 2^16:     [0x00]*4 [ROC]  [SEQ]  [0x00]*6
+    //
+    //   其中 i = (ROC << 16) | SEQ (48-bit index)
+    //   ROC  = (index >> 16) & 0xFFFFFFFF
+    //   SEQ  = index & 0xFFFF
+    //
+    // XOR 结果:
+    //   byte[0..3]:   salt[0..3]
+    //   byte[4..7]:   salt[4..7] XOR SSRC XOR ROC
+    //   byte[8..9]:   salt[8..9] XOR SEQ
+    //   byte[10..13]: salt[10..13]
+    //   byte[14..15]: 0x0000
+
+    uint32_t roc = (index >> 16) & 0xFFFFFFFF;
+    uint16_t seq = index & 0xFFFF;
+
     memset(iv, 0, 16);
-    memcpy(iv, salt, 14);  // salt 填充前 14 字节
+    memcpy(iv, salt, 14);  // k_s * 2^16: salt 填充前 14 字节
 
-    // XOR SSRC 到字节 4-7 (bits 32-63)
-    iv[4]  ^= (ssrc >> 24) & 0xFF;
-    iv[5]  ^= (ssrc >> 16) & 0xFF;
-    iv[6]  ^= (ssrc >> 8)  & 0xFF;
-    iv[7]  ^= ssrc & 0xFF;
+    // XOR SSRC * 2^64: SSRC 在字节 4-7 (bits 32-63)
+    iv[4] ^= (ssrc >> 24) & 0xFF;
+    iv[5] ^= (ssrc >> 16) & 0xFF;
+    iv[6] ^= (ssrc >> 8)  & 0xFF;
+    iv[7] ^= ssrc & 0xFF;
 
-    // ★ 修正：XOR index 到字节 6-13 (bits 48-111)
-    //         注意与 SSRC 在字节 6-7 有重叠，这是正确的！
-    iv[6]  ^= (index >> 24) & 0xFF;
-    iv[7]  ^= (index >> 16) & 0xFF;
-    iv[8]  ^= (index >> 8)  & 0xFF;
-    iv[9]  ^= index & 0xFF;
+    // XOR i * 2^16: ROC 在字节 4-7, SEQ 在字节 8-9
+    iv[4] ^= (roc >> 24) & 0xFF;
+    iv[5] ^= (roc >> 16) & 0xFF;
+    iv[6] ^= (roc >> 8)  & 0xFF;
+    iv[7] ^= roc & 0xFF;
 
-    // index 继续覆盖到 salt 区域之后
-    iv[10] ^= 0;  // index 高位已经用完（32-bit index），这里为 0
-    iv[11] ^= 0;
-    iv[12] ^= 0;
-    iv[13] ^= 0;
+    iv[8] ^= (seq >> 8) & 0xFF;
+    iv[9] ^= seq & 0xFF;
 
-    // 最后 2 字节保持 0 (bits 112-127)
+    // 字节 14-15 保持 0x0000
 }
 
 /* ---------- HMAC-SHA1 (using mbedtls) ---------- */
