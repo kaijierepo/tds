@@ -273,6 +273,10 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 				fmtpLine += "sprop-parameter-sets=" + spropParamSets;
 			}
 		}
+		// 确保 packetization-mode 存在（RFC 6184 必需，默认 mode=1 支持 FU-A/STAP-A）
+		if (!fmtpLine.empty() && fmtpLine.find("packetization-mode") == std::string::npos) {
+			fmtpLine = "packetization-mode=1;" + fmtpLine;
+		}
 		// 确保 profile-level-id 存在（如果原始 fmtp 没有，填一个默认值）
 		if (!fmtpLine.empty() && fmtpLine.find("profile-level-id") == std::string::npos) {
 			// 从 SPS 前 3 字节推导 profile-level-id
@@ -284,6 +288,10 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			} else {
 				fmtpLine = "profile-level-id=42C01F;" + fmtpLine;
 			}
+		}
+		// 确保 level-asymmetry-allowed 存在
+		if (!fmtpLine.empty() && fmtpLine.find("level-asymmetry-allowed") == std::string::npos) {
+			fmtpLine += ";level-asymmetry-allowed=1";
 		}
 		if (!fmtpLine.empty()) {
 			sdp << "a=fmtp:" << si.payload_type << " " << fmtpLine << "\r\n";
@@ -304,6 +312,9 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			<< serverIp << " " << si.server_rtp_port << " typ host\r\n";
 
 		si.sdp = sdp.str();
+
+		// 打印完整 SDP Answer 用于调试
+		LOG("[WebRTC] SDP Answer:\n%s", si.sdp.c_str());
 
 		// 先推入列表，再从列表中取引用传给 ICE 线程（确保生命周期与 StreamNode 一致）
 		rc->client_sessions_mutex_.lock();

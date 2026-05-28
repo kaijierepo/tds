@@ -2793,8 +2793,12 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
 
                 sendSingleNalRtp(ctx->session->sps);
                 sendSingleNalRtp(ctx->session->pps);
-                LOG("SRTP: injected SPS (%zu bytes) + PPS (%zu bytes) before IDR",
-                    ctx->session->sps.size(), ctx->session->pps.size());
+                LOG("SRTP: injected SPS (%zu bytes, NAL type=0x%02x) + PPS (%zu bytes, NAL type=0x%02x) before IDR, seq_start=%u",
+                    ctx->session->sps.size(),
+                    ctx->session->sps.empty() ? 0 : (ctx->session->sps[0] & 0x1F),
+                    ctx->session->pps.size(),
+                    ctx->session->pps.empty() ? 0 : (ctx->session->pps[0] & 0x1F),
+                    dtlsState->local_seq - 2);
             }
 
             // 用 per-session 独立序列号替换原始 seq 后发送
