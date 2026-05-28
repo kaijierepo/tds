@@ -251,7 +251,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		sdp << "a=rtcp-mux\r\n";                          // RTCP 复用 RTP 端口（匹配浏览器 rtcp-mux）
 		sdp << "a=rtcp-rsize\r\n";                        // 精简 RTCP（匹配浏览器 rtcp-rsize）
 		sdp << "a=sendonly\r\n";                         // 服务端仅发送视频（匹配浏览器 recvonly）
-		sdp << "a=setup:active\r\n";                      // 服务端主动发起 DTLS
+		sdp << "a=setup:passive\r\n";                     // 服务端作为 DTLS server，等待浏览器发起握手
 		sdp << "a=ice-lite\r\n";                           // ICE-Lite 模式
 		sdp << "a=ice-ufrag:" << iceUfrag << "\r\n";
 		sdp << "a=ice-pwd:" << icePwd << "\r\n";

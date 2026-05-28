@@ -47,17 +47,23 @@ int DtlsTransport::bio_recv(void* ctx, unsigned char* buf, size_t len) {
     auto* self = static_cast<DtlsTransport*>(ctx);
     if (!self->peer_set_ || self->sock_ == StreamNode::kInvalidSocket)
         return MBEDTLS_ERR_NET_RECV_FAILED;
-    socklen_t peerLen = sizeof(self->peer_addr_);
-    int ret = recvfrom(static_cast<SOCKET>(self->sock_),
-                       (char*)buf, (int)len, 0,
-                       (struct sockaddr*)&self->peer_addr_,
-                       &peerLen);
-    if (ret == SOCKET_ERROR) {
-        if (WSAGetLastError() == WSAETIMEDOUT)
-            return MBEDTLS_ERR_SSL_WANT_READ;
-        return MBEDTLS_ERR_NET_RECV_FAILED;
+
+    // 只从内部缓冲区读取，不直接读 socket
+    // 所有数据统一由 iceHandleLoop 的 recvfrom → feedData 路径喂入
+    {
+        std::lock_guard<std::mutex> lock(self->recv_buf_mutex_);
+        if (!self->recv_buf_.empty()) {
+            size_t n = (len < self->recv_buf_.size()) ? len : self->recv_buf_.size();
+            for (size_t i = 0; i < n; i++) {
+                buf[i] = self->recv_buf_[i];
+            }
+            self->recv_buf_.erase(self->recv_buf_.begin(), self->recv_buf_.begin() + n);
+            return (int)n;
+        }
     }
-    return ret;
+
+    // 缓冲区为空，返回 WANT_READ，等待主循环喂入更多数据
+    return MBEDTLS_ERR_SSL_WANT_READ;
 }
 
 void DtlsTransport::debug_print(void* /*ctx*/, int level,
@@ -196,10 +202,20 @@ void DtlsTransport::startHandshake() {
 bool DtlsTransport::handleDtlsData(const uint8_t* data, size_t len) {
     if (handshake_done_) return false;
 
-    // 将数据注入 mbedtls 的接收缓冲区会被 bio_recv 消费
-    // mbedtls 的 DTLS 是基于 recvfrom 的，我们直接用套接字的真实 recv
-    // 这里不需要手动喂入，mbedtls 会在 doHandshakeStep 中通过 bio_recv 读取
+    // 将数据存入内部缓冲区，bio_recv 会优先从此读取
+    feedData(data, len);
     return true;
+}
+
+void DtlsTransport::feedData(const uint8_t* data, size_t len) {
+    std::lock_guard<std::mutex> lock(recv_buf_mutex_);
+    recv_buf_.insert(recv_buf_.end(), data, data + len);
+}
+
+void DtlsTransport::setClientTransportId(const struct sockaddr_in& addr) {
+    // 用 IP:Port 作为客户端唯一标识，用于 DTLS Cookie 的 HMAC 计算
+    mbedtls_ssl_set_client_transport_id(&ssl_,
+        (const unsigned char*)&addr, sizeof(addr));
 }
 
 // ---- 握手步骤 -------------------------------------------------------------
@@ -208,14 +224,32 @@ int DtlsTransport::doHandshakeStep() {
     if (!initialized_) return MBEDTLS_ERR_SSL_BAD_INPUT_DATA;
 
     int ret = mbedtls_ssl_handshake_step(&ssl_);
-    if (ret == 0) {
+
+    // mbedtls 握手状态机在中间步骤也会返回 0（例如 HELLO_REQUEST→CLIENT_HELLO），
+    // 只有通过 mbedtls_ssl_is_handshake_over 才能准确判断握手是否完成
+    if (ret == 0 && mbedtls_ssl_is_handshake_over(&ssl_) == 1) {
         handshake_done_ = true;
         exportSrptKeys();
         LOG("[DTLS] Handshake OK");
     } else if (ret == MBEDTLS_ERR_SSL_WANT_READ ||
                ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
         // 正常等待
-    } else {
+    } else if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED) {
+        // DTLS Cookie 验证流程：HelloVerifyRequest 已发送。
+        // 需要重置 SSL 会话状态，让状态机回到 HELLO_REQUEST，
+        // 等客户端重发带 Cookie 的 ClientHello 时重新开始握手。
+        //
+        // 重要：mbedtls_ssl_session_reset() 会清除 BIO 回调、定时器回调等，
+        // 必须在 reset 后重新绑定，否则后续握手步骤无法收发数据。
+        mbedtls_ssl_session_reset(&ssl_);
+
+        // 重新绑定 BIO 回调（bio_recv 从内部缓冲区读，bio_send 通过 sendto 发）
+        mbedtls_ssl_set_bio(&ssl_, this, bio_send, bio_recv, nullptr);
+
+        // 重新绑定 DTLS 定时器回调
+        mbedtls_ssl_set_timer_cb(&ssl_, &timer_,
+                                  timing_set_delay, timing_get_delay);
+    } else if (ret != 0) {
         char buf[128];
         mbedtls_strerror(ret, buf, sizeof(buf));
         LOG("[DTLS] Handshake error: -0x%04x: %s", -ret, buf);

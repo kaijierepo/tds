@@ -7359,8 +7359,16 @@ void mbedtls_ssl_handshake_wrapup(mbedtls_ssl_context *ssl)
         mbedtls_ssl_set_timer(ssl, 0);
 
         /* Keep last flight around in case we need to resend it:
-         * we need the handshake and transform structures for that */
-        MBEDTLS_SSL_DEBUG_MSG(3, ("skip freeing handshake and transform"));
+         * we need the handshake and transform structures for that.
+         * However, we still need to switch transform to transform_negotiate
+         * so that export_keying_material can access randbytes. */
+        if (ssl->transform) {
+            mbedtls_ssl_transform_free(ssl->transform);
+            mbedtls_free(ssl->transform);
+        }
+        ssl->transform = ssl->transform_negotiate;
+        ssl->transform_negotiate = NULL;
+        MBEDTLS_SSL_DEBUG_MSG(3, ("skip freeing handshake but switch transform"));
     } else
 #endif
     mbedtls_ssl_handshake_wrapup_free_hs_transform(ssl);

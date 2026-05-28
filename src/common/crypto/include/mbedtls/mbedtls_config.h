@@ -159,4 +159,8 @@
 /* This uses PSA crypto implementations from tf-psa-crypto */
 #define MBEDTLS_USE_PSA_CRYPTO
 
+/* Expose legacy mbedtls crypto API declarations (sha1, aes, etc.)
+ * Needed by srtp_protect.cpp for direct SHA1/AES access */
+#define MBEDTLS_DECLARE_PRIVATE_IDENTIFIERS
+
 #endif /* MBEDTLS_CONFIG_H */

@@ -4,6 +4,8 @@
 #include <vector>
 #include <functional>
 #include <atomic>
+#include <mutex>
+#include <deque>
 
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_cookie.h"
@@ -68,12 +70,27 @@ public:
     void startHandshake();
 
     /**
-     * @brief 喂入网络收到的 DTLS 握手数据
+     * @brief 喂入网络收到的 DTLS 握手数据（存入内部缓冲区，供 bio_recv 消费）
      * @param data  缓冲区
      * @param len   长度
      * @return true 表示该包已被 DTLS 层消费
      */
     bool handleDtlsData(const uint8_t* data, size_t len);
+
+    /**
+     * @brief 将主循环已收到的 DTLS 数据包存入内部缓冲区
+     *        在主循环的 recvfrom 已消费 UDP 包后，调用此方法将数据传递给 DTLS 层
+     * @param data  缓冲区
+     * @param len   长度
+     */
+    void feedData(const uint8_t* data, size_t len);
+
+    /**
+     * @brief 设置客户端传输层标识（IP+Port），用于 DTLS Cookie 生成
+     *        必须在收到第一个 ClientHello 后、doHandshakeStep 之前调用
+     * @param addr  对端 sockaddr_in 地址
+     */
+    void setClientTransportId(const struct sockaddr_in& addr);
 
     /**
      * @brief 运行 DTLS 握手的主循环步骤（非阻塞）
@@ -99,6 +116,10 @@ public:
     void setSocket(StreamNode::SocketHandle sock,
                    const struct sockaddr_in& peer_addr);
 
+    /// 获取对端地址
+    const struct sockaddr_in& getPeerAddr() const { return peer_addr_; }
+    bool isPeerSet() const { return peer_set_; }
+
 private:
     mbedtls_ssl_context        ssl_;
     mbedtls_ssl_config         conf_;
@@ -119,6 +140,11 @@ private:
 
     /// SSL 配置是否已做完
     bool conf_ready_ = false;
+
+    /// 内部接收缓冲区：主循环 recvfrom 消费了 DTLS 数据后，通过 feedData 存入，
+    /// bio_recv 优先从此缓冲区读取，避免 socket 已被排空导致读不到数据
+    std::mutex recv_buf_mutex_;
+    std::deque<uint8_t> recv_buf_;
 
     void exportSrptKeys();
     static int bio_send(void* ctx, const unsigned char* buf, size_t len);

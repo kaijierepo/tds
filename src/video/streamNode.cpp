@@ -2656,11 +2656,10 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     // 序列化RTP包
     auto data = packet.serialize();
 
-
     for (int i = 0; i < playClients.size(); i++) {
 		auto& client = playClients[i];
         if (client.transport_mode == TransportMode::UDP) {
-            // UDP推流
+            // UDP推流（RTSP 明文）
             if (sendUDPDataToSession(data.data(), data.size(), client)) {
                 std::lock_guard<std::mutex> lock(stats_mutex_);
                 stats_.bytes_forwarded += data.size();
@@ -2686,6 +2685,39 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             //        stats_.frames_forwarded++;
             //    }
             //}
+        }
+    }
+
+    // === WebRTC SRTP 发送路径 ===
+    // 遍历所有 ICE 会话，对 DTLS+SRTP 已完成的会话通过 SRTP 加密后发送视频
+    {
+        std::vector<std::shared_ptr<IceThreadCtx>> contexts;
+        {
+            std::lock_guard<std::mutex> lock(ice_contexts_mutex_);
+            contexts = ice_contexts_;
+        }
+        for (auto& ctx : contexts) {
+            if (!ctx->session || ctx->session->conn_state != 3) continue;
+
+            auto* dtls = static_cast<DtlsTransport*>(ctx->session->dtls_transport_);
+            auto* srtpCtx = static_cast<SrptProtect::Context*>(ctx->session->srtp_context_);
+            if (!dtls || !srtpCtx) continue;
+            if (!dtls->isPeerSet()) continue;
+
+            // SRTP protect
+            std::vector<uint8_t> rtpVec(data.begin(), data.end());
+            std::vector<uint8_t> srtpPkt = SrptProtect::protect(*srtpCtx, rtpVec);
+            if (srtpPkt.empty()) continue;
+
+            const struct sockaddr_in& peerAddr = dtls->getPeerAddr();
+            int sent = sendto(ctx->sock,
+                (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
+                (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
+            if (sent > 0) {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                stats_.bytes_forwarded += srtpPkt.size();
+                stats_.frames_forwarded++;
+            }
         }
     }
 }
@@ -3453,32 +3485,56 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
             // 更新对端地址（首包时绑定）
             dtls_state->dtls.setSocket(ctx->sock, peer);
 
-            // mbedtls 会通过 bio_recv 读取，这里只需驱动握手步骤
-            int ret = dtls_state->dtls.doHandshakeStep();
+            // 设置客户端传输标识（IP+Port），DTLS Cookie 需要它来生成 HMAC
+            dtls_state->dtls.setClientTransportId(peer);
 
-            if (ret == 0) {
-                // 握手成功！导出 SRTP 密钥
-                dtls_state->srtp_ready = true;
-                ctx->session->conn_state = 2; // DTLS 完成
+            // 将主循环 recvfrom 已消费的 DTLS 数据喂入内部缓冲区，
+            // 这样 mbedtls 的 bio_recv 才能读到数据并完成握手
+            dtls_state->dtls.feedData(buf, len);
 
-                // 初始化 SRTP 上下文（服务端使用 server_write_key）
-                const auto& keys = dtls_state->dtls.getKeyingMaterial();
-                if (keys.ready) {
-                    dtls_state->srtp_ctx = SrptProtect::initFromDtls(
-                        keys, true, /* is_server */
-                        0);         // ssrc 将在发送时设置
+            // DTLS 握手是多步骤状态机，需要循环调用 doHandshakeStep()
+            // 直到返回 WANT_READ（需要等对端数据）、WANT_WRITE（需要等发送完成）或出错
+            int ret;
+            while (true) {
+                ret = dtls_state->dtls.doHandshakeStep();
 
-                    ctx->session->conn_state = 3; // SRTP 激活
-                    LOG("[ICE] DTLS handshake + SRTP keys ready for socket fd="
-                        + std::to_string(ctx->sock));
+                // 握手成功：doHandshakeStep 内部已设置 handshake_done_ 并导出密钥
+                if (dtls_state->dtls.isHandshakeDone()) {
+                    dtls_state->srtp_ready = true;
+                    ctx->session->conn_state = 2; // DTLS 完成
+
+                    // 初始化 SRTP 上下文（服务端使用 server_write_key）
+                    const auto& keys = dtls_state->dtls.getKeyingMaterial();
+                    if (keys.ready) {
+                        dtls_state->srtp_ctx = SrptProtect::initFromDtls(
+                            keys, true, /* is_server */
+                            0);         // ssrc 将在发送时设置
+
+                        ctx->session->conn_state = 3; // SRTP 激活
+                        LOG("[ICE] DTLS handshake + SRTP keys ready for socket fd="
+                            + std::to_string(ctx->sock));
+                    }
+                    break;
+                } else if (ret == MBEDTLS_ERR_SSL_WANT_READ ||
+                           ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
+                    // 正常等待：需要等对端发数据或等发送缓冲区就绪，退出循环
+                    break;
+                } else if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED) {
+                    // DTLS Cookie 验证：等待客户端重发带 Cookie 的 ClientHello
+                    // 这是正常流程，退出循环等待下一个数据包
+                    break;
+                } else if (ret == 0) {
+                    // 中间步骤成功（如 HELLO_REQUEST→CLIENT_HELLO 状态转换），
+                    // 继续循环推进状态机
+                    continue;
+                } else {
+                    // 握手失败，重置以便重试
+                    char errbuf[128];
+                    mbedtls_strerror(ret, errbuf, sizeof(errbuf));
+                    LOG("[ICE] DTLS error: %s (0x%04X), will retry", errbuf, -ret);
+                    // 浏览器可能重新发起握手，不退出循环
+                    break;
                 }
-            } else if (ret != MBEDTLS_ERR_SSL_WANT_READ &&
-                       ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-                // 握手失败，重置以便重试
-                char errbuf[128];
-                mbedtls_strerror(ret, errbuf, sizeof(errbuf));
-                LOG("[ICE] DTLS error: %s (0x%04X), will retry", errbuf, -ret);
-                // 浏览器可能重新发起握手，不退出循环
             }
         }
         // === SRTP (来自客户端的加密 RTP) ===

@@ -75,9 +75,8 @@ public:
                         uint32_t ssrc, uint32_t index);
 
 private:
-    /// HMAC-SHA1 简化实现（不依赖 mbedtls，后续可切换）
+    /// HMAC-SHA1 (using mbedtls)
     static void hmacSha1(const uint8_t* key, size_t key_len,
                          const uint8_t* data, size_t data_len,
                          uint8_t out[20]);
-    static void sha1Hash(const uint8_t* data, size_t len, uint8_t out[20]);
 };
