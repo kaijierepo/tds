@@ -1902,6 +1902,12 @@ void StreamNode::doRtpRecv() {
             auto pPkt = std::make_shared<RTPPacket>();
             RTPPacket& packet = *pPkt;
             if (packet.parse(buffer.data(), received)) {
+                // 捕获实际 SSRC（用于 SDP 声明，只记录一次）
+                if (pull_session_.video_ssrc == 0 && packet.ssrc != 0) {
+                    pull_session_.video_ssrc = packet.ssrc;
+                    LOG("[StreamNode] Captured video SSRC=%u", packet.ssrc);
+                }
+
                 // 放入缓存
                 addToRtpBuffer(pPkt);
 
@@ -2648,6 +2654,21 @@ bool StreamNode::URLComponents::parse(const std::string & url, URLComponents & c
     return true;
 }
 
+// 每个 session 独有的 DTLS/SRTP 状态（定义在 sendRTPPacketToClients 之前，
+// 使其在 SRTP 发送路径中能被安全地 static_cast 访问）
+struct SessionDtlsState {
+    DtlsTransport dtls;
+    SrptProtect::Context srtp_ctx;
+    bool dtls_initialized = false;
+    bool srtp_ready = false;
+    // Per-session RTP 序列号管理：原始流的 seq 不能直接透传，
+    // 每个 WebRTC 客户端需要独立连续的序列号
+    uint16_t local_seq = 0;
+    bool    seq_inited = false;
+    // SPS/PPS 注入标记（替代 session->conn_state 的 3→4 标记）
+    bool    sps_pps_injected = false;
+};
+
 void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     std::vector<StreamNode::STREAM_SESSION> playClients;
     client_sessions_mutex_.lock();
@@ -2691,28 +2712,117 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     // === WebRTC SRTP 发送路径 ===
     // 遍历所有 ICE 会话，对 DTLS+SRTP 已完成的会话通过 SRTP 加密后发送视频
     {
+        // 检测当前包是否包含 IDR NAL（用于在 IDR 前插入 SPS/PPS）
+        bool isIdr = false;
+        if (!packet.payload.empty()) {
+            uint8_t nalHeader = packet.payload[0];
+            uint8_t nalType = nalHeader & 0x1F;
+            if (nalType == NAL_TYPE_IDR) {
+                isIdr = true;
+            } else if (nalType == NAL_TYPE_FU_A && packet.payload.size() > 1) {
+                // FU-A: 第二个字节是 FU header，其中低 5 位是 NAL type
+                uint8_t fuHeader = packet.payload[1];
+                uint8_t fuNalType = fuHeader & 0x1F;
+                if (fuNalType == NAL_TYPE_IDR) {
+                    isIdr = true;
+                }
+            } else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 2) {
+                // STAP-A: 跳过第一个 NALU 的长度字段(2B)检查
+                uint8_t firstNalType = packet.payload[2] & 0x1F;
+                if (firstNalType == NAL_TYPE_IDR) {
+                    isIdr = true;
+                }
+            }
+        }
+
         std::vector<std::shared_ptr<IceThreadCtx>> contexts;
         {
             std::lock_guard<std::mutex> lock(ice_contexts_mutex_);
             contexts = ice_contexts_;
         }
         for (auto& ctx : contexts) {
-            if (!ctx->session || ctx->session->conn_state != 3) continue;
+            // conn_state: 3=SRTP激活, 4=SRTP激活+SPS/PPS已注入
+            if (!ctx->session || (ctx->session->conn_state != 3 && ctx->session->conn_state != 4)) continue;
 
-            auto* dtls = static_cast<DtlsTransport*>(ctx->session->dtls_transport_);
-            auto* srtpCtx = static_cast<SrptProtect::Context*>(ctx->session->srtp_context_);
-            if (!dtls || !srtpCtx) continue;
-            if (!dtls->isPeerSet()) continue;
+            // 通过 SessionDtlsState 正确访问 DTLS 和 SRTP 上下文
+            auto* dtlsState = static_cast<SessionDtlsState*>(ctx->session->dtls_transport_);
+            if (!dtlsState || !dtlsState->srtp_ready) continue;
+            if (!dtlsState->dtls.isPeerSet()) continue;
 
-            // SRTP protect
+            DtlsTransport& dtls = dtlsState->dtls;
+            SrptProtect::Context& srtpCtx = dtlsState->srtp_ctx;
+
+            // 初始化 per-session 序列号（以原始流第一个包的 seq 为基准）
+            if (!dtlsState->seq_inited) {
+                dtlsState->local_seq = packet.sequence_number;
+                dtlsState->seq_inited = true;
+            }
+
+            // 如果当前包是 IDR 且 session 有 SPS/PPS，先发送 SPS/PPS RTP 包
+            if (isIdr && !ctx->session->sps.empty() && !ctx->session->pps.empty()
+                && !dtlsState->sps_pps_injected) {
+                dtlsState->sps_pps_injected = true;
+
+                // 辅助函数：发送单个 NAL 的 RTP 包，使用 per-session 独立序列号
+                auto sendSingleNalRtp = [&](const std::vector<uint8_t>& nal) {
+                    std::vector<uint8_t> nalData(12 + nal.size());
+                    nalData[0] = 0x80;  // V=2, P=0, X=0, CC=0
+                    nalData[1] = (0 << 7) | (packet.payload_type & 0x7F);  // marker=0
+                    nalData[2] = (dtlsState->local_seq >> 8) & 0xFF;
+                    nalData[3] = dtlsState->local_seq & 0xFF;
+                    nalData[4] = (packet.timestamp >> 24) & 0xFF;
+                    nalData[5] = (packet.timestamp >> 16) & 0xFF;
+                    nalData[6] = (packet.timestamp >> 8) & 0xFF;
+                    nalData[7] = packet.timestamp & 0xFF;
+                    nalData[8]  = (packet.ssrc >> 24) & 0xFF;
+                    nalData[9]  = (packet.ssrc >> 16) & 0xFF;
+                    nalData[10] = (packet.ssrc >> 8) & 0xFF;
+                    nalData[11] = packet.ssrc & 0xFF;
+                    memcpy(&nalData[12], nal.data(), nal.size());
+
+                    dtlsState->local_seq++;  // 递增序列号
+
+                    auto srtpPkt = SrptProtect::protect(srtpCtx, nalData);
+                    if (!srtpPkt.empty()) {
+                        const struct sockaddr_in& peerAddr = dtls.getPeerAddr();
+                        sendto(ctx->sock,
+                            (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
+                            (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
+                    }
+                };
+
+                sendSingleNalRtp(ctx->session->sps);
+                sendSingleNalRtp(ctx->session->pps);
+                LOG("SRTP: injected SPS (%zu bytes) + PPS (%zu bytes) before IDR",
+                    ctx->session->sps.size(), ctx->session->pps.size());
+            }
+
+            // 用 per-session 独立序列号替换原始 seq 后发送
+            // 注意：需要修改 rtpVec 中的序列号字节（byte[2], byte[3]）
             std::vector<uint8_t> rtpVec(data.begin(), data.end());
-            std::vector<uint8_t> srtpPkt = SrptProtect::protect(*srtpCtx, rtpVec);
+            rtpVec[2] = (dtlsState->local_seq >> 8) & 0xFF;
+            rtpVec[3] = dtlsState->local_seq & 0xFF;
+            dtlsState->local_seq++;
+
+            std::vector<uint8_t> srtpPkt = SrptProtect::protect(srtpCtx, rtpVec);
             if (srtpPkt.empty()) continue;
 
-            const struct sockaddr_in& peerAddr = dtls->getPeerAddr();
+            const struct sockaddr_in& peerAddr = dtls.getPeerAddr();
             int sent = sendto(ctx->sock,
                 (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
                 (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
+
+            // 前 5 次打印发送状态
+            static int srtp_send_count = 0;
+            if (srtp_send_count < 5) {
+                char ipbuf[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &peerAddr.sin_addr, ipbuf, sizeof(ipbuf));
+                LOG("SRTP send #%d: sent=%d/%zu to %s:%u",
+                    srtp_send_count, sent, srtpPkt.size(),
+                    ipbuf, ntohs(peerAddr.sin_port));
+                srtp_send_count++;
+            }
+
             if (sent > 0) {
                 std::lock_guard<std::mutex> lock(stats_mutex_);
                 stats_.bytes_forwarded += srtpPkt.size();
@@ -3197,14 +3307,6 @@ void StreamNode::writeNALtoFile(uint8_t nal_type,char* nal, size_t size, std::of
 // ============================================================================
 // ICE-Lite + DTLS + SRTP (WebRTC) 实现 — 每客户端一线程
 // ============================================================================
-
-// 每个 session 独有的 DTLS/SRTP 状态
-struct SessionDtlsState {
-    DtlsTransport dtls;
-    SrptProtect::Context srtp_ctx;
-    bool dtls_initialized = false;
-    bool srtp_ready = false;
-};
 
 void StreamNode::startIceHandleThread(STREAM_SESSION& session) {
     if (session.rtp_socket == kInvalidSocket || !session.is_webrtc) {

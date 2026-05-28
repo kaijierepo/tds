@@ -280,6 +280,9 @@ public:
         std::string ice_pwd;
         int           conn_state = 0;     // 0=等待ICE, 1=ICE连通, 2=DTLS完成, 3=SRTP激活
 
+        // 从实际 RTP 流中捕获的视频 SSRC（用于 SDP 声明）
+        uint32_t      video_ssrc = 0;
+
         // DTLS/SRTP 状态（per-session，由 ice 线程管理）
         void* dtls_transport_ = nullptr;  // 指向 DtlsTransport 实例
         void* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
@@ -457,6 +460,9 @@ public:
     void logDebug(const std::string& msg) const;
     void logVerbose(const std::string& msg) const;
 
+    // Base64 编码（用于 SDP sprop-parameter-sets 等）
+    static std::string base64Encode(const std::string& input);
+
 private:
     // MD5相关函数（内部实现）
     struct MD5Context {
@@ -470,7 +476,6 @@ private:
     static void md5Final(MD5Context* context, uint8_t digest[16]);
     static void md5Transform(uint32_t state[4], const uint8_t block[64]);
     static std::string md5Hex(const std::string& input);
-    static std::string base64Encode(const std::string& input);
 
     // ICE-Lite 线程上下文
     struct IceThreadCtx {

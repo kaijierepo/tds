@@ -281,6 +281,15 @@ void DtlsTransport::exportSrptKeys() {
     memcpy(keying_material_.server_write_salt, keyblk + 46, 14);
     keying_material_.ready = true;
 
+    // 打印完整 keyblk 用于调试
+    {
+        char hex_buf[256];
+        int pos = snprintf(hex_buf, sizeof(hex_buf), "DTLS SRTP keyblk[%d]=", (int)sizeof(keyblk));
+        for (unsigned i = 0; i < sizeof(keyblk) && pos < (int)sizeof(hex_buf)-4; i++)
+            pos += snprintf(hex_buf+pos, sizeof(hex_buf)-pos, "%02x", keyblk[i]);
+        LOG("%s", hex_buf);
+    }
+
     LOG("[DTLS] SRTP keys exported OK");
 }
 

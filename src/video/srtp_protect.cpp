@@ -55,13 +55,21 @@ SrptProtect::initFromDtls(const DtlsTransport::SrptKeyingMaterial& keys,
     // k_s = master_salt (14 bytes)
     memcpy(ctx.encrypt_salt, master_salt, 14);
 
-    // 诊断日志: 打印 key material 的前几个字节用于对比
-    char hex_buf[128];
-    snprintf(hex_buf, sizeof(hex_buf),
-        "SRTP init key[0..3]=%02x%02x%02x%02x salt[0..3]=%02x%02x%02x%02x",
-        ctx.encrypt_key[0], ctx.encrypt_key[1], ctx.encrypt_key[2], ctx.encrypt_key[3],
-        ctx.encrypt_salt[0], ctx.encrypt_salt[1], ctx.encrypt_salt[2], ctx.encrypt_salt[3]);
-    LOG("%s", hex_buf);
+    // 诊断日志: 打印完整 key material 用于对比浏览器端密钥
+    {
+        char hex_buf[512];
+        int pos = snprintf(hex_buf, sizeof(hex_buf),
+            "SRTP init (is_server=%d) key=", is_server);
+        for (int i = 0; i < 16; i++)
+            pos += snprintf(hex_buf + pos, sizeof(hex_buf) - pos, "%02x", ctx.encrypt_key[i]);
+        pos += snprintf(hex_buf + pos, sizeof(hex_buf) - pos, " salt=");
+        for (int i = 0; i < 14; i++)
+            pos += snprintf(hex_buf + pos, sizeof(hex_buf) - pos, "%02x", ctx.encrypt_salt[i]);
+        pos += snprintf(hex_buf + pos, sizeof(hex_buf) - pos, " auth=");
+        for (int i = 0; i < 20; i++)
+            pos += snprintf(hex_buf + pos, sizeof(hex_buf) - pos, "%02x", ctx.auth_key[i]);
+        LOG("%s", hex_buf);
+    }
 
     // 重放窗口初始化 — 0xFFFF 确保第一个包总是能通过重放检测
     ctx.highest_seq = 0xFFFF;
@@ -118,12 +126,13 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
     if (pkt_count < 5) {
         char hex_buf[256];
         snprintf(hex_buf, sizeof(hex_buf),
-            "SRTP protect #%d: SSRC=0x%08x seq=%u ROC=%u index=0x%08x "
-            "pkt_size=%zu iv[4..9]=%02x%02x%02x%02x%02x%02x "
+            "SRTP protect #%d: SSRC=0x%08x seq=%u ROC=%u "
+            "pkt_size=%zu "
+            "iv[4..13]=%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x "
             "rtp[0..3]=%02x%02x%02x%02x",
-            pkt_count, pkt_ssrc, seq, ctx.rollover_counter, index,
+            pkt_count, pkt_ssrc, seq, ctx.rollover_counter,
             rtp.size(),
-            iv[4], iv[5], iv[6], iv[7], iv[8], iv[9],
+            iv[4], iv[5], iv[6], iv[7], iv[8], iv[9], iv[10], iv[11], iv[12], iv[13],
             rtp[0], rtp[1], rtp[2], rtp[3]);
         LOG("%s", hex_buf);
         pkt_count++;
@@ -149,6 +158,26 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
              hmac_input.data(), hmac_input.size(),
              auth_tag);
     memcpy(encrypted.data() + 12 + payload_len, auth_tag, 10);
+
+    // ★ 自检验证: 用独立 context 做 unprotect，验证加密/认证正确
+    if (pkt_count < 5) {
+        Context verify_ctx = ctx;
+        verify_ctx.highest_seq = seq - 1;     // 小于当前 seq，保证通过重放检测
+        verify_ctx.rollover_counter = 0;       // 重置 ROC
+        std::vector<uint8_t> out_rtp;
+        int vr = unprotect(verify_ctx, encrypted, out_rtp);
+        char hex_buf[256];
+        if (vr == 0 && out_rtp.size() == rtp.size()) {
+            snprintf(hex_buf, sizeof(hex_buf),
+                "SRTP self-check #%d: OK (rtp_size=%zu, match=%s)",
+                pkt_count, rtp.size(),
+                memcmp(rtp.data(), out_rtp.data(), rtp.size())==0 ? "YES" : "NO");
+        } else {
+            snprintf(hex_buf, sizeof(hex_buf),
+                "SRTP self-check #%d: FAIL ret=%d", pkt_count, vr);
+        }
+        LOG("%s", hex_buf);
+    }
 
     return encrypted;
 }
@@ -250,7 +279,7 @@ void SrptProtect::aesCtrCrypt(const uint8_t* key, size_t key_len,
         for (int i = 15; i >= 0; i--) {
             if (++counter[i] != 0) break;
         }
-        offset += 16;
+        offset += chunk;
     }
 
     mbedtls_aes_free(&aes);
@@ -261,22 +290,19 @@ void SrptProtect::buildIv(uint8_t iv[16], const uint8_t* salt,
                            uint32_t ssrc, uint32_t index) {
     // RFC 3711 §4.1.1: IV = (k_s * 2^16) XOR (SSRC * 2^64) XOR (i * 2^16)
     //
-    // 展开到 16 字节 (128 bits):
+    // 对照 libsrtp 的 ICM 模式实现 (srtp.c):
+    //   v32[0] = 0        → bytes 0-3:  0x00000000
+    //   v32[1] = SSRC     → bytes 4-7:  SSRC (big-endian)
+    //   v64[1] = est<<16  → bytes 8-15: ROC(4) | SEQ(2) | 0x0000
     //
-    //   k_s * 2^16:   [salt[0..13]] [0x00] [0x00]
-    //   SSRC * 2^64:  [0x00]*4 [SSRC] [0x00]*8
-    //   i * 2^16:     [0x00]*4 [ROC]  [SEQ]  [0x00]*6
+    //   然后 counter = salt XOR iv
     //
-    //   其中 i = (ROC << 16) | SEQ (48-bit index)
-    //   ROC  = (index >> 16) & 0xFFFFFFFF
-    //   SEQ  = index & 0xFFFF
-    //
-    // XOR 结果:
-    //   byte[0..3]:   salt[0..3]
-    //   byte[4..7]:   salt[4..7] XOR SSRC XOR ROC
-    //   byte[8..9]:   salt[8..9] XOR SEQ
-    //   byte[10..13]: salt[10..13]
-    //   byte[14..15]: 0x0000
+    // 最终 counter 字节布局:
+    //   bytes 0-3:   salt[0..3]
+    //   bytes 4-7:   salt[4..7]  XOR SSRC
+    //   bytes 8-11:  salt[8..11] XOR ROC
+    //   bytes 12-13: salt[12..13] XOR SEQ
+    //   bytes 14-15: 0x0000
 
     uint32_t roc = (index >> 16) & 0xFFFFFFFF;
     uint16_t seq = index & 0xFFFF;
@@ -284,20 +310,20 @@ void SrptProtect::buildIv(uint8_t iv[16], const uint8_t* salt,
     memset(iv, 0, 16);
     memcpy(iv, salt, 14);  // k_s * 2^16: salt 填充前 14 字节
 
-    // XOR SSRC * 2^64: SSRC 在字节 4-7 (bits 32-63)
+    // XOR SSRC * 2^64: SSRC 在字节 4-7
     iv[4] ^= (ssrc >> 24) & 0xFF;
     iv[5] ^= (ssrc >> 16) & 0xFF;
     iv[6] ^= (ssrc >> 8)  & 0xFF;
     iv[7] ^= ssrc & 0xFF;
 
-    // XOR i * 2^16: ROC 在字节 4-7, SEQ 在字节 8-9
-    iv[4] ^= (roc >> 24) & 0xFF;
-    iv[5] ^= (roc >> 16) & 0xFF;
-    iv[6] ^= (roc >> 8)  & 0xFF;
-    iv[7] ^= roc & 0xFF;
+    // XOR i * 2^16: ROC 在字节 8-11, SEQ 在字节 12-13
+    iv[8]  ^= (roc >> 24) & 0xFF;
+    iv[9]  ^= (roc >> 16) & 0xFF;
+    iv[10] ^= (roc >> 8)  & 0xFF;
+    iv[11] ^= roc & 0xFF;
 
-    iv[8] ^= (seq >> 8) & 0xFF;
-    iv[9] ^= seq & 0xFF;
+    iv[12] ^= (seq >> 8) & 0xFF;
+    iv[13] ^= seq & 0xFF;
 
     // 字节 14-15 保持 0x0000
 }
@@ -322,20 +348,29 @@ void SrptProtect::hmacSha1(const uint8_t* key, size_t key_len,
         opad[i] = key_block[i] ^ 0x5C;
     }
 
-    // inner = SHA1(ipad || data)
-    mbedtls_sha1_context sha1;
-    mbedtls_sha1_init(&sha1);
-    mbedtls_sha1_starts(&sha1);
-    mbedtls_sha1_update(&sha1, ipad, 64);
-    mbedtls_sha1_update(&sha1, data, data_len);
-    mbedtls_sha1_finish(&sha1, out);
+    uint8_t inner_hash[20];
 
-    // outer = SHA1(opad || inner_hash)
-    mbedtls_sha1_starts(&sha1);
-    mbedtls_sha1_update(&sha1, opad, 64);
-    mbedtls_sha1_update(&sha1, out, 20);
-    mbedtls_sha1_finish(&sha1, out);
-    mbedtls_sha1_free(&sha1);
+    // inner = SHA1(ipad || data) — 使用独立的 context
+    {
+        mbedtls_sha1_context sha1_inner;
+        mbedtls_sha1_init(&sha1_inner);
+        mbedtls_sha1_starts(&sha1_inner);
+        mbedtls_sha1_update(&sha1_inner, ipad, 64);
+        mbedtls_sha1_update(&sha1_inner, data, data_len);
+        mbedtls_sha1_finish(&sha1_inner, inner_hash);
+        mbedtls_sha1_free(&sha1_inner);
+    }
+
+    // outer = SHA1(opad || inner_hash) — 使用另一个独立的 context
+    {
+        mbedtls_sha1_context sha1_outer;
+        mbedtls_sha1_init(&sha1_outer);
+        mbedtls_sha1_starts(&sha1_outer);
+        mbedtls_sha1_update(&sha1_outer, opad, 64);
+        mbedtls_sha1_update(&sha1_outer, inner_hash, 20);
+        mbedtls_sha1_finish(&sha1_outer, out);
+        mbedtls_sha1_free(&sha1_outer);
+    }
 }
 
 

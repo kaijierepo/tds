@@ -5,6 +5,7 @@
 #include <sstream>
 #include <fstream>
 #include <random>
+#include <cstdio>
 #include "prj.h"
 
 StreamServer streamSrv;
@@ -234,6 +235,19 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			  "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
 			: m_dtlsFingerprint;
 
+		// 将 SPS/PPS 编码为 Base64（用于 SDP sprop-parameter-sets）
+		// 格式: <sps_base64>,<pps_base64>
+		std::string spropParamSets;
+		if (!si.sps.empty() && !si.pps.empty()) {
+			// 拼接 SPS 和 PPS 为 sprop-parameter-sets 格式：
+			// Base64(SPS),Base64(PPS)
+			std::string sps_raw(reinterpret_cast<const char*>(si.sps.data()), si.sps.size());
+			std::string pps_raw(reinterpret_cast<const char*>(si.pps.data()), si.pps.size());
+			std::string sps_b64 = StreamNode::base64Encode(sps_raw);
+			std::string pps_b64 = StreamNode::base64Encode(pps_raw);
+			spropParamSets = sps_b64 + "," + pps_b64;
+		}
+
 		std::ostringstream sdp;
 		sdp << "v=0\r\n";
 		sdp << "o=- 0 0 IN IP4 " << serverIp << "\r\n";
@@ -245,9 +259,36 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		sdp << "a=mid:0\r\n";                             // 媒体流标识（匹配浏览器 Offer）
 		sdp << "a=rtpmap:" << si.payload_type
 			<< " " << si.codec << "/" << si.clock_rate << "\r\n";
+
+		// 构造 fmtp 行：如果已有 fmtp 则在其后追加 sprop-parameter-sets，
+		// 否则从 sps/pps 构造完整 fmtp
+		std::string fmtpLine;
 		if (!si.fmtp.empty()) {
-			sdp << "a=fmtp:" << si.payload_type << " " << si.fmtp << "\r\n";
+			fmtpLine = si.fmtp;
 		}
+		if (!spropParamSets.empty()) {
+			// 如果原有 fmtp 已有 sprop-parameter-sets，则不重复添加
+			if (fmtpLine.find("sprop-parameter-sets") == std::string::npos) {
+				if (!fmtpLine.empty()) fmtpLine += ";";
+				fmtpLine += "sprop-parameter-sets=" + spropParamSets;
+			}
+		}
+		// 确保 profile-level-id 存在（如果原始 fmtp 没有，填一个默认值）
+		if (!fmtpLine.empty() && fmtpLine.find("profile-level-id") == std::string::npos) {
+			// 从 SPS 前 3 字节推导 profile-level-id
+			if (si.sps.size() >= 3) {
+				char buf[16];
+				snprintf(buf, sizeof(buf), "profile-level-id=%02X%02X%02X",
+					si.sps[0], si.sps[1], si.sps[2]);
+				fmtpLine = std::string(buf) + ";" + fmtpLine;
+			} else {
+				fmtpLine = "profile-level-id=42C01F;" + fmtpLine;
+			}
+		}
+		if (!fmtpLine.empty()) {
+			sdp << "a=fmtp:" << si.payload_type << " " << fmtpLine << "\r\n";
+		}
+
 		sdp << "a=rtcp-mux\r\n";                          // RTCP 复用 RTP 端口（匹配浏览器 rtcp-mux）
 		sdp << "a=rtcp-rsize\r\n";                        // 精简 RTCP（匹配浏览器 rtcp-rsize）
 		sdp << "a=sendonly\r\n";                         // 服务端仅发送视频（匹配浏览器 recvonly）
@@ -256,6 +297,9 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		sdp << "a=ice-ufrag:" << iceUfrag << "\r\n";
 		sdp << "a=ice-pwd:" << icePwd << "\r\n";
 		sdp << "a=fingerprint:sha-256 " << fingerprint << "\r\n";
+		// SSRC 声明：使用实际流中的 SSRC（如果尚未捕获则用 1 作为占位符）
+		uint32_t declaredSsrc = si.video_ssrc ? si.video_ssrc : 1;
+		sdp << "a=ssrc:" << declaredSsrc << " cname:TDS\r\n";
 		sdp << "a=candidate:1 1 UDP 2130706431 "
 			<< serverIp << " " << si.server_rtp_port << " typ host\r\n";
 
