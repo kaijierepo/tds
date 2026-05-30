@@ -21,6 +21,10 @@ DtlsTransport::DtlsTransport() {
 }
 
 DtlsTransport::~DtlsTransport() {
+    // 如果握手进行中被析构，先 reset SSL 状态机再 free，避免 mbedtls 内部断言
+    if (initialized_) {
+        mbedtls_ssl_session_reset(&ssl_);
+    }
     mbedtls_ssl_free(&ssl_);
     mbedtls_ssl_config_free(&conf_);
     mbedtls_entropy_free(&entropy_);

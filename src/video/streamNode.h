@@ -248,7 +248,15 @@ public:
         SERVER_SEND    //自身作为流媒体服务器，向客户端发送流的会话
     };
 
+    enum SESSION_STATE {
+        S0_WAITING_ICE = 0,
+        S1_ICE_CONNECTED,
+        S2_DTLS_COMPLETED,
+        S3_SRTP_ACTIVE
+	};
+
     // 媒体流信息
+    // 注意：WebRTC 会话通过 shared_ptr 管理；含 std::thread 成员，禁止值拷贝
     struct STREAM_SESSION {
         std::string control_url;
         std::string codec = "H264";
@@ -278,16 +286,76 @@ public:
         bool is_webrtc = false;
         std::string ice_ufrag;
         std::string ice_pwd;
-        int           conn_state = 0;     // 0=等待ICE, 1=ICE连通, 2=DTLS完成, 3=SRTP激活
+        SESSION_STATE state = SESSION_STATE::S0_WAITING_ICE;
 
         // 从实际 RTP 流中捕获的视频 SSRC（用于 SDP 声明）
         uint32_t      video_ssrc = 0;
 
         // DTLS/SRTP 状态（per-session，由 ice 线程管理）
-        void* dtls_transport_ = nullptr;  // 指向 DtlsTransport 实例
+        void* dtls_transport_ = nullptr;  // 指向 SessionDtlsState 实例
         void* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
 
 		bool last_was_idr_ = false; // 记录上一个处理的是否为 IDR，用于判断连续的 IDR
+
+        // ---- 以下成员仅 WebRTC (is_webrtc=true) 使用 ----
+        // ICE 处理线程（由 startIceHandleThread 创建，stopAllIceThreads 回收）
+        std::thread ice_thread_;
+        std::atomic<bool> ice_running_{true};
+
+        STREAM_SESSION() = default;
+        STREAM_SESSION(STREAM_SESSION&&) = default;
+        STREAM_SESSION& operator=(STREAM_SESSION&&) = default;
+
+        // 拷贝构造：逐字段拷贝（跳过不可拷贝的 ice_thread_，新对象 ice_thread_ 为默认空线程）
+        STREAM_SESSION(const STREAM_SESSION& other)
+            : control_url(other.control_url), codec(other.codec)
+            , payload_type(other.payload_type), clock_rate(other.clock_rate)
+            , fmtp(other.fmtp), sps(other.sps), pps(other.pps), sdp(other.sdp)
+            , session_type_(other.session_type_)
+            , transport_mode(other.transport_mode), transport(other.transport)
+            , remote_host(other.remote_host), client_port(other.client_port)
+            , server_port(other.server_port)
+            , client_rtp_port(other.client_rtp_port)
+            , client_rtcp_port(other.client_rtcp_port)
+            , server_rtp_port(other.server_rtp_port)
+            , server_rtcp_port(other.server_rtcp_port)
+            , rtp_socket(other.rtp_socket), rtcp_socket(other.rtcp_socket)
+            , is_webrtc(other.is_webrtc)
+            , ice_ufrag(other.ice_ufrag), ice_pwd(other.ice_pwd)
+            , state(other.state), video_ssrc(other.video_ssrc)
+            , dtls_transport_(other.dtls_transport_)
+            , srtp_context_(other.srtp_context_)
+            , last_was_idr_(other.last_was_idr_)
+            // ice_thread_ 默认构造（空线程）
+            // ice_running_ 保持默认 true
+        {}
+
+        STREAM_SESSION& operator=(const STREAM_SESSION& other) {
+            if (this != &other) {
+                // 不允许在运行中的 ICE 线程上赋值
+                // （WebRTC session 应通过 shared_ptr 管理，不走拷贝赋值路径）
+                control_url = other.control_url; codec = other.codec;
+                payload_type = other.payload_type; clock_rate = other.clock_rate;
+                fmtp = other.fmtp; sps = other.sps; pps = other.pps; sdp = other.sdp;
+                session_type_ = other.session_type_;
+                transport_mode = other.transport_mode; transport = other.transport;
+                remote_host = other.remote_host; client_port = other.client_port;
+                server_port = other.server_port;
+                client_rtp_port = other.client_rtp_port;
+                client_rtcp_port = other.client_rtcp_port;
+                server_rtp_port = other.server_rtp_port;
+                server_rtcp_port = other.server_rtcp_port;
+                rtp_socket = other.rtp_socket; rtcp_socket = other.rtcp_socket;
+                is_webrtc = other.is_webrtc;
+                ice_ufrag = other.ice_ufrag; ice_pwd = other.ice_pwd;
+                state = other.state; video_ssrc = other.video_ssrc;
+                dtls_transport_ = other.dtls_transport_;
+                srtp_context_ = other.srtp_context_;
+                last_was_idr_ = other.last_was_idr_;
+                // ice_thread_ 和 ice_running_ 不拷贝
+            }
+            return *this;
+        }
     };
 
     // URL解析
@@ -351,8 +419,8 @@ public:
     STREAM_SESSION pull_audio_session_;
     STREAM_SESSION push_session_;
 
-    // 播放客户段
-	std::vector<STREAM_SESSION> client_sessions_;
+    // 播放客户段（使用 shared_ptr 避免 vector 扩容导致 ICE 线程中的指针失效）
+	std::vector<std::shared_ptr<STREAM_SESSION>> client_sessions_;
 	std::mutex client_sessions_mutex_;
 
 
@@ -453,7 +521,7 @@ public:
     int receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port);
 
     // ICE-Lite (WebRTC) — 每客户端一线程处理 STUN 请求
-    void startIceHandleThread(STREAM_SESSION& session);
+    void startIceHandleThread(std::shared_ptr<STREAM_SESSION> session);
     void stopAllIceThreads();
 
     // 日志
@@ -479,17 +547,6 @@ private:
     static void md5Transform(uint32_t state[4], const uint8_t block[64]);
     static std::string md5Hex(const std::string& input);
 
-    // ICE-Lite 线程上下文
-    struct IceThreadCtx {
-        SocketHandle sock;
-        std::string ice_ufrag;
-        std::string ice_pwd;
-        STREAM_SESSION* session = nullptr;  // 关联的会话
-        std::atomic<bool> running{true};
-        std::thread thread;
-    };
-
-    void iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx);
-    std::vector<std::shared_ptr<IceThreadCtx>> ice_contexts_;
-    std::mutex ice_contexts_mutex_;
+    // ICE-Lite 工作循环（由每个 WebRTC session 的 ice_thread_ 执行）
+    void iceHandleLoop(std::shared_ptr<STREAM_SESSION> session);
 };

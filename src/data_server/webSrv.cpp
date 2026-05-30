@@ -1470,6 +1470,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 				"HTTP/1.1 200 OK\r\n"
 				"Access-Control-Allow-Origin:*\r\n"  //允许所有源，也可以指定请求中的源
 				"Access-Control-Allow-Private-Network: true\r\n" //CORS-RFC1918 允许私有网络请求
+				"Content-Type: application/json\r\n"
 				"Content-Length:" + contentLen + "\r\n\r\n";
 
 			

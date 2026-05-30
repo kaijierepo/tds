@@ -316,14 +316,14 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		// 打印完整 SDP Answer 用于调试
 		LOG("[WebRTC] SDP Answer:\n%s", si.sdp.c_str());
 
-		// 先推入列表，再从列表中取引用传给 ICE 线程（确保生命周期与 StreamNode 一致）
+		// 先推入列表，使用 shared_ptr 确保 vector 扩容时 ICE 线程持有的指针不会失效
+		auto sessionPtr = std::make_shared<StreamNode::STREAM_SESSION>(si);
 		rc->client_sessions_mutex_.lock();
-		rc->client_sessions_.push_back(si);
-		StreamNode::STREAM_SESSION& sessionRef = rc->client_sessions_.back();
+		rc->client_sessions_.push_back(sessionPtr);
 		rc->client_sessions_mutex_.unlock();
 
 		// 启动 ICE-Lite 线程，监听该会话的 UDP 端口并响应 STUN Binding Request
-		rc->startIceHandleThread(sessionRef);
+		rc->startIceHandleThread(sessionPtr);
 
 		Sleep(1000);
 		json j;

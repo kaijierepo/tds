@@ -2665,20 +2665,22 @@ struct SessionDtlsState {
     // 每个 WebRTC 客户端需要独立连续的序列号
     uint16_t local_seq = 0;
     bool    seq_inited = false;
-    // SPS/PPS 注入标记（替代 session->conn_state 的 3→4 标记）
+    // SPS/PPS 注入标记（替代 session->state 的 3→4 标记）
     bool    sps_pps_injected = false;
 };
 
 void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
-    std::vector<StreamNode::STREAM_SESSION> playClients;
+    std::vector<std::shared_ptr<StreamNode::STREAM_SESSION>> playClients;
     client_sessions_mutex_.lock();
     playClients = client_sessions_;
     client_sessions_mutex_.unlock();
     // 序列化RTP包
     auto data = packet.serialize();
 
-    for (int i = 0; i < playClients.size(); i++) {
-        StreamNode::STREAM_SESSION& client = playClients[i];
+    for (size_t i = 0; i < playClients.size(); i++) {
+        auto& sp = playClients[i];
+        if (!sp) continue;
+        StreamNode::STREAM_SESSION& client = *sp;
         if (client.transport_mode == TransportMode::UDP) {
             // UDP推流（RTSP 明文）
             if (sendUDPDataToSession(data.data(), data.size(), client)) {
@@ -2710,7 +2712,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     }
 
     // === WebRTC SRTP 发送路径 ===
-    // 遍历所有 ICE 会话，对 DTLS+SRTP 已完成的会话通过 SRTP 加密后发送视频
+    // 遍历所有 client_sessions_，对 DTLS+SRTP 已完成的会话通过 SRTP 加密后发送视频
     {
         // 检测当前包是否包含 IDR NAL（用于在 IDR 前插入 SPS/PPS）
         bool isIdr = false;
@@ -2737,17 +2739,19 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             }
         }
 
-        std::vector<std::shared_ptr<IceThreadCtx>> contexts;
+        // 获取 client_sessions_ 快照（避免持锁遍历）
+        std::vector<std::shared_ptr<STREAM_SESSION>> sessions;
         {
-            std::lock_guard<std::mutex> lock(ice_contexts_mutex_);
-            contexts = ice_contexts_;
+            std::lock_guard<std::mutex> lock(client_sessions_mutex_);
+            sessions = client_sessions_;
         }
-        for (auto& ctx : contexts) {
-            // conn_state: 3=SRTP激活, 4=SRTP激活+SPS/PPS已注入
-            if (!ctx->session || (ctx->session->conn_state != 3 && ctx->session->conn_state != 4)) continue;
+        for (auto& session : sessions) {
+            if (!session || !session->is_webrtc) continue;
+            // state: 3=SRTP激活（is_webrtc 下 S3_SRTP_ACTIVE 即为激活态）
+            if (session->state != SESSION_STATE::S3_SRTP_ACTIVE) continue;
 
             // 通过 SessionDtlsState 正确访问 DTLS 和 SRTP 上下文
-            auto* dtlsState = static_cast<SessionDtlsState*>(ctx->session->dtls_transport_);
+            auto* dtlsState = static_cast<SessionDtlsState*>(session->dtls_transport_);
             if (!dtlsState || !dtlsState->srtp_ready) continue;
             if (!dtlsState->dtls.isPeerSet()) continue;
 
@@ -2761,8 +2765,8 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             }
 
             // 如果当前包是 IDR 且 session 有 SPS/PPS，先发送 SPS/PPS RTP 包
-            if (!ctx->session->last_was_idr_ && isIdr 
-                && !ctx->session->sps.empty() && !ctx->session->pps.empty()) {
+            if (!session->last_was_idr_ && isIdr 
+                && !session->sps.empty() && !session->pps.empty()) {
                 // 辅助函数：发送单个 NAL 的 RTP 包，使用 per-session 独立序列号
                 auto sendSingleNalRtp = [&](const std::vector<uint8_t>& nal) {
                     std::vector<uint8_t> nalData(12 + nal.size());
@@ -2785,22 +2789,22 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                     auto srtpPkt = SrptProtect::protect(srtpCtx, nalData);
                     if (!srtpPkt.empty()) {
                         const struct sockaddr_in& peerAddr = dtls.getPeerAddr();
-                        sendto(ctx->sock,
+                        sendto(session->rtp_socket,
                             (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
                             (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
                     }
                 };
 
-                sendSingleNalRtp(ctx->session->sps);
-                sendSingleNalRtp(ctx->session->pps);
+                sendSingleNalRtp(session->sps);
+                sendSingleNalRtp(session->pps);
                 LOG("SRTP: injected SPS (%zu bytes, NAL type=0x%02x) + PPS (%zu bytes, NAL type=0x%02x) before IDR, seq_start=%u",
-                    ctx->session->sps.size(),
-                    ctx->session->sps.empty() ? 0 : (ctx->session->sps[0] & 0x1F),
-                    ctx->session->pps.size(),
-                    ctx->session->pps.empty() ? 0 : (ctx->session->pps[0] & 0x1F),
+                    session->sps.size(),
+                    session->sps.empty() ? 0 : (session->sps[0] & 0x1F),
+                    session->pps.size(),
+                    session->pps.empty() ? 0 : (session->pps[0] & 0x1F),
                     dtlsState->local_seq - 2);
             }
-            ctx->session->last_was_idr_ = isIdr;
+            session->last_was_idr_ = isIdr;
 
             // 用 per-session 独立序列号替换原始 seq 后发送
             // 注意：需要修改 rtpVec 中的序列号字节（byte[2], byte[3]）
@@ -2813,7 +2817,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             if (srtpPkt.empty()) continue;
 
             const struct sockaddr_in& peerAddr = dtls.getPeerAddr();
-            int sent = sendto(ctx->sock,
+            int sent = sendto(session->rtp_socket,
                 (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
                 (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
 
@@ -3313,66 +3317,61 @@ void StreamNode::writeNALtoFile(uint8_t nal_type,char* nal, size_t size, std::of
 // ICE-Lite + DTLS + SRTP (WebRTC) 实现 — 每客户端一线程
 // ============================================================================
 
-void StreamNode::startIceHandleThread(STREAM_SESSION& session) {
-    if (session.rtp_socket == kInvalidSocket || !session.is_webrtc) {
+void StreamNode::startIceHandleThread(std::shared_ptr<STREAM_SESSION> session) {
+    if (!session || session->rtp_socket == kInvalidSocket || !session->is_webrtc) {
         return;
     }
-
-    auto ctx = std::make_shared<IceThreadCtx>();
-    ctx->sock = session.rtp_socket;
-    ctx->ice_ufrag = session.ice_ufrag;
-    ctx->ice_pwd = session.ice_pwd;
-    ctx->session = &session;
 
     // 设置 socket 接收超时为 1 秒，保证 stop 时能及时退出
 #ifdef _WIN32
     int timeout_ms = 1000;
-    setsockopt(static_cast<SOCKET_TYPE>(ctx->sock), SOL_SOCKET, SO_RCVTIMEO,
+    setsockopt(static_cast<SOCKET_TYPE>(session->rtp_socket), SOL_SOCKET, SO_RCVTIMEO,
                (const char*)&timeout_ms, sizeof(timeout_ms));
 #else
     struct timeval tv = {1, 0};
-    setsockopt(ctx->sock, SOL_SOCKET, SO_RCVTIMEO,
+    setsockopt(session->rtp_socket, SOL_SOCKET, SO_RCVTIMEO,
                (const char*)&tv, sizeof(tv));
 #endif
 
-    ctx->thread = std::thread(&StreamNode::iceHandleLoop, this, ctx);
+    session->ice_running_ = true;
+    session->ice_thread_ = std::thread(&StreamNode::iceHandleLoop, this, session);
 
-    std::lock_guard<std::mutex> lock(ice_contexts_mutex_);
-    ice_contexts_.push_back(ctx);
-
-    logInfo("ICE thread started for socket fd=" + std::to_string(ctx->sock)
-            + " ufrag=" + ctx->ice_ufrag);
+    logInfo("ICE thread started for socket fd=" + std::to_string(session->rtp_socket)
+            + " ufrag=" + session->ice_ufrag);
 }
 
 void StreamNode::stopAllIceThreads() {
-    std::vector<std::shared_ptr<IceThreadCtx>> contexts;
+    // 获取所有 client_sessions_ 快照，停止其中的 WebRTC ICE 线程
+    std::vector<std::shared_ptr<STREAM_SESSION>> sessions;
     {
-        std::lock_guard<std::mutex> lock(ice_contexts_mutex_);
-        contexts.swap(ice_contexts_);
+        std::lock_guard<std::mutex> lock(client_sessions_mutex_);
+        sessions = client_sessions_;
     }
 
-    for (auto& ctx : contexts) {
-        ctx->running = false;
-        if (ctx->thread.joinable()) {
-            ctx->thread.join();
+    for (auto& s : sessions) {
+        if (!s || !s->is_webrtc) continue;
+
+        s->ice_running_ = false;
+        if (s->ice_thread_.joinable()) {
+            s->ice_thread_.join();
         }
-        // 清理 DTLS 状态
-        if (ctx->session && ctx->session->dtls_transport_) {
-            delete static_cast<SessionDtlsState*>(ctx->session->dtls_transport_);
-            ctx->session->dtls_transport_ = nullptr;
-            ctx->session->srtp_context_   = nullptr;
+        // 清理 DTLS 状态（iceHandleLoop 退出时通常已清理，这里兜底）
+        if (s->dtls_transport_) {
+            delete static_cast<SessionDtlsState*>(s->dtls_transport_);
+            s->dtls_transport_ = nullptr;
+            s->srtp_context_   = nullptr;
         }
-        logInfo("ICE thread stopped for socket fd=" + std::to_string(ctx->sock));
+        logInfo("ICE thread stopped for socket fd=" + std::to_string(s->rtp_socket));
     }
 }
 
-void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
+void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
     uint8_t buf[2048];
 
     // 初始化本会话的 DTLS 状态
     auto* dtls_state = new SessionDtlsState();
-    ctx->session->dtls_transport_ = dtls_state;
-    ctx->session->srtp_context_   = &dtls_state->srtp_ctx;
+    session->dtls_transport_ = dtls_state;
+    session->srtp_context_   = &dtls_state->srtp_ctx;
 
     // 使用 StreamServer 的共享证书初始化 DTLS
     extern StreamServer streamSrv;
@@ -3383,18 +3382,30 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
         dtls_state->dtls_initialized = dtls_state->dtls.init(
             streamSrv.m_dtlsCertPem, streamSrv.m_dtlsKeyPem);
         if (dtls_state->dtls_initialized) {
-            dtls_state->dtls.setSocket(ctx->sock, {}); // peer 会在首包时由 recvfrom 设置
+            dtls_state->dtls.setSocket(session->rtp_socket, {}); // peer 会在首包时由 recvfrom 设置
             dtls_state->dtls.startHandshake();
-            // conn_state 将在收到 STUN Binding Request 并回复后置 1，不在此处提前标记
         }
     }
 
-    while (ctx->running) {
+    auto dtls_start = std::chrono::steady_clock::now();
+
+    while (session->ice_running_) {
         struct sockaddr_in peer;
         socklen_t peerLen = sizeof(peer);
-        int len = recvfrom(static_cast<SOCKET_TYPE>(ctx->sock),
+        int len = recvfrom(static_cast<SOCKET_TYPE>(session->rtp_socket),
                            (char*)buf, sizeof(buf), 0,
                            (struct sockaddr*)&peer, &peerLen);
+
+        // 检查 DTLS 握手是否超时（8秒内 state 未到 3）
+        if (session->state >= S1_ICE_CONNECTED && session->state < S3_SRTP_ACTIVE) {
+            auto now = std::chrono::steady_clock::now();
+            if (now - dtls_start > std::chrono::seconds(8)) {
+                LOG("[ICE] DTLS handshake timeout (8s), state=%d",
+                    (int)session->state);
+                session->ice_running_ = false;
+                break;
+            }
+        }
 
         if (len < 0) {
             continue;  // 超时，继续循环
@@ -3463,7 +3474,7 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
             response[lenPos + 1] = attrLen & 0xFF;
 
             // 计算 HMAC-SHA1：key = ice_pwd（mbedTLS 4.x 使用 PSA MAC API）
-            const std::string& icePwd = ctx->session->ice_pwd;
+            const std::string& icePwd = session->ice_pwd;
             if (!icePwd.empty()) {
                 psa_mac_operation_t macOp = psa_mac_operation_init();
                 psa_key_attributes_t keyAttr = PSA_KEY_ATTRIBUTES_INIT;
@@ -3578,22 +3589,26 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
                     inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), pos, dbg);
             }
 
-            sendto(static_cast<SOCKET_TYPE>(ctx->sock),
+            sendto(static_cast<SOCKET_TYPE>(session->rtp_socket),
                    (const char*)response, pos, 0,
                    (struct sockaddr*)&peer, sizeof(peer));
 
             // ICE 连通性确认：收到 Binding Request 并回复 Response
             // 只在初始状态(0)时升级为1，避免 keep-alive Binding Request 把 SRTP 激活(3)降级
-            if (ctx->session->conn_state == 0) {
-                ctx->session->conn_state = 1;
+            if (session->state == SESSION_STATE::S0_WAITING_ICE) {
+                session->state = SESSION_STATE::S1_ICE_CONNECTED;
+                dtls_start = std::chrono::steady_clock::now();  // 开始 DTLS 握手计时
             }
         }
         // === DTLS ===
         else if (firstByte >= 0x14 && firstByte <= 0x18) {
             if (!dtls_state->dtls_initialized) continue;
 
+            // 每次收到 DTLS 数据包，重置握手超时计时器
+            dtls_start = std::chrono::steady_clock::now();
+
             // 更新对端地址（首包时绑定）
-            dtls_state->dtls.setSocket(ctx->sock, peer);
+            dtls_state->dtls.setSocket(session->rtp_socket, peer);
 
             // 设置客户端传输标识（IP+Port），DTLS Cookie 需要它来生成 HMAC
             dtls_state->dtls.setClientTransportId(peer);
@@ -3611,7 +3626,7 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
                 // 握手成功：doHandshakeStep 内部已设置 handshake_done_ 并导出密钥
                 if (dtls_state->dtls.isHandshakeDone()) {
                     dtls_state->srtp_ready = true;
-                    ctx->session->conn_state = 2; // DTLS 完成
+                    session->state = SESSION_STATE::S2_DTLS_COMPLETED; // DTLS 完成
 
                     // 初始化 SRTP 上下文（服务端使用 server_write_key）
                     const auto& keys = dtls_state->dtls.getKeyingMaterial();
@@ -3620,9 +3635,9 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
                             keys, true, /* is_server */
                             0);         // ssrc 将在发送时设置
 
-                        ctx->session->conn_state = 3; // SRTP 激活
+                        session->state = SESSION_STATE::S3_SRTP_ACTIVE; // SRTP 激活
                         LOG("[ICE] DTLS handshake + SRTP keys ready for socket fd="
-                            + std::to_string(ctx->sock));
+                            + std::to_string(session->rtp_socket));
                     }
                     break;
                 } else if (ret == MBEDTLS_ERR_SSL_WANT_READ ||
@@ -3665,7 +3680,7 @@ void StreamNode::iceHandleLoop(std::shared_ptr<IceThreadCtx> ctx) {
     // 清理本会话的 DTLS 状态
     if (dtls_state) {
         delete dtls_state;
-        ctx->session->dtls_transport_ = nullptr;
-        ctx->session->srtp_context_   = nullptr;
+        session->dtls_transport_ = nullptr;
+        session->srtp_context_   = nullptr;
     }
 }
