@@ -7,6 +7,7 @@
 #include <random>
 #include <cstdio>
 #include "prj.h"
+#include <filesystem>
 
 StreamServer streamSrv;
 
@@ -325,7 +326,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		// 启动 ICE-Lite 线程，监听该会话的 UDP 端口并响应 STUN Binding Request
 		rc->startIceHandleThread(sessionPtr);
 
-		Sleep(1000);
+		sleep(1000);
 		json j;
 		j["sdpAnswer"] = si.sdp;
 		j["serverRtpPort"] = si.server_rtp_port;
@@ -419,6 +420,9 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			j["duration"] = duration;
 			j["preSeconds"] = rc->rec_ctrl_.preSeconds;
 			rpcResp.result = j.dump();
+
+			// 清理超出数量限制的旧录像文件
+			cleanOldRecords();
 		}
 		else
 		{
@@ -688,4 +692,53 @@ bool StreamServer::closeStream(string tag)
 	}
 
 	return true;
+}
+
+void StreamServer::cleanOldRecords() {
+	std::string recordDir = tds->conf->dbPath + "/record/";
+	std::vector<std::pair<std::string, std::filesystem::file_time_type>> files;
+
+	namespace fs = std::filesystem;
+
+	try {
+		if (!fs::exists(recordDir) || !fs::is_directory(recordDir))
+			return;
+
+		for (const auto& entry : fs::directory_iterator(recordDir)) {
+			if (entry.is_regular_file() && entry.path().extension() == ".h264") {
+				files.push_back({ entry.path().string(), entry.last_write_time() });
+			}
+		}
+	}
+	catch (const std::exception& e) {
+		LOG("[录像清理] 扫描目录失败: %s, 错误: %s", recordDir.c_str(), e.what());
+		return;
+	}
+
+	int maxFiles = tds->conf->recordMaxFiles;
+	if (maxFiles <= 0) maxFiles = 100;
+
+	if ((int)files.size() <= maxFiles)
+		return;
+
+	std::sort(files.begin(), files.end(),
+		[](const auto& a, const auto& b) { return a.second < b.second; });
+
+	int toDelete = (int)files.size() - maxFiles;
+	int deleted = 0;
+	for (int i = 0; i < toDelete; i++) {
+		const std::string& filePath = files[i].first;
+		if (std::remove(filePath.c_str()) == 0) {
+			LOG("[录像清理] 删除旧录像: %s", filePath.c_str());
+			deleted++;
+		}
+		else {
+			LOG("[录像清理] 删除失败: %s", filePath.c_str());
+		}
+	}
+
+	if (deleted > 0) {
+		LOG("[录像清理] 完成, 保留上限: %d, 当前: %zu, 删除: %d",
+			maxFiles, files.size(), deleted);
+	}
 }

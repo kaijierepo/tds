@@ -129,6 +129,7 @@ masterTds=                #主服务地址，多个主服务使用逗号分隔 �
 
 #文件服务
 fsRoot=                   #文件服务的根目录。留空不启动文件服务
+recordMaxFiles=100     	  #录像文件最大保留数量
 
 #短信服务(飞鸽)
 smsApiUrl =			      #短信平台api地址
@@ -193,6 +194,10 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 		else if (checkKey(key, "dbPath")) {
 			dbPath = val.c_str();
 			dbPath = fs::toAbsolutePath(dbPath);
+		}
+		else if (checkKey(key, "recordMaxFiles")) {
+			recordMaxFiles = atoi(val.c_str());
+			if (recordMaxFiles <= 0) recordMaxFiles = 100;
 		}
 		else if (checkKey(key, "logPath")) {
 			logPath = val.c_str();

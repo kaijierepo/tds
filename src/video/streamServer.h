@@ -38,6 +38,7 @@ public:
 	std::string m_dtlsFingerprint;  // SHA-256, 用于 SDP
 
 	void initDtlsCertificate();
+	void cleanOldRecords();
 };
 
 extern StreamServer streamSrv;

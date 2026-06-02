@@ -437,6 +437,7 @@ struct iTDSConf {
 	std::string confPath;   //config data path
 	std::string currentPath; //current data of path
 	std::string dbPath;     //database folder path
+	int recordMaxFiles = 100; //max record files to keep, delete oldest when exceeded
 	std::string uiPath;     //ui web files path
 	std::string logPath;
 	std::string fmsPath;  //file manage service root path
