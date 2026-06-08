@@ -389,7 +389,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ENABLE_ALM_SRV_HOOK_SCRIPT;ENABLE_QJS;UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_QJS_HTTP;ENABLE_ALM_SRV_HOOK_SCRIPT;ENABLE_QJS;UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;CONF_FILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/common/crypto/include;../src/common/crypto/psa/drivers/builtin/include;../src/common/crypto/psa/core;../src/common/crypto/psa/drivers/builtin/src;../src/common/crypto/psa/platform;../src/common/crypto/psa/utilities;../src/common/crypto/psa/extras;../src/script/;../src/3rdparty/jerryscript/include/;../src/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
