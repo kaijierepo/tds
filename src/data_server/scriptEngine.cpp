@@ -1642,11 +1642,7 @@ void thread_reloadFile(std::string filePath) {
         g_mutexScriptFileBuff.lock();
         g_mapScriptFileBuff[filePath] = file_data;
         try {
-#ifdef _WIN32
-            g_mapScriptFileTime[filePath] = stdfs::last_write_time(utf8_to_utf16(filePath));
-#else
-            g_mapScriptFileTime[filePath] = stdfs::last_write_time(filePath);
-#endif
+            g_mapScriptFileTime[filePath] = stdfs::last_write_time(filePath);  // 同步保存文件修改时间，供后续 mtime 校验使用
         } catch (...) {}
         g_mutexScriptFileBuff.unlock();
 	}
@@ -1875,14 +1871,8 @@ bool loadScriptFile(std::string path, std::string& script) {
     // 即使 inotify 未触发，此校验也能保证下次执行时加载最新内容
     bool bFileChanged = true;
     try {
-#ifdef _WIN32
-        auto wpath = utf8_to_utf16(path);
-        if (stdfs::exists(wpath)) {
-            auto ftime = stdfs::last_write_time(wpath);
-#else
         if (stdfs::exists(path)) {
-            auto ftime = stdfs::last_write_time(path);
-#endif
+            auto ftime = stdfs::last_write_time(path);              // 获取文件当前修改时间
             auto it = g_mapScriptFileTime.find(path);
             if (it != g_mapScriptFileTime.end() && it->second == ftime) {  // 与缓存的时间戳对比
                 bFileChanged = false;                               // 时间一致，缓存未过期
@@ -1909,11 +1899,7 @@ bool loadScriptFile(std::string path, std::string& script) {
 
     g_mapScriptFileBuff[path] = script;                             // 更新内容缓存
     try {
-#ifdef _WIN32
-        g_mapScriptFileTime[path] = stdfs::last_write_time(utf8_to_utf16(path));
-#else
-        g_mapScriptFileTime[path] = stdfs::last_write_time(path);
-#endif
+        g_mapScriptFileTime[path] = stdfs::last_write_time(path);   // 更新修改时间缓存，使下次校验能够命中
     } catch (const std::exception&) {
     }
     return true;
