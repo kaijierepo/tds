@@ -81,6 +81,9 @@ bool MqttSrv::run() {
                     yyjson_val* yy_clientID = yyjson_obj_get(item, "clientID");
                     if(yy_clientID)
                     conf.clientID = yyjson_get_str(yy_clientID);
+                    yyjson_val* yy_connectScript = yyjson_obj_get(item, "connectScript");
+                    if(yy_connectScript)
+                        conf.connectScript = yyjson_get_str(yy_connectScript);
 					m_masterDSConf.push_back(conf);
 				}
 			}
@@ -208,15 +211,11 @@ void thread_mqtt_client_comm(void* p)
 	pDev->m_bConnectting = true;
 
     while (!pDev->m_bStop) {
-        while (pDev->m_bConnected) {
-            mg_mgr_poll(&mgr, 500);
-        }
+        mg_mgr_poll(&mgr, 500);
 
-        timeopt::sleepMilli(100);
-
-        if (pDev->m_bConnected == false && 
-            pDev->m_bConnectting == false &&
-            timeopt::calcTimePassMilliSecond(pDev->m_lastConnectTime) > 5000) 
+        if (!pDev->m_bConnected &&
+            !pDev->m_bConnectting &&
+            timeopt::calcTimePassMilliSecond(pDev->m_lastConnectTime) > 5000)
         {
             c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn, pDev);
             pDev->m_lastConnectTime.setNow();
@@ -240,7 +239,7 @@ void thread_mqtt_script(void* p) {
         }
 
         if (pDev->m_bThreadRunning && pDev->m_bConnected && pDev->m_conf.intervel != 0) {
-            //Ö´ĞĞ½Å±¾
+            //æ‰§è¡Œè„šæœ¬
             string strparams = "";
             string strResult = "";
             string strOutput = "";
@@ -282,7 +281,7 @@ void MqttClt::stop()
 void MqttClt::confUpdated()
 {
     if (m_lastSubTopics != m_conf.subTopics) {
-        LOG("[MQTT]¶©ÔÄĞŞ¸Ä£¬ÀÏÖ÷Ìâ %s,ĞÂÖ÷Ìâ %s", m_lastSubTopics.c_str(), m_conf.subTopics.c_str());
+        LOG("[MQTT]è®¢é˜…ä¿®æ”¹ï¼Œè€ä¸»é¢˜ %s,æ–°ä¸»é¢˜ %s", m_lastSubTopics.c_str(), m_conf.subTopics.c_str());
         stop();
         run(m_conf);
     }
@@ -356,7 +355,7 @@ void MqttClt::onRecvMqttData(string topic, string data)
 void MqttClt::onTdsNotify(string method,string params)
 {
     if (m_conf.sendScript != "") {
-        //Ö»´¦ÀíÊı¾İ¸üĞÂÍ¨Öª
+        //åªå¤„ç†æ•°æ®æ›´æ–°é€šçŸ¥
         if (method != "onDataUpdate") {
             return;
         }
@@ -396,6 +395,8 @@ void MqttClt::onTdsNotify(string method,string params)
 
 void MqttClt::onMqttConnected()
 {
-    
-    return;
+    if (m_conf.connectScript != "") {
+        string strResult, strOutput;
+        scriptManager.runScript(m_conf.connectScript, "", strResult, strOutput);
+    }
 }
