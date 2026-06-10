@@ -12,6 +12,7 @@ struct MASTER_SRV_CONF {
 	std::string pwd;
 	std::string subTopics;
 	int qos;
+	std::string connectScript;
 	std::string recvScript;       
 	std::string sendScript;		 
 	std::string cycleScript;		 
