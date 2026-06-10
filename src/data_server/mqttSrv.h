@@ -6,17 +6,16 @@
 using namespace std;
 
 struct MASTER_SRV_CONF {
-    std::string ip;							
-	int port;					
-	std::string user;			
-	std::string pwd;			
-	std::string subTopics;		
-	int qos;					
-	std::string connectScript;	
-	std::string recvScript;		
-	std::string sendScript;		
-	std::string cycleScript;	
-	int intervel;				
+    std::string ip;
+	int port;
+	std::string user;
+	std::string pwd;
+	std::string subTopics;
+	int qos;
+	std::string recvScript;       
+	std::string sendScript;		 
+	std::string cycleScript;		 
+	int intervel;			
 	std::string clientID;
 };
 
@@ -25,29 +24,29 @@ public:
 	MqttClt();
 	~MqttClt();
 
-	struct mg_mgr mgr;					
-	struct mg_connection* m_cltConn;	
+	struct mg_mgr mgr;  
+	struct mg_connection* m_cltConn;
 
-	bool run(MASTER_SRV_CONF conf);								
-	void stop();												
-	void onRecvMqttData(std::string topic, std::string data);	
-	void onTdsNotify(std::string method, std::string params);	
-	void onMqttConnected();										
-	void confUpdated();											
-	MASTER_SRV_CONF m_conf;										
+	bool run(MASTER_SRV_CONF conf);
+	void stop();
+	void onRecvMqttData(std::string topic, std::string data);
+	void onTdsNotify(std::string method, std::string params);
+	void onMqttConnected();
+	void confUpdated();
+	MASTER_SRV_CONF m_conf;
 
-	void mqttPublish(std::string topic, std::string data);		
+	void mqttPublish(std::string topic, std::string data);
 
-	SCRIPT_RUN_INFO m_lastRunInfo_onSend;		
-	SCRIPT_RUN_INFO m_lastRunInfo_onRecv;		
+	SCRIPT_RUN_INFO m_lastRunInfo_onSend;
+	SCRIPT_RUN_INFO m_lastRunInfo_onRecv;
 
-	bool m_bThreadRunning;						
-	bool m_bConnected;							
-	bool m_bConnectting;						
-	bool m_bStop;								
-	TIME m_lastConnectTime;						
-	std::string m_lastSubTopics;				
-	int m_socket;								
+	bool m_bThreadRunning;
+	bool m_bConnected;
+	bool m_bConnectting;
+	bool m_bStop;
+	TIME m_lastConnectTime;
+	std::string m_lastSubTopics;
+	int m_socket;
 };
 
 class MqttSrv
