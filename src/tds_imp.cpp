@@ -707,6 +707,11 @@ bool TDS_imp::run(string cmdline) {
 		string recPath = tds->conf->dbPath + "/record";
 		fs::createFolderOfPath(recPath);
 	}
+
+	string startupLogPath = tds->conf->dbPath + "/selfcheck/startup.log";
+	string startupInfo = g_strStartupTime + " " + m_sTitle + "\r\n";
+	fs::createFolderOfPath(startupLogPath);
+	fs::appendFile(startupLogPath, startupInfo);
 		
 	prj.loadObjTemplate();
 	prj.loadConfFile();
