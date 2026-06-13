@@ -47,9 +47,18 @@ class OBJ;
 */
 
 
+struct OBJ_SELECTOR {
+	std::string group;
+	std::string ioType;
+	std::string mode;
+};
 
-struct OBJ_QUERIER {
-	//指定子对象的返回结构
+/**
+ * Specifies which properties to return.
+ * Unlike attributes, 'properties' include both primitive fields and nested child objects.
+ */
+struct OBJ_PROP_SEL {
+	//specify child objects to return
 	bool getChild;
 	bool getMp;
 	bool dataSaveMp;
@@ -58,7 +67,7 @@ struct OBJ_QUERIER {
 	std::string leafLevel;
 	bool flatten;  //是否将多层级的树形子节点压缩为只有一个层级的列表。
 
-	//指定对象中返回的数据
+	//specify status data to return
 	bool getVal; 
 	bool getValDesc;
 	bool getStatus;  //status = val + alarm + 其他运行时数据
@@ -74,7 +83,7 @@ struct OBJ_QUERIER {
 
 	OBJ* pRoot;
 
-	OBJ_QUERIER() {
+	OBJ_PROP_SEL() {
 		 dataSaveMp = false;
 		 getConf = true;
 		 getMp = false;
@@ -428,8 +437,8 @@ public:
 	virtual bool loadStatus(yyjson_val* status);
 	virtual bool saveStatus(json& statusNode);
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);
-	virtual bool toJson(YY_OBJ_VAL& yyObj, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const std::string& user = "admin");
-	virtual bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const std::string& user = "admin");
+	virtual bool toJson(YY_OBJ_VAL& yyObj, OBJ_PROP_SEL querier, bool* isSelectedByLeafType = nullptr, const std::string& user = "admin");
+	virtual bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_PROP_SEL querier, bool* isSelectedByLeafType = nullptr, const std::string& user = "admin");
 	//virtual bool toJson(json& conf, json serializeOption);
 	//从srcTree找到与自身对应的对象，并拷贝以该对象为根节点的子树的状态
 	virtual bool loadTreeStatus(OBJ* pSrcTree);
@@ -480,7 +489,8 @@ public:
 	void removeMp(json& mo);
 	void clearChildren();
 	OBJ* getOwnerChildTds();
-	static OBJ_QUERIER parseQuerier(json& opt);
+	static OBJ_PROP_SEL parseQuerier(json& opt);
+	static OBJ_PROP_SEL parseQuerier(yyjson_val* opt);
 	OBJ* GetRootMO();
 	OBJ* GetFatherMO(std::string type);//获得指定类型的父节点，或者是自身
 	OBJ* GetChildMO(std::string type);
@@ -499,6 +509,7 @@ public:
 	void GetAllChildAlarmInfo(std::string& strSummary);
 	bool getTagsByTagSelector(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt);
 	void getObjByTagSelector(std::vector<OBJ*>& objList, TAG_SELECTOR& tagSelector);
+	std::vector<OBJ*> filterByObjSel(std::vector<OBJ*>& objList, OBJ_SELECTOR objSel);
 	OBJ* getObjByID(std::string id);
 	void getMpByTagSelector(std::vector<MP*>& mpList, TAG_SELECTOR& tagSelector);
 	std::vector<std::string> getTagPartials(std::string strTag);

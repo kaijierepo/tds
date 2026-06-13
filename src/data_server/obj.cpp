@@ -584,11 +584,11 @@ void OBJ::recursiveSetOffline()
 
 //bool OBJ::toJson(json& conf, json serializeOption)
 //{
-//	OBJ_QUERIER q = parseQuerier(serializeOption);
+//	OBJ_PROP_SEL q = parseQuerier(serializeOption);
 //	return toJson(conf, q);
 //}
 
-bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* parentSelectedByLeafType, const string& user) {
+bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_PROP_SEL q, bool* parentSelectedByLeafType, const string& user) {
 	//先进行权限判断
 	if (user != "admin" && user != "") {//内部脚本调用时，user == ""
 		if (m_level != "mp") {
@@ -1031,7 +1031,7 @@ bool OBJ::saveStatus(yyjson_mut_val* statusNode,yyjson_mut_doc* doc)
 	return false;
 }
 
-bool OBJ::toJson(YY_OBJ_VAL& yyObj, OBJ_QUERIER querier, bool* isSelectedByLeafType, const string& user)
+bool OBJ::toJson(YY_OBJ_VAL& yyObj, OBJ_PROP_SEL querier, bool* isSelectedByLeafType, const string& user)
 {
 	return toJson(yyObj.val, yyObj.doc, querier, isSelectedByLeafType, user);
 }
@@ -1824,9 +1824,9 @@ void OBJ::statisChildMo(json& jStatis)
 	}
 }
 
-OBJ_QUERIER OBJ::parseQuerier(json& opt)
+OBJ_PROP_SEL OBJ::parseQuerier(json& opt)
 {
-	OBJ_QUERIER q;
+	OBJ_PROP_SEL q;
 	if (opt == nullptr)
 		return q;
 
@@ -1883,6 +1883,18 @@ OBJ_QUERIER OBJ::parseQuerier(json& opt)
 		q.getStatusDetail = opt["getStatusDetail"].get<bool>();
 	}
 	return q;
+}
+
+OBJ_PROP_SEL OBJ::parseQuerier(yyjson_val* opt)
+{
+	char* p = yyjson_val_write(opt,0,nullptr);
+	if (p) {
+		string s = p;
+		json j = json::parse(s);
+		free(p);
+		return parseQuerier(j);
+	}
+	return OBJ_PROP_SEL();
 }
 
 
@@ -2020,10 +2032,6 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 
 		OBJ* p = prj.queryObj(exp, tagSelector.selLanguage);
 		if (p) {
-			if (!p->isSelectedByIOType(tagSelector.ioType)) {
-				continue;
-			}
-
 			objList.push_back(p);
 		}
 	}
@@ -2035,12 +2043,48 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type, tagSelector.level);
 
 		for (auto& i : tagSet) {
-			if (!i->isSelectedByIOType(tagSelector.ioType)) {
-				continue;
-			}
 			objList.push_back(i);
 		}
 	}
+}
+
+std::vector<OBJ*> OBJ::filterByObjSel(std::vector<OBJ*>& objList, OBJ_SELECTOR objSel)
+{
+	vector<OBJ*> org = objList;
+	vector<OBJ*> dest;
+	if (objSel.group == "") {
+		dest = org;
+	}
+	else {
+		for (int i = 0; i < org.size(); i++) {
+			OBJ* pObj = org[i];
+			if (pObj->m_groupName == objSel.group) {
+				dest.push_back(pObj);
+			}
+			else if (objSel.group == "*" && pObj->m_groupName != "") {
+				dest.push_back(pObj);
+			}
+		}
+	} 
+
+	org = dest;
+	dest.clear();
+	if (objSel.ioType == "") {
+		dest = org;
+	}
+	else {
+		for (int i = 0; i < org.size(); i++) {
+			OBJ* pObj = org[i];
+			if (pObj->m_level == "mp") {
+				MP* pmp = (MP*)pObj;
+				if (pmp->m_ioType == objSel.ioType) {
+					dest.push_back(pObj);
+				}
+			}
+		}
+	}
+	
+	return dest;
 }
 
 OBJ* OBJ::getObjByID(string id)

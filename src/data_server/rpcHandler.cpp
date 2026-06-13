@@ -999,7 +999,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	else if (method == "getSessionBuff")
 	{
 		string remoteAddr = params["remoteAddr"].get<string>();
-		shared_ptr<TDS_SESSION> pSession = ioSrv.getTDSSession(remoteAddr);
+		shared_ptr<TDS_SESSION> pSession = ioSrv.getIOSession(remoteAddr);
 
 		if (pSession != nullptr)
 		{
@@ -1037,7 +1037,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 			vec = str::hexStrToBytes(data);
 		}
 
-		shared_ptr<TDS_SESSION> pDestSession = ioSrv.getTDSSession(tdsSession);
+		shared_ptr<TDS_SESSION> pDestSession = ioSrv.getIOSession(tdsSession);
 		if (pDestSession == nullptr)
 		{
 			rpcResp.error = "\"session not found," +  tdsSession +  "\"";
@@ -1953,7 +1953,7 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 		result = p.dump();
 	}
 	else if (method == "acq") {
-		OBJ_QUERIER query;
+		OBJ_PROP_SEL query;
 		query.getConf = false;
 		query.getStatus = true;
 		query.getChild = true;
@@ -2216,164 +2216,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			prj.getMpTypeList(list);
 			result = list.dump();
 		}
-		else if (method == "getObjTree") {
-			result = prj.m_moConfFileDump;
-		}
-		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo") {
-			session.tStartHandle = getTick();
-
-			//位号选择器 参数tag + rootTag
-			//用户查询时 tag默认"",rootTag默认""
-			//tag是相对于rootTag的相对位号
-			//rootTag和tag组合出用户位号。
-			//用户位号和用户组织结构组合成系统位号
-			string rootTag = "";//查询根
-			if (params != nullptr && params["rootTag"] != nullptr && params["rootTag"].get<string>() != "") { //获取子树
-				rootTag = params["rootTag"].get<string>();
-			}
-
-			rootTag = TAG::addRoot(rootTag, session.org);//组合为系统查询根
-
-			//类型选择
-			string type = ""; //为空表示选中所有，为*表示选中所有自定义类型
-			if (params["type"] != nullptr) {
-				type = params["type"].get<string>();
-			}
-	
-			//层级选择
-			//将getOrg,getMp,getMo统一转化为getObj
-			string level = "*";
-			if (params["level"] != nullptr) {
-				level = params["level"].get<string>();
-			}
-			else if (method == "getOrg") {
-				level = "org";
-			}
-			else if (method == "getCustomOrg") {
-				level = "org";
-			}
-			else if (method == "getMo") {
-				level = "mo";
-			}
-			else if (method == "getCustomMo") {
-				level = "mo";
-			}
-			else if (method == "getMp") {
-				params["getMp"] = true;
-				level = "mp";
-			}
-
-			//位号选择
-			vector<string> vecTagSel = parseTagSel(params["tag"],type);
-
-			TAG_SELECTOR tagSel;
-			tagSel.selLanguage = session.language;
-			tagSel.init(vecTagSel, rootTag, type,level);
-
-			if (params["ioType"] != nullptr) {
-                tagSel.ioType = params["ioType"].get<string>();
-			}
-
-			string mode = "array";
-			if (params["mode"] != nullptr) {
-				mode = params["mode"].get<string>();
-			}
-			
-			vector<OBJ*> objList;
-			prj.getObjByTagSelector(objList, tagSel);
-
-			//多选模式
-			if (!tagSel.singleSelMode()) {
-				params["rootTag"] = rootTag;
-
-				OBJ_QUERIER q = OBJ::parseQuerier(params);
-				q.language = session.language;
-				q.getTag = true; //多选模式，没有树结构，因此需要tag信息
-
-				if (mode == "array") {
-					yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
-					yyjson_mut_val* rootRlt = yyjson_mut_arr(doc);
-
-					for (int i = 0; i < objList.size(); i++) {
-						OBJ* pObj = objList[i];
-
-						yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
-
-						bool selectedByLeafType = false;
-						if (pObj->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
-							yyjson_mut_arr_append(rootRlt, rootObj);
-						}
-					}
-
-					rpcResp.info = str::format("objCount=%d", objList.size());
-
-					size_t len = 0;
-					char* s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
-					if (s) {
-						result = s;
-						free(s);
-					}
-
-					yyjson_mut_doc_free(doc);
-				}
-				else {
-					yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
-					yyjson_mut_val* rootRlt = yyjson_mut_obj(doc);
-
-					for (int i = 0; i < objList.size(); i++) {
-						OBJ* pObj = objList[i];
-
-						yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
-
-						bool selectedByLeafType = false;
-						if (pObj->toJson(rootObj, doc, q,&selectedByLeafType, session.user)) {
-							string tag = yyjson_mut_get_str(yyjson_mut_obj_get(rootObj, "tag"));
-							tag = str::replace(tag, ".", "_");
-							yyjson_mut_val* key = yyjson_mut_strcpy(doc, tag.c_str());
-							yyjson_mut_obj_put(rootRlt, key, rootObj);
-						}
-					}
-
-					size_t len = 0;
-					char* s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
-					if (s) {
-						result = s;
-						free(s);
-					}
-
-					yyjson_mut_doc_free(doc);
-				}
-			}
-			//精确查找模式，返回一个对象
-			else if(objList.size() == 1){
-				OBJ* pmo = objList[0];
-
-				//所有位号以用户位号的方式展示。除非另外指定rootTag
-				yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
-				yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
-
-				params["rootTag"] = rootTag;
-
-				OBJ_QUERIER q = OBJ::parseQuerier(params);
-				q.pRoot = pmo;
-				q.language = session.language;
-
-				bool selectedByLeafType = false;
-				if (pmo->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
-					size_t len = 0;
-					char* s = yyjson_mut_val_write(rootObj, YYJSON_WRITE_NOFLAG, &len);
-					if (s) {
-						result = s;
-						free(s);
-					}
-				}
-
-				yyjson_mut_doc_free(doc);
-			}
-			else {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
-			}
-		}
 		else if ( method == "getCustomTypes") {
 			OBJ* pmo = nullptr;
 			if (params != nullptr && params.contains("tag"))
@@ -2513,30 +2355,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	return bHandled;
 }
 
-vector<string> rpcHandler::parseTagSel(json& tagSel,string& type) {
-	vector<string> vec;
-	if (tagSel.is_null()) { //位号未指定
-		if (type == "")  //type未指定
-		{
-			vec.push_back(""); //选中根位号
-		}
-		else { //指定了某种自定义对象，认为是一种批量查找
-			vec.push_back("*");
-		}
-	}
-	else if (tagSel.is_string()) {
-		vec.push_back(tagSel.get<string>());
-	}
-	else if (tagSel.is_array()) {
-		for (auto& t : tagSel) {
-			if (t.is_string()) {
-				vec.push_back(t.get<string>());
-			}
-		}
-	}
-
-	return vec;
-}
 
 bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
@@ -2785,7 +2603,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	else if (method == "enableIOSession") {
 		string ip = params["ip"];
 		int port = params["port"].get<int>();
-		shared_ptr<TDS_SESSION> p = ioSrv.getTDSSession(ip,port);
+		shared_ptr<TDS_SESSION> p = ioSrv.getIOSession(ip,port);
 		p->m_bEnableIO = true;
 		if (p->pTcpSession) {
 			p->pTcpSession->bEnable = true;
@@ -2798,7 +2616,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	else if (method == "disableIOSession") {
 		string ip = params["ip"];
 		int port = params["port"].get<int>();
-		shared_ptr<TDS_SESSION> p = ioSrv.getTDSSession(ip, port);
+		shared_ptr<TDS_SESSION> p = ioSrv.getIOSession(ip, port);
 		p->m_bEnableIO = false;
 		if (p->pTcpSession) {
 			p->pTcpSession->bEnable = false;
@@ -3536,8 +3354,9 @@ float CalDTWDist(const vector<double>& vecRef, const vector<double>& vecCur)
 
 bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	bool bHandled = true;
-	if (method == "setObj") {
-		prj.rpc_setObj(params, rpcResp, session);
+
+	if (prj.handleRpc(method, params, rpcResp, session)) {
+		bHandled = true;
 	}
 	else if (db.handleRpc(method, params, rpcResp.result, rpcResp.error, rpcResp.dbQueryInfo, session.org, session.language)) {
 		bHandled = true;
@@ -3664,17 +3483,19 @@ void rpcHandler::setLicenceStatus(json j)
 	m_csLicenceStatus.unlock();
 }
 
-bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string method = yyjson_get_str(yyjson_obj_get(jReq,"method"));
-	yyjson_val* yytdsSession = yyjson_obj_get(jReq, "tdsSession");
+	yyjson_val* yyIOSession = yyjson_obj_get(jReq, "ioSession");
 	yyjson_val* yyioAddr = yyjson_obj_get(jReq, "ioAddr");
 	yyjson_val* yytag = yyjson_obj_get(jReq, "tag");
+	yyjson_val* yyObj = yyjson_obj_get(jReq, "object");
 	yyjson_val* yyChildTds = yyjson_obj_get(jReq, "childTds");
+	yyjson_val* yyv_params = yyjson_obj_get(jReq, "params");
 
-	if (yytdsSession) {//使用tdsSession进行io透传
-		string tdsSession = yyjson_get_str(yytdsSession);
-		shared_ptr<TDS_SESSION> pDestSession = ioSrv.getTDSSession(tdsSession);
+	if (yyIOSession) {//使用tdsSession进行io透传
+		string ioSession = yyjson_get_str(yyIOSession);
+		shared_ptr<TDS_SESSION> pDestSession = ioSrv.getIOSession(ioSession);
 		
 		if (pDestSession == nullptr) {
 			return true;
@@ -3690,7 +3511,7 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 		}
 
 		json j = json::parse(str);
-		j["clientId"] = pSession->getRemoteAddr();
+		j["clientId"] = session.remoteAddr;
 		j.erase("user");
 		j.erase("token");
 
@@ -3703,7 +3524,7 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 		ioDev* pIoDev = nullptr;
 
 		string strIoAddr = yyjson_get_str(yyioAddr);
-		pSession->route_ioAddr = strIoAddr;
+		session.route_ioAddr = strIoAddr;
 
 		pIoDev = ioSrv.getIODev(strIoAddr);
 		if (!pIoDev) {
@@ -3723,15 +3544,15 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 		json j = json::parse(s);
 		pIoDev->handleDevRpcCall(j,rpcResp);
 
-		logRPCRoute(method, j["params"],rpcResp, *pSession);
+		logRPCRoute(method, yyv_params,rpcResp, session, "", pIoDev->getIOAddrStr());
 
 		return true;
 	}
 	else if (yytag) {
 		string tag = yyjson_get_str(yytag);
-		tag = TAG::addRoot(tag, pSession->org);
+		tag = TAG::addRoot(tag, session.org);
 
-		pSession->route_tag = tag;
+		session.route_tag = tag;
 
 		string s;
 		
@@ -3748,10 +3569,10 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 		ioDev* pIoDev = ioSrv.getIODevByTag(tag);
 		if (pIoDev) {
 			j.erase("tag");
-			pSession->route_ioAddr = pIoDev->getIOAddrStr();
+			session.route_ioAddr = pIoDev->getIOAddrStr();
 			pIoDev->handleDevRpcCall(j, rpcResp);
 
-			logRPCRoute(method, j["params"],rpcResp, *pSession);
+			logRPCRoute(method, yyv_params,rpcResp, session, tag, pIoDev->getIOAddrStr());
 			return true;
 		}
 
@@ -3818,6 +3639,47 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 			return true;
 		}*/
 	}
+	else if (yyObj) {
+		TAG_SELECTOR tagSel;
+		OBJ_SELECTOR objSel;
+		prj.getTagSel(tagSel, method, yyObj, session);
+		prj.getObjSel(objSel, method, yyObj, session);
+		vector<OBJ*> objList;
+		prj.getObjByTagSelector(objList, tagSel);
+		objList = prj.filterByObjSel(objList, objSel);
+		string routeInfo;
+		int routeObjCount = 0;
+		for (int i = 0; i < objList.size(); i++) {
+			OBJ* pObj = objList[i];
+			if (pObj) {
+				string tag = pObj->getTag();
+				ioDev* pIoDev = ioSrv.getIODevByTag(tag);
+				if (pIoDev) {
+					char* p = yyjson_val_write(jReq, 0, nullptr);
+					if (p) {
+						string ioAddr = pIoDev->getIOAddrStr();
+						routeInfo += TAG::trimRoot(tag, session.org) + "," + ioAddr + ";";
+						routeObjCount++;
+						string s = p;
+						thread t([s, method, session, pIoDev,tag,ioAddr]() {
+							yyjson_doc* doc = yyjson_read(s.c_str(), s.length(), 0);
+							yyjson_val* yyv_req = yyjson_doc_get_root(doc);
+							yyjson_val* yyv_params = yyjson_obj_get(yyv_req, "params");
+							RPC_RESP resp;
+							pIoDev->handleDevRpcCall(yyv_req, resp);
+							rpcSrv.logRPCRoute(method, yyv_params, resp,session,tag,ioAddr);
+							yyjson_doc_free(doc);
+							});
+						t.detach();
+						free(p);
+					}
+				}
+			}
+		}
+
+		rpcResp.result = RPC_OK;
+		rpcResp.info = str::format("共转发%d个设备,%s",routeObjCount,routeInfo.c_str());
+	}
 	else if (yyChildTds)
 	{
 		string s = yyjson_val_write(jReq,0,nullptr);
@@ -3825,8 +3687,8 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 		jReq.erase("user");
 		jReq.erase("token");
 		jReq.erase("childTds");
-		pSession->route_childTds = yyjson_get_str(yyChildTds);
-		ioDev* pIoDev = ioSrv.getIODevByTag(pSession->route_childTds);
+		session.route_childTds = yyjson_get_str(yyChildTds);
+		ioDev* pIoDev = ioSrv.getIODevByTag(session.route_childTds);
 		if (pIoDev && pIoDev->m_devSubType == TDSP_SUB_TYPE::childTds)
 		{
 			pIoDev->handleDevRpcCall(jReq, rpcResp);
@@ -3845,10 +3707,10 @@ void logOutput(const string& tag,json& j) {
 	pOutputLogDB->Insert(tag, sDe);
 }
 
-void rpcHandler::logRPCRoute(string method,json& params,const RPC_RESP& rpcResp,RPC_SESSION& session) {
+void rpcHandler::logRPCRoute(string method,yyjson_val* params,const RPC_RESP& rpcResp,const RPC_SESSION& session,string routeTag,string routeIoAddr) {
 	json logParams;
 	if (method == "startRepel") {
-		logParams["tag"] = session.route_tag;
+		logParams["tag"] = routeTag;
 		logParams["user"] = "用户:" + session.user;
 		logParams["type"] = "探驱联动开始";
 		logParams["org"] = session.org;
@@ -3856,28 +3718,29 @@ void rpcHandler::logRPCRoute(string method,json& params,const RPC_RESP& rpcResp,
 		logParams["timeCost"] = rpcResp.timeCost;
 
 		string pan = "null";
-		if(params["pan"]!=nullptr)
-			pan = str::fromFloat(params["pan"].get<float>());
+		yyjson_val* yyv = yyjson_obj_get(params, "pan");
+		if (yyv != nullptr && yyjson_is_num(yyv))
+			pan = str::fromFloat(yyjson_get_num(yyv));
 		string tilt = "null";
-		if (params["tilt"] != nullptr)
-			tilt = str::fromFloat(params["tilt"].get<float>());
-
-		logParams["info"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr + ",水平角:" + pan + ",俯仰角:" + tilt;
+		yyjson_val* yyvTilt = yyjson_obj_get(params, "tilt");
+		if (yyvTilt != nullptr && yyjson_is_num(yyvTilt))
+			tilt = str::fromFloat(yyjson_get_num(yyvTilt));
+		logParams["info"] = "设备名称:" + routeTag + ",设备地址:" + routeIoAddr + ",水平角:" + pan + ",俯仰角:" + tilt;
 		logParams["success"] = rpcResp.result != "";
 		//logSrv.rpc_addLog(logParams, session);
-		logOutput(session.route_tag, logParams);
+		logOutput(routeTag, logParams);
 	}	
 	else if (method == "stopRepel") {
-		logParams["tag"] = session.route_tag;
+		logParams["tag"] = routeTag;
 		logParams["user"] = "用户:" + session.user;
 		logParams["type"] = "探驱联动结束";
 		logParams["org"] = session.org;
 		logParams["remoteAddr"] = session.remoteAddr;
 		logParams["timeCost"] = rpcResp.timeCost;
-		logParams["info"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr;
+		logParams["info"] = "设备名称:" + routeTag + ",设备地址:" + routeIoAddr;
 		logParams["success"] = rpcResp.result != "";
 		//logSrv.rpc_addLog(logParams, session);
-		logOutput(session.route_tag, logParams);
+		logOutput(routeTag, logParams);
 	}
 
 }
@@ -4267,7 +4130,7 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	}
 
 	//设备模式不开启中继转发处理.返回true表示是中继命令.放在用户认证前面处理.
-	if (handleRpcRoute(jReq, rpcResp, pSession)) {
+	if (handleRpcRoute(jReq, rpcResp, pSession->getRpcSession())) {
 		goto HANDLE_END;
 	}
 

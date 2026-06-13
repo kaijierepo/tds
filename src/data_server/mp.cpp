@@ -530,12 +530,12 @@ bool MP::loadStatus(yyjson_val* status)
 
 //bool MP::toJson(json& conf, json serializeOption)
 //{	
-//	OBJ_QUERIER q = parseQuerier(serializeOption);
+//	OBJ_PROP_SEL q = parseQuerier(serializeOption);
 //	return toJson(conf, q);
 //}
 
 
-bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* parentSelectedByLeafType, const string& user)
+bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_PROP_SEL q, bool* parentSelectedByLeafType, const string& user)
 {
 	if (q.dataSaveMp && m_saveMode == DATA_SAVE_MODE::never) {
 		return false;

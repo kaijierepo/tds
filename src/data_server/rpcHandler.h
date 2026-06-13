@@ -42,8 +42,8 @@ public:
 
 	void setLicenceStatus(json j);
 	//rpc路由的命令  可以路由到tdsp设备，或者childTds
-	bool handleRpcRoute(yyjson_val*, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
-	void logRPCRoute(std::string method, json& params, const RPC_RESP& rpcResp,RPC_SESSION& session);
+	bool handleRpcRoute(yyjson_val*, RPC_RESP& rpcResp,  RPC_SESSION& session);
+	void logRPCRoute(std::string method, yyjson_val* params, const RPC_RESP& rpcResp,const RPC_SESSION& session,string routeTag,string routeIoAddr);
 
 	bool isGB2312Pkt(std::string& req);
 
@@ -68,7 +68,6 @@ public:
 	bool handleMethodCall_gamePad(std::string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_utils(const std::string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_MoMng(std::string method, json& params, RPC_RESP& rpcResp,RPC_SESSION& session);
-	std::vector<std::string> parseTagSel(json& tagSel,std::string& type);
 	bool handleMethodCall_alarmMng(std::string method, json& params, RPC_RESP& rpcResp,RPC_SESSION& session);
 	bool handleMethodCall_userMng(std::string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_unclassified(std::string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);

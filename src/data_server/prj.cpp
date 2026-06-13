@@ -11,6 +11,14 @@
 
 project prj;
 
+static long long getTick() {
+	auto now = std::chrono::high_resolution_clock::now();
+	auto microsec = std::chrono::time_point_cast<std::chrono::microseconds>(now);
+	auto epoch = microsec.time_since_epoch();
+	long long microseconds = epoch.count();
+	return microseconds;
+}
+
 void g_getTagsByTagSelector(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt) {
 	prj.getTagsByTagSelector(tagSelector,rlt);
 }
@@ -162,7 +170,7 @@ bool project::saveConfFile() {
 	yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
 	mut_root = yyjson_mut_obj(mut_doc);
 
-	OBJ_QUERIER q;
+	OBJ_PROP_SEL q;
 	q.getConf = true;
 	q.getChild = true;
 	q.getMp = true;
@@ -374,6 +382,208 @@ void project::getAllVarExpScript()
 	scriptManager.updateVarExpScript(expScripts);
 }
 
+string getObjSelLevelByMethod(string method) {
+	if (method == "getOrg") {
+		return "org";
+	}
+	else if (method == "getCustomOrg") {
+		return "org";
+	}
+	else if (method == "getMo") {
+		return "mo";
+	}
+	else if (method == "getCustomMo") {
+		return "mo";
+	}
+	else if (method == "getMp") {
+		return "mp";
+	}
+	return "";
+}
+
+
+void project::getTagSel(TAG_SELECTOR& tagSel,string method, yyjson_val* params, RPC_SESSION& session) {
+	//位号选择器 参数tag + rootTag
+	//用户查询时 tag默认"",rootTag默认""
+	//tag是相对于rootTag的相对位号
+	//rootTag和tag组合出用户位号。
+	//用户位号和用户组织结构组合成系统位号
+	string rootTag = "";//查询根
+	yyjson_val* yyv_rootTag = yyjson_obj_get(params, "rootTag");
+	if (yyv_rootTag != nullptr && yyjson_is_str(yyv_rootTag)) { //获取子树
+		rootTag = yyjson_get_str(yyv_rootTag);
+	}
+	rootTag = TAG::addRoot(rootTag, session.org);//组合为系统查询根
+
+	//类型选择
+	string type = ""; //为空表示选中所有，为*表示选中所有自定义类型
+	yyjson_val* yyv_type = yyjson_obj_get(params, "type");
+	if (yyv_type && yyjson_is_str(yyv_type)) {
+		type = yyjson_get_str(yyv_type);
+	}
+
+	//层级选择
+	//将getOrg,getMp,getMo统一转化为getObj
+	string level = "*";
+	yyjson_val* yyv_level = yyjson_obj_get(params, "level");
+	string level_byMethod = getObjSelLevelByMethod(method);
+	if (level_byMethod != "") {
+		level = level_byMethod;
+	}
+	if (yyv_level && yyjson_is_str(yyv_level)) {
+		level = yyjson_get_str(yyv_level);
+	}
+
+	//位号选择
+	yyjson_val* yyv_tagSel = yyjson_obj_get(params, "tag");
+	vector<string> vecTagSel;
+	if (yyv_tagSel) {
+		vecTagSel = parseTagSel(yyv_tagSel, type);
+	}
+
+
+	tagSel.selLanguage = session.language;
+	tagSel.init(vecTagSel, rootTag, type, level);
+}
+
+void project::getObjSel(OBJ_SELECTOR& objSel, string method, yyjson_val* params, RPC_SESSION& session) {
+	yyjson_val* yyv_ioType = yyjson_obj_get(params, "ioType");
+	if (yyv_ioType && yyjson_is_str(yyv_ioType)) {
+		objSel.ioType = yyjson_get_str(yyv_ioType);
+	}
+
+	objSel.mode = "array";
+	yyjson_val* yyv_mode = yyjson_obj_get(params, "mode");
+	if (yyv_mode && yyjson_is_str(yyv_mode)) {
+		objSel.mode = yyjson_get_str(yyv_mode);
+	}
+
+	//自定义编组
+	objSel.group = ""; //为空表示选中所有，为*表示选中所有自定义编组
+	yyjson_val* yyv_group = yyjson_obj_get(params, "group");
+	if (yyv_group && yyjson_is_str(yyv_group)) {
+		objSel.group = yyjson_get_str(yyv_group);
+	}
+}
+
+
+bool project::handleRpc(string method, yyjson_val* params, RPC_RESP& resp, RPC_SESSION& session)
+{
+	bool handled = true;
+	if (method == "setObj") {
+		rpc_setObj(params, resp, session);
+	}
+	else if (method == "getObjTree") {
+		shared_lock<shared_mutex> lock(prj.m_csPrj);
+		resp.result = prj.m_moConfFileDump;
+	}
+	else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo") {
+		shared_lock<shared_mutex> lock(prj.m_csPrj);
+		session.tStartHandle = getTick();
+
+		TAG_SELECTOR tagSel;
+		OBJ_SELECTOR objSel;
+		getTagSel(tagSel, method, params, session);
+		getObjSel(objSel, method, params, session);
+		vector<OBJ*> objList;
+		prj.getObjByTagSelector(objList, tagSel);
+		objList = filterByObjSel(objList, objSel);
+
+		//多选模式
+		if (!tagSel.singleSelMode()) {
+			OBJ_PROP_SEL q = OBJ::parseQuerier(params);
+			q.language = session.language;
+			q.getTag = true; //多选模式，没有树结构，因此需要tag信息
+			q.rootTag = tagSel.m_rootTag;   // replace to system root
+
+			if (objSel.mode == "array") {
+				yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+				yyjson_mut_val* rootRlt = yyjson_mut_arr(doc);
+
+				for (int i = 0; i < objList.size(); i++) {
+					OBJ* pObj = objList[i];
+
+					yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
+
+					bool selectedByLeafType = false;
+					if (pObj->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
+						yyjson_mut_arr_append(rootRlt, rootObj);
+					}
+				}
+
+				resp.info = str::format("objCount=%d", objList.size());
+
+				size_t len = 0;
+				char* s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
+				if (s) {
+					resp.result = s;
+					free(s);
+				}
+
+				yyjson_mut_doc_free(doc);
+			}
+			else {
+				yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+				yyjson_mut_val* rootRlt = yyjson_mut_obj(doc);
+
+				for (int i = 0; i < objList.size(); i++) {
+					OBJ* pObj = objList[i];
+
+					yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
+
+					bool selectedByLeafType = false;
+					if (pObj->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
+						string tag = yyjson_mut_get_str(yyjson_mut_obj_get(rootObj, "tag"));
+						tag = str::replace(tag, ".", "_");
+						yyjson_mut_val* key = yyjson_mut_strcpy(doc, tag.c_str());
+						yyjson_mut_obj_put(rootRlt, key, rootObj);
+					}
+				}
+
+				size_t len = 0;
+				char* s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
+				if (s) {
+					resp.result = s;
+					free(s);
+				}
+
+				yyjson_mut_doc_free(doc);
+			}
+		}
+		//精确查找模式，返回一个对象
+		else if (objList.size() == 1) {
+			OBJ* pmo = objList[0];
+
+			//所有位号以用户位号的方式展示。除非另外指定rootTag
+			yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+			yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
+
+			OBJ_PROP_SEL q = OBJ::parseQuerier(params);
+			q.pRoot = pmo;
+			q.language = session.language;
+			q.rootTag = tagSel.m_rootTag;   // replace to system root
+
+			bool selectedByLeafType = false;
+			if (pmo->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
+				size_t len = 0;
+				char* s = yyjson_mut_val_write(rootObj, YYJSON_WRITE_NOFLAG, &len);
+				if (s) {
+					resp.result = s;
+					free(s);
+				}
+			}
+
+			yyjson_mut_doc_free(doc);
+		}
+		else {
+			resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
+		}
+	}
+	else {
+		handled = false;
+	}
+	return handled;
+}
 
 void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	session.tStartHandle = rpcSrv.getTick();
@@ -471,4 +681,30 @@ void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& ses
 			result = "\"ok\"";
 		}
 	}
+}
+
+vector<string> project::parseTagSel(yyjson_val* tagSel, string& type) {
+	vector<string> vec;
+	if (tagSel == nullptr) { //位号未指定
+		if (type == "")  //type未指定
+		{
+			vec.push_back(""); //选中根位号
+		}
+		else { //指定了某种自定义对象，认为是一种批量查找
+			vec.push_back("*");
+		}
+	}
+	else if (yyjson_is_str(tagSel)) {
+		vec.push_back(yyjson_get_str(tagSel));
+	}
+	else if (yyjson_is_arr(tagSel)) {
+		for (size_t i = 0; i < yyjson_arr_size(tagSel); i++) {
+			yyjson_val* t = yyjson_arr_get(tagSel, i);
+			if (yyjson_is_str(t)) {
+				vec.push_back(yyjson_get_str(t));
+			}
+		}
+	}
+
+	return vec;
 }

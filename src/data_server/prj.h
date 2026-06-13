@@ -71,7 +71,14 @@ public:
 	void clear();
 	void getMpTypeList(json& mpTypeList);
 
+
+	void getTagSel(TAG_SELECTOR& tagSel, string method, yyjson_val* params, RPC_SESSION& session);
+	void getObjSel(OBJ_SELECTOR& tagSel, string method, yyjson_val* params, RPC_SESSION& session);
+
+	bool handleRpc(string method,yyjson_val* params, RPC_RESP& resp, RPC_SESSION& session);
 	void rpc_setObj(yyjson_val* params, RPC_RESP& resp, RPC_SESSION& session);
+
+	vector<string> parseTagSel(yyjson_val* tagSel, string& type);
 
 	std::vector<MP*> getAllEzvizMp();
 

@@ -203,10 +203,10 @@ public:
 	void rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 
 	//IO会话
-	shared_ptr<TDS_SESSION> getTDSSession(tcpSession* pTcpSess);
-	shared_ptr<TDS_SESSION> getTDSSession(string remoteIP, int remotePort);
-	shared_ptr<TDS_SESSION> getTDSSession(string remoteAddr);
-	shared_ptr<TDS_SESSION> getTDSSession(tcpSessionClt* pTcpSess);
+	shared_ptr<TDS_SESSION> getIOSession(tcpSession* pTcpSess);
+	shared_ptr<TDS_SESSION> getIOSession(string remoteIP, int remotePort);
+	shared_ptr<TDS_SESSION> getIOSession(string remoteAddr);
+	shared_ptr<TDS_SESSION> getIOSession(tcpSessionClt* pTcpSess);
 	std::shared_ptr<TDS_SESSION> getStreamPusher(string tag);
 	vector<std::shared_ptr<TDS_SESSION>> getStreamPushers(string tag);
 	map<void*,std::shared_ptr<TDS_SESSION>> m_IoSessions;

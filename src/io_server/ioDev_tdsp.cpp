@@ -1473,7 +1473,7 @@ void ioDev_tdsp::onEvent_online()
 	if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 		/*
 			等效于如下查询，首次返回树形全部实时值
-			OBJ_QUERIER query;
+			OBJ_PROP_SEL query;
 			query.getConf = false;
 			query.getStatus = true;
 			query.getChild = true;

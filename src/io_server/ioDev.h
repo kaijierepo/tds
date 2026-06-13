@@ -283,6 +283,7 @@ public:
 	void triggerCycleAcq();
 	virtual void call(string method, json params, json sessionParams, json& result, json& error, bool sync = true) {  };
 	virtual bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp);
+	virtual bool handleDevRpcCall(yyjson_val* yyv_req, RPC_RESP& rpcResp);
 
 	// 支持绑定了ip地址的设备，通过ping来检测上下线
 	virtual void doPingHeartbeat(string ip);

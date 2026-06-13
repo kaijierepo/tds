@@ -1425,6 +1425,16 @@ void ioDev::doPingHeartbeat(string ip)
 	}
 }
 
+bool ioDev::handleDevRpcCall(yyjson_val* yyv_req, RPC_RESP& rpcResp) {
+	char* p = yyjson_val_write(yyv_req, 0, nullptr);
+	if (p) {
+		string sReq(p);
+		free(p);
+		json jReq = json::parse(sReq);
+		return handleDevRpcCall(jReq, rpcResp);
+	}
+}
+
 bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp)
 {
 	string method = jReq["method"].get<string>();

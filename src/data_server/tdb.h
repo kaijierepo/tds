@@ -291,7 +291,6 @@ public:
 	std::string type; //object type
 	std::string level;
 	std::string error;
-	std::string ioType;
 	std::string selLanguage;
 	std::string rltLanguage;
 };

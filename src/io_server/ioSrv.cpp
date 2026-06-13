@@ -2656,7 +2656,7 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 }
 
 //此处加锁，连接断开现成可能会并发操作此列表
-shared_ptr<TDS_SESSION> ioServer::getTDSSession(tcpSession* pTcpSess)
+shared_ptr<TDS_SESSION> ioServer::getIOSession(tcpSession* pTcpSess)
 {
 	lock_guard<mutex> g(m_mutexIoSessions);
 	/*for (int i = 0; i < m_IoSessions.size(); i++)
@@ -2671,7 +2671,7 @@ shared_ptr<TDS_SESSION> ioServer::getTDSSession(tcpSession* pTcpSess)
 }
 
 
-shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteIP, int remotePort)
+shared_ptr<TDS_SESSION> ioServer::getIOSession(string remoteIP, int remotePort)
 {
 	lock_guard<mutex> g(m_mutexIoSessions);
 	for (auto& i: m_IoSessions)
@@ -2700,7 +2700,7 @@ shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteIP, int remotePort)
 	return nullptr;
 }
 
-shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteAddr)
+shared_ptr<TDS_SESSION> ioServer::getIOSession(string remoteAddr)
 {
 	size_t pos = remoteAddr.find(":");
 	if (pos < 0)
@@ -2708,12 +2708,12 @@ shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteAddr)
 	string ip = remoteAddr.substr(0, pos);
 	string sPort = remoteAddr.substr(pos + 1, remoteAddr.length() - pos - 1);
 	int iPort = atoi(sPort.c_str());
-	return getTDSSession(ip, iPort);
+	return getIOSession(ip, iPort);
 }
 
 
 
-shared_ptr<TDS_SESSION> ioServer::getTDSSession(tcpSessionClt* pTcpSess)
+shared_ptr<TDS_SESSION> ioServer::getIOSession(tcpSessionClt* pTcpSess)
 {
 	lock_guard<mutex> g(m_mutexIoSessions);
 	/*for (int i = 0; i < m_IoSessions.size(); i++)
