@@ -26,6 +26,7 @@
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
 string rootDir;
+string ui_common_dir;
 string confDir;
 string filesDir;
 string fmsDir;
@@ -1438,7 +1439,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		else {
 			struct mg_http_serve_opts opts;
 			memset(&opts, 0, sizeof(opts));
-			string dir = "/=" + rootDir + ",/config/=" + confDir + ",/files/=" + filesDir + ",/app/topo/res/=" + topoDir + ",/app//topo/res/=" + topoDir + ",/db/=" + dbDir;
+			string dir = "/=" + rootDir + ",/common/=" + ui_common_dir + ",/config/=" + confDir + ",/files/=" + filesDir + ",/app/topo/res/=" + topoDir + ",/app//topo/res/=" + topoDir + ",/db/=" + dbDir;
 			if (fmsDir != "") {
 				dir += ",/fmsPath/=" + fmsDir;
 			}
@@ -1791,6 +1792,7 @@ bool runWebServers() {
 	loadApiBlackList();
 
 	rootDir = tds->conf->uiPath; 
+	ui_common_dir = tds->conf->uiCommonPath;
 
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);

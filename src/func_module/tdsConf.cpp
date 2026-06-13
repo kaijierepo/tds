@@ -191,6 +191,11 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 			uiPath = val;
 			uiPath = fs::toAbsolutePath(uiPath); 
 		}
+		else if (checkKey(key, "uiCommonPath"))
+		{
+			uiCommonPath = val;
+			uiCommonPath = fs::toAbsolutePath(uiCommonPath);
+		}
 		else if (checkKey(key, "dbPath")) {
 			dbPath = val.c_str();
 			dbPath = fs::toAbsolutePath(dbPath);
@@ -469,6 +474,8 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 		currentPath = fs::toAbsolutePath("../current");
 	if(uiPath == "")
 		uiPath = fs::toAbsolutePath("./ui");
+	if(uiCommonPath == "")
+		uiCommonPath = fs::toAbsolutePath("./common");
 	if (dbPath == "")
 		dbPath = fs::toAbsolutePath("../db");
 	if (logPath == "")
