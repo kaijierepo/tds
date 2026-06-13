@@ -347,9 +347,9 @@ bool ioDev::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querie
 
 
 		//conf["typeLabel"] = getDevTypeLabel(m_devType);
-        key = yyjson_mut_strcpy(doc, "typeLabel");
-        val = yyjson_mut_strcpy(doc, getDevTypeLabel(m_devType).c_str());
-        yyjson_mut_obj_put(conf, key, val);
+        //key = yyjson_mut_strcpy(doc, "typeLabel");
+        //val = yyjson_mut_strcpy(doc, getDevTypeLabel(m_devType).c_str());
+        //yyjson_mut_obj_put(conf, key, val);
 
 
 		if (m_devSubType != "") {
