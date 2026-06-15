@@ -3,6 +3,7 @@
 #include <random>
 #include "prj.h"
 #include "mp.h"
+#include "mqttSrv.h"
 
 CDataSimu* g_pDataSimu = NULL;
 
@@ -13,26 +14,40 @@ void CDataSimu::startDataSimu() {
 
 	map<string, MP*> mapAllMP;
 	prj.getMpList(mapAllMP);
+	while (1)
+	{
+		sleep(1);
+		json changedList = json::array();
+		for (map<string, MP*>::iterator it = mapAllMP.begin(); it != mapAllMP.end(); it++) {
+			MP* pmp = (MP*)it->second;
 
-	for (map<string, MP*>::iterator it = mapAllMP.begin(); it != mapAllMP.end(); it++) {
-		MP* pmp = (MP*)it->second;
+			if (pmp && pmp->m_simuConf.enable) {
+				if (timeopt::CalcTimePassSecond(pmp->m_simuDataTime) > pmp->m_simuConf.interval) {
+					timeopt::now(&pmp->m_simuDataTime);
 
-		if (pmp && pmp->m_simuConf.enable) {
-			if (timeopt::CalcTimePassSecond(pmp->m_simuDataTime) > pmp->m_simuConf.interval) {
-				timeopt::now(&pmp->m_simuDataTime);
+					double value = pmp->m_simuConf.lowLimit;
+					if (pmp->m_simuConf.lowLimit != pmp->m_simuConf.highLimit) {
+						// 创建均匀分布
+						std::uniform_real_distribution<> dis(min(pmp->m_simuConf.lowLimit, pmp->m_simuConf.highLimit), max(pmp->m_simuConf.lowLimit, pmp->m_simuConf.highLimit));
 
-				double value = pmp->m_simuConf.lowLimit;
-				if (pmp->m_simuConf.lowLimit != pmp->m_simuConf.highLimit) {
-					// 创建均匀分布
-					std::uniform_real_distribution<> dis(min(pmp->m_simuConf.lowLimit, pmp->m_simuConf.highLimit), max(pmp->m_simuConf.lowLimit, pmp->m_simuConf.highLimit));
+						// 生成随机数并调整小数位
+						value = dis(gen);
+					}
 
-					// 生成随机数并调整小数位
-					value = dis(gen);
+					json val = value;
+					pmp->input(val);
+
+
+					json item;
+					item["tag"] = pmp->getTag();
+					item["val"] = json::parse(pmp->m_curVal);
+					item["time"] = pmp->m_stDataLastUpdate.toStr();
+					changedList.push_back(item);
 				}
-
-				json val = value;
-				pmp->input(val);
 			}
+		}
+		if (changedList.size() > 0) {
+			mqttSrv.onTdsNotify("onDataUpdate", changedList.dump());
 		}
 	}
 }

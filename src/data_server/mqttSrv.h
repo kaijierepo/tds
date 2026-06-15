@@ -11,7 +11,9 @@ struct MASTER_SRV_CONF {
 	std::string user;
 	std::string pwd;
 	std::string subTopics;
+	std::string pubTopics;
 	int qos;
+	std::string format;
 	std::string connectScript;
 	std::string recvScript;       
 	std::string sendScript;		 

@@ -7,6 +7,8 @@
 #include "scriptEngine.h"
 #include "scriptFunc.h"
 #include "scriptManager.h"
+#include "prj.h"
+#include "mp.h"
 
 #ifdef TDS
 #include "logger.h"
@@ -63,6 +65,9 @@ bool MqttSrv::run() {
                     yyjson_val* yy_subTopics = yyjson_obj_get(item, "subTopics");
                     if (yy_subTopics)
                         conf.subTopics = yyjson_get_str(yy_subTopics);
+                    yyjson_val* yy_pubTopics = yyjson_obj_get(item, "pubTopics");
+                    if (yy_pubTopics)
+                        conf.pubTopics = yyjson_get_str(yy_pubTopics);
                     yyjson_val* yy_recvScript = yyjson_obj_get(item, "recvScript");
                     if(yy_recvScript)
                         conf.recvScript = yyjson_get_str(yy_recvScript);
@@ -84,6 +89,9 @@ bool MqttSrv::run() {
                     yyjson_val* yy_connectScript = yyjson_obj_get(item, "connectScript");
                     if(yy_connectScript)
                         conf.connectScript = yyjson_get_str(yy_connectScript);
+                    yyjson_val* yy_format = yyjson_obj_get(item, "format");
+                    if (yy_format)
+                        conf.format = yyjson_get_str(yy_format);
 					m_masterDSConf.push_back(conf);
 				}
 			}
@@ -91,7 +99,7 @@ bool MqttSrv::run() {
 	}
 
 	for(int i = 0; i < m_masterDSConf.size(); i++){
-        LOG("[MQTT-DS]started,%s:%d,password:%s,qos:%d,subTopic:%s,sendScript:%s,recvScript:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
+        LOG("[MQTT-DS]started,%s:%d,password:%s,qos:%d,subTopic:%s,pubTopic:%s,format:%s,sendScript:%s,recvScript:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].pubTopics.c_str(), m_masterDSConf[i].format.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
         MqttClt* clt = new MqttClt();
         clt->run(m_masterDSConf[i]);
         m_mqttClts.push_back(clt);
@@ -243,7 +251,24 @@ void thread_mqtt_script(void* p) {
             string strparams = "";
             string strResult = "";
             string strOutput = "";
-            if (pDev->m_conf.cycleScript != "") {
+            if (pDev->m_conf.format == "default") {
+                map<string, MP*> mapAllMP;
+                prj.getMpList(mapAllMP);
+
+                json output = json::array();
+                for (auto& it : mapAllMP) {
+                    MP* pmp = it.second;
+                    //if (pmp->m_valType == "video") continue;
+                    json item;
+                    item["tag"] = pmp->getTag();
+                    item["val"] = !pmp->m_curVal.empty() ? json::parse(pmp->m_curVal) : json(nullptr);
+                    item["time"] = pmp->m_stDataLastUpdate.toStr(true);
+                    output.push_back(item);
+                }
+
+                pDev->mqttPublish(pDev->m_conf.pubTopics, output.dump());
+            }
+            else if (pDev->m_conf.cycleScript != "") {
                 scriptManager.runScript(pDev->m_conf.cycleScript, strparams, strResult, strOutput);
             }
         }        
@@ -297,7 +322,7 @@ void MqttSrv::mqttPublish(string topic, string data)
 void MqttSrv::onTdsNotify(string method, string params)
 {
     for (int i = 0; i < m_mqttClts.size(); i++) {
-        m_mqttClts[i]->mqttPublish(method, params);
+        m_mqttClts[i]->onTdsNotify(method, params);
     }
 }
 
@@ -321,6 +346,9 @@ void MqttClt::mqttPublish(string topic, string data)
 
 void MqttClt::onRecvMqttData(string topic, string data)
 {
+    if (m_conf.format == "default") {
+        return;
+    }
     if (m_conf.recvScript != "") {
         ScriptEngine se;
 
@@ -354,47 +382,33 @@ void MqttClt::onRecvMqttData(string topic, string data)
 
 void MqttClt::onTdsNotify(string method,string params)
 {
-    if (m_conf.sendScript != "") {
-        //只处理数据更新通知
-        if (method != "onDataUpdate") {
-            return;
-        }
-
-
-        ScriptEngine se;
-
-#ifdef TDS
-        se.m_engineInitFuncList.push_back(initTdsFunc);
-#endif
-
-
-        json jTdsNotify = json::object();
-        //jTdsNotify["topic"] = topic;
-		jTdsNotify["method"] = method;
-        jTdsNotify["params"] = params;
-
-
-        se.m_globalObj["TdsNotify"] = jTdsNotify;
-        se.m_globalObj["MqttPublish"] = json::object();
-        se.m_ioDevThis = this;
-
-        SCRIPT_INFO si;
-        scriptManager.getScript(m_conf.recvScript, si);
-        se.runScript(si, m_lastRunInfo_onRecv);
-
-        if (se.m_sError != "") {
-            string s = str::format("[warn][MQTT]run script error,script:%s,err:%s,addr=%s:%d", si.name.c_str(), se.m_sError.c_str(), m_conf.ip.c_str(), m_conf.port);
-            LOG(s);
-        }
-        else {
-
-        }
+    if (m_conf.format == "default") {
+        mqttPublish(m_conf.pubTopics, params);
+        return;
     }
-    return;
+    mqttPublish(method, params);
 }
 
 void MqttClt::onMqttConnected()
 {
+    if (m_conf.format == "default") {
+        map<string, MP*> mapAllMP;
+        prj.getMpList(mapAllMP);
+
+        json output = json::array();
+        for (auto& it : mapAllMP) {
+            MP* pmp = it.second;
+            //if (pmp->m_valType == "video") continue;
+            json item;
+            item["tag"] = pmp->getTag();
+            item["val"] = !pmp->m_curVal.empty() ? json::parse(pmp->m_curVal) : json(nullptr);
+            item["time"] = pmp->m_stDataLastUpdate.toStr(true);
+            output.push_back(item);
+        }
+
+        mqttPublish(m_conf.pubTopics, output.dump());
+        return;
+    }
     if (m_conf.connectScript != "") {
         string strResult, strOutput;
         scriptManager.runScript(m_conf.connectScript, "", strResult, strOutput);
