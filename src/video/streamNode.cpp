@@ -1554,6 +1554,7 @@ void StreamNode::controlThread() {
                     isPulling_ = true;
                 }
                 else {
+                    doReconnect();
                     teardown();
                 }
             }
@@ -1563,15 +1564,18 @@ void StreamNode::controlThread() {
                     isPushing_ = true;
 				}
                 else {
+                    doReconnect();
                     teardown();
                 }
             }
-            
+
             // 心跳保活
             if (isPulling_) {
                 if (source_conn_ && !source_session_.empty()) {
                     if (!rtspGetParameter(*source_conn_, config_.source_url, source_session_)) {
                         setError("Source RTSP keepalive failed", 1002);
+                        isPulling_ = false;
+                        teardown();
                     }
                 }
             }
@@ -1580,6 +1584,8 @@ void StreamNode::controlThread() {
                 if (target_conn_ && !target_session_.empty()) {
                     if (!rtspGetParameter(*target_conn_, config_.target_url, target_session_)) {
                         setError("Target RTSP keepalive failed", 1002);
+                        isPushing_ = false;
+                        teardown();
                     }
                 }
             }
@@ -1922,13 +1928,14 @@ void StreamNode::doRtpRecv() {
 
                 // 录制到磁盘
                 if (rec_ctrl_.recording) {
-                    if (rec_ctrl_.firstWrite) {
-                        //从rtp_buffer_取出rec_ctrl_.preSeconds的数据并录制
+                    if (rec_ctrl_.firstWrite && !rec_ctrl_.preRecordingDone) {
+                        //从rtp_buffer_取出rec_ctrl_.preSeconds的数据并录制（仅一次）
                         std::vector<std::shared_ptr<RTPPacket>> pre_packets;
                         {
                             std::lock_guard<std::mutex> lock(queue_mutex_);
+                            uint32_t _clock = (pull_session_.clock_rate > 0) ? static_cast<uint32_t>(pull_session_.clock_rate) : 90000u;
                             for (auto it = rtp_buffer_.rbegin(); it != rtp_buffer_.rend(); ++it) {
-                                if (packet.timestamp - (*it)->timestamp <= rec_ctrl_.preSeconds * 90000) {
+                                if (packet.timestamp - (*it)->timestamp <= static_cast<uint64_t>(rec_ctrl_.preSeconds) * _clock) {
                                     pre_packets.push_back(*it);
                                 }
                                 else {
@@ -1939,9 +1946,10 @@ void StreamNode::doRtpRecv() {
 						for (auto it = pre_packets.rbegin(); it != pre_packets.rend(); ++it) {
                             recordRTPPacket(*it);
                         }
+                        rec_ctrl_.preRecordingDone = true;
                     }
-                    else
-					    recordRTPPacket(pPkt);
+                    // 无论是否写过预录数据，当前包都要录制
+                    recordRTPPacket(pPkt);
                 }
 
                 //logVerbose((pullUDP ? "UDP" : "TCP") + std::string("->RTP: seq=") + 
@@ -1970,7 +1978,8 @@ void StreamNode::doRtpRecv() {
         }
     }
 
-    LOG("[StreamNode]Pull thread stopped,tag=",config_.tag);
+    isPulling_ = false;
+    LOG("[StreamNode]Pull thread stopped,tag= %s ",config_.tag.c_str());
 }
 
 void StreamNode::teardown() {
@@ -3286,7 +3295,64 @@ void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> pPkt) {
     ofs.flush();
 }
 
-void StreamNode::writeNALtoFile(uint8_t nal_type,char* nal, size_t size, std::ofstream& ofs) {
+void StreamNode::flushRecordBuffer() {
+    if (record_batch_buffer_.empty()) return;
+
+    std::vector<std::shared_ptr<RTPPacket>> to_write;
+    to_write.swap(record_batch_buffer_);
+
+    std::ofstream ofs(rec_ctrl_.path, std::ios::binary | std::ios::app);
+    if (!ofs) {
+        logError("flushRecordBuffer: Failed to open record file: " + rec_ctrl_.path);
+        return;
+    }
+
+    for (auto p : to_write) {
+        const std::vector<uint8_t>& payload = p->payload;
+        if (payload.empty()) continue;
+
+        uint8_t nal_unit_type = payload[0] & 0x1F;
+
+        if (nal_unit_type == NAL_TYPE_STAP_A && payload.size() >= 2) {
+            size_t off = 1;
+            while (off + 2 <= payload.size()) {
+                uint16_t L = (payload[off] << 8) | payload[off + 1];
+                off += 2;
+                if (L == 0) continue;
+                if (off + L > payload.size()) break;
+                const uint8_t* subNal = &payload[off];
+                writeNALtoFile(subNal[0] & 0x1F, (char*)subNal, L, ofs);
+                off += L;
+            }
+        }
+        else if (nal_unit_type == NAL_TYPE_FU_A && payload.size() >= 2) {
+            uint8_t fu_header = payload[1];
+            bool end = (fu_header & 0x40) != 0;
+            uint8_t fu_a_org_type = fu_header & 0x1F;
+            uint8_t nal_header = (payload[0] & 0xE0) | fu_a_org_type;
+
+            bool start = (fu_header & 0x80) != 0;
+            if (start) {
+                rec_ctrl_.fu_a_buffer_.clear();
+                rec_ctrl_.fu_a_buffer_.push_back(nal_header);
+            }
+            rec_ctrl_.fu_a_buffer_.insert(rec_ctrl_.fu_a_buffer_.end(), payload.begin() + 2, payload.end());
+
+            if (end) {
+                writeNALtoFile(fu_a_org_type, rec_ctrl_.fu_a_buffer_.data(), rec_ctrl_.fu_a_buffer_.size(), ofs);
+            }
+        }
+        else {
+            writeNALtoFile(nal_unit_type, (char*)payload.data(), payload.size(), ofs);
+        }
+    }
+
+    ofs.flush();
+    LOG("[StreamNode] Flushed %zu buffered packets to record file, tag=%s",
+        to_write.size(), config_.tag.c_str());
+}
+
+void StreamNode::writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs) {
     //此处不要使用 ofstream 的 tellp获得长度，不准确
     if (rec_ctrl_.firstWrite && nal_type != NAL_TYPE_IDR) {
         return;
@@ -3468,12 +3534,12 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
             response[pos++] = 0x00; response[pos++] = 0x14;  // attr len = 20
             pos += 20;  // HMAC-SHA1 占位
 
-            // 回填长度（不含 20 字节 STUN 头部，含 MI 属性）
+            // ---- 添加 FINGERPRINT 占位（CRC-32，必须放在最后）----
             int attrLen = pos - 20;
             response[lenPos]     = (attrLen >> 8) & 0xFF;
             response[lenPos + 1] = attrLen & 0xFF;
 
-            // 计算 HMAC-SHA1：key = ice_pwd（mbedTLS 4.x 使用 PSA MAC API）
+            // ★ 关键：先设置最终长度（含 FINGERPRINT），再计算 HMAC。
             const std::string& icePwd = session->ice_pwd;
             if (!icePwd.empty()) {
                 psa_mac_operation_t macOp = psa_mac_operation_init();
@@ -3514,16 +3580,16 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
                 LOG("[STUN] WARNING: ice_pwd is empty, MI not computed");
             }
 
-            // ---- 添加 FINGERPRINT（CRC-32，必须放在最后）----
+            // ---- 计算 FINGERPRINT CRC-32 ----
             // 某些浏览器（Chrome）依赖 FINGERPRINT 区分 STUN 与其他协议
             {
-                // 先记录 FINGERPRINT 开始位置，CRC 计算到此为止（不含 FINGERPRINT 本身）
+                // 计算 CRC-32（覆盖整个 STUN 消息，不含 FINGERPRINT 属性本身）
                 int fpPos = pos;
                 response[pos++] = 0x80; response[pos++] = 0x28;  // attr type = 0x8028
                 response[pos++] = 0x00; response[pos++] = 0x04;  // attr len = 4
                 int fpValuePos = pos;  // CRC 值写入位置
                 pos += 4;              // CRC 值占位
-                // 先更新 Length 为最终值（包含 FINGERPRINT），因为 CRC 要覆盖正确的 Length
+                // 即：header + 所有属性（不含 FINGERPRINT 的 type/length/value）
                 int finalAttrLen = pos - 20;
                 response[lenPos]     = (finalAttrLen >> 8) & 0xFF;
                 response[lenPos + 1] = finalAttrLen & 0xFF;

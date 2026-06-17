@@ -298,10 +298,10 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			sdp << "a=fmtp:" << si.payload_type << " " << fmtpLine << "\r\n";
 		}
 
-		sdp << "a=rtcp-mux\r\n";                          // RTCP 复用 RTP 端口（匹配浏览器 rtcp-mux）
-		sdp << "a=rtcp-rsize\r\n";                        // 精简 RTCP（匹配浏览器 rtcp-rsize）
-		sdp << "a=sendonly\r\n";                         // 服务端仅发送视频（匹配浏览器 recvonly）
-		sdp << "a=setup:passive\r\n";                     // 服务端作为 DTLS server，等待浏览器发起握手
+		sdp << "a=rtcp-mux\r\n";                          // RTCP 复用 RTP 端口
+		sdp << "a=rtcp-rsize\r\n";                        // 精简 RTCP
+		sdp << "a=sendonly\r\n";                         // 服务端仅发送视频
+		sdp << "a=setup:passive\r\n";                     // DTLS server
 		sdp << "a=ice-lite\r\n";                           // ICE-Lite 模式
 		sdp << "a=ice-ufrag:" << iceUfrag << "\r\n";
 		sdp << "a=ice-pwd:" << icePwd << "\r\n";
@@ -326,7 +326,11 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		// 启动 ICE-Lite 线程，监听该会话的 UDP 端口并响应 STUN Binding Request
 		rc->startIceHandleThread(sessionPtr);
 
-		sleep(1000);
+#ifdef _WIN32
+		Sleep(1000);
+#else
+		usleep(1000 * 1000);
+#endif
 		json j;
 		j["sdpAnswer"] = si.sdp;
 		j["serverRtpPort"] = si.server_rtp_port;
@@ -345,13 +349,13 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 {
 	string tag;
 	string ip;
-	yyjson_val* yyv = yyjson_obj_get(params, "tag");
-	if (yyv)
-		tag = yyjson_get_str(yyv);
-	yyv = yyjson_obj_get(params, "camera_ip");
+	yyjson_val* yyv = yyjson_obj_get(params, "camera_ip");
 	if (yyv)
 		ip = yyjson_get_str(yyv);
-	int preTime;
+	yyv = yyjson_obj_get(params, "tag");
+	if (yyv)
+		tag = yyjson_get_str(yyv);
+	int preTime = 0;
 	yyv = yyjson_obj_get(params, "preSeconds");
 	if (yyv)
 		preTime = yyjson_get_int(yyv);
@@ -362,18 +366,28 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 		rc = getStreamNode(tag);
 	}
 	if (rc) {
-		rc->rec_ctrl_.fu_a_buffer_.clear();
-		rc->rec_ctrl_.firstWrite = true;
-		rc->rec_ctrl_.preSeconds = preTime;
-		DB_TIME now; now.setNow();
-		std::string ts = str::format("%04d%02d%02d_%02d%02d%02d",
-			now.wYear, now.wMonth, now.wDay,
-			now.wHour, now.wMinute, now.wSecond);
-		rc->rec_ctrl_.path = tds->conf->dbPath + "/record/"
-			+ rc->config_.tag + "_" + ts + ".h264";
-		rc->rec_ctrl_.startTime = std::chrono::steady_clock::now();
-		rc->rec_ctrl_.recording = true;
-		rpcResp.result = RPC_OK;
+		if (rc->rec_ctrl_.recording == false)
+		{
+			rc->rec_ctrl_.fu_a_buffer_.clear();
+			rc->rec_ctrl_.firstWrite = true;
+			rc->rec_ctrl_.preRecordingDone = false;
+			rc->rec_ctrl_.last_was_idr_ = false;
+			rc->rec_ctrl_.preSeconds = preTime;
+			DB_TIME now; now.setNow();
+			std::string ts = str::format("%04d%02d%02d_%02d%02d%02d",
+				now.wYear, now.wMonth, now.wDay,
+				now.wHour, now.wMinute, now.wSecond);
+			rc->rec_ctrl_.path = tds->conf->dbPath + "/record/"
+				+ rc->config_.tag + "_" + ts + ".h264";
+			rc->rec_ctrl_.startTime = std::chrono::steady_clock::now();
+			rc->rec_ctrl_.recording = true;
+			rpcResp.result = RPC_OK;
+		}
+		else
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "record is already started");
+			return false;
+		}
 	}
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag or ip not found");
@@ -386,12 +400,12 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 {
 	string tag;
 	string ip;
-	yyjson_val* yyv = yyjson_obj_get(params, "tag");
-	if (yyv)
-		tag = yyjson_get_str(yyv);
-	yyv = yyjson_obj_get(params, "camera_ip");
+	yyjson_val* yyv = yyjson_obj_get(params, "camera_ip");
 	if (yyv)
 		ip = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "tag");
+	if (yyv)
+		tag = yyjson_get_str(yyv);
 	StreamNode* rc = nullptr;
 	if (!ip.empty()) {
 		rc = getStreamNodeByIp(ip);
@@ -401,14 +415,15 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	if (rc) {
 		if (rc->rec_ctrl_.recording == true)
 		{
+			// 先停止录制，确保 RTP 线程不再写入新数据，再刷缓冲区
 			rc->rec_ctrl_.recording = false;
+			rc->flushRecordBuffer();
 
-			// 计算 duration（秒）
+			// 计算 duration（秒）：录制会话挂钟时间
 			auto now = std::chrono::steady_clock::now();
 			int duration = static_cast<int>(
 				std::chrono::duration_cast<std::chrono::seconds>(
-					now - rc->rec_ctrl_.startTime).count());
-
+					now - rc->rec_ctrl_.startTime).count());		
 			// fileUrl 用相对路径
 			std::string filePath = rc->rec_ctrl_.path;
 			size_t pos = filePath.find_last_of("/\\");
@@ -427,12 +442,13 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		else
 		{
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "record is not start");
+			return false;
 		}
 	}
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag or ip not found");
 	}
-	LOG("[HTTP API]stopRecord, tag: %s, camera_ip: %s", tag.c_str(), ip.c_str());
+		LOG("[HTTP API]stopRecord, tag: %s, camera_ip: %s", tag.c_str(), ip.c_str());
 	return true;
 }
 

@@ -43,7 +43,7 @@ class DtlsTransport;
 class SrptProtect;
 struct SrptContext;
 
-// RTP包结构
+// RTP包结�?
 // NAL header (1 byte) format: F(1) | NRI(2) | Type(5)
 // - F: forbidden_zero_bit
 // - NRI (bits 6-5): nal_ref_idc (importance / priority)
@@ -99,9 +99,10 @@ public:
         int max_files = 0;            // 最多保留的录像文件数量，0表示不限制
 		int preSeconds = 0;          // 录像预录时间(秒)，即在事件发生前也保存的录像时长
         bool firstWrite = true;
+	    bool preRecordingDone = false;  // 预录数据已一次性写出，避免重复写入
 
         std::vector<char> fu_a_buffer_; // FU-A分片缓存
-        // 记录上一个写入的是否为 IDR，用于判断连续的 IDR
+        // 记录上一个写入的是否为IDR，用于判断连续的 IDR
         bool last_was_idr_ = false;
         std::chrono::steady_clock::time_point startTime;  // 录像开始时间，用于计算 duration
 	};
@@ -399,8 +400,8 @@ public:
     State state_ = State::IDLE;
     std::atomic<bool> running_{ false };
     std::atomic<bool> stopping_{ false };
-    bool isPulling_{ false };
-	bool isPushing_{ false };
+    std::atomic<bool> isPulling_{ false };
+    std::atomic<bool> isPushing_{ false };
 
     RecordControl rec_ctrl_;
 
@@ -492,6 +493,7 @@ public:
     void sendRTPPacketToClients(const RTPPacket& packet);
     void forwardRTPPacket(const RTPPacket& packet);
     void recordRTPPacket(std::shared_ptr<RTPPacket> pPkt);
+    void flushRecordBuffer();
     void writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs);
     std::string extractSessionID(const std::string& response);
     std::string extractTransport(const std::string& response);
