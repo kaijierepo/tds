@@ -1923,11 +1923,13 @@ void StreamNode::doRtpRecv() {
                 }
 
                 //发送给拉流客户端
-				sendRTPPacketToClients(packet);
-                
+                sendRTPPacketToClients(packet);
 
-                // 录制到磁盘
-                if (rec_ctrl_.recording) {
+
+                // 录制到磁盘（加锁保护 rec_ctrl_ 和 record_batch_buffer_，与 rpc_startRecord/rpc_stopRecord 互斥）
+                {
+                    std::lock_guard<std::recursive_mutex> lock(rec_mutex_);
+                    if (!rec_ctrl_.recording) continue;  // 双重检查：锁获取期间 recording 可能已被 stopRecord 置 false
                     if (rec_ctrl_.firstWrite && !rec_ctrl_.preRecordingDone) {
                         //从rtp_buffer_取出rec_ctrl_.preSeconds的数据并录制（仅一次）
                         std::vector<std::shared_ptr<RTPPacket>> pre_packets;
@@ -1942,8 +1944,8 @@ void StreamNode::doRtpRecv() {
                                     break;
                                 }
                             }
-						}
-						for (auto it = pre_packets.rbegin(); it != pre_packets.rend(); ++it) {
+                        }
+                        for (auto it = pre_packets.rbegin(); it != pre_packets.rend(); ++it) {
                             recordRTPPacket(*it);
                         }
                         rec_ctrl_.preRecordingDone = true;
@@ -3213,6 +3215,7 @@ std::string getNALTypeDesc(unsigned char nal_type) {
 
 // h264文件分析工具 https://nalu.qer.im/
 void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> pPkt) {
+    std::lock_guard<std::recursive_mutex> lock(rec_mutex_);  // 与 rpc_stopRecord 互斥，可被 doRtpRecv 重入
     if (!rec_ctrl_.recording || rec_ctrl_.path.empty()) return;
 
     std::vector<std::shared_ptr<RTPPacket>> to_write;
@@ -3296,6 +3299,7 @@ void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> pPkt) {
 }
 
 void StreamNode::flushRecordBuffer() {
+    std::lock_guard<std::recursive_mutex> lock(rec_mutex_);  // 与 doRtpRecv 互斥，可被 rpc_stopRecord 重入
     if (record_batch_buffer_.empty()) return;
 
     std::vector<std::shared_ptr<RTPPacket>> to_write;
@@ -3353,28 +3357,14 @@ void StreamNode::flushRecordBuffer() {
 }
 
 void StreamNode::writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs) {
-    //此处不要使用 ofstream 的 tellp获得长度，不准确
-    if (rec_ctrl_.firstWrite && nal_type != NAL_TYPE_IDR) {
+    // firstWrite 期间只跳过视频数据（non-IDR slice），放行 SPS/PPS/IDR/SEI/AUD
+    // 确保录制文件以摄像头原生的参数集开头，不插入 SDP 的 SPS/PPS（VUI 时间参数可能不一致）
+    if (rec_ctrl_.firstWrite && nal_type == NAL_TYPE_NON_IDR) {
         return;
     }
     rec_ctrl_.firstWrite = false;
 
     const uint8_t start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
-
-    // NAL 是 IDR（type==5）时，在写入该 NAL 前插入 SPS/PPS
-    if (nal_type == NAL_TYPE_IDR) {
-        if (!rec_ctrl_.last_was_idr_ && !pull_session_.sps.empty() && !pull_session_.pps.empty()) {
-            ofs.write((const char*)start_code, sizeof(start_code));
-            ofs.write((const char*)pull_session_.sps.data(), static_cast<std::streamsize>(pull_session_.sps.size()));
-            ofs.write((const char*)start_code, sizeof(start_code));
-            ofs.write((const char*)pull_session_.pps.data(), static_cast<std::streamsize>(pull_session_.pps.size()));
-        }
-        rec_ctrl_.last_was_idr_ = true;
-    }
-    else {
-        rec_ctrl_.last_was_idr_ = false;
-    }
-
     ofs.write((const char*)start_code, sizeof(start_code));
     ofs.write((const char*)nal, size);
 }

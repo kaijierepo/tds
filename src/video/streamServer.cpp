@@ -366,12 +366,12 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 		rc = getStreamNode(tag);
 	}
 	if (rc) {
+		std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);  // 与 doRtpRecv 录制线程互斥
 		if (rc->rec_ctrl_.recording == false)
 		{
 			rc->rec_ctrl_.fu_a_buffer_.clear();
 			rc->rec_ctrl_.firstWrite = true;
 			rc->rec_ctrl_.preRecordingDone = false;
-			rc->rec_ctrl_.last_was_idr_ = false;
 			rc->rec_ctrl_.preSeconds = preTime;
 			DB_TIME now; now.setNow();
 			std::string ts = str::format("%04d%02d%02d_%02d%02d%02d",
@@ -413,6 +413,7 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		rc = getStreamNode(tag);
 	}
 	if (rc) {
+		std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);  // 与 doRtpRecv 录制线程互斥
 		if (rc->rec_ctrl_.recording == true)
 		{
 			// 先停止录制，确保 RTP 线程不再写入新数据，再刷缓冲区

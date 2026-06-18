@@ -128,7 +128,7 @@ public:
         TransportMode push_mode = TransportMode::UDP;
         
         // UDP特定配置
-        int udp_recv_buffer_size = 0;    // UDP接收缓冲区大小(0=系统默认)
+        int udp_recv_buffer_size = 524288;  // UDP接收缓冲区(512KB)，避免4K高码流内核丢包
         int udp_send_buffer_size = 0;    // UDP发送缓冲区大小(0=系统默认)
         int udp_ttl = 64;                // TTL生存时间
         int udp_tos = 0xC0;              // Type of Service (Default: AF41 低延迟)
@@ -435,6 +435,7 @@ public:
     mutable std::mutex state_mutex_;
     mutable std::mutex stats_mutex_;
     mutable std::mutex queue_mutex_;
+    mutable std::recursive_mutex rec_mutex_;   // 保护 rec_ctrl_ 和 record_batch_buffer_
     std::condition_variable cv_;
 
     // 数据队列
