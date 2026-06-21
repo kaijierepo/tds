@@ -57,8 +57,8 @@ public:
 	virtual void input(yyjson_val* jVal,string& tagBind, TIME* dataTime = NULL, bool bPic = false);
 	virtual void output(json jVal, json& rlt,json& err,bool sync = false); //sync指定为同步输出,该函数将阻塞
 
-	json m_curVal;
-	json m_curOrgVal; //未经过倍率转换的
+	string m_curVal = "null";
+	string m_curOrgVal = "null"; //未经过倍率转换的
 	unsigned short m_regOffset;  // 如果是寄存器，偏移1代表2字节；如果是线圈偏移，偏移1代表1个bit
 	string m_regType; //modbus寄存器类型
 	bool m_bCustomOutputType = false;

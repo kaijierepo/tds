@@ -440,6 +440,9 @@ void project::getTagSel(TAG_SELECTOR& tagSel,string method, yyjson_val* params, 
 	if (yyv_tagSel) {
 		vecTagSel = parseTagSel(yyv_tagSel, type);
 	}
+	else {
+		vecTagSel.push_back("");
+	}
 
 
 	tagSel.selLanguage = session.language;
@@ -476,6 +479,23 @@ bool project::handleRpc(string method, yyjson_val* params, RPC_RESP& resp, RPC_S
 	else if (method == "getObjTree") {
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
 		resp.result = prj.m_moConfFileDump;
+	}
+	else if (method == "getObjGroups") {
+		shared_lock<shared_mutex> lock(prj.m_csPrj);
+		set<string> groups;
+		prj.getObjGroups(groups);
+		json jGroups = json::array();
+		string sGroups = "[";
+		int i = 0;
+		for (auto it = groups.begin(); it != groups.end(); ++it, ++i) {
+			jGroups.push_back(*it);
+			sGroups += "\"" + *it + "\"";
+			if(i != groups.size() - 1) {
+				sGroups += ",";
+			}
+		}
+		sGroups += "]";
+		resp.result = sGroups;
 	}
 	else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo") {
 		shared_lock<shared_mutex> lock(prj.m_csPrj);

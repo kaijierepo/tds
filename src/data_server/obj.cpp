@@ -1580,6 +1580,16 @@ string OBJ::getUpdateTimeDesc()
 	}
 }
 
+void OBJ::getObjGroups(std::set<std::string>& groups)
+{
+	if(m_groupName != "")
+		groups.insert(m_groupName);
+	for (int i = 0; i < m_childObj.size(); i++)
+	{
+		m_childObj.at(i)->getObjGroups(groups);
+	}
+}
+
 
 OBJ* OBJ::createChildMO(string subTag,string moType)
 {

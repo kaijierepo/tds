@@ -515,6 +515,7 @@ public:
 	std::vector<std::string> getTagPartials(std::string strTag);
 	std::string getTypeLabel(std::string type);
 	std::string getUpdateTimeDesc();
+	void getObjGroups(std::set<std::string>& groups);
 
 	//conf
 	std::string m_level;

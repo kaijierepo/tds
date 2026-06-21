@@ -401,6 +401,30 @@ namespace JSON_STR {
 	{	
 		return atoi(s.c_str());		
 	}
+	inline string toStr(double db) {
+		return std::to_string(db);
+	}
+	inline string toStr(int i) {
+		return std::to_string(i);
+	}
+	inline string toStr(bool b) {
+		if (b)
+			return "true";
+		else
+			return "false";
+	}
+	inline string toStr(string s) {
+		for (size_t i = 0; i < s.size(); ) {
+			if (s[i] == '"') {
+				s.replace(i, 1, "\\\"");
+				i += 2;      
+			}
+			else {
+				++i;
+			}
+		}
+		return "\"" + s + "\"";
+	}
 }
 
 

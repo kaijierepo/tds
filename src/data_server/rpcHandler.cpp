@@ -3649,6 +3649,7 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp, RPC_SESSION
 		objList = prj.filterByObjSel(objList, objSel);
 		string routeInfo;
 		int routeObjCount = 0;
+		int routeDevCount = 0;
 		for (int i = 0; i < objList.size(); i++) {
 			OBJ* pObj = objList[i];
 			if (pObj) {
@@ -3660,6 +3661,7 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp, RPC_SESSION
 						string ioAddr = pIoDev->getIOAddrStr();
 						routeInfo += TAG::trimRoot(tag, session.org) + "," + ioAddr + ";";
 						routeObjCount++;
+						routeDevCount++;
 						string s = p;
 						thread t([s, method, session, pIoDev,tag,ioAddr]() {
 							yyjson_doc* doc = yyjson_read(s.c_str(), s.length(), 0);
@@ -3674,11 +3676,15 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp, RPC_SESSION
 						free(p);
 					}
 				}
+				else {
+					routeInfo += TAG::trimRoot(tag, session.org) + ",未绑定;";
+					routeObjCount++;
+				}
 			}
 		}
 
 		rpcResp.result = RPC_OK;
-		rpcResp.info = str::format("共转发%d个设备,%s",routeObjCount,routeInfo.c_str());
+		rpcResp.info = str::format("选中%d个对象,转发绑定的%d个设备,%s",routeObjCount,routeDevCount,routeInfo.c_str());
 	}
 	else if (yyChildTds)
 	{

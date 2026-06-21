@@ -135,7 +135,7 @@ bool ioDev::input(vector<string> chanAddr, vector<json> val, TIME* stDataTime)
 
 			if (tagBind != "") {
 				inputTags.push_back(tagBind);
-				inputVals.push_back(pC->m_curVal);
+				inputVals.push_back(json::parse(pC->m_curVal));
 			}
 		}
 	}

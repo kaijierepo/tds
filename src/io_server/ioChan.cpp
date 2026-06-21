@@ -207,74 +207,20 @@ bool ioChannel::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER qu
 
 	if (querier.getStatus)
 	{
-		//conf["ioTypeLabel"] = m_ioTypeLabel;
-        //key = yyjson_mut_strcpy(doc, "ioTypeLabel");
-        //val = yyjson_mut_strcpy(doc, m_ioTypeLabel.c_str());
-        //yyjson_mut_obj_put(conf, key, val);
-
-		//conf["val"] = m_curVal;
-        //key = yyjson_mut_strcpy(doc, "val");
-        //val = yyjson_mut_strcpy(doc, m_curVal.c_str());
-        //yyjson_mut_obj_put(conf, key, val);
+		yyjson_mut_val* key = yyjson_mut_strcpy(doc, "val");
+		string sVal = m_curVal;
+		yyjson_doc* read_doc = yyjson_read_opts((char*)sVal.c_str(), sVal.size(), 0, NULL, NULL);
+		yyjson_mut_val* val;
+		if (read_doc) {
+			yyjson_val* read_root = yyjson_doc_get_root(read_doc);
+			yyjson_mut_val* val = yyjson_val_mut_copy(doc, read_root);
+			yyjson_doc_free(read_doc);
+			yyjson_mut_obj_put(conf, key, val);
+		}
 	}
 
 	return true;
 }
-
-//bool ioChannel::toJson(json& conf, DEV_QUERIER querier)
-//{
-//	json jDevAddr;
-//	if (m_jDevAddr.is_object()) {
-//		for (auto& i : m_jDevAddr.items()) {
-//			if (i.value() != nullptr) {
-//				jDevAddr[i.key()] = i.value();
-//			}
-//		}
-//	}
-//	else {
-//		jDevAddr = m_jDevAddr;
-//	}
-//
-//	conf["addr"] = jDevAddr;
-//
-//	if (querier.getConf) {
-//		conf["nodeID"] = m_confNodeId;
-//		conf["tagBind"] = m_strTagBind;
-//		conf["ioType"] = m_ioType;
-//		conf["valType"] = m_valType;
-//		conf["name"] = m_name;
-//
-//		conf["k"] = m_k;
-//
-//		//optional fields
-//		if (m_fmt != "")
-//			conf["fmt"] = m_fmt;
-//
-//		if (m_byteOrder != "")
-//			conf["byteOrder"] = m_byteOrder;
-//
-//		if (m_bCustomOutputType)
-//		{
-//			conf["isCustomOutputType"] = m_bCustomOutputType;
-//			conf["customOutputType"] = m_sCustomOutputType;
-//		}
-//
-//		if (m_bDownSample)
-//		{
-//			conf["downSample"] = true;
-//			conf["downSampleInterval"] = m_iDownSampleInterval;
-//		}
-//	}
-//
-//
-//	if (querier.getStatus)
-//	{
-//		//conf["ioTypeLabel"] = m_ioTypeLabel;
-//		conf["val"] = m_curVal;
-//	}
-//
-//	return false;
-//}
 
 bool ioChannel::getChanStatus(json& statusList)
 {
@@ -297,13 +243,13 @@ bool ioChannel::getChanVal(json& valList)
 {
 	json j;
 	string tag = m_strTagBind;
-	if (tag != "" && timeopt::isValidTime(m_stLastUpdateTime) && m_curVal!=nullptr) {
+	if (tag != "" && timeopt::isValidTime(m_stLastUpdateTime) && !JSON_STR::is_null(m_curVal)) {
 		if (m_pParent->m_strTagBind != "") {
 			tag = m_pParent->m_strTagBind + "." + tag;
 		}
 		j["time"] = timeopt::st2str(m_stLastUpdateTime);
 		j["tag"] = tag;
-		j["val"] = m_curVal;
+		j["val"] = json::parse(m_curVal);
 		valList.push_back(j);
 	}
 
@@ -338,7 +284,7 @@ void ioChannel::input(yyjson_val* jVal, TIME* dataTime, bool bPic) {
 	//更新绑定位号值
 	json param;
 	param["tag"] = tagBind;
-	param["val"] = m_curVal;
+	param["val"] = json::parse(m_curVal);
 	param["time"] = timeopt::st2str(m_stLastUpdateTime);
 	tds->callAsyn("input", param);
 }
@@ -350,7 +296,7 @@ void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 	//更新绑定位号值
 	json param;
 	param["tag"] = tagBind;
-	param["val"] = m_curVal;
+	param["val"] = json::parse(m_curVal);
 	param["time"] = timeopt::st2str(m_stLastUpdateTime);
 	tds->callAsyn("input", param);
 }
@@ -366,11 +312,11 @@ void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 	}
 	m_stLastUpdateTime = *dataTime;
 	m_curOrgVal = jVal;
-	if (m_curOrgVal.is_number()) {
+	if (JSON_STR::is_num(m_curOrgVal)) {
 		double val = 0;
-		double valOrg = m_curOrgVal.get<double>();
+		double valOrg = JSON_STR::get_num(m_curOrgVal);
 		val = valOrg * m_k + m_b;
-		m_curVal = val;
+		m_curVal = JSON_STR::toStr(val);
 	}
 	else {
 		m_curVal = m_curOrgVal;
@@ -380,7 +326,7 @@ void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 	m_csStreamPuller.lock();
 	if (m_vecStreamPuller.size() > 0) {
 		json jDe;
-		jDe["val"] = m_curVal;
+		jDe["val"] = json::parse(m_curVal);
 		string s = jDe.dump() + "\n\n"; //数据流都要加，便于分帧
 
 		for (size_t i = 0; i < m_vecStreamPuller.size(); i++) {
@@ -421,33 +367,35 @@ void ioChannel::input(yyjson_val* jVal, string& tagBind, TIME* dataTime, bool bP
 		dataTime = &t;
 	}
 	m_stLastUpdateTime = *dataTime;
+
+
 	if (yyjson_is_real(jVal)) {
 		double valOrg = yyjson_get_real(jVal);
-		m_curOrgVal = valOrg;
+		m_curOrgVal = JSON_STR::toStr(valOrg);
 		double val = valOrg * m_k + m_b;
-		m_curVal = val;
+		m_curVal = JSON_STR::toStr(val);
 	}
 	else if (yyjson_is_int(jVal)){
 		int valOrg = yyjson_get_int(jVal);
-		m_curOrgVal = valOrg;
+		m_curOrgVal = JSON_STR::toStr(valOrg);
 		int val = valOrg * m_k + m_b;
-		m_curVal = val;
+		m_curVal = JSON_STR::toStr(val);
 	}
 	else if (yyjson_is_bool(jVal)) {
 		bool valOrg = yyjson_get_bool(jVal);
-		m_curOrgVal = valOrg;
-		m_curVal = valOrg;
+		m_curOrgVal = JSON_STR::toStr(valOrg);
+		m_curVal = m_curOrgVal;
 	}
 	else if (yyjson_is_str(jVal)) {
 		string s = yyjson_get_str(jVal);
-		m_curVal = s;
+		m_curVal = JSON_STR::toStr(s);
 	}
 
 	//如果有数据流订阅者，直接推送
 	m_csStreamPuller.lock();
 	if (m_vecStreamPuller.size() > 0) {
 		json jDe;
-		jDe["val"] = m_curVal;
+		jDe["val"] = json::parse(m_curVal);
 		string s = jDe.dump() + "\n\n"; //数据流都要加，便于分帧
 
 		for (size_t i = 0; i < m_vecStreamPuller.size(); i++) {
