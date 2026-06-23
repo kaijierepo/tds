@@ -1,6 +1,7 @@
 #pragma once
 #include "ioDev.h"
 #include <string>
+#include <functional>
 #include "udpSrv.h"
 #include "json.hpp"
 using namespace std;
@@ -97,7 +98,6 @@ public:
 
 	//主开关
 	bool run() override;
-	bool runAsCloud();
 	void stop() override;
 
 	//组态信息
@@ -232,6 +232,29 @@ public:
 	string m_ioSrvIPAsClient;//ioSrv作为客户端跟设备通信时绑定的本地ip
 	bool m_bDisableIOHandle;  //用于测试性能，检查是否io处理对性能消耗比较大
 	bool m_bGb2312Tdsp;
+
+	// === MQTT Broker ===
+	bool startMqttBroker();                         // 启动 MQTT Broker
+	void stopMqttBroker();                           // 停止 MQTT Broker
+	bool m_bMqttBrokerRunning;                       // Broker 是否运行中
+	bool m_bMqttBrokerStop;                          // 停止信号
+	std::thread* m_pMqttBrokerThread;                // Broker 工作线程
+
+	// MQTT Broker 配置
+	int    m_mqttBrokerPort;                         // 监听端口，默认 1883
+	string m_mqttBrokerIP;                           // 监听 IP，默认 "0.0.0.0"
+
+	// MQTT Broker 回调接口 —— 预留，收到 MQTT PUBLISH 消息时调用
+	// topic: 消息主题, data: 消息负载, dataLen: 负载长度
+	// clientId: 发送该消息的客户端 ID (可能为空)
+	using MqttMsgCallback = std::function<void(const std::string& topic, const std::string& data, const std::string& clientId)>;
+	std::vector<MqttMsgCallback> m_vecMqttMsgCallbacks;
+	void onMqttBrokerMsg(const std::string& topic, const std::string& data, const std::string& clientId);
+
+	// MQTT Broker 客户端连接/断开回调
+	using MqttConnCallback = std::function<void(const std::string& clientId, bool connected)>;
+	std::vector<MqttConnCallback> m_vecMqttConnCallbacks;
+	void onMqttBrokerConn(const std::string& clientId, bool connected);
 };
 
 extern ioServer ioSrv;

@@ -16,6 +16,7 @@
 #include "statusServer.h"
 #include "yyjson.h"
 #include "proto_ws.h"
+#include "mongoose.h"
 
 
 ioServer ioSrv;
@@ -196,6 +197,13 @@ ioServer::ioServer()
 	m_bPingThreadStart = false;
 	m_bDisableIOHandle = false;
 	m_bGb2312Tdsp = true;
+
+	// MQTT Broker 初始化
+	m_bMqttBrokerRunning = false;
+	m_bMqttBrokerStop = false;
+	m_pMqttBrokerThread = nullptr;
+	m_mqttBrokerPort = 1883;
+	m_mqttBrokerIP = "0.0.0.0";
 }
 ioServer::~ioServer()
 {
@@ -1368,13 +1376,8 @@ void ioServer::saveChanTemplate(string name,string& data)
 	fs::writeFile(p, data);
 }
 
-bool ioServer::run()
-{
-	runAsCloud();
-	return false;
-}
 
-bool ioServer::runAsCloud() {
+bool ioServer::run() {
 	m_bRunning = true;
 	loadChanTemplate();
 
@@ -1401,6 +1404,10 @@ bool ioServer::runAsCloud() {
 	m_mapPort2DevType[iq60Port]  = DEV_TYPE_iq60;
 	m_mapPort2DevType[mbTcpPort] = DEV_TYPE_modbus_tcp_slave;
 	m_mapPort2DevType[jepPort]   = DEV_TYPE_jep;
+
+	// 读取 MQTT Broker 配置
+	m_mqttBrokerPort = tds->conf->getInt("mqttBrokerPort", 1883);
+	m_mqttBrokerIP   = tds->conf->getStr("mqttBrokerIP", "0.0.0.0");
 
 	//启动服务端口
 	if(tdspPort) LOG("[IO服务    ] 监听地址:"     + m_ioSrvIP + ":" + str::fromInt(tdspPort)  + "设备协议 TDSP");
@@ -1555,10 +1562,16 @@ bool ioServer::runAsCloud() {
 	std::thread io(IOThread);
 	io.detach();
 
+	//启动 MQTT Broker
+	startMqttBroker();
+
 	return true;
 }
 
 void ioServer::stop() {
+	// 先停止 MQTT Broker，让客户端优雅断开
+	stopMqttBroker();
+
 	if (m_tcpSrv_iq60)
 		m_tcpSrv_iq60->stop();
 
@@ -2801,5 +2814,257 @@ void ioHandler_customUdp::OnRecvUdpData(unsigned char* recvData, size_t recvData
 		}
 		else
 			dev->onRecvData(recvData, recvDataLen);
+	}
+}
+
+// =========================== MQTT Broker ===========================
+
+// MQTT Broker 事件回调 —— mongoose 的事件处理入口
+static void mqtt_broker_fn(struct mg_connection* c, int ev, void* ev_data) {
+	ioServer* pSrv = (ioServer*)c->fn_data;
+	if (pSrv == nullptr) return;
+
+	switch (ev) {
+	case MG_EV_ACCEPT: {
+		// 有新客户端 TCP 连接进入
+		LOG("[MQTT Broker] 新客户端连接 %d.%d.%d.%d:%d", c->rem.ip[0], c->rem.ip[1], c->rem.ip[2], c->rem.ip[3], c->rem.port);
+		break;
+	}
+	case MG_EV_MQTT_CMD: {
+		// 处理 MQTT 底层命令
+		struct mg_mqtt_message* mm = (struct mg_mqtt_message*)ev_data;
+		switch (mm->cmd) {
+		case MQTT_CMD_CONNECT: {
+			// 客户端发起连接请求，发送 CONNACK 响应 (返回码 0 = 成功)
+			mg_mqtt_send_header(c, MQTT_CMD_CONNACK, 0, 2);
+			uint8_t connack[] = { 0, 0 };  // flags=0, reason_code=0
+			mg_send(c, connack, 2);
+			LOG("[MQTT Broker] 客户端连接认证成功");
+			break;
+		}
+		case MQTT_CMD_SUBSCRIBE: {
+			// 处理订阅请求
+			mg_mqtt_send_header(c, MQTT_CMD_SUBACK, 0, 3);
+			uint8_t suback[] = { (uint8_t)((mm->id >> 8) & 0xFF), (uint8_t)(mm->id & 0xFF), 0 };  // packetId + QoS 0
+			mg_send(c, suback, 3);
+			string topic = str::fromBuff(mm->topic.ptr, mm->topic.len);
+			LOG("[MQTT Broker] 客户端订阅主题: %s", topic.c_str());
+			break;
+		}
+		case MQTT_CMD_UNSUBSCRIBE: {
+			// 处理取消订阅请求
+			mg_mqtt_send_header(c, MQTT_CMD_UNSUBACK, 0, 2);
+			uint8_t unsuback[] = { (uint8_t)((mm->id >> 8) & 0xFF), (uint8_t)(mm->id & 0xFF) };
+			mg_send(c, unsuback, 2);
+			break;
+		}
+		case MQTT_CMD_PINGREQ: {
+			// 心跳请求，发送 PINGRESP
+			mg_mqtt_pong(c);
+			break;
+		}
+		case MQTT_CMD_DISCONNECT: {
+			LOG("[MQTT Broker] 客户端主动断开");
+			break;
+		}
+		default:
+			break;
+		}
+		break;
+	}
+	case MG_EV_MQTT_OPEN: {
+		// MQTT CONNECT 完成，客户端已认证上线
+		string clientId;
+		LOG("[MQTT Broker] 客户端上线");
+		pSrv->onMqttBrokerConn(clientId, true);
+		break;
+	}
+	case MG_EV_MQTT_MSG: {
+		// 收到 MQTT PUBLISH 消息
+		struct mg_mqtt_message* mm = (struct mg_mqtt_message*)ev_data;
+		string topic = str::fromBuff(mm->topic.ptr, mm->topic.len);
+
+		// 跳过 payload 前导 null 字节（MQTTX v1.13 会在 payload 前多发一个 0x00）
+		const char* p = mm->data.ptr;
+		size_t len = mm->data.len;
+		while (len > 0 && *p == '\0') { p++; len--; }
+		string data = str::fromBuff(p, len);
+
+		string clientId;
+		// LOG("[MQTT Broker] 收到消息, topic=%s, data_len=%zu", topic.c_str(), data.size());
+		pSrv->onMqttBrokerMsg(topic, data, clientId);
+		break;
+	}
+	case MG_EV_CLOSE: {
+		// 客户端断开连接
+		string clientId;
+		LOG("[MQTT Broker] 客户端断开");
+		pSrv->onMqttBrokerConn(clientId, false);
+		break;
+	}
+	case MG_EV_ERROR: {
+		LOG("[MQTT Broker] 错误: %s", (char*)ev_data);
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+// MQTT Broker 工作线程
+static void thread_mqtt_broker(void* p) {
+	ioServer* pSrv = (ioServer*)p;
+	setThreadName("mqtt broker thread");
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	string listenUrl = "mqtt://" + pSrv->m_mqttBrokerIP + ":" + to_string(pSrv->m_mqttBrokerPort);
+	struct mg_connection* c = mg_mqtt_listen(&mgr, listenUrl.c_str(), mqtt_broker_fn, pSrv);
+	if (c == nullptr) {
+		LOG("[error][MQTT Broker] 启动失败, 端口:%d, 地址:%s", pSrv->m_mqttBrokerPort, pSrv->m_mqttBrokerIP.c_str());
+		pSrv->m_bMqttBrokerRunning = false;
+		mg_mgr_free(&mgr);
+		return;
+	}
+
+	LOG("[MQTT Broker] 启动成功, 监听 %s", listenUrl.c_str());
+	pSrv->m_bMqttBrokerRunning = true;
+
+	while (!pSrv->m_bMqttBrokerStop) {
+		mg_mgr_poll(&mgr, 200);
+	}
+
+	mg_mgr_free(&mgr);
+	LOG("[MQTT Broker] 已停止");
+	pSrv->m_bMqttBrokerRunning = false;
+}
+
+bool ioServer::startMqttBroker() {
+	if (m_bMqttBrokerRunning) {
+		LOG("[warn][MQTT Broker] Broker 已在运行中");
+		return true;
+	}
+
+	// 从配置读取端口（如果配置了的话）
+	m_mqttBrokerPort = tds->conf->getInt("mqttBrokerPort", 1883);
+	m_mqttBrokerIP   = tds->conf->getStr("mqttBrokerIP", "0.0.0.0");
+
+	if (m_mqttBrokerPort == 0) {
+		LOG("[MQTT Broker] 端口配置为 0, 跳过启动");
+		return true;
+	}
+
+	m_vecMqttMsgCallbacks.push_back(
+		[](const string& topic, const string& data, const string& clientId) {
+			if (topic.find("tds") == 0) {
+				string tag = topic.substr(4, topic.size() - 4);
+				tag = str::replace(tag, "/", ".");
+				string params = data;
+
+				yyjson_doc* doc = yyjson_read((const char*)params.c_str(), params.length(), 0);
+				if (!doc) {
+					LOG("[warn]解析mqtt数据包失败,不是正确的json格式");
+					return;
+				}
+				yyjson_val* yroot = yyjson_doc_get_root(doc);
+				yyjson_mut_doc* mdoc = NULL;
+				yyjson_mut_val* root = NULL;
+
+				if (yyjson_is_obj(yroot)) {
+					// 是 JSON 对象，复制并查找 val 字段
+					mdoc = yyjson_doc_mut_copy(doc, NULL);
+					root = yyjson_mut_doc_get_root(mdoc);
+					yyjson_val* yyv_val = yyjson_obj_get(yroot, "val");
+					if (yyv_val && root) {
+						yyjson_mut_obj_add_str(mdoc, root, "tag", tag.c_str());
+						size_t len = 0;
+						char* p = yyjson_mut_val_write(root, YYJSON_WRITE_PRETTY_NO_SPACES, &len);
+						if (p) {
+							string sParams(p, len);
+							tds->callAsyn("input", sParams, 0);
+							free(p);
+						}
+					}
+				} else if (yyjson_is_num(yroot)) {
+					// 是数值，构造 {"val": XX, "tag": "..."}
+					mdoc = yyjson_mut_doc_new(NULL);
+					root = yyjson_mut_obj(mdoc);
+					yyjson_mut_doc_set_root(mdoc, root);
+					if (yyjson_is_real(yroot)) {
+						yyjson_mut_obj_add_real(mdoc, root, "val", yyjson_get_real(yroot));
+					} else {
+						yyjson_mut_obj_add_int(mdoc, root, "val", yyjson_get_int(yroot));
+					}
+					yyjson_mut_obj_add_str(mdoc, root, "tag", tag.c_str());
+					size_t len = 0;
+					char* p = yyjson_mut_val_write(root, YYJSON_WRITE_PRETTY_NO_SPACES, &len);
+					if (p) {
+						string sParams(p, len);
+						tds->callAsyn("input", sParams, 0);
+						free(p);
+					}
+				} else if (yyjson_is_bool(yroot)) {
+					// 是布尔值，构造 {"val": true/false, "tag": "..."}
+					mdoc = yyjson_mut_doc_new(NULL);
+					root = yyjson_mut_obj(mdoc);
+					yyjson_mut_doc_set_root(mdoc, root);
+					yyjson_mut_obj_add_bool(mdoc, root, "val", yyjson_get_bool(yroot));
+					yyjson_mut_obj_add_str(mdoc, root, "tag", tag.c_str());
+					size_t len = 0;
+					char* p = yyjson_mut_val_write(root, YYJSON_WRITE_PRETTY_NO_SPACES, &len);
+					if (p) {
+						string sParams(p, len);
+						tds->callAsyn("input", sParams, 0);
+						free(p);
+					}
+				}
+				yyjson_doc_free(doc);
+				yyjson_mut_doc_free(mdoc);
+			}
+		}
+	);
+
+	m_vecMqttConnCallbacks.push_back(
+		[](const string& clientId, bool connected) {
+			
+		}
+	);
+
+
+
+	m_bMqttBrokerStop = false;
+	m_pMqttBrokerThread = new std::thread(thread_mqtt_broker, this);
+	return true;
+}
+
+void ioServer::stopMqttBroker() {
+	if (!m_bMqttBrokerRunning) return;
+
+	m_bMqttBrokerStop = true;
+
+	// 等待线程退出
+	if (m_pMqttBrokerThread) {
+		m_pMqttBrokerThread->join();
+		delete m_pMqttBrokerThread;
+		m_pMqttBrokerThread = nullptr;
+	}
+}
+
+void ioServer::onMqttBrokerMsg(const std::string& topic, const std::string& data, const std::string& clientId) {
+	// 遍历所有注册的回调，通知消息到达
+	for (auto& cb : m_vecMqttMsgCallbacks) {
+		if (cb) {
+			cb(topic, data, clientId);
+		}
+	}
+}
+
+void ioServer::onMqttBrokerConn(const std::string& clientId, bool connected) {
+	// 遍历所有注册的回调，通知连接状态变化
+	for (auto& cb : m_vecMqttConnCallbacks) {
+		if (cb) {
+			cb(clientId, connected);
+		}
 	}
 }
