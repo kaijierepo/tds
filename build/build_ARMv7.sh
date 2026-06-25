@@ -2,15 +2,20 @@
 set -e
 
 # ===================== 1. 清理逻辑 =====================
-ENABLE_CLEAN="yes"
+# 支持命令行参数: clean / rebuild 执行全量编译, 默认增量编译
+ENABLE_CLEAN="no"
+if [ "$1" = "clean" ] || [ "$1" = "rebuild" ]; then
+    ENABLE_CLEAN="yes"
+fi
 
 if [ "$ENABLE_CLEAN" = "yes" ]; then
     echo "🧹 开始清理原有 .o 目标文件..."
     cd ../src || { echo "❌ 错误：无法进入源码目录 ../src"; exit 1; }
     find . -name "*.o" -type f -delete
-    echo "✅ 清理完成！已删除所有 .o 文件"
+    find . -name "*.d" -type f -delete
+    echo "✅ 清理完成！已删除所有 .o 和 .d 文件"
 else
-    echo "ℹ️  清理功能已禁用（ENABLE_CLEAN=no），保留原有 .o 文件"
+    echo "ℹ️  增量编译模式（保留原有 .o 文件），如需全量编译请执行: $0 clean"
     cd ../src || { echo "❌ 错误：无法进入源码目录 ../src"; exit 1; }
 fi
 
@@ -23,10 +28,10 @@ arch_flags="-march=armv7-a -mtune=cortex-a7 -mfloat-abi=hard -mfpu=neon-vfpv4"
 strip_tool="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-strip"
 SYSROOT="${TOOLCHAIN_PATH}/arm-buildroot-linux-gnueabihf/sysroot"
 # armv7l 固定使用混合链接（业务库静态，系统库动态）
+# 注：MG_TLS_BUILTIN 模式不需要 -lcrypto -lssl -lkrb5 -lk5crypto -lcom_err
 linkerflags="\
 -Wl,--start-group \
 -Wl,-Bstatic \
--lcrypto -lssl -lkrb5 -lk5crypto -lcom_err \
 -Wl,-Bdynamic \
 -lpthread -lutil -lrt -latomic -ldl -lc \
 -Wl,--end-group \
@@ -89,6 +94,13 @@ common_flags+=" \
 -I ./func_module \
 -I ./mongoose \
 -I ./video \
+-I ./common/crypto/include \
+-I ./common/crypto/psa/drivers/builtin/include \
+-I ./common/crypto/psa/drivers/builtin/src \
+-I ./common/crypto/psa/core \
+-I ./common/crypto/library \
+-I ./common/crypto/psa/utilities \
+-I ./common/crypto/psa/drivers/everest/include/tf-psa-crypto/private/everest \
 "
 
 # --------------------------
@@ -122,9 +134,30 @@ cpp_flags="\
 compile_c_if_needed() {
     local src_file=$1
     local obj_file=$2
-    if [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
+    local dep_file="${obj_file%.o}.d"
+    local need_compile=0
+
+    if [ ! -f "$obj_file" ]; then
+        need_compile=1
+    elif [ ! -f "$dep_file" ]; then
+        need_compile=1
+    elif [ "$src_file" -nt "$obj_file" ]; then
+        need_compile=1
+    else
+        # 检查头文件依赖是否有变化
+        if [ -f "$dep_file" ]; then
+            while IFS= read -r header; do
+                if [ -f "$header" ] && [ "$header" -nt "$obj_file" ]; then
+                    need_compile=1
+                    break
+                fi
+            done < <(sed -n 's/^ *//; s/ *\\*$//; /^$/d' "$dep_file" | tr ' ' '\n' | grep '\.h$')
+        fi
+    fi
+
+    if [ "$need_compile" -eq 1 ]; then
         echo "🔨 编译 C 文件: $src_file → $obj_file"
-        $CC $common_flags $c_flags -c "$src_file" -o "$obj_file"
+        $CC $common_flags $c_flags -MMD -MP -c "$src_file" -o "$obj_file"
     else
         echo "⏩ 跳过 C 文件（未修改）: $src_file"
     fi
@@ -133,9 +166,30 @@ compile_c_if_needed() {
 compile_cpp_if_needed() {
     local src_file=$1
     local obj_file=$2
-    if [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
+    local dep_file="${obj_file%.o}.d"
+    local need_compile=0
+
+    if [ ! -f "$obj_file" ]; then
+        need_compile=1
+    elif [ ! -f "$dep_file" ]; then
+        need_compile=1
+    elif [ "$src_file" -nt "$obj_file" ]; then
+        need_compile=1
+    else
+        # 检查头文件依赖是否有变化
+        if [ -f "$dep_file" ]; then
+            while IFS= read -r header; do
+                if [ -f "$header" ] && [ "$header" -nt "$obj_file" ]; then
+                    need_compile=1
+                    break
+                fi
+            done < <(sed -n 's/^ *//; s/ *\\*$//; /^$/d' "$dep_file" | tr ' ' '\n' | grep '\.h$')
+        fi
+    fi
+
+    if [ "$need_compile" -eq 1 ]; then
         echo "🔨 编译 C++ 文件: $src_file → $obj_file"
-        $CXX $common_flags $cpp_flags -c "$src_file" -o "$obj_file"
+        $CXX $common_flags $cpp_flags -MMD -MP -c "$src_file" -o "$obj_file"
     else
         echo "⏩ 跳过 C++ 文件（未修改）: $src_file"
     fi
@@ -155,6 +209,128 @@ compile_c_if_needed ./script/libunicode.c ./script/libunicode.o
 compile_c_if_needed ./script/quickjs-libc.c ./script/quickjs-libc.o
 compile_c_if_needed ./script/quickjs.c ./script/quickjs.o
 compile_c_if_needed ./script/repl.c ./script/repl.o
+compile_c_if_needed ./common/rsa.c ./common/rsa.o
+compile_c_if_needed ./common/bignum.c ./common/bignum.o
+
+# mbedtls library
+compile_c_if_needed ./common/crypto/library/ssl_tls.c ./common/crypto/library/ssl_tls.o
+compile_c_if_needed ./common/crypto/library/ssl_tls13_server.c ./common/crypto/library/ssl_tls13_server.o
+compile_c_if_needed ./common/crypto/library/ssl_tls13_keys.c ./common/crypto/library/ssl_tls13_keys.o
+compile_c_if_needed ./common/crypto/library/ssl_tls13_generic.c ./common/crypto/library/ssl_tls13_generic.o
+compile_c_if_needed ./common/crypto/library/ssl_tls13_client.c ./common/crypto/library/ssl_tls13_client.o
+compile_c_if_needed ./common/crypto/library/ssl_tls12_server.c ./common/crypto/library/ssl_tls12_server.o
+compile_c_if_needed ./common/crypto/library/ssl_tls12_client.c ./common/crypto/library/ssl_tls12_client.o
+compile_c_if_needed ./common/crypto/library/ssl_ticket.c ./common/crypto/library/ssl_ticket.o
+compile_c_if_needed ./common/crypto/library/ssl_msg.c ./common/crypto/library/ssl_msg.o
+compile_c_if_needed ./common/crypto/library/ssl_debug_helpers_generated.c ./common/crypto/library/ssl_debug_helpers_generated.o
+compile_c_if_needed ./common/crypto/library/ssl_cookie.c ./common/crypto/library/ssl_cookie.o
+compile_c_if_needed ./common/crypto/library/ssl_client.c ./common/crypto/library/ssl_client.o
+compile_c_if_needed ./common/crypto/library/ssl_ciphersuites.c ./common/crypto/library/ssl_ciphersuites.o
+compile_c_if_needed ./common/crypto/library/ssl_cache.c ./common/crypto/library/ssl_cache.o
+compile_c_if_needed ./common/crypto/library/pkcs7.c ./common/crypto/library/pkcs7.o
+compile_c_if_needed ./common/crypto/library/net_sockets.c ./common/crypto/library/net_sockets.o
+compile_c_if_needed ./common/crypto/library/mps_trace.c ./common/crypto/library/mps_trace.o
+compile_c_if_needed ./common/crypto/library/mps_reader.c ./common/crypto/library/mps_reader.o
+compile_c_if_needed ./common/crypto/library/mbedtls_config.c ./common/crypto/library/mbedtls_config.o
+compile_c_if_needed ./common/crypto/library/error.c ./common/crypto/library/error.o
+compile_c_if_needed ./common/crypto/library/debug.c ./common/crypto/library/debug.o
+compile_c_if_needed ./common/crypto/library/version.c ./common/crypto/library/version.o
+compile_c_if_needed ./common/crypto/library/version_features.c ./common/crypto/library/version_features.o
+compile_c_if_needed ./common/crypto/library/timing.c ./common/crypto/library/timing.o
+compile_c_if_needed ./common/crypto/library/x509.c ./common/crypto/library/x509.o
+compile_c_if_needed ./common/crypto/library/x509_create.c ./common/crypto/library/x509_create.o
+compile_c_if_needed ./common/crypto/library/x509_crl.c ./common/crypto/library/x509_crl.o
+compile_c_if_needed ./common/crypto/library/x509_crt.c ./common/crypto/library/x509_crt.o
+compile_c_if_needed ./common/crypto/library/x509_csr.c ./common/crypto/library/x509_csr.o
+compile_c_if_needed ./common/crypto/library/x509_oid.c ./common/crypto/library/x509_oid.o
+compile_c_if_needed ./common/crypto/library/x509write.c ./common/crypto/library/x509write.o
+compile_c_if_needed ./common/crypto/library/x509write_crt.c ./common/crypto/library/x509write_crt.o
+compile_c_if_needed ./common/crypto/library/x509write_csr.c ./common/crypto/library/x509write_csr.o
+
+# psa/core
+compile_c_if_needed ./common/crypto/psa/core/psa_crypto.c ./common/crypto/psa/core/psa_crypto.o
+compile_c_if_needed ./common/crypto/psa/core/psa_crypto_client.c ./common/crypto/psa/core/psa_crypto_client.o
+compile_c_if_needed ./common/crypto/psa/core/psa_crypto_driver_wrappers_no_static.c ./common/crypto/psa/core/psa_crypto_driver_wrappers_no_static.o
+compile_c_if_needed ./common/crypto/psa/core/psa_crypto_random.c ./common/crypto/psa/core/psa_crypto_random.o
+compile_c_if_needed ./common/crypto/psa/core/psa_crypto_slot_management.c ./common/crypto/psa/core/psa_crypto_slot_management.o
+compile_c_if_needed ./common/crypto/psa/core/psa_crypto_storage.c ./common/crypto/psa/core/psa_crypto_storage.o
+compile_c_if_needed ./common/crypto/psa/core/psa_its_file.c ./common/crypto/psa/core/psa_its_file.o
+compile_c_if_needed ./common/crypto/psa/core/psa_util.c ./common/crypto/psa/core/psa_util.o
+compile_c_if_needed ./common/crypto/psa/core/tf_psa_crypto_config.c ./common/crypto/psa/core/tf_psa_crypto_config.o
+compile_c_if_needed ./common/crypto/psa/core/tf_psa_crypto_version.c ./common/crypto/psa/core/tf_psa_crypto_version.o
+
+# psa/drivers/builtin/src
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/aes.c ./common/crypto/psa/drivers/builtin/src/aes.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/aria.c ./common/crypto/psa/drivers/builtin/src/aria.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/bignum.c ./common/crypto/psa/drivers/builtin/src/bignum.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/bignum_core.c ./common/crypto/psa/drivers/builtin/src/bignum_core.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/bignum_mod.c ./common/crypto/psa/drivers/builtin/src/bignum_mod.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/bignum_mod_raw.c ./common/crypto/psa/drivers/builtin/src/bignum_mod_raw.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/block_cipher.c ./common/crypto/psa/drivers/builtin/src/block_cipher.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/camellia.c ./common/crypto/psa/drivers/builtin/src/camellia.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/ccm.c ./common/crypto/psa/drivers/builtin/src/ccm.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/chacha20.c ./common/crypto/psa/drivers/builtin/src/chacha20.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/chacha20_neon.c ./common/crypto/psa/drivers/builtin/src/chacha20_neon.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/chachapoly.c ./common/crypto/psa/drivers/builtin/src/chachapoly.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/cipher.c ./common/crypto/psa/drivers/builtin/src/cipher.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/cipher_wrap.c ./common/crypto/psa/drivers/builtin/src/cipher_wrap.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/cmac.c ./common/crypto/psa/drivers/builtin/src/cmac.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/ctr_drbg.c ./common/crypto/psa/drivers/builtin/src/ctr_drbg.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/ecdsa.c ./common/crypto/psa/drivers/builtin/src/ecdsa.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/ecjpake.c ./common/crypto/psa/drivers/builtin/src/ecjpake.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/ecp.c ./common/crypto/psa/drivers/builtin/src/ecp.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/ecp_curves.c ./common/crypto/psa/drivers/builtin/src/ecp_curves.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/ecp_curves_new.c ./common/crypto/psa/drivers/builtin/src/ecp_curves_new.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/entropy.c ./common/crypto/psa/drivers/builtin/src/entropy.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/entropy_poll.c ./common/crypto/psa/drivers/builtin/src/entropy_poll.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/gcm.c ./common/crypto/psa/drivers/builtin/src/gcm.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/hmac_drbg.c ./common/crypto/psa/drivers/builtin/src/hmac_drbg.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/md5.c ./common/crypto/psa/drivers/builtin/src/md5.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/poly1305.c ./common/crypto/psa/drivers/builtin/src/poly1305.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_crypto_aead.c ./common/crypto/psa/drivers/builtin/src/psa_crypto_aead.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_crypto_cipher.c ./common/crypto/psa/drivers/builtin/src/psa_crypto_cipher.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_crypto_ecp.c ./common/crypto/psa/drivers/builtin/src/psa_crypto_ecp.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_crypto_ffdh.c ./common/crypto/psa/drivers/builtin/src/psa_crypto_ffdh.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_crypto_hash.c ./common/crypto/psa/drivers/builtin/src/psa_crypto_hash.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_crypto_mac.c ./common/crypto/psa/drivers/builtin/src/psa_crypto_mac.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_crypto_pake.c ./common/crypto/psa/drivers/builtin/src/psa_crypto_pake.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_crypto_rsa.c ./common/crypto/psa/drivers/builtin/src/psa_crypto_rsa.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_crypto_xof.c ./common/crypto/psa/drivers/builtin/src/psa_crypto_xof.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/psa_util_internal.c ./common/crypto/psa/drivers/builtin/src/psa_util_internal.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/ripemd160.c ./common/crypto/psa/drivers/builtin/src/ripemd160.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/rsa.c ./common/crypto/psa/drivers/builtin/src/rsa.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/rsa_alt_helpers.c ./common/crypto/psa/drivers/builtin/src/rsa_alt_helpers.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/sha1.c ./common/crypto/psa/drivers/builtin/src/sha1.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/sha256.c ./common/crypto/psa/drivers/builtin/src/sha256.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/sha3.c ./common/crypto/psa/drivers/builtin/src/sha3.o
+compile_c_if_needed ./common/crypto/psa/drivers/builtin/src/sha512.c ./common/crypto/psa/drivers/builtin/src/sha512.o
+
+# psa/drivers/everest/library
+compile_c_if_needed ./common/crypto/psa/drivers/everest/library/x25519.c ./common/crypto/psa/drivers/everest/library/x25519.o
+compile_c_if_needed ./common/crypto/psa/drivers/everest/library/Hacl_Curve25519_joined.c ./common/crypto/psa/drivers/everest/library/Hacl_Curve25519_joined.o
+
+# psa/extras
+compile_c_if_needed ./common/crypto/psa/extras/md.c ./common/crypto/psa/extras/md.o
+compile_c_if_needed ./common/crypto/psa/extras/nist_kw.c ./common/crypto/psa/extras/nist_kw.o
+compile_c_if_needed ./common/crypto/psa/extras/pk.c ./common/crypto/psa/extras/pk.o
+compile_c_if_needed ./common/crypto/psa/extras/pk_ecc.c ./common/crypto/psa/extras/pk_ecc.o
+compile_c_if_needed ./common/crypto/psa/extras/pk_rsa.c ./common/crypto/psa/extras/pk_rsa.o
+compile_c_if_needed ./common/crypto/psa/extras/pk_wrap.c ./common/crypto/psa/extras/pk_wrap.o
+compile_c_if_needed ./common/crypto/psa/extras/pkparse.c ./common/crypto/psa/extras/pkparse.o
+compile_c_if_needed ./common/crypto/psa/extras/pkwrite.c ./common/crypto/psa/extras/pkwrite.o
+
+# psa/platform
+compile_c_if_needed ./common/crypto/psa/platform/platform.c ./common/crypto/psa/platform/platform.o
+compile_c_if_needed ./common/crypto/psa/platform/platform_util.c ./common/crypto/psa/platform/platform_util.o
+
+# psa/utilities
+compile_c_if_needed ./common/crypto/psa/utilities/asn1parse.c ./common/crypto/psa/utilities/asn1parse.o
+compile_c_if_needed ./common/crypto/psa/utilities/asn1write.c ./common/crypto/psa/utilities/asn1write.o
+compile_c_if_needed ./common/crypto/psa/utilities/base64.c ./common/crypto/psa/utilities/base64.o
+compile_c_if_needed ./common/crypto/psa/utilities/constant_time.c ./common/crypto/psa/utilities/constant_time.o
+compile_c_if_needed ./common/crypto/psa/utilities/oid.c ./common/crypto/psa/utilities/oid.o
+compile_c_if_needed ./common/crypto/psa/utilities/pem.c ./common/crypto/psa/utilities/pem.o
+compile_c_if_needed ./common/crypto/psa/utilities/pkcs5.c ./common/crypto/psa/utilities/pkcs5.o
 
 # --- 编译 C++ 文件 ---
 compile_cpp_if_needed ./CDataSimu.cpp ./CDataSimu.o
@@ -198,6 +374,10 @@ compile_cpp_if_needed ./func_module/statusServer.cpp ./func_module/statusServer.
 compile_cpp_if_needed ./func_module/taskServer.cpp ./func_module/taskServer.o
 compile_cpp_if_needed ./func_module/tdsConf.cpp ./func_module/tdsConf.o
 compile_cpp_if_needed ./func_module/userMng.cpp ./func_module/userMng.o
+compile_cpp_if_needed ./func_module/diskCleaner.cpp ./func_module/diskCleaner.o
+compile_cpp_if_needed ./func_module/gzhServer.cpp ./func_module/gzhServer.o
+compile_cpp_if_needed ./func_module/licence.cpp ./func_module/licence.o
+compile_cpp_if_needed ./func_module/xiaot.cpp ./func_module/xiaot.o
 compile_cpp_if_needed ./include/tds.cpp ./include/tds.o
 compile_cpp_if_needed ./io_server/ioChan.cpp ./io_server/ioChan.o
 compile_cpp_if_needed ./io_server/ioDev.cpp ./io_server/ioDev.o
@@ -222,7 +402,11 @@ compile_cpp_if_needed ./io_server/proto_common.cpp ./io_server/proto_common.o
 compile_cpp_if_needed ./io_server/proto_eip.cpp ./io_server/proto_eip.o
 compile_cpp_if_needed ./io_server/proto_tb3386.cpp ./io_server/proto_tb3386.o
 compile_cpp_if_needed ./io_server/proto_ws.cpp ./io_server/proto_ws.o
-compile_cpp_if_needed ./video/rtspRelay.cpp ./video/rtspRelay.o
+compile_cpp_if_needed ./video/streamServer.cpp ./video/streamServer.o
+compile_cpp_if_needed ./video/streamNode.cpp ./video/streamNode.o
+compile_cpp_if_needed ./video/dtls_transport.cpp ./video/dtls_transport.o
+compile_cpp_if_needed ./video/srtp_protect.cpp ./video/srtp_protect.o
+compile_cpp_if_needed ./common/rsa_verify.cpp ./common/rsa_verify.o
 
 # ===================== 6. 链接生成可执行文件 =====================
 obj_files="\
@@ -238,6 +422,114 @@ obj_files="\
 ./script/quickjs-libc.o \
 ./script/quickjs.o \
 ./script/repl.o \
+./common/rsa.o \
+./common/bignum.o \
+./common/crypto/library/ssl_tls.o \
+./common/crypto/library/ssl_tls13_server.o \
+./common/crypto/library/ssl_tls13_keys.o \
+./common/crypto/library/ssl_tls13_generic.o \
+./common/crypto/library/ssl_tls13_client.o \
+./common/crypto/library/ssl_tls12_server.o \
+./common/crypto/library/ssl_tls12_client.o \
+./common/crypto/library/ssl_ticket.o \
+./common/crypto/library/ssl_msg.o \
+./common/crypto/library/ssl_debug_helpers_generated.o \
+./common/crypto/library/ssl_cookie.o \
+./common/crypto/library/ssl_client.o \
+./common/crypto/library/ssl_ciphersuites.o \
+./common/crypto/library/ssl_cache.o \
+./common/crypto/library/pkcs7.o \
+./common/crypto/library/net_sockets.o \
+./common/crypto/library/mps_trace.o \
+./common/crypto/library/mps_reader.o \
+./common/crypto/library/mbedtls_config.o \
+./common/crypto/library/error.o \
+./common/crypto/library/debug.o \
+./common/crypto/library/version.o \
+./common/crypto/library/version_features.o \
+./common/crypto/library/timing.o \
+./common/crypto/library/x509.o \
+./common/crypto/library/x509_create.o \
+./common/crypto/library/x509_crl.o \
+./common/crypto/library/x509_crt.o \
+./common/crypto/library/x509_csr.o \
+./common/crypto/library/x509_oid.o \
+./common/crypto/library/x509write.o \
+./common/crypto/library/x509write_crt.o \
+./common/crypto/library/x509write_csr.o \
+./common/crypto/psa/core/psa_crypto.o \
+./common/crypto/psa/core/psa_crypto_client.o \
+./common/crypto/psa/core/psa_crypto_driver_wrappers_no_static.o \
+./common/crypto/psa/core/psa_crypto_random.o \
+./common/crypto/psa/core/psa_crypto_slot_management.o \
+./common/crypto/psa/core/psa_crypto_storage.o \
+./common/crypto/psa/core/psa_its_file.o \
+./common/crypto/psa/core/psa_util.o \
+./common/crypto/psa/core/tf_psa_crypto_config.o \
+./common/crypto/psa/core/tf_psa_crypto_version.o \
+./common/crypto/psa/drivers/builtin/src/aes.o \
+./common/crypto/psa/drivers/builtin/src/aria.o \
+./common/crypto/psa/drivers/builtin/src/bignum.o \
+./common/crypto/psa/drivers/builtin/src/bignum_core.o \
+./common/crypto/psa/drivers/builtin/src/bignum_mod.o \
+./common/crypto/psa/drivers/builtin/src/bignum_mod_raw.o \
+./common/crypto/psa/drivers/builtin/src/block_cipher.o \
+./common/crypto/psa/drivers/builtin/src/camellia.o \
+./common/crypto/psa/drivers/builtin/src/ccm.o \
+./common/crypto/psa/drivers/builtin/src/chacha20.o \
+./common/crypto/psa/drivers/builtin/src/chacha20_neon.o \
+./common/crypto/psa/drivers/builtin/src/chachapoly.o \
+./common/crypto/psa/drivers/builtin/src/cipher.o \
+./common/crypto/psa/drivers/builtin/src/cipher_wrap.o \
+./common/crypto/psa/drivers/builtin/src/cmac.o \
+./common/crypto/psa/drivers/builtin/src/ctr_drbg.o \
+./common/crypto/psa/drivers/builtin/src/ecdsa.o \
+./common/crypto/psa/drivers/builtin/src/ecjpake.o \
+./common/crypto/psa/drivers/builtin/src/ecp.o \
+./common/crypto/psa/drivers/builtin/src/ecp_curves.o \
+./common/crypto/psa/drivers/builtin/src/ecp_curves_new.o \
+./common/crypto/psa/drivers/builtin/src/entropy.o \
+./common/crypto/psa/drivers/builtin/src/entropy_poll.o \
+./common/crypto/psa/drivers/builtin/src/gcm.o \
+./common/crypto/psa/drivers/builtin/src/hmac_drbg.o \
+./common/crypto/psa/drivers/builtin/src/md5.o \
+./common/crypto/psa/drivers/builtin/src/poly1305.o \
+./common/crypto/psa/drivers/builtin/src/psa_crypto_aead.o \
+./common/crypto/psa/drivers/builtin/src/psa_crypto_cipher.o \
+./common/crypto/psa/drivers/builtin/src/psa_crypto_ecp.o \
+./common/crypto/psa/drivers/builtin/src/psa_crypto_ffdh.o \
+./common/crypto/psa/drivers/builtin/src/psa_crypto_hash.o \
+./common/crypto/psa/drivers/builtin/src/psa_crypto_mac.o \
+./common/crypto/psa/drivers/builtin/src/psa_crypto_pake.o \
+./common/crypto/psa/drivers/builtin/src/psa_crypto_rsa.o \
+./common/crypto/psa/drivers/builtin/src/psa_crypto_xof.o \
+./common/crypto/psa/drivers/builtin/src/psa_util_internal.o \
+./common/crypto/psa/drivers/builtin/src/ripemd160.o \
+./common/crypto/psa/drivers/builtin/src/rsa.o \
+./common/crypto/psa/drivers/builtin/src/rsa_alt_helpers.o \
+./common/crypto/psa/drivers/builtin/src/sha1.o \
+./common/crypto/psa/drivers/builtin/src/sha256.o \
+./common/crypto/psa/drivers/builtin/src/sha3.o \
+./common/crypto/psa/drivers/builtin/src/sha512.o \
+./common/crypto/psa/drivers/everest/library/x25519.o \
+./common/crypto/psa/drivers/everest/library/Hacl_Curve25519_joined.o \
+./common/crypto/psa/extras/md.o \
+./common/crypto/psa/extras/nist_kw.o \
+./common/crypto/psa/extras/pk.o \
+./common/crypto/psa/extras/pk_ecc.o \
+./common/crypto/psa/extras/pk_rsa.o \
+./common/crypto/psa/extras/pk_wrap.o \
+./common/crypto/psa/extras/pkparse.o \
+./common/crypto/psa/extras/pkwrite.o \
+./common/crypto/psa/platform/platform.o \
+./common/crypto/psa/platform/platform_util.o \
+./common/crypto/psa/utilities/asn1parse.o \
+./common/crypto/psa/utilities/asn1write.o \
+./common/crypto/psa/utilities/base64.o \
+./common/crypto/psa/utilities/constant_time.o \
+./common/crypto/psa/utilities/oid.o \
+./common/crypto/psa/utilities/pem.o \
+./common/crypto/psa/utilities/pkcs5.o \
 ./CDataSimu.o \
 ./main.o \
 ./pch.o \
@@ -279,6 +571,10 @@ obj_files="\
 ./func_module/taskServer.o \
 ./func_module/tdsConf.o \
 ./func_module/userMng.o \
+./func_module/diskCleaner.o \
+./func_module/gzhServer.o \
+./func_module/licence.o \
+./func_module/xiaot.o \
 ./include/tds.o \
 ./io_server/ioChan.o \
 ./io_server/ioDev.o \
@@ -303,7 +599,11 @@ obj_files="\
 ./io_server/proto_eip.o \
 ./io_server/proto_tb3386.o \
 ./io_server/proto_ws.o \
-./video/rtspRelay.o \
+./video/streamServer.o \
+./video/streamNode.o \
+./video/dtls_transport.o \
+./video/srtp_protect.o \
+./common/rsa_verify.o \
 "
 
 output_file="../out/tds/tds_armv7l"  # 固定输出文件名

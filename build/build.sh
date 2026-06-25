@@ -122,6 +122,21 @@ common_flags="\
 -I ./func_module \
 -I ./mongoose \
 -I ./video \
+-I ./common/crypto/include \
+-I ./common/crypto/include/psa \
+-I ./common/crypto/include/tf-psa-crypto \
+-I ./common/crypto/include/tf-psa-crypto/private \
+-I ./common/crypto/psa/drivers/builtin/include \
+-I ./common/crypto/psa/drivers/builtin/include/mbedtls/private \
+-I ./common/crypto/psa/drivers/builtin/src \
+-I ./common/crypto/psa/core \
+-I ./common/crypto/psa/drivers/everest/include \
+-I ./common/crypto/psa/drivers/everest/include/tf-psa-crypto/private/everest \
+-I ./common/crypto/psa/drivers/everest/include/tf-psa-crypto/private/everest/kremlib \
+-I ./common/crypto/psa/drivers/everest/include/tf-psa-crypto/private/everest \
+-I ./common/crypto/psa/include \
+-I ./common/crypto/psa/utilities \
+-I ./common/crypto/library \
 -fPIC \
 -pthread \
 "
@@ -185,6 +200,80 @@ compile_cpp_if_needed() {
     fi
 }
 
+# ===================== 3.5 编译 mbedtls 静态库 =====================
+MBEDTLS_LIB="../out/tds/libmbedtls.a"
+compile_mbedtls() {
+    local mbedtls_src_dirs=(
+        "./common/crypto/library"
+        "./common/crypto/psa/core"
+        "./common/crypto/psa/drivers/builtin/src"
+        "./common/crypto/psa/drivers/everest/library"
+        "./common/crypto/psa/drivers/everest/library/kremlib"
+        "./common/crypto/psa/drivers/everest/library/legacy"
+        "./common/crypto/psa/extras"
+        "./common/crypto/psa/platform"
+        "./common/crypto/psa/utilities"
+    )
+    
+    local all_obj_files=""
+    local need_rebuild=false
+    
+    # 收集所有需要编译的 .c 文件
+    local c_files=()
+    for dir in "${mbedtls_src_dirs[@]}"; do
+        if [ -d "$dir" ]; then
+            while IFS= read -r -d '' f; do
+                c_files+=("$f")
+            done < <(find "$dir" -name "*.c" -print0 2>/dev/null)
+        fi
+    done
+    
+    # 检查是否需要重新编译
+    if [ "$REBUILD_MODE" = true ] || [ ! -f "$MBEDTLS_LIB" ]; then
+        need_rebuild=true
+    else
+        for src_file in "${c_files[@]}"; do
+            if [ "$src_file" -nt "$MBEDTLS_LIB" ]; then
+                need_rebuild=true
+                break
+            fi
+        done
+    fi
+    
+    if [ "$need_rebuild" = false ]; then
+        echo "跳过 mbedtls 库（未修改）"
+        return
+    fi
+    
+    echo "编译 mbedtls 库..."
+    
+    local obj_list=""
+    for src_file in "${c_files[@]}"; do
+        local obj_file="${src_file%.c}.o"
+        echo "  编译: $src_file"
+        # FStar_UInt128_extracted.c 需要结构体版本的 uint128
+        if [[ "$src_file" == *"FStar_UInt128_extracted"* ]]; then
+            gcc $common_flags $c_flags -DKRML_VERIFIED_UINT128 -c "$src_file" -o "$obj_file" || exit 1
+        else
+            gcc $common_flags $c_flags -c "$src_file" -o "$obj_file" || exit 1
+        fi
+        obj_list="$obj_list $obj_file"
+    done
+    
+    # 打包成静态库
+    echo "  打包: $MBEDTLS_LIB"
+    ar rcs "$MBEDTLS_LIB" $obj_list
+    
+    # 清理临时 .o 文件
+    for obj_file in $obj_list; do
+        rm -f "$obj_file"
+    done
+    
+    echo "mbedtls 库编译完成"
+}
+
+compile_mbedtls
+
 # ===================== 4. 创建输出目录 =====================
 mkdir -p ../out/tds
 
@@ -244,13 +333,20 @@ compile_cpp_if_needed ./data_server/tdsSession.cpp ./data_server/tdsSession.o
 compile_cpp_if_needed ./data_server/tSockSrv.cpp ./data_server/tSockSrv.o
 compile_cpp_if_needed ./data_server/webSrv.cpp ./data_server/webSrv.o
 compile_cpp_if_needed ./func_module/csvTable.cpp ./func_module/csvTable.o
+compile_cpp_if_needed ./func_module/diskCleaner.cpp ./func_module/diskCleaner.o
 compile_cpp_if_needed ./func_module/dumpCatch.cpp ./func_module/dumpCatch.o
 compile_cpp_if_needed ./func_module/fileUploadSrv.cpp ./func_module/fileUploadSrv.o
+compile_cpp_if_needed ./func_module/gzhServer.cpp ./func_module/gzhServer.o
+compile_cpp_if_needed ./func_module/licence.cpp ./func_module/licence.o
 compile_cpp_if_needed ./func_module/logServer.cpp ./func_module/logServer.o
+compile_cpp_if_needed ./func_module/smsServer.cpp ./func_module/smsServer.o
 compile_cpp_if_needed ./func_module/statusServer.cpp ./func_module/statusServer.o
 compile_cpp_if_needed ./func_module/taskServer.cpp ./func_module/taskServer.o
 compile_cpp_if_needed ./func_module/tdsConf.cpp ./func_module/tdsConf.o
+compile_cpp_if_needed ./func_module/tdsWatchDog.cpp ./func_module/tdsWatchDog.o
 compile_cpp_if_needed ./func_module/userMng.cpp ./func_module/userMng.o
+compile_cpp_if_needed ./func_module/xiaot.cpp ./func_module/xiaot.o
+compile_cpp_if_needed ./func_module/aliDDNS.cpp ./func_module/aliDDNS.o
 compile_cpp_if_needed ./include/tds.cpp ./include/tds.o
 compile_cpp_if_needed ./io_server/ioChan.cpp ./io_server/ioChan.o
 compile_cpp_if_needed ./io_server/ioDev.cpp ./io_server/ioDev.o
@@ -275,7 +371,10 @@ compile_cpp_if_needed ./io_server/proto_common.cpp ./io_server/proto_common.o
 compile_cpp_if_needed ./io_server/proto_eip.cpp ./io_server/proto_eip.o
 compile_cpp_if_needed ./io_server/proto_tb3386.cpp ./io_server/proto_tb3386.o
 compile_cpp_if_needed ./io_server/proto_ws.cpp ./io_server/proto_ws.o
-compile_cpp_if_needed ./video/rtspClient.cpp ./video/rtspClient.o
+compile_cpp_if_needed ./video/streamServer.cpp ./video/streamServer.o
+compile_cpp_if_needed ./video/streamNode.cpp ./video/streamNode.o
+compile_cpp_if_needed ./video/dtls_transport.cpp ./video/dtls_transport.o
+compile_cpp_if_needed ./video/srtp_protect.cpp ./video/srtp_protect.o
 
 # ===================== 6. 链接生成可执行文件 =====================
 echo ""
@@ -331,13 +430,20 @@ obj_files="\
 ./data_server/tSockSrv.o \
 ./data_server/webSrv.o \
 ./func_module/csvTable.o \
+./func_module/diskCleaner.o \
 ./func_module/dumpCatch.o \
 ./func_module/fileUploadSrv.o \
+./func_module/gzhServer.o \
+./func_module/licence.o \
 ./func_module/logServer.o \
+./func_module/smsServer.o \
 ./func_module/statusServer.o \
 ./func_module/taskServer.o \
 ./func_module/tdsConf.o \
+./func_module/tdsWatchDog.o \
 ./func_module/userMng.o \
+./func_module/xiaot.o \
+./func_module/aliDDNS.o \
 ./include/tds.o \
 ./io_server/ioChan.o \
 ./io_server/ioDev.o \
@@ -362,10 +468,13 @@ obj_files="\
 ./io_server/proto_eip.o \
 ./io_server/proto_tb3386.o \
 ./io_server/proto_ws.o \
-./video/rtspClient.o \
+./video/streamServer.o \
+./video/streamNode.o \
+./video/dtls_transport.o \
+./video/srtp_protect.o \
 "
 
-g++ $common_flags $cpp_flags $obj_files -o $output_file $linkerflags
+g++ $common_flags $cpp_flags $obj_files -o $output_file $linkerflags $MBEDTLS_LIB
 
 # ===================== 7. 优化和验证 =====================
 echo ""
