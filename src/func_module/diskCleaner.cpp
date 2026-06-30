@@ -24,6 +24,7 @@ DiskCleaner diskCleaner;
 #include <cstdlib>
 #include <sstream>
 #include <cstdio>  // 确保包含printf所需的头文件
+#include <cstring>
 
 // 假设LOG函数已事先定义，支持printf风格的格式化输出
 // 这里仅做声明，实际实现由用户提供
@@ -135,7 +136,7 @@ struct Date {
     }
 };
 
-struct TIME {
+struct DiskCleanerTime {
     unsigned short wYear;
     unsigned short wMonth;
     unsigned short wDay;
@@ -145,7 +146,7 @@ struct TIME {
     unsigned short wMilliseconds;
     unsigned short wDayOfWeek;
 
-    TIME() {
+    DiskCleanerTime() {
         memset(this, 0, sizeof(*this));
     }
 
@@ -154,9 +155,9 @@ struct TIME {
     time_t toUnixTime();
     void fromUnixTime(time_t t, int milli = 0);
 
-    static 	long long calcTimePassMilliSecond(TIME& lastTime)
+    static 	long long calcTimePassMilliSecond(DiskCleanerTime& lastTime)
     {
-        TIME nowTime;
+        DiskCleanerTime nowTime;
         nowTime.setNow();
         time_t now = nowTime.toUnixTime();
         time_t last = lastTime.toUnixTime();
@@ -167,7 +168,7 @@ struct TIME {
     }
 };
 
-void TIME::setNow() {
+void DiskCleanerTime::setNow() {
     auto now = std::chrono::system_clock::now();
     unsigned short milli = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
         - std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
@@ -175,13 +176,13 @@ void TIME::setNow() {
     fromUnixTime(tt, milli);
 }
 
-time_t  TIME::toUnixTime() {
+time_t  DiskCleanerTime::toUnixTime() {
     tm temptm = { wSecond, wMinute, wHour,wDay,wMonth - 1,wYear - 1900,wDayOfWeek, 0, 0 };
     time_t unixTime = mktime(&temptm);
     return unixTime;
 }
 
-void  TIME::fromUnixTime(time_t unixTime, int milli) {
+void  DiskCleanerTime::fromUnixTime(time_t unixTime, int milli) {
     static std::mutex mtx;
     mtx.lock();
     tm time_tm = *localtime(&unixTime);  //线程安全linux下推荐用localtime_r，win下推荐用localtime_s，此处为方便直接加个锁
@@ -336,12 +337,12 @@ bool fastDeleteDirectory(const std::string& dirPath) {
     //LOG("Executing command: %s", command.c_str());
     // 执行系统命令
 #ifdef _WIN32
-    TIME tStart;
+    DiskCleanerTime tStart;
     tStart.setNow();
 
     std::wstring wcommand = utf8_to_utf16(command);
     int result = _wsystem(wcommand.c_str());
-    int costMilli = TIME::calcTimePassMilliSecond(tStart);
+    int costMilli = DiskCleanerTime::calcTimePassMilliSecond(tStart);
 
     LOG("文件夹路径：%s, 删除时长：%dms", dirPath.c_str(), costMilli);
 #else

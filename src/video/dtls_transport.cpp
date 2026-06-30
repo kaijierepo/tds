@@ -43,7 +43,8 @@ int DtlsTransport::bio_send(void* ctx, const unsigned char* buf, size_t len) {
                      (const char*)buf, (int)len, 0,
                      (struct sockaddr*)&self->peer_addr_,
                      sizeof(self->peer_addr_));
-    if (ret == SOCKET_ERROR) return MBEDTLS_ERR_NET_SEND_FAILED;
+                     
+    if (ret < 0) return MBEDTLS_ERR_NET_SEND_FAILED;
     return ret;
 }
 

@@ -255,7 +255,7 @@ json AliDDNS::getSubdomainRecords(string subDomain)
         }
     }
     catch (exception& e) {
-        EXCEPTION(e);
+        T_EXCEPTION(e);
     }
 
     return nullptr;
@@ -320,7 +320,7 @@ bool AliDDNS::updateDomainRecord(string recordID, string RR, string Type, string
         }
     }
     catch (exception& e) {
-        EXCEPTION(e);
+        T_EXCEPTION(e);
     }
 
     return true;
