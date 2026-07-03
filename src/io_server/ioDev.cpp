@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "ioDev.h"
 #include "ioChan.h"
 #include "logger.h"
@@ -96,7 +96,14 @@ bool ioDev::input(json jVal, string addr, TIME* stDataTime) {
 	string tagBind;
 	if (m_mapDataChannel.find(addr) != m_mapDataChannel.end()) {
 		ioChannel* pC = m_mapDataChannel[addr];
-		pC->input(jVal, tagBind, &st);
+		try {
+			pC->input(jVal, tagBind, &st);
+		}
+		catch (const std::exception& e) {
+			LOG("[error]ioDev::input 通道数据输入异常, addr=%s, json类型=%s, error=%s",
+				addr.c_str(), jVal.type_name(), e.what());
+			return false;
+		}
 	}
 	else {
 		return false;
@@ -131,7 +138,14 @@ bool ioDev::input(vector<string> chanAddr, vector<json> val, TIME* stDataTime)
 		if (m_mapDataChannel.find(addr) != m_mapDataChannel.end()) {
 			ioChannel* pC = m_mapDataChannel[addr];
 			string tagBind;
-			pC->input(jVal,tagBind,&st);
+			try {
+				pC->input(jVal,tagBind,&st);
+			}
+			catch (const std::exception& e) {
+				LOG("[error]ioDev::input(批量) 通道数据输入异常, chan=%s, json类型=%s, error=%s",
+					addr.c_str(), jVal.type_name(), e.what());
+				continue;
+			}
 
 			if (tagBind != "") {
 				inputTags.push_back(tagBind);
@@ -2828,6 +2842,8 @@ void ioDev::openAllCycleAcq()
 void ioDev::unbindIOSession()
 {
 	pIOSession = nullptr;
+	// 清空缓冲区，防止连接断开后残留数据继续被处理导致错误上线
+	m_pab.Init();
 }
 
 void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)

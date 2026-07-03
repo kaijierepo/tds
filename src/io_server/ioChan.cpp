@@ -311,7 +311,22 @@ void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 		dataTime = &t;
 	}
 	m_stLastUpdateTime = *dataTime;
-	m_curOrgVal = jVal;
+
+	// 安全地将json值转为字符串表示，避免非字符串类型(json number/bool/null)
+	// 触发nlohmann库的type_error异常导致abort()
+	if (jVal.is_string()) {
+		m_curOrgVal = jVal.get<std::string>();
+	}
+	else if (jVal.is_number()) {
+		m_curOrgVal = JSON_STR::toStr(jVal.get<double>());
+	}
+	else if (jVal.is_boolean()) {
+		m_curOrgVal = JSON_STR::toStr(jVal.get<bool>());
+	}
+	else {
+		m_curOrgVal = jVal.dump();
+	}
+
 	if (JSON_STR::is_num(m_curOrgVal)) {
 		double val = 0;
 		double valOrg = JSON_STR::get_num(m_curOrgVal);

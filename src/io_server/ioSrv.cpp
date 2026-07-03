@@ -2958,6 +2958,12 @@ bool ioServer::startMqttBroker() {
 	m_vecMqttMsgCallbacks.push_back(
 		[](const string& topic, const string& data, const string& clientId) {
 			if (topic.find("tds") == 0) {
+				// topic 长度必须 > 4（至少 "tds/" + 一个字符）
+				if(topic.size() <= 4)
+				{
+					LOG("[warn][MQTT Broker] topic 格式错误(过短): %s", topic.c_str());
+					return;
+				}
 				string tag = topic.substr(4, topic.size() - 4);
 				tag = str::replace(tag, "/", ".");
 				string params = data;
