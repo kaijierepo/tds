@@ -3393,19 +3393,16 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		return true;
 	}
 
-	// 内部调用（如脚本 val 函数通过 tds->call）走的是 json 路径，需要手动转发
-	if (method == "getObj" || method == "getMp" || method == "getMo" || method == "getOrg" ||
-		method == "getCustomOrg" || method == "getCustomMo" ||
-		method == "setObj" || method == "getObjTree" || method == "getObjGroups") {
-		if (params == nullptr) {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "params required for " + method);
-			return true;
-		}
+	// 内部调用（如脚本 val/sum/avg/input/output 等函数通过 tds->call）走的是 json 路径，
+	// 而 prj.handleRpc、db.handleRpc、ioSrv.handleRpc、scriptManager.handleRpc、
+	// streamSrv.handleRpc 等方法路由仅在 yyjson_val* 重载中实现。
+	// 此处将 json params 转为 yyjson_val* 后转发给 yyjson 重载，无需逐个列举方法名。
+	if (params != nullptr && !params.is_null()) {
 		string sParams = params.dump();
 		yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 		if (doc) {
 			yyjson_val* yyParams = yyjson_doc_get_root(doc);
-			if (yyjson_is_obj(yyParams) && prj.handleRpc(method, yyParams, rpcResp, session)) {
+			if (handleMethodCall(method, yyParams, rpcResp, session)) {
 				yyjson_doc_free(doc);
 				return true;
 			}

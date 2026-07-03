@@ -122,7 +122,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -270,7 +270,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=0;ENABLE_QJS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/script</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/script;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -287,7 +287,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -304,7 +304,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=0;ENABLE_QJS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/include;../src/script</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/include;../src/script;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -328,7 +328,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -350,7 +350,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -372,7 +372,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>MG_TLS=MG_TLS_NONE;TDSDLL;TDS;ENABLE_SERIAL;ENABLE_QJS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -444,7 +444,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_ALM_SRV_HOOK_SCRIPT;UTF8;TDS;ENABLE_SERIAL;ENABLE_QJS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=MG_TLS_BUILTIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/common/crypto/include;../src/common/crypto/psa/drivers/builtin/include;../src/common/crypto/psa/core;../src/common/crypto/psa/drivers/builtin/src;../src/common/crypto/psa/platform;../src/common/crypto/psa/utilities;../src/common/crypto/psa/extras;../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/ssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module;../src/script/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/common/crypto/include;../src/common/crypto/psa/drivers/builtin/include;../src/common/crypto/psa/core;../src/common/crypto/psa/drivers/builtin/src;../src/common/crypto/psa/platform;../src/common/crypto/psa/utilities;../src/common/crypto/psa/extras;../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/ssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module;../src/script/;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -462,7 +462,7 @@
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>../unitybuild/preBuild.bat</Command>
+      <Command>../build/preBuild.bat</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>
@@ -528,7 +528,7 @@
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>../unitybuild/preBuild.bat</Command>
+      <Command>../build/preBuild.bat</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>
@@ -543,7 +543,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>TDSDLL;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_OPENSSL;MG_ENABLE_POLL;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/3rdparty/ssl/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/3rdparty/ssl/include;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -560,7 +560,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc;../src/3rdparty/ssl/include/openssl/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc;../src/3rdparty/ssl/include/openssl/;../src/mongoose</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <SupportJustMyCode>true</SupportJustMyCode>
@@ -580,7 +580,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>MG_TLS=MG_TLS_NONE;TDSDLL;TDS;ENABLE_SERIAL;ENABLE_QJS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
