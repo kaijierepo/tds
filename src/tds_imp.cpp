@@ -823,6 +823,9 @@ bool TDS_imp::run(string cmdline) {
 		streamSrv.startRtspServer(rtspPort);
 	}
 
+	// 默认加载 tds.exe 同级目录下 rtsp 文件夹的 h264 文件作为流媒体源
+	streamSrv.serveDefaultFolder("rtsp");
+
 	//create browser window
 	if (conf->uiMode == "chrome") {
 		createChromeWnd();
@@ -1138,34 +1141,6 @@ bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv rec
 	return true;
 }
 
-
-#ifdef ENABLE_GENICAM
-void TDS_imp::startStream(string streamId, STREAM_INFO* si)
-{
-	streamSrv.startStream(streamId,si);
-}
-
-void TDS_imp::pushStream(string streamId, char* pData, int len, STREAM_INFO* si)
-{
-	if (InterfaceEncoding == "gb2312")
-	{
-		streamId = charCodec::ansi2Utf8(streamId);
-	}
-
-	STREAM_DATA sd;
-	sd.pData = pData;
-	sd.len = len;
-	sd.info = *si;
-	streamSrv.pushStream(streamId,sd);
-	sd.pData = NULL;
-}
-
-void TDS_imp::pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream,STREAM_INFO* si)
-{
-	streamSrvNode* pssn = streamSrv.getSrvNode(streamId);
-	pssn->addPuller(user,onRecvStream);
-}
-#endif
 
 void TDS_imp::log(const char* text)
 {

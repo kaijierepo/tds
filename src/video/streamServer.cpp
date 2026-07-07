@@ -117,6 +117,9 @@ bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& r
 	else if (method == "removeRecordFile") {
 		rpc_removeRecordFile(params, rpcResp, session);
 	}
+	else if (method == "serveLocalFile") {
+		rpc_serveLocalFile(params, rpcResp, session);
+	}
 	else {
 		bHandled = false;
 	}
@@ -181,6 +184,34 @@ bool StreamServer::rpc_startStreamNode(yyjson_val* params, RPC_RESP& rpcResp, RP
 
 	rpcResp.result = RPC_OK;
 	return true;
+}
+
+bool StreamServer::rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string filePath, url;
+	yyjson_val* yyv = yyjson_obj_get(params_obj, "filePath");
+	if (yyv)
+		filePath = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params_obj, "url");
+	if (yyv)
+		url = yyjson_get_str(yyv);
+
+	if (filePath.empty() || url.empty()) {
+		LOG("[RPC] serveLocalFile: missing filePath or url");
+		return false;
+	}
+
+	LOG("[RPC] serveLocalFile: filePath=%s, url=%s", filePath.c_str(), url.c_str());
+
+	bool ok = serveLocalStreamFile(filePath, url);
+	if (ok) {
+		rpcResp.result = RPC_OK;
+	}
+	else {
+		LOG("[RPC] serveLocalFile: failed for filePath=%s", filePath.c_str());
+	}
+
+	return ok;
 }
 
 bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
@@ -762,6 +793,498 @@ void StreamServer::cleanOldRecords() {
 }
 
 // ============================================================================
+// 本地文件流服务
+// 将本地 h264 文件读取并封装为 RTP 流，通过 RTSP 服务端对外提供
+// ============================================================================
+
+// 本地文件流上下文：存储解析后的 NAL 单元和线程控制
+struct LocalFileStreamCtx {
+	std::vector<std::vector<uint8_t>> nals;  // 解析后的 NAL 单元（Annex B → 裸 NAL）
+	std::vector<uint8_t> sps;
+	std::vector<uint8_t> pps;
+	int payload_type = 96;
+	int clock_rate = 90000;
+	std::thread feed_thread_;
+	std::atomic<bool> running_{false};
+	StreamNode* node = nullptr;  // 关联的 StreamNode
+};
+
+static std::mutex g_localStreamMutex;
+static std::map<std::string, std::shared_ptr<LocalFileStreamCtx>> g_localStreams;  // key=tag
+
+// 解析 h264 Annex B 文件，提取 NAL 单元
+static bool parseH264File(const std::string& filePath,
+	std::vector<std::vector<uint8_t>>& nals,
+	std::vector<uint8_t>& sps, std::vector<uint8_t>& pps)
+{
+	std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+	if (!file.is_open()) {
+		LOG("[LocalFileStream] Failed to open file: %s", filePath.c_str());
+		return false;
+	}
+	std::streamsize fileSize = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	std::vector<uint8_t> buffer((size_t)fileSize);
+	if (!file.read((char*)buffer.data(), fileSize)) {
+		LOG("[LocalFileStream] Failed to read file: %s", filePath.c_str());
+		return false;
+	}
+	LOG("[LocalFileStream] Read file %s, size=%lld bytes", filePath.c_str(), (long long)fileSize);
+
+	// 按 Annex B 起始码 0x00000001 或 0x000001 拆分 NAL 单元
+	size_t pos = 0;
+	while (pos < buffer.size()) {
+		// 跳过前导的 0x00 字节
+		while (pos < buffer.size() && buffer[pos] == 0x00) pos++;
+		if (pos >= buffer.size()) break;
+
+		// 跳过 0x01 起始码标记
+		if (pos < buffer.size() && buffer[pos] == 0x01) pos++;
+		else break;
+
+		// 查找下一个起始码位置
+		size_t nextStart = buffer.size();
+		for (size_t i = pos; i + 3 < buffer.size(); i++) {
+			if (buffer[i] == 0x00 && buffer[i+1] == 0x00) {
+				if (buffer[i+2] == 0x01) {
+					nextStart = i;
+					break;
+				}
+				if (i + 3 < buffer.size() && buffer[i+2] == 0x00 && buffer[i+3] == 0x01) {
+					nextStart = i;
+					break;
+				}
+			}
+		}
+
+		std::vector<uint8_t> nal(buffer.begin() + (long long)pos, buffer.begin() + (long long)nextStart);
+		if (!nal.empty()) {
+			uint8_t nalType = nal[0] & 0x1F;
+			if (nalType == 7) {  // SPS
+				sps = nal;
+			} else if (nalType == 8) {  // PPS
+				pps = nal;
+			}
+			nals.push_back(std::move(nal));
+		}
+		pos = nextStart;
+	}
+
+	LOG("[LocalFileStream] Parsed %zu NALs (SPS=%zu bytes, PPS=%zu bytes)",
+		nals.size(), sps.size(), pps.size());
+	return !nals.empty();
+}
+
+// 本地文件 RTP 喂流线程：循环读取 NAL，封装为 RTP 包，写入 StreamNode 缓冲区并分发给客户端
+static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
+	if (!ctx || !ctx->node) return;
+
+	const auto& nals = ctx->nals;
+	if (nals.empty()) return;
+
+	uint16_t seq = 0;
+	uint32_t timestamp = 0;
+	uint32_t ssrc = 0x4C4F4341;  // "LOCA" 标识本地文件源
+	uint32_t clockRate = (uint32_t)ctx->clock_rate;
+
+	LOG("[LocalFileStream] Feed loop started: tag=%s, nals=%zu",
+		ctx->node->config_.tag.c_str(), nals.size());
+
+	// 首帧发送 SPS/PPS（如果存在）
+	if (!ctx->sps.empty()) {
+		auto spsPkt = std::make_shared<StreamNode::RTPPacket>();
+		spsPkt->version = 2;
+		spsPkt->payload_type = (uint8_t)ctx->payload_type;
+		spsPkt->sequence_number = seq++;
+		spsPkt->timestamp = timestamp;
+		spsPkt->ssrc = ssrc;
+		spsPkt->marker = false;
+		spsPkt->payload = ctx->sps;
+		ctx->node->addToRtpBuffer(spsPkt);
+		ctx->node->sendRTPPacketToClients(*spsPkt);
+	}
+	if (!ctx->pps.empty()) {
+		auto ppsPkt = std::make_shared<StreamNode::RTPPacket>();
+		ppsPkt->version = 2;
+		ppsPkt->payload_type = (uint8_t)ctx->payload_type;
+		ppsPkt->sequence_number = seq++;
+		ppsPkt->timestamp = timestamp;
+		ppsPkt->ssrc = ssrc;
+		ppsPkt->marker = false;
+		ppsPkt->payload = ctx->pps;
+		ctx->node->addToRtpBuffer(ppsPkt);
+		ctx->node->sendRTPPacketToClients(*ppsPkt);
+	}
+
+	size_t nalIdx = 0;
+	while (ctx->running_ && ctx->node->running_) {
+		// 没有客户端时等待，避免无效循环消耗 CPU
+		bool hasClients = false;
+		{
+			ctx->node->client_sessions_mutex_.lock();
+			hasClients = !ctx->node->client_sessions_.empty();
+			ctx->node->client_sessions_mutex_.unlock();
+		}
+		if (!hasClients) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			// 没有客户端时重置播放位置，下次有人拉流从头开始
+			nalIdx = 0;
+			timestamp = 0;
+			continue;
+		}
+
+		const auto& nal = nals[nalIdx];
+		uint8_t nalType = nal.empty() ? 0 : (nal[0] & 0x1F);
+		uint8_t nri = nal.empty() ? 0 : ((nal[0] & 0x60) >> 5);
+
+		// 跳过 SPS/PPS（已在首帧发送）
+		if (nalType == 7 || nalType == 8) {
+			nalIdx = (nalIdx + 1) % nals.size();
+			continue;
+		}
+
+		if (nal.size() <= 1400) {
+			// 单包模式
+			auto pkt = std::make_shared<StreamNode::RTPPacket>();
+			pkt->version = 2;
+			pkt->payload_type = (uint8_t)ctx->payload_type;
+			pkt->sequence_number = seq++;
+			pkt->timestamp = timestamp;
+			pkt->ssrc = ssrc;
+			pkt->marker = true;
+			pkt->payload = nal;
+
+			ctx->node->addToRtpBuffer(pkt);
+			ctx->node->sendRTPPacketToClients(*pkt);
+		} else {
+			// FU-A 分片模式
+			size_t offset = 1;  // 跳过 NAL header
+			bool first = true;
+			while (offset < nal.size()) {
+				size_t chunkSize = (std::min)((size_t)1400, nal.size() - offset);
+				bool last = (offset + chunkSize >= nal.size());
+
+				auto fragPkt = std::make_shared<StreamNode::RTPPacket>();
+				fragPkt->version = 2;
+				fragPkt->payload_type = (uint8_t)ctx->payload_type;
+				fragPkt->sequence_number = seq++;
+				fragPkt->timestamp = timestamp;
+				fragPkt->ssrc = ssrc;
+				fragPkt->marker = last;
+
+				// FU indicator: F=0, NRI=原始NRI, Type=FU-A(28)
+				uint8_t fuIndicator = (0 << 7) | ((nri & 0x3) << 5) | 28;
+				// FU header: S=1(first) or 0, E=1(last) or 0, R=0, Type=原始NAL类型
+				uint8_t fuHeader = (first ? 0x80 : 0x00) | (last ? 0x40 : 0x00) | (nalType & 0x1F);
+
+				fragPkt->payload.resize(2 + chunkSize);
+				fragPkt->payload[0] = fuIndicator;
+				fragPkt->payload[1] = fuHeader;
+				memcpy(&fragPkt->payload[2], &nal[offset], chunkSize);
+
+				ctx->node->addToRtpBuffer(fragPkt);
+				ctx->node->sendRTPPacketToClients(*fragPkt);
+				offset += chunkSize;
+				first = false;
+			}
+		}
+
+		// 每发完一个 access unit 后推进时间戳
+		timestamp += clockRate / 30;
+
+		// 帧间隔：30fps ≈ 33ms
+		std::this_thread::sleep_for(std::chrono::milliseconds(33));
+
+		// 循环播放
+		nalIdx = (nalIdx + 1) % nals.size();
+		if (nalIdx == 0) {
+			// 循环一轮后重新从 0 开始 timestamp，避免溢出
+			timestamp = 0;
+		}
+	}
+
+	LOG("[LocalFileStream] Feed loop ended: tag=%s", ctx->node->config_.tag.c_str());
+}
+
+bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::string& url) {
+	// 从 url 提取 tag
+	std::string tag = url;
+	if (!tag.empty() && tag[0] == '/') tag = tag.substr(1);
+	if (tag.empty()) {
+		LOG("[LocalFileStream] Invalid url (empty tag): %s", url.c_str());
+		return false;
+	}
+
+	// 检查是否已存在同名流
+	{
+		std::lock_guard<std::mutex> lock(g_localStreamMutex);
+		if (g_localStreams.find(tag) != g_localStreams.end()) {
+			LOG("[LocalFileStream] Stream already exists for tag: %s", tag.c_str());
+			return false;
+		}
+	}
+
+	// 判断文件类型：.h264 直接解析，.mp4 暂不支持
+	std::string ext;
+	size_t dotPos = filePath.rfind('.');
+	if (dotPos != std::string::npos) {
+		ext = filePath.substr(dotPos);
+		for (auto& c : ext) c = (char)tolower((unsigned char)c);
+	}
+
+	std::vector<std::vector<uint8_t>> nals;
+	std::vector<uint8_t> sps, pps;
+
+	if (ext == ".h264") {
+		if (!parseH264File(filePath, nals, sps, pps)) {
+			return false;
+		}
+	} else if (ext == ".mp4") {
+		LOG("[LocalFileStream] MP4 format not yet supported: %s", filePath.c_str());
+		return false;
+	} else {
+		// 尝试按 h264 裸流解析
+		if (!parseH264File(filePath, nals, sps, pps)) {
+			return false;
+		}
+	}
+
+	// 创建 StreamNode
+	auto node = std::make_unique<StreamNode>();
+	StreamNode::Config cfg;
+	cfg.tag = tag;
+	cfg.source_url = "file://" + filePath;
+	cfg.target_url = "";
+	cfg.retry_interval = 0;
+	cfg.max_retries = 0;
+	cfg.rtp_timeout = 0;
+
+	node->config_ = cfg;
+
+	// 设置 pull_session_ 的编码信息
+	node->pull_session_.codec = "H264";
+	node->pull_session_.payload_type = 96;
+	node->pull_session_.clock_rate = 90000;
+	node->pull_session_.sps = sps;
+	node->pull_session_.pps = pps;
+	node->pull_session_.video_ssrc = 0x4C4F4341;
+
+	// 构建 fmtp（包含 sprop-parameter-sets）
+	if (!sps.empty() && !pps.empty()) {
+		std::string spsB64 = StreamNode::base64Encode(std::string((char*)sps.data(), sps.size()));
+		std::string ppsB64 = StreamNode::base64Encode(std::string((char*)pps.data(), pps.size()));
+		node->pull_session_.fmtp = "profile-level-id=42C01F;packetization-mode=1;sprop-parameter-sets="
+			+ spsB64 + "," + ppsB64;
+	}
+
+	node->pull_session_.session_type_ = StreamNode::SERVER_PULL;
+	node->pull_session_.control_url = "trackID=0";
+	node->isPulling_ = true;
+	node->running_ = true;
+	node->state_ = StreamNode::State::PLAYING;
+
+	StreamNode* rawNode = node.get();
+
+	// 加入全局 map
+	{
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		m_mapStreamNodes[tag] = std::move(node);
+	}
+
+	// 创建本地流上下文并启动喂流线程
+	auto ctx = std::make_shared<LocalFileStreamCtx>();
+	ctx->nals = std::move(nals);
+	ctx->sps = sps;
+	ctx->pps = pps;
+	ctx->payload_type = 96;
+	ctx->clock_rate = 90000;
+	ctx->node = rawNode;
+	ctx->running_ = true;
+
+	{
+		std::lock_guard<std::mutex> lock(g_localStreamMutex);
+		g_localStreams[tag] = ctx;
+	}
+
+	ctx->feed_thread_ = std::thread(localFileFeedLoop, ctx);
+	ctx->feed_thread_.detach();
+
+	LOG("[LocalFileStream] Started serving: file=%s, url=%s, tag=%s, nals=%zu",
+		filePath.c_str(), url.c_str(), tag.c_str(), ctx->nals.size());
+	return true;
+}
+
+// ============================================================================
+// 默认文件夹流服务：递归遍历 tds.exe 同级目录下的 rtsp 文件夹，
+// 按文件夹路径结构作为 RTSP url，对外提供所有 h264 文件流媒体服务
+// ============================================================================
+void StreamServer::serveDefaultFolder(const std::string& folderName) {
+	std::string baseDir = fs::appPath() + "/" + folderName;
+
+	if (!std::filesystem::exists(baseDir) || !std::filesystem::is_directory(baseDir)) {
+		LOG("[DefaultFolder] Folder not found: %s, skip", baseDir.c_str());
+		return;
+	}
+
+	LOG("[DefaultFolder] Scanning folder: %s", baseDir.c_str());
+
+	int count = 0;
+	std::lock_guard<std::mutex> lock(m_localFileMapMutex_);
+	try {
+		for (const auto& entry : std::filesystem::recursive_directory_iterator(baseDir)) {
+			if (!entry.is_regular_file()) continue;
+
+			std::string filePath = entry.path().string();
+			// 只处理 .h264 文件（忽略大小写）
+			if (filePath.size() < 5) continue;
+			std::string ext = filePath.substr(filePath.size() - 5);
+			for (size_t j = 0; j < ext.size(); j++)
+				ext[j] = (char)tolower((unsigned char)ext[j]);
+			if (ext != ".h264") continue;
+
+			// 获取相对路径，去除 .h264 后缀作为 tag
+			std::string relPath = filePath.substr(baseDir.size());
+			while (!relPath.empty() && (relPath[0] == '/' || relPath[0] == '\\')) {
+				relPath = relPath.substr(1);
+			}
+			for (size_t j = 0; j < relPath.size(); j++) {
+				if (relPath[j] == '\\') relPath[j] = '/';
+			}
+			if (relPath.size() > 5)
+				relPath = relPath.substr(0, relPath.size() - 5);
+
+			// 只记录映射，不读文件
+			m_localFileMap["/" + relPath] = filePath;
+			LOG("[DefaultFolder] Mapped: %s -> %s", filePath.c_str(), ("/" + relPath).c_str());
+			count++;
+		}
+	} catch (const std::exception& e) {
+		LOG("[DefaultFolder] Error scanning: %s", e.what());
+	}
+
+	LOG("[DefaultFolder] Registered %d h264 file mappings from %s", count, baseDir.c_str());
+}
+
+// 按需加载本地文件流：有客户端拉流时才读文件、创建 StreamNode、启动喂流线程
+StreamNode* StreamServer::loadLocalFileStream(const std::string& tag) {
+	// 先检查是否已存在
+	StreamNode* existing = getStreamNode(tag);
+	if (existing) return existing;
+
+	// 从映射表查找文件路径
+	std::string filePath;
+	{
+		std::lock_guard<std::mutex> lock(m_localFileMapMutex_);
+		// 尝试 /tag 格式匹配
+		std::string key = "/" + tag;
+		auto it = m_localFileMap.find(key);
+		if (it != m_localFileMap.end()) {
+			filePath = it->second;
+		}
+	}
+	if (filePath.empty()) return nullptr;
+
+	// 解析文件
+	std::vector<std::vector<uint8_t>> nals;
+	std::vector<uint8_t> sps, pps;
+	if (!parseH264File(filePath, nals, sps, pps)) {
+		LOG("[LocalFileStream] Failed to parse: %s", filePath.c_str());
+		return nullptr;
+	}
+
+	// 创建 StreamNode
+	auto node = std::make_unique<StreamNode>();
+	StreamNode::Config cfg;
+	cfg.tag = tag;
+	cfg.source_url = "file://" + filePath;
+	cfg.target_url = "";
+	cfg.retry_interval = 0;
+	cfg.max_retries = 0;
+	cfg.rtp_timeout = 0;
+	node->config_ = cfg;
+
+	node->pull_session_.codec = "H264";
+	node->pull_session_.payload_type = 96;
+	node->pull_session_.clock_rate = 90000;
+	node->pull_session_.sps = sps;
+	node->pull_session_.pps = pps;
+	node->pull_session_.video_ssrc = 0x4C4F4341;
+
+	if (!sps.empty() && !pps.empty()) {
+		std::string spsB64 = StreamNode::base64Encode(std::string((char*)sps.data(), sps.size()));
+		std::string ppsB64 = StreamNode::base64Encode(std::string((char*)pps.data(), pps.size()));
+		node->pull_session_.fmtp = "profile-level-id=42C01F;packetization-mode=1;sprop-parameter-sets="
+			+ spsB64 + "," + ppsB64;
+	}
+
+	node->pull_session_.session_type_ = StreamNode::SERVER_PULL;
+	node->pull_session_.control_url = "trackID=0";
+	node->isPulling_ = true;
+	node->running_ = true;
+	node->state_ = StreamNode::State::PLAYING;
+
+	StreamNode* rawNode = node.get();
+	{
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		m_mapStreamNodes[tag] = std::move(node);
+	}
+
+	// 创建本地流上下文并启动喂流线程
+	auto ctx = std::make_shared<LocalFileStreamCtx>();
+	ctx->nals = std::move(nals);
+	ctx->sps = sps;
+	ctx->pps = pps;
+	ctx->payload_type = 96;
+	ctx->clock_rate = 90000;
+	ctx->node = rawNode;
+	ctx->running_ = true;
+
+	{
+		std::lock_guard<std::mutex> lock(g_localStreamMutex);
+		g_localStreams[tag] = ctx;
+	}
+
+	ctx->feed_thread_ = std::thread(localFileFeedLoop, ctx);
+	ctx->feed_thread_.detach();
+
+	LOG("[LocalFileStream] Loaded on demand: file=%s, tag=%s, nals=%zu",
+		filePath.c_str(), tag.c_str(), ctx->nals.size());
+	return rawNode;
+}
+
+// 检查并停止没有客户端的本地文件流
+void StreamServer::cleanupIdleLocalStream(const std::string& tag) {
+	StreamNode* node = getStreamNode(tag);
+	if (!node) return;
+
+	// 检查是否还有客户端
+	node->client_sessions_mutex_.lock();
+	bool hasClients = !node->client_sessions_.empty();
+	node->client_sessions_mutex_.unlock();
+
+	if (hasClients) return;
+
+	// 没有客户端了，停止喂流线程
+	{
+		std::lock_guard<std::mutex> lock(g_localStreamMutex);
+		auto it = g_localStreams.find(tag);
+		if (it != g_localStreams.end()) {
+			it->second->running_ = false;
+			g_localStreams.erase(it);
+		}
+	}
+
+	// 移除 StreamNode
+	{
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		m_mapStreamNodes.erase(tag);
+	}
+
+	LOG("[LocalFileStream] Cleaned idle stream: tag=%s", tag.c_str());
+}
+
+// ============================================================================
 // RTSP 服务端实现
 // 支持作为 RTSP 服务端接受客户端拉流
 // ============================================================================
@@ -1117,6 +1640,13 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 
 			// 尝试通过路径查找 stream（路径格式: /tag）
 			streamNode = findStreamByRtspPath(path);
+
+			if (!streamNode) {
+				// 尝试按需从本地文件映射加载
+				std::string tag = path;
+				if (!tag.empty() && tag[0] == '/') tag = tag.substr(1);
+				streamNode = loadLocalFileStream(tag);
+			}
 
 			if (!streamNode) {
 				std::ostringstream resp;
@@ -1628,6 +2158,8 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 						}),
 					sessions.end());
 				streamNode->client_sessions_mutex_.unlock();
+				// 检查本地文件流是否空闲
+				cleanupIdleLocalStream(streamTag);
 			}
 			break;
 		}
@@ -1658,6 +2190,20 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 			sessions.end());
 		streamNode->client_sessions_mutex_.unlock();
 		LOG("[RTSP-Server] TCP interleaved pull session cleaned for %s", clientIp.c_str());
+		cleanupIdleLocalStream(streamTag);
+	}
+	// 清理 UDP 拉流会话（非 TCP interleaved 的普通拉流）
+	if (!isPushMode && streamNode && rtspSession.transport_mode != StreamNode::TransportMode::TCP) {
+		streamNode->client_sessions_mutex_.lock();
+		auto& sessions = streamNode->client_sessions_;
+		sessions.erase(
+			std::remove_if(sessions.begin(), sessions.end(),
+				[&](const std::shared_ptr<StreamNode::STREAM_SESSION>& s) {
+					return s->remote_host == clientIp;
+				}),
+			sessions.end());
+		streamNode->client_sessions_mutex_.unlock();
+		cleanupIdleLocalStream(streamTag);
 	}
 
 	// 清理：关闭客户端 socket

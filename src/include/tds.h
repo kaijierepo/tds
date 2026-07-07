@@ -629,15 +629,6 @@ public:
 	virtual bool lockIoAddr(std::string ioAddr) = 0;
 	virtual bool unlockIoAddr(std::string ioAddr) = 0;
 	virtual bool setIoAddrRecvCallback(std::string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
-
-	//video function
-#ifdef ENABLE_GENICAM
-	virtual void startStream(std::string streamId, STREAM_INFO* si=NULL) = 0;
-	//push to sepecified streamId 
-	virtual void pushStream(std::string streamId, char* pData, int len, STREAM_INFO* si=NULL) = 0;
-	virtual void pullStream(std::string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO*si = NULL) = 0;
-#endif
-
 	virtual void log(const char* text) = 0;
 
 	iTDSConf* conf;

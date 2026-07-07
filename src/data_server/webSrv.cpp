@@ -2191,13 +2191,6 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		rpcPktMonitorClient.push_back(tdsSession);
 		tdsSession->setActivityCheck(false);
 	}
-	else if (strData.find("desktop") != string::npos)
-	{
-		tdsSession->type = TDS_SESSION_TYPE::video;
-#ifdef ENABLE_FFMPEG
-		rds.startStream(tdsSession);
-#endif
-	}
 	else if (strData.find("stream") != string::npos)
 	{
 		tdsSession->type = TDS_SESSION_TYPE::dataStream;

@@ -88,13 +88,6 @@ public:
 	 bool lockIoAddr(string ioAddr) override;
 	 bool unlockIoAddr(string ioAddr) override;
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) override;
-
-	 // 视频功能
-#ifdef ENABLE_GENICAM
-	 void startStream(string streamId, STREAM_INFO* si = NULL);
-	 void pushStream(string streamId, char* pData, int len, STREAM_INFO* si = NULL);
-	 void pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO* si = NULL);
-#endif
 	 void log(const char* text) override;
 };
 

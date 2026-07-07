@@ -19,6 +19,7 @@ public:
 	bool rpc_removeRecordFile(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getStreamInfo(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
 	bool openStream(string tag, string pushTo = "");
 
@@ -41,6 +42,27 @@ public:
 
 	void initDtlsCertificate();
 	void cleanOldRecords();
+
+	// 将本地 h264/mp4 文件作为 RTSP 流提供出去
+	// filePath: 本地文件路径
+	// url: RTSP 路径，如 "/camera1" 或 "/live/test"
+	bool serveLocalStreamFile(const std::string& filePath, const std::string& url);
+
+	// 默认递归遍历 tds.exe 同级目录下的 rtsp 文件夹，
+	// 按照文件夹路径结构作为 RTSP url，对外提供所有 h264 文件流媒体服务
+	// folderName: 要遍历的文件夹名，默认 "rtsp"
+	void serveDefaultFolder(const std::string& folderName = "rtsp");
+
+	// 按需加载本地文件流（有客户端拉流时才读文件启动喂流线程）
+	// 返回创建的 StreamNode，失败返回 nullptr
+	StreamNode* loadLocalFileStream(const std::string& tag);
+
+	// 检查并停止没有客户端的本地文件流
+	void cleanupIdleLocalStream(const std::string& tag);
+
+	// 本地文件映射：url路径 → 本地文件路径
+	std::map<std::string, std::string> m_localFileMap;
+	std::mutex m_localFileMapMutex_;
 
 	// ---- RTSP 服务端 ----
 	// 启动/停止 RTSP 服务端监听
