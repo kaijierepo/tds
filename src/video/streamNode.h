@@ -244,9 +244,10 @@ public:
     };
 
     enum STREAM_SESSION_TYPE {
-        CLINET_PULL,    //自身作为客户端，向媒体源服务器拉流的会话
-        CLINET_PUSH,    //自身作为客户端，对外推流的会话
-        SERVER_SEND    //自身作为流媒体服务器，向客户端发送流的会话
+        CLINET_PULL,    //自身作为客户端，向服务端拉流
+		CLINET_PUSH,    //自身作为客户端，向服务端推流
+		SERVER_PULL,    //自身作为服务端，接收客户端拉流
+		SERVER_PUSH     //自身作为服务端，接收客户端推流
     };
 
     enum SESSION_STATE {
@@ -282,6 +283,9 @@ public:
 		int server_rtcp_port = 0;
 		SocketHandle rtp_socket = kInvalidSocket;
 		SocketHandle rtcp_socket = kInvalidSocket;
+		SocketHandle tcp_socket = kInvalidSocket;  // TCP interleaved 模式使用的 RTSP 连接
+		int interleaved_rtp = -1;      // TCP interleaved RTP 通道号
+		int interleaved_rtcp = -1;     // TCP interleaved RTCP 通道号
 
         // ICE-Lite (WebRTC) 字段
         bool is_webrtc = false;
@@ -321,6 +325,8 @@ public:
             , server_rtp_port(other.server_rtp_port)
             , server_rtcp_port(other.server_rtcp_port)
             , rtp_socket(other.rtp_socket), rtcp_socket(other.rtcp_socket)
+            , tcp_socket(other.tcp_socket)
+            , interleaved_rtp(other.interleaved_rtp), interleaved_rtcp(other.interleaved_rtcp)
             , is_webrtc(other.is_webrtc)
             , ice_ufrag(other.ice_ufrag), ice_pwd(other.ice_pwd)
             , state(other.state), video_ssrc(other.video_ssrc)
@@ -347,6 +353,8 @@ public:
                 server_rtp_port = other.server_rtp_port;
                 server_rtcp_port = other.server_rtcp_port;
                 rtp_socket = other.rtp_socket; rtcp_socket = other.rtcp_socket;
+                tcp_socket = other.tcp_socket;
+                interleaved_rtp = other.interleaved_rtp; interleaved_rtcp = other.interleaved_rtcp;
                 is_webrtc = other.is_webrtc;
                 ice_ufrag = other.ice_ufrag; ice_pwd = other.ice_pwd;
                 state = other.state; video_ssrc = other.video_ssrc;

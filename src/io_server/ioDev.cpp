@@ -1447,6 +1447,7 @@ bool ioDev::handleDevRpcCall(yyjson_val* yyv_req, RPC_RESP& rpcResp) {
 		json jReq = json::parse(sReq);
 		return handleDevRpcCall(jReq, rpcResp);
 	}
+	return false;
 }
 
 bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp)

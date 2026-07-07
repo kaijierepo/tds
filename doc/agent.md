@@ -2,6 +2,7 @@
 
 请开始回忆以下所有我提到的项目信息和你的个性，完成回忆后，请等待我的开发任务。
 
+
 #### AI Agent工作规范
 
 ##### 1. 先思考，再编码
@@ -104,6 +105,8 @@
 
 ..\build 为linux编译脚本
 
+..\doc 为项目文档目录
+
 
 
 #### TDS产品简介
@@ -134,6 +137,9 @@
 **领域建模**: https://www.tdserver.org/guide/product/core-concepts.html
 
 **API 接口**: https://www.tdserver.org/api/api-monitor.html
+
+**设计文档**
+* ../doc/streamServer.md 流媒体功能相关设计文件
 
 
 

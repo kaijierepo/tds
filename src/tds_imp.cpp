@@ -817,6 +817,12 @@ bool TDS_imp::run(string cmdline) {
 
 	streamSrv.initDtlsCertificate();
 
+	// 启动 RTSP 服务端（配置项: rtspServerPort，默认 0=不启动）
+	int rtspPort = tds->conf->getInt("rtspServerPort", 554);
+	if (rtspPort > 0 && rtspPort <= 65535) {
+		streamSrv.startRtspServer(rtspPort);
+	}
+
 	//create browser window
 	if (conf->uiMode == "chrome") {
 		createChromeWnd();

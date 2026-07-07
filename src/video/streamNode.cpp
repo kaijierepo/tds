@@ -2692,6 +2692,8 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
         auto& sp = playClients[i];
         if (!sp) continue;
         StreamNode::STREAM_SESSION& client = *sp;
+        // WebRTC 客户端走 SRTP 路径，此处跳过明文发送
+        if (client.is_webrtc) continue;
         if (client.transport_mode == TransportMode::UDP) {
             // UDP推流（RTSP 明文）
             if (sendUDPDataToSession(data.data(), data.size(), client)) {
@@ -2700,25 +2702,33 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                 stats_.frames_forwarded++;
             }
         }
-        else {
-            // TCP推流：发送到目标RTSP服务器（通过RTSP控制的连接）
-            //if (target_conn_ && target_conn_->isConnected()) {
-            //    // RTP over RTSP: 插入 $ (0x24) + channel + length
-            //    uint8_t rtpOverTcp[4] = { 0x24, 0x00, 0x00, 0x00 };  // channel 0, length待定
-            //    rtpOverTcp[2] = (data.size() >> 8) & 0xFF;
-            //    rtpOverTcp[3] = data.size() & 0xFF;
+        else if (client.transport_mode == TransportMode::TCP) {
+            // TCP interleaved 发送：$channel length data 格式
+            if (client.tcp_socket != kInvalidSocket && client.interleaved_rtp >= 0) {
+                uint8_t header[4];
+                header[0] = 0x24;  // $ magic byte
+                header[1] = (uint8_t)(client.interleaved_rtp & 0xFF);
+                header[2] = (uint8_t)((data.size() >> 8) & 0xFF);
+                header[3] = (uint8_t)(data.size() & 0xFF);
 
-            //    std::vector<uint8_t> tcpPacket;
-            //    tcpPacket.insert(tcpPacket.end(), rtpOverTcp, rtpOverTcp + 4);
-            //    tcpPacket.insert(tcpPacket.end(), data.begin(), data.end());
-
-            //    int sent = target_conn_->send(tcpPacket.data(), tcpPacket.size());
-            //    if (sent > 0) {
-            //        std::lock_guard<std::mutex> lock(stats_mutex_);
-            //        stats_.bytes_forwarded += data.size();
-            //        stats_.frames_forwarded++;
-            //    }
-            //}
+#ifdef _WIN32
+                int sent = ::send(client.tcp_socket, (const char*)header, 4, 0);
+                if (sent == 4) {
+                    sent = ::send(client.tcp_socket, (const char*)data.data(),
+                        (int)data.size(), 0);
+                }
+#else
+                int sent = ::send(client.tcp_socket, header, 4, MSG_NOSIGNAL);
+                if (sent == 4) {
+                    sent = ::send(client.tcp_socket, data.data(), data.size(), MSG_NOSIGNAL);
+                }
+#endif
+                if (sent == (int)data.size()) {
+                    std::lock_guard<std::mutex> lock(stats_mutex_);
+                    stats_.bytes_forwarded += data.size();
+                    stats_.frames_forwarded++;
+                }
+            }
         }
     }
 
