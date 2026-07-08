@@ -587,7 +587,7 @@ bool StreamServer::rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, 
 	// 2. 遍历map中的每个StreamNode实例
 	for (const auto& pair : mapStreamNodes) {
 		const std::string& relay_key = pair.first;          // map的key（比如RTSP流标识）
-		const std::unique_ptr<StreamNode>& relay_ptr = pair.second;
+		const std::shared_ptr<StreamNode>& relay_ptr = pair.second;
 
 		// 安全检查：跳过空指针
 		if (!relay_ptr) {
@@ -737,7 +737,7 @@ bool StreamServer::closeStream(string tag)
 	}
 	else {
 		// 再尝试关闭 StreamNode
-		std::unique_ptr<StreamNode> relayToStop;
+		std::shared_ptr<StreamNode> relayToStop;
 		{
 			std::lock_guard<std::mutex> lock(nodeLock_);
 			auto it = m_mapStreamNodes.find(tag);
@@ -821,7 +821,7 @@ struct LocalFileStreamCtx {
 	int clock_rate = 90000;
 	std::thread feed_thread_;
 	std::atomic<bool> running_{false};
-	StreamNode* node = nullptr;  // 关联的 StreamNode
+	std::shared_ptr<StreamNode> node;  // 关联的 StreamNode（shared_ptr 防止 feed 线程中悬空指针）
 };
 
 static std::mutex g_localStreamMutex;
@@ -1054,7 +1054,7 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	}
 
 	// 创建 StreamNode
-	auto node = std::make_unique<StreamNode>();
+	auto node = std::make_shared<StreamNode>();
 	StreamNode::Config cfg;
 	cfg.tag = tag;
 	cfg.source_url = "file://" + filePath;
@@ -1087,12 +1087,13 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	node->running_ = true;
 	node->state_ = StreamNode::State::PLAYING;
 
-	StreamNode* rawNode = node.get();
+	// 继续持有 node 引用，供下方 ctx->node 使用
+	// （三个 shared_ptr 共同管理生命周期：map、局部变量 node、ctx->node）
 
 	// 加入全局 map
 	{
 		std::lock_guard<std::mutex> lock(nodeLock_);
-		m_mapStreamNodes[tag] = std::move(node);
+		m_mapStreamNodes[tag] = node;
 	}
 
 	// 创建本地流上下文并启动喂流线程
@@ -1102,7 +1103,7 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	ctx->pps = pps;
 	ctx->payload_type = 96;
 	ctx->clock_rate = 90000;
-	ctx->node = rawNode;
+	ctx->node = node;
 	ctx->running_ = true;
 
 	{
@@ -1197,7 +1198,7 @@ StreamNode* StreamServer::loadLocalFileStream(const std::string& tag) {
 	}
 
 	// 创建 StreamNode
-	auto node = std::make_unique<StreamNode>();
+	auto node = std::make_shared<StreamNode>();
 	StreamNode::Config cfg;
 	cfg.tag = tag;
 	cfg.source_url = "file://" + filePath;
@@ -1227,10 +1228,11 @@ StreamNode* StreamServer::loadLocalFileStream(const std::string& tag) {
 	node->running_ = true;
 	node->state_ = StreamNode::State::PLAYING;
 
-	StreamNode* rawNode = node.get();
+	// 继续持有 node 引用，供下方 ctx->node 使用
+	// （三个 shared_ptr 共同管理生命周期：map、局部变量 node、ctx->node）
 	{
 		std::lock_guard<std::mutex> lock(nodeLock_);
-		m_mapStreamNodes[tag] = std::move(node);
+		m_mapStreamNodes[tag] = node;
 	}
 
 	// 创建本地流上下文并启动喂流线程
@@ -1240,7 +1242,7 @@ StreamNode* StreamServer::loadLocalFileStream(const std::string& tag) {
 	ctx->pps = pps;
 	ctx->payload_type = 96;
 	ctx->clock_rate = 90000;
-	ctx->node = rawNode;
+	ctx->node = node;
 	ctx->running_ = true;
 
 	{
@@ -1253,7 +1255,7 @@ StreamNode* StreamServer::loadLocalFileStream(const std::string& tag) {
 
 	LOG("[LocalFileStream] Loaded on demand: file=%s, tag=%s, nals=%zu",
 		filePath.c_str(), tag.c_str(), ctx->nals.size());
-	return rawNode;
+	return node.get();
 }
 
 // 检查并停止没有客户端的本地文件流
@@ -1601,7 +1603,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				cfg.max_retries = 0;
 				cfg.rtp_timeout = 10000;
 
-				auto node = std::make_unique<StreamNode>();
+				auto node = std::make_shared<StreamNode>();
 				// 直接设置 pull_session_ 信息（跳过 doStreamPull）
 				node->config_ = cfg;
 				node->pull_session_ = videoInfo;
@@ -1611,7 +1613,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				node->state_ = StreamNode::State::PLAYING;
 
 				std::lock_guard<std::mutex> lock(nodeLock_);
-				m_mapStreamNodes[tag] = std::move(node);
+				m_mapStreamNodes[tag] = node;
 				streamNode = m_mapStreamNodes[tag].get();
 				LOG("[RTSP-Server] Created new StreamNode for push tag=%s, codec=%s, pt=%d",
 					tag.c_str(), videoInfo.codec.c_str(), videoInfo.payload_type);

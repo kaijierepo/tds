@@ -30,7 +30,7 @@ public:
 	StreamNode* getStreamNode(std::string tag);			   // 通过标签查找 StreamNode
 	StreamNode* getStreamNodeByIp(const std::string& ip);  // 通过IP地址查找 StreamNode
 
-	map<std::string, std::unique_ptr<StreamNode>> m_mapStreamNodes;
+	map<std::string, std::shared_ptr<StreamNode>> m_mapStreamNodes;
 	map<std::string, std::unique_ptr<StreamNode>> m_mapStreamNodes_urlID; //根据拉流源url查找StreamNode
 	mutable std::mutex nodeLock_url_;
 	mutable std::mutex nodeLock_; // 保护 m_mapStreamNodes 的互斥锁
