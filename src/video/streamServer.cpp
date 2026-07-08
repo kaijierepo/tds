@@ -1157,7 +1157,7 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 
 	size_t nalIdx = 0;
 	while (ctx->running_ && ctx->node->running_) {
-		// 没有客户端时等待，避免无效循环消耗 CPU
+		// 没有客户端时：空转，不做任何操作，等待客户端连接
 		bool hasClients = false;
 		{
 			ctx->node->session_list_client_pull_mutex_.lock();
@@ -1165,9 +1165,8 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 			ctx->node->session_list_client_pull_mutex_.unlock();
 		}
 		if (!hasClients) {
-			// 没有客户端时等待，避免无效循环消耗 CPU
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-			// 重置播放位置，下次有人拉流从头开始
+			// 空转：什么也不干，立即再次检查（busy-wait）
+			// 重置播放位置，确保有客户端时从头开始
 			nalIdx = 0;
 			timestamp = 0;
 			continue;
@@ -1386,7 +1385,8 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 
 // ============================================================================
 // 默认文件夹流服务：递归遍历 tds.exe 同级目录下的 rtsp 文件夹，
-// 按文件夹路径结构作为 RTSP url，对外提供所有 h264 文件流媒体服务
+// 按文件夹路径结构作为 RTSP url，对外提供所有 h264 文件流媒体服务。
+// 启动时立即解析文件、创建 StreamNode、启动喂流线程（线程内判断客户端，空转等待）。
 // ============================================================================
 void StreamServer::serveDefaultFolder(const std::string& folderName) {
 	std::string baseDir = fs::appPath() + "/" + folderName;
@@ -1399,7 +1399,6 @@ void StreamServer::serveDefaultFolder(const std::string& folderName) {
 	LOG("[DefaultFolder] Scanning folder: %s", baseDir.c_str());
 
 	int count = 0;
-	std::lock_guard<std::mutex> lock(m_localFileMapMutex_);
 	try {
 		for (const auto& entry : std::filesystem::recursive_directory_iterator(baseDir)) {
 			if (!entry.is_regular_file()) continue;
@@ -1423,16 +1422,25 @@ void StreamServer::serveDefaultFolder(const std::string& folderName) {
 			if (relPath.size() > 5)
 				relPath = relPath.substr(0, relPath.size() - 5);
 
-			// 只记录映射，不读文件
-			m_localFileMap["/" + relPath] = filePath;
-			LOG("[DefaultFolder] Mapped: %s -> %s", filePath.c_str(), ("/" + relPath).c_str());
+			std::string tag = relPath;
+			std::string url = "/" + relPath;
+
+			// 注册文件映射（保留兼容）
+			{
+				std::lock_guard<std::mutex> lock(m_localFileMapMutex_);
+				m_localFileMap[url] = filePath;
+			}
+			LOG("[DefaultFolder] Mapped: %s -> %s", filePath.c_str(), url.c_str());
+
+			// 立即创建 StreamNode 并启动喂流线程（线程内部判断客户端，空转等待）
+			serveLocalStreamFile(filePath, url);
 			count++;
 		}
 	} catch (const std::exception& e) {
 		LOG("[DefaultFolder] Error scanning: %s", e.what());
 	}
 
-	LOG("[DefaultFolder] Registered %d h264 file mappings from %s", count, baseDir.c_str());
+	LOG("[DefaultFolder] Registered %d h264 file streams from %s", count, baseDir.c_str());
 }
 
 // 按需加载本地文件流：有客户端拉流时才读文件、创建 StreamNode、启动喂流线程
@@ -1960,14 +1968,9 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 			std::string path = extractPathFromUrl(url);
 
 			// 尝试通过路径查找 stream（路径格式: /tag）
+			// 注：serveDefaultFolder 启动时已创建所有本地文件对应的 StreamNode，
+			// 此处直接查找即可，无需按需加载
 			streamNode = findStreamByRtspPath(path);
-
-			if (!streamNode) {
-				// 尝试按需从本地文件映射加载
-				std::string tag = path;
-				if (!tag.empty() && tag[0] == '/') tag = tag.substr(1);
-				streamNode = loadLocalFileStream(tag);
-			}
 
 			if (!streamNode) {
 				std::ostringstream resp;
