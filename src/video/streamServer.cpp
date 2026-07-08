@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "streamServer.h"
 #include "dtls_transport.h"
 #include "logger.h"
@@ -1544,6 +1544,10 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 		}
 		else if (method == "ANNOUNCE") {
 			// ---- RTSP 推流：客户端推送 SDP 到服务端 ----
+			// 重置上一个会话状态（避免跨序列污染），仅重置安全字段
+			sessionSetup = false;
+			streamTag.clear();
+
 			std::string path = extractPathFromUrl(url);
 			std::string tag = path;
 			if (!tag.empty() && tag[0] == '/') tag = tag.substr(1);
@@ -1625,6 +1629,13 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				streamNode->isPulling_ = true;
 			}
 
+			// 清理上一个推流会话（ANNOUNCE 成功，旧会话不再有效）
+			if (isPushMode && !sessionId.empty()) {
+				cleanupPushSession(sessionId);
+			}
+			sessionId.clear();
+			pushSession.reset();
+
 			streamTag = tag;
 			isPushMode = true;
 
@@ -1641,6 +1652,17 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 			sendResponse(cseq, resp.str());
 		}
 		else if (method == "DESCRIBE") {
+			// 重置上一个拉流/推流会话状态
+			sessionSetup = false;
+			streamTag.clear();
+			// 清理上一个推流会话（客户端已转拉流，旧推流不再需要）
+			if (isPushMode && !sessionId.empty()) {
+				cleanupPushSession(sessionId);
+			}
+			isPushMode = false;
+			sessionId.clear();
+			pushSession.reset();
+
 			std::string path = extractPathFromUrl(url);
 
 			// 尝试通过路径查找 stream（路径格式: /tag）
