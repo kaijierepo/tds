@@ -244,6 +244,7 @@ bool StreamServer::rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp,
 
 	if (filePath.empty() || url.empty()) {
 		LOG("[RPC] serveLocalFile: missing filePath or url");
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing filePath or url");
 		return false;
 	}
 
@@ -255,9 +256,11 @@ bool StreamServer::rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp,
 	}
 	else {
 		LOG("[RPC] serveLocalFile: failed for filePath=%s", filePath.c_str());
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::OS_fileNotExist,
+			"failed to serve local file, check file path and format");
 	}
 
-	return ok;
+	return true;
 }
 
 bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
@@ -816,12 +819,27 @@ struct LocalFileStreamCtx {
 static std::mutex g_localStreamMutex;
 static std::map<std::string, std::shared_ptr<LocalFileStreamCtx>> g_localStreams;  // key=tag
 
+// Windows 下将 UTF-8 路径转为宽字符（std::ifstream 的 string 重载使用系统 locale，中文字符需 wchar_t 重载）
+#ifdef _WIN32
+static std::wstring pathToWide(const std::string& utf8) {
+	int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+	if (len <= 0) return std::wstring();
+	std::wstring w(len - 1, L'\0');
+	MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, &w[0], len);
+	return w;
+}
+#endif
+
 // 解析 h264 Annex B 文件，提取 NAL 单元
 static bool parseH264File(const std::string& filePath,
 	std::vector<std::vector<uint8_t>>& nals,
 	std::vector<uint8_t>& sps, std::vector<uint8_t>& pps)
 {
+#ifdef _WIN32
+	std::ifstream file(pathToWide(filePath), std::ios::binary | std::ios::ate);
+#else
 	std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+#endif
 	if (!file.is_open()) {
 		LOG("[LocalFileStream] Failed to open file: %s", filePath.c_str());
 		return false;
