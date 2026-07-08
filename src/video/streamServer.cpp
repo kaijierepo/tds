@@ -172,7 +172,7 @@ bool StreamServer::rpc_startStreamNode(yyjson_val* params, RPC_RESP& rpcResp, RP
 	relay->setErrorCallback([](const std::string& error, int code) {
 		LOG("[StreamNode] Error (%d): %s", code, error.c_str());
 		});
-
+	// 3. 配置 relay
 
 	// 3. 配置 relay
 	StreamNode::Config config;
@@ -898,39 +898,16 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 	const auto& nals = ctx->nals;
 	if (nals.empty()) return;
 
+	// 提前拷贝 tag，因为 ctx->node 是裸指针，循环结束后可能已被其他线程销毁
+	const std::string tag = ctx->node->config_.tag;
+
 	uint16_t seq = 0;
 	uint32_t timestamp = 0;
 	uint32_t ssrc = 0x4C4F4341;  // "LOCA" 标识本地文件源
 	uint32_t clockRate = (uint32_t)ctx->clock_rate;
 
 	LOG("[LocalFileStream] Feed loop started: tag=%s, nals=%zu",
-		ctx->node->config_.tag.c_str(), nals.size());
-
-	// 首帧发送 SPS/PPS（如果存在）
-	if (!ctx->sps.empty()) {
-		auto spsPkt = std::make_shared<StreamNode::RTPPacket>();
-		spsPkt->version = 2;
-		spsPkt->payload_type = (uint8_t)ctx->payload_type;
-		spsPkt->sequence_number = seq++;
-		spsPkt->timestamp = timestamp;
-		spsPkt->ssrc = ssrc;
-		spsPkt->marker = false;
-		spsPkt->payload = ctx->sps;
-		ctx->node->addToRtpBuffer(spsPkt);
-		ctx->node->sendRTPPacketToClients(*spsPkt);
-	}
-	if (!ctx->pps.empty()) {
-		auto ppsPkt = std::make_shared<StreamNode::RTPPacket>();
-		ppsPkt->version = 2;
-		ppsPkt->payload_type = (uint8_t)ctx->payload_type;
-		ppsPkt->sequence_number = seq++;
-		ppsPkt->timestamp = timestamp;
-		ppsPkt->ssrc = ssrc;
-		ppsPkt->marker = false;
-		ppsPkt->payload = ctx->pps;
-		ctx->node->addToRtpBuffer(ppsPkt);
-		ctx->node->sendRTPPacketToClients(*ppsPkt);
-	}
+		tag.c_str(), nals.size());
 
 	size_t nalIdx = 0;
 	while (ctx->running_ && ctx->node->running_) {
@@ -942,8 +919,9 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 			ctx->node->client_sessions_mutex_.unlock();
 		}
 		if (!hasClients) {
+			// 没有客户端时等待，避免无效循环消耗 CPU
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-			// 没有客户端时重置播放位置，下次有人拉流从头开始
+			// 重置播放位置，下次有人拉流从头开始
 			nalIdx = 0;
 			timestamp = 0;
 			continue;
@@ -953,8 +931,18 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 		uint8_t nalType = nal.empty() ? 0 : (nal[0] & 0x1F);
 		uint8_t nri = nal.empty() ? 0 : ((nal[0] & 0x60) >> 5);
 
-		// 跳过 SPS/PPS（已在首帧发送）
+		// SPS/PPS 参数集：发送但不推进时间戳、不 sleep（花屏修复：确保客户端收到带内参数集）
 		if (nalType == 7 || nalType == 8) {
+			auto pkt = std::make_shared<StreamNode::RTPPacket>();
+			pkt->version = 2;
+			pkt->payload_type = (uint8_t)ctx->payload_type;
+			pkt->sequence_number = seq++;
+			pkt->timestamp = timestamp;
+			pkt->ssrc = ssrc;
+			pkt->marker = false;
+			pkt->payload = nal;
+			ctx->node->addToRtpBuffer(pkt);
+			ctx->node->sendRTPPacketToClients(*pkt);
 			nalIdx = (nalIdx + 1) % nals.size();
 			continue;
 		}
@@ -1005,7 +993,7 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 			}
 		}
 
-		// 每发完一个 access unit 后推进时间戳
+		// 每发完一个视频切片 NAL 后推进时间戳（辅助 NAL 以上面的 continue 跳过）
 		timestamp += clockRate / 30;
 
 		// 帧间隔：30fps ≈ 33ms
@@ -1019,7 +1007,7 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 		}
 	}
 
-	LOG("[LocalFileStream] Feed loop ended: tag=%s", ctx->node->config_.tag.c_str());
+	LOG("[LocalFileStream] Feed loop ended: tag=%s", tag.c_str());
 }
 
 bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::string& url) {
