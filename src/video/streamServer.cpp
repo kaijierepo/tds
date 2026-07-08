@@ -7,7 +7,6 @@
 #include <random>
 #include <cstdio>
 #include <algorithm>
-#include "prj.h"
 #include <filesystem>
 
 StreamServer streamSrv;
@@ -644,115 +643,73 @@ bool StreamServer::rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, 
 }
 
 
-bool StreamServer::openStream(string tag, string pushTo)
+bool StreamServer::openStream(string tag,string srcUrl, string pushTo)
 {
-	m_enableZLM = tds->conf->getInt("enableZLM", 0) != 0;
-	MP* pmp = prj.GetMPByTag(tag, "zh");
-	if (!pmp) {
-		LOG("[流媒体] 请求的位号不存在, tag=" + tag);
-		return false;
-	}
+	StreamNode* sn = getStreamNode(tag);
 
-	if (pmp->m_isOpenningStream) {
-		LOG("[流媒体] 当前正在打开媒体源，收到重复打开请求，忽略, 位号:%s, 当前配置地址:%s",
-			tag.c_str(), pmp->m_mediaUrl.c_str());
-		return false;
-	}
-
-	pmp->m_isOpenningStream = true;
-
-	// 如果拉流地址变更，先关闭旧流
-	if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl && pmp->m_mpStatus.m_pullingSrcUrl != "") {
-		LOG("[流媒体] 监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s, 配置地址:%s",
-			pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
-
-		closeStream(tag);
-	}
-
-	bool ret = false;
-	if (m_enableZLM) {
-		bool retPull = pmp->startStreamPull();   //zlm  addStreamProxy
-		bool pushRet = false;
-		if (pushTo != "") {
-			if (retPull) {
-				timeopt::sleepMilli(500);
-				pushRet = pmp->startStreamPush(pushTo);  //zlm  addStreamPusherProxy
-				LOG("[流媒体] 向上级服务推流（ZLM模式），url=%s", pushTo.c_str());
-				ret = pushRet;
-			}
+	if (sn) {
+		if (sn->config_.source_url == srcUrl && sn->config_.target_url == pushTo) {
+			LOG("[流媒体] 媒体源已打开，收到重复打开请求，忽略, 位号:%s, 当前配置地址:%s",
+				tag.c_str(), sn->config_.source_url.c_str());
+			return false;
 		}
-		else {
-			ret = retPull;
+		if (sn->config_.source_url != srcUrl) {
+			LOG("[流媒体] 媒体源变更，重启streamNode，当前拉流地址:%s, 新地址:%s",
+				sn->config_.source_url.c_str(), srcUrl.c_str());
+			closeStream(tag);
+		}
+		if (sn->config_.target_url != pushTo) {
+			LOG("[流媒体] 推流地址变更，重启streamNode, 当前推流地址:%s, 新地址:%s",
+				sn->config_.target_url.c_str(), pushTo.c_str());
+			closeStream(tag);
 		}
 	}
 	else {
-		StreamNode* rc = getStreamNode(tag);
-		if (rc) {
-			LOG("[流媒体] StreamNode 已在运行 for tag: %s", tag.c_str());
-			if (rc->config_.target_url == "" && pushTo != "") {
-				rc->config_.target_url = pushTo;
-				LOG("[流媒体] StreamNode is pulling for tag: %s, start push to %s", tag.c_str(), pushTo.c_str());
-			}
-			pmp->m_isOpenningStream = false;
-			return true;
-		}
-
-		// 创建新的 StreamNode
-		auto rtspClt = std::make_unique<StreamNode>();
-
-		// 3. 配置 relay
-		StreamNode::Config config;
-		config.source_url = pmp->m_mediaUrl; // 源地址
-		// 提取用户名和密码
-		bool isSuccess = rtspClt->extractRtspAuthInfo(config);
-
-		config.target_url = pushTo; // 目标地址
-		config.retry_interval = 3000;
-		config.max_retries = 0; // 无限重试
-		config.rtp_timeout = 10000;
-		config.tag = tag;
-
-		if (rtspClt->start(config)) {
-			std::lock_guard<std::mutex> lock(nodeLock_);
-			m_mapStreamNodes[tag] = std::move(rtspClt);
-			ret = true;
-		}
-		else {
-			ret = false;
-		}
+		sn = new StreamNode();
 	}
 
-	pmp->m_isOpenningStream = false;
+
+	StreamNode::Config config;
+	config.source_url = srcUrl; 
+	// 提取用户名和密码
+	bool isSuccess = sn->extractRtspAuthInfo(config);
+	config.target_url = pushTo; // 目标地址
+	config.retry_interval = 3000;
+	config.max_retries = 0; // 无限重试
+	config.rtp_timeout = 10000;
+	config.tag = tag;
+
+	bool ret;
+	if (sn->start(config)) {
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		m_mapStreamNodes[tag] = std::shared_ptr<StreamNode>(sn);
+		ret = true;
+	}
+	else {
+		ret = false;
+	}
+
 	return ret;
 }
 
 bool StreamServer::closeStream(string tag)
 {
-	if (m_enableZLM) {
-		MP* pmp = prj.GetMPByTag(tag, "zh");
-		if (pmp) {
-			pmp->stopStreamPush();
-			pmp->stopStreamPull(tag);
+	// 再尝试关闭 StreamNode
+	std::shared_ptr<StreamNode> sn;
+	{
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		auto it = m_mapStreamNodes.find(tag);
+		if (it != m_mapStreamNodes.end()) {
+			sn = it->second;
+			m_mapStreamNodes.erase(it);
+			LOG("[流媒体] 正在停止 StreamNode for tag: %s", tag.c_str());
 		}
 	}
-	else {
-		// 再尝试关闭 StreamNode
-		std::shared_ptr<StreamNode> relayToStop;
-		{
-			std::lock_guard<std::mutex> lock(nodeLock_);
-			auto it = m_mapStreamNodes.find(tag);
-			if (it != m_mapStreamNodes.end()) {
-				relayToStop = std::move(it->second);
-				m_mapStreamNodes.erase(it);
-				LOG("[流媒体] 正在停止 StreamNode for tag: %s", tag.c_str());
-			}
-		}
 
-		// 在锁外停止 relay，避免潜在死锁
-		if (relayToStop) {
-			relayToStop->stop();
-			LOG("[流媒体] StreamNode 已停止 for tag: %s", tag.c_str());
-		}
+	// 在锁外停止 relay，避免潜在死锁
+	if (sn) {
+		sn->stop();
+		LOG("[流媒体] StreamNode 已停止 for tag: %s", tag.c_str());
 	}
 
 	return true;

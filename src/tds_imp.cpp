@@ -567,7 +567,7 @@ void openAllStream() {
 		MP* pmp = pair.second;
 		if (pmp && pmp->m_mediaUrl != "") {
 			string tag = pmp->getTag();
-			streamSrv.openStream(tag);
+			streamSrv.openStream(tag,pmp->m_mediaUrl);
 		}
 	}
 }

@@ -23,7 +23,7 @@ public:
 	bool rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
-	bool openStream(string tag, string pushTo = "");
+	bool openStream(string tag, string srcUrl, string pushTo = "");
 
 	bool closeStream(string tag);
 

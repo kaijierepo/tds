@@ -437,7 +437,10 @@ void thread_handleDataOverWebsocket(thread_data* data, std::shared_ptr<TDS_SESSI
 }
 
 void thread_asynOpenStream(string tag) {
-	streamSrv.openStream(tag);
+	MP* pmp = prj.GetMPByTag(tag, "zh");
+	if (pmp) {
+		streamSrv.openStream(tag,pmp->m_mediaUrl);
+	}
 }
 
 void thread_asynOpenChildTdsStream(ioDev* pChildTds,string tag) {
