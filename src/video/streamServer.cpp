@@ -2517,10 +2517,10 @@ void StreamServer::rtpRecvThread(std::shared_ptr<RtspRecvSession> session) {
 				if (session->tcp_sock != StreamNode::kInvalidSocket) {
 #ifdef _WIN32
 					shutdown(static_cast<SOCKET>(session->tcp_sock), SD_BOTH);
-					closesocket(static_cast<SOCKET>(session->tcp_sock));
+					// closesocket not used here — tcp_sock owned by handleRtspClient
 #else
 					shutdown(session->tcp_sock, SHUT_RDWR);
-					close(session->tcp_sock);
+					// close not used here — tcp_sock owned by handleRtspClient
 #endif
 					session->tcp_sock = StreamNode::kInvalidSocket;
 				}
@@ -2563,10 +2563,10 @@ void StreamServer::cleanupPushSession(const std::string& sessionId) {
 		if (session->tcp_sock != StreamNode::kInvalidSocket) {
 #ifdef _WIN32
 			shutdown(static_cast<SOCKET>(session->tcp_sock), SD_BOTH);
-			closesocket(static_cast<SOCKET>(session->tcp_sock));
+			// closesocket not used here — tcp_sock owned by handleRtspClient
 #else
 			shutdown(session->tcp_sock, SHUT_RDWR);
-			close(session->tcp_sock);
+			// close not used here — tcp_sock owned by handleRtspClient
 #endif
 			session->tcp_sock = StreamNode::kInvalidSocket;
 		}
