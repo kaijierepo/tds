@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "streamServer.h"
 #include "dtls_transport.h"
 #include "logger.h"
@@ -811,10 +811,11 @@ struct LocalFileStreamCtx {
 	std::vector<uint8_t> pps;
 	int payload_type = 96;
 	int clock_rate = 90000;
+	int fps = 25;                              // 视频帧率，用于时间戳计算和帧间隔 sleep
 	std::thread feed_thread_;
 	std::atomic<bool> running_{false};
-	std::shared_ptr<StreamNode> node;  // 关联的 StreamNode（shared_ptr 防止 feed 线程中悬空指针）
-};
+		std::shared_ptr<StreamNode> node;  // 关联的 StreamNode（shared_ptr 防止 feed 线程中悬空指针）
+	};
 
 static std::mutex g_localStreamMutex;
 static std::map<std::string, std::shared_ptr<LocalFileStreamCtx>> g_localStreams;  // key=tag
@@ -898,6 +899,219 @@ static bool parseH264File(const std::string& filePath,
 	return !nals.empty();
 }
 
+// ============================================================
+// H.264 SPS VUI 定时信息解析
+// ============================================================
+
+// 简易比特流读取器（用于 SPS 解析，仅需前向读取）
+struct H264BitReader {
+	const uint8_t* data;
+	size_t size;
+	size_t bytePos;
+	int bitPos;  // 0=MSB, 7=LSB
+
+	H264BitReader(const uint8_t* d, size_t s)
+		: data(d), size(s), bytePos(0), bitPos(0) {}
+
+	int readBit() {
+		if (bytePos >= size) return 0;
+		int bit = (data[bytePos] >> (7 - bitPos)) & 1;
+		if (++bitPos >= 8) { bitPos = 0; bytePos++; }
+		return bit;
+	}
+
+	unsigned int readBits(int n) {
+		unsigned int val = 0;
+		for (int i = 0; i < n; i++)
+			val = (val << 1) | readBit();
+		return val;
+	}
+
+	// 读取无符号指数哥伦布编码值
+	unsigned int readUE() {
+		int leadingZeros = 0;
+		while (readBit() == 0) {
+			leadingZeros++;
+			if (bytePos >= size && bitPos == 0) return 0;
+		}
+		if (leadingZeros == 0) return 0;
+		return (1u << leadingZeros) - 1 + readBits(leadingZeros);
+	}
+
+	// 读取有符号指数哥伦布编码值
+	int readSE() {
+		unsigned int codeNum = readUE();
+		return (codeNum & 1) ? (int)((codeNum + 1) >> 1) : -(int)(codeNum >> 1);
+	}
+};
+
+// 从 SPS NAL 中解析 VUI timing info，计算视频帧率
+// spsNal: 裸 NAL（含 NAL header 字节）
+// 返回 fps（如 29.97, 25.0, 30.0），解析失败返回 0.0
+static double parseSpsFps(const std::vector<uint8_t>& spsNal) {
+	if (spsNal.size() < 10) return 0.0;
+
+	// 1) 移除 emulation prevention bytes (0x00 0x00 0x03)
+	std::vector<uint8_t> rbsp;
+	rbsp.reserve(spsNal.size());
+	for (size_t i = 0; i < spsNal.size(); i++) {
+		if (i >= 2 && spsNal[i-2] == 0 && spsNal[i-1] == 0 && spsNal[i] == 3) {
+			continue;  // 跳过 0x03
+		}
+		rbsp.push_back(spsNal[i]);
+	}
+	if (rbsp.size() < 10) return 0.0;
+
+	H264BitReader br(rbsp.data(), rbsp.size());
+
+	// 2) 解析 NAL header（1 字节）
+	br.readBits(8);  // forbidden_zero_bit(1) + nal_ref_idc(2) + nal_unit_type(5)
+
+	// 3) 解析 SPS RBSP
+	unsigned int profile_idc = br.readBits(8);
+	br.readBits(8);  // constraint_set_flags
+	br.readBits(8);  // level_idc
+	br.readUE();     // seq_parameter_set_id
+
+	// 高档次有额外 chroma 格式参数
+	if (profile_idc == 100 || profile_idc == 110 || profile_idc == 122 ||
+		profile_idc == 244 || profile_idc == 44 || profile_idc == 83 ||
+		profile_idc == 86 || profile_idc == 118 || profile_idc == 128 ||
+		profile_idc == 138 || profile_idc == 139 || profile_idc == 134 || profile_idc == 135) {
+		unsigned int chroma_format_idc = br.readUE();
+		if (chroma_format_idc == 3)
+			br.readBits(1);  // separate_colour_plane_flag
+		br.readUE();  // bit_depth_luma_minus8
+		br.readUE();  // bit_depth_chroma_minus8
+		br.readBits(1);  // qpprime_y_zero_transform_bypass_flag
+		unsigned int seq_scaling_matrix_present_flag = br.readBits(1);
+		if (seq_scaling_matrix_present_flag) {
+			unsigned int maxLists = (chroma_format_idc == 3) ? 12 : 8;
+			for (unsigned int i = 0; i < maxLists; i++) {
+				if (i < rbsp.size()) {
+					unsigned int present = br.readBits(1);
+					if (present) {
+						int size = (i < 6) ? 16 : 64;
+						int lastScale = 8, nextScale = 8;
+						for (int j = 0; j < size; j++) {
+							if (nextScale != 0) {
+								int deltaScale = br.readSE();
+								nextScale = (lastScale + deltaScale + 256) & 0xFF;
+							}
+							if (nextScale == 0) { /* keep lastScale */ }
+							else lastScale = nextScale;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 4) 所有档次共有的字段
+	br.readUE();  // log2_max_frame_num_minus4
+	unsigned int pic_order_cnt_type = br.readUE();
+	if (pic_order_cnt_type == 0) {
+		br.readUE();  // log2_max_pic_order_cnt_lsb_minus4
+	} else if (pic_order_cnt_type == 1) {
+		br.readBits(1);  // delta_pic_order_always_zero_flag
+		br.readSE();     // offset_for_non_ref_pic
+		br.readSE();     // offset_for_top_to_bottom_field
+		unsigned int num_ref_frames_in_poc_cycle = br.readUE();
+		for (unsigned int i = 0; i < num_ref_frames_in_poc_cycle; i++) {
+			br.readSE();  // offset_for_ref_frame[i]
+		}
+	}
+	// pic_order_cnt_type == 2: no additional data
+
+	br.readUE();  // max_num_ref_frames
+	br.readBits(1);  // gaps_in_frame_num_value_allowed_flag
+	br.readUE();  // pic_width_in_mbs_minus1
+	br.readUE();  // pic_height_in_map_units_minus1
+
+	unsigned int frame_mbs_only_flag = br.readBits(1);
+	if (!frame_mbs_only_flag) {
+		br.readBits(1);  // mb_adaptive_frame_field_flag
+	}
+	br.readBits(1);  // direct_8x8_inference_flag
+	unsigned int frame_cropping_flag = br.readBits(1);
+	if (frame_cropping_flag) {
+		br.readUE();  // frame_crop_left_offset
+		br.readUE();  // frame_crop_right_offset
+		br.readUE();  // frame_crop_top_offset
+		br.readUE();  // frame_crop_bottom_offset
+	}
+
+	// 5) VUI 参数
+	unsigned int vui_parameters_present_flag = br.readBits(1);
+	if (!vui_parameters_present_flag) return 0.0;
+
+	// aspect_ratio_info_present_flag
+	if (br.readBits(1)) {
+		unsigned int aspect_ratio_idc = br.readBits(8);
+		if (aspect_ratio_idc == 255) {
+			br.readBits(16);
+			br.readBits(16);
+		}
+	}
+
+	if (br.readBits(1)) br.readBits(1);  // overscan_info
+
+	if (br.readBits(1)) {  // video_signal_type_present_flag
+		br.readBits(3);  // video_format
+		br.readBits(1);  // video_full_range_flag
+		if (br.readBits(1)) {  // colour_description_present_flag
+			br.readBits(8);
+			br.readBits(8);
+			br.readBits(8);
+		}
+	}
+
+	if (br.readBits(1)) {  // chroma_loc_info_present_flag
+		br.readUE();
+		br.readUE();
+	}
+
+	// 6) 目标：timing info
+	unsigned int timing_info_present_flag = br.readBits(1);
+	if (!timing_info_present_flag) return 0.0;
+
+	unsigned int num_units_in_tick = br.readBits(32);
+	unsigned int time_scale = br.readBits(32);
+
+	if (num_units_in_tick == 0) return 0.0;
+
+	// 帧率 = time_scale / (2 * num_units_in_tick)
+	// 2x 因子：H.264 clock tick 以 field 为单位，一个 frame = 2 fields
+	double fps = (double)time_scale / (2.0 * (double)num_units_in_tick);
+
+	return (fps >= 1.0 && fps <= 120.0) ? fps : 0.0;
+}
+
+// 从 slice NAL 中提取 first_mb_in_slice（用于判断是否为新帧）
+// 返回 0 = 新帧的第一个 slice，>0 = 同一帧的延续 slice
+static unsigned int getFirstMbInSlice(const std::vector<uint8_t>& nal) {
+	if (nal.size() < 2) return 0;
+	// 简单 Exp-Golomb 解析器，只读 first_mb_in_slice
+	size_t bytePos = 1;  // 跳过 NAL header 字节
+	int bitPos = 0;
+	auto readBit = [&]() -> int {
+		if (bytePos >= nal.size()) return 0;
+		int bit = (nal[bytePos] >> (7 - bitPos)) & 1;
+		if (++bitPos >= 8) { bitPos = 0; bytePos++; }
+		return bit;
+	};
+	int leadingZeros = 0;
+	while (readBit() == 0) {
+		leadingZeros++;
+		if (bytePos >= nal.size() && bitPos == 0) return 0;
+	}
+	if (leadingZeros == 0) return 0;
+	unsigned int val = 0;
+	for (int i = 0; i < leadingZeros; i++)
+		val = (val << 1) | readBit();
+	return (1u << leadingZeros) - 1 + val;
+}
+
 // 本地文件 RTP 喂流线程：循环读取 NAL，封装为 RTP 包，写入 StreamNode 缓冲区并分发给客户端
 static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 	if (!ctx || !ctx->node) return;
@@ -912,6 +1126,7 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 	uint32_t timestamp = 0;
 	uint32_t ssrc = 0x4C4F4341;  // "LOCA" 标识本地文件源
 	uint32_t clockRate = (uint32_t)ctx->clock_rate;
+
 
 	LOG("[LocalFileStream] Feed loop started: tag=%s, nals=%zu",
 		tag.c_str(), nals.size());
@@ -1000,11 +1215,20 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 			}
 		}
 
-		// 每发完一个视频切片 NAL 后推进时间戳（辅助 NAL 以上面的 continue 跳过）
-		timestamp += clockRate / 30;
+		// 每个帧 NAL（type 1 或 5）独立推进时间戳 + sleep
+		// 原始 H.264 文件通常没有 AUD/SEI 间隔，每个 slice NAL 就是独立的一帧
+		if ((nalType == 1 || nalType == 5) && getFirstMbInSlice(nal) == 0) {
+			timestamp += clockRate / ctx->fps;
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000 / ctx->fps));
+		}
 
-		// 帧间隔：30fps ≈ 33ms
-		std::this_thread::sleep_for(std::chrono::milliseconds(33));
+		// 诊断进度（每 1000 帧）
+		static int frameCounter = 0;
+		frameCounter++;
+		if ((frameCounter % 1000) == 0) {
+			LOG("[LocalFileStream] Progress: tag=%s, nalIdx=%zu/%zu, ts=%u, nalType=%u",
+				tag.c_str(), nalIdx, nals.size(), timestamp, nalType);
+		}
 
 		// 循环播放
 		nalIdx = (nalIdx + 1) % nals.size();
@@ -1110,16 +1334,26 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	ctx->pps = pps;
 	ctx->payload_type = 96;
 	ctx->clock_rate = 90000;
-	ctx->node = node;
-	ctx->running_ = true;
-
+	// 从 SPS VUI 自动检测帧率，检测失败使用默认值 25
 	{
-		std::lock_guard<std::mutex> lock(g_localStreamMutex);
-		g_localStreams[tag] = ctx;
+		double detectedFps = parseSpsFps(sps);
+		if (detectedFps > 0.0) {
+			ctx->fps = (int)(detectedFps + 0.5);
+			LOG("[LocalFileStream] Detected fps=%d from SPS VUI", ctx->fps);
+		} else {
+			LOG("[LocalFileStream] SPS VUI timing not available, using default fps=%d", ctx->fps);
+		}
 	}
-
-	ctx->feed_thread_ = std::thread(localFileFeedLoop, ctx);
-	ctx->feed_thread_.detach();
+	ctx->node = node;
+		ctx->running_ = true;
+	
+		{
+			std::lock_guard<std::mutex> lock(g_localStreamMutex);
+			g_localStreams[tag] = ctx;
+		}
+	
+		ctx->feed_thread_ = std::thread(localFileFeedLoop, ctx);
+		ctx->feed_thread_.detach();
 
 	LOG("[LocalFileStream] Started serving: file=%s, url=%s, tag=%s, nals=%zu",
 		filePath.c_str(), url.c_str(), tag.c_str(), ctx->nals.size());
@@ -1249,6 +1483,16 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	ctx->pps = pps;
 	ctx->payload_type = 96;
 	ctx->clock_rate = 90000;
+	// 从 SPS VUI 自动检测帧率，检测失败使用默认值 25
+	{
+		double detectedFps = parseSpsFps(sps);
+		if (detectedFps > 0.0) {
+			ctx->fps = (int)(detectedFps + 0.5);
+			LOG("[LocalFileStream] Detected fps=%d from SPS VUI", ctx->fps);
+		} else {
+			LOG("[LocalFileStream] SPS VUI timing not available, using default fps=%d", ctx->fps);
+		}
+	}
 	ctx->node = node;
 	ctx->running_ = true;
 
