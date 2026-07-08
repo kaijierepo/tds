@@ -1458,10 +1458,26 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 	auto readRequest = [&](std::string& out) -> bool {
 		char buf[4096];
 		int len = recv(static_cast<SOCKET_TYPE>(clientSock), buf, sizeof(buf) - 1, 0);
-		if (len <= 0) return false;
-		buf[len] = '\0';
-		out = std::string(buf, len);
-		return true;
+		if (len > 0) {
+			buf[len] = '\0';
+			out = std::string(buf, len);
+			return true;
+		}
+		// 超时不属于断连（TCP interleaved 模式下 send/recv 分属不同线程，recv 超时应重试）
+		if (len < 0) {
+#ifdef _WIN32
+			if (WSAGetLastError() == WSAETIMEDOUT) {
+				out.clear();
+				return true;
+			}
+#else
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				out.clear();
+				return true;
+			}
+#endif
+		}
+		return false;
 	};
 
 	// 解析 RTSP 请求行
@@ -1520,8 +1536,11 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 	while (m_rtspRunning_) {
 		std::string request;
 		if (!readRequest(request)) {
-			LOG("[RTSP-Server] Client %s disconnected or timeout", clientIp.c_str());
+			LOG("[RTSP-Server] Client %s disconnected", clientIp.c_str());
 			break;
+		}
+		if (request.empty()) {
+			continue;
 		}
 
 		std::string method, url;
@@ -2054,18 +2073,18 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 			LOG("[RTSP-Server] Stream %s started playing to %s:%d (RTP port %d)",
 				streamTag.c_str(), clientIp.c_str(), rtspSession.client_rtp_port, rtspSession.server_rtp_port);
 
-			// TCP interleaved 拉流：去掉 recv 超时，保持连接等待 TEARDOWN
+			// TCP interleaved 拉流：设 recv 超时 1s（非阻塞 recv 避免与 feed 线程 send 并发）
 			if (rtspSession.transport_mode == StreamNode::TransportMode::TCP) {
 #ifdef _WIN32
-				int timeout_infinite = 0;  // 0 = 无限等待
+				int timeout_tcp_ms = 1000;  // 1s 超时，readRequest 超时重入
 				setsockopt(static_cast<SOCKET>(clientSock), SOL_SOCKET, SO_RCVTIMEO,
-					(const char*)&timeout_infinite, sizeof(timeout_infinite));
+					(const char*)&timeout_tcp_ms, sizeof(timeout_tcp_ms));
 #else
-				struct timeval tv_inf = {0, 0};
+				struct timeval tv_tcp = {1, 0};
 				setsockopt(clientSock, SOL_SOCKET, SO_RCVTIMEO,
-					(const char*)&tv_inf, sizeof(tv_inf));
+					(const char*)&tv_tcp, sizeof(tv_tcp));
 #endif
-				LOG("[RTSP-Server] TCP interleaved pull: removed recv timeout for %s", clientIp.c_str());
+				LOG("[RTSP-Server] TCP interleaved pull: recv timeout set to 1s for %s", clientIp.c_str());
 			}
 		}
 		else if (method == "RECORD") {
@@ -2121,9 +2140,9 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				setsockopt(static_cast<SOCKET>(clientSock), SOL_SOCKET, SO_RCVTIMEO,
 					(const char*)&timeout_inf, sizeof(timeout_inf));
 #else
-				struct timeval tv_inf = {0, 0};
+				struct timeval tv_tcp = {1, 0};
 				setsockopt(clientSock, SOL_SOCKET, SO_RCVTIMEO,
-					(const char*)&tv_inf, sizeof(tv_inf));
+					(const char*)&tv_tcp, sizeof(tv_tcp));
 #endif
 				LOG("[RTSP-TcpRecv] Removed recv timeout for TCP interleaved push, tag=%s", streamTag.c_str());
 
@@ -2147,9 +2166,9 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				setsockopt(static_cast<SOCKET>(clientSock), SOL_SOCKET, SO_RCVTIMEO,
 					(const char*)&timeout_inf, sizeof(timeout_inf));
 #else
-				struct timeval tv_inf = {0, 0};
+				struct timeval tv_tcp = {1, 0};
 				setsockopt(clientSock, SOL_SOCKET, SO_RCVTIMEO,
-					(const char*)&tv_inf, sizeof(tv_inf));
+					(const char*)&tv_tcp, sizeof(tv_tcp));
 #endif
 				LOG("[RTSP-Server] UDP push: removed recv timeout for %s to keep RTSP connection alive", clientIp.c_str());
 			}
