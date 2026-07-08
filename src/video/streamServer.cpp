@@ -420,7 +420,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		rpcResp.result = j.dump();
 	}
 	else {
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag not found");
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "stream node of specified tag not found");
 	}
 
 	return true;
