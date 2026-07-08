@@ -27,12 +27,12 @@ public:
 
 	bool closeStream(string tag);
 
-	StreamNode* getStreamNode(std::string tag);			   // 通过标签查找 StreamNode
-	StreamNode* getStreamNodeByIp(const std::string& ip);  // 通过IP地址查找 StreamNode
+	std::shared_ptr<StreamNode> getStreamNodeByStreamUrl(std::string tag);			   // 通过标签查找 StreamNode
+	std::shared_ptr<StreamNode> getStreamNodeByTag(std::string tag);
+	std::shared_ptr<StreamNode> getStreamNodeByIp(const std::string& ip);  // 通过IP地址查找 StreamNode
+	std::shared_ptr<StreamNode> getStreamNodeBySrcUrl(const std::string& srcUrl);  // 通过IP地址查找 StreamNode
 
 	map<std::string, std::shared_ptr<StreamNode>> m_mapStreamNodes;
-	map<std::string, std::unique_ptr<StreamNode>> m_mapStreamNodes_urlID; //根据拉流源url查找StreamNode
-	mutable std::mutex nodeLock_url_;
 	mutable std::mutex nodeLock_; // 保护 m_mapStreamNodes 的互斥锁
 
 	bool m_enableZLM;
@@ -57,7 +57,7 @@ public:
 
 	// 按需加载本地文件流（有客户端拉流时才读文件启动喂流线程）
 	// 返回创建的 StreamNode，失败返回 nullptr
-	StreamNode* loadLocalFileStream(const std::string& tag);
+	std::shared_ptr<StreamNode> loadLocalFileStream(const std::string& tag);
 
 	// 检查并停止没有客户端的本地文件流
 	void cleanupIdleLocalStream(const std::string& tag);
@@ -100,13 +100,13 @@ private:
 	// RTSP 服务端监听线程
 	void rtspListenLoop(int port);
 	void handleRtspClient(StreamNode::SocketHandle clientSock, const std::string& clientIp);
-	std::string buildSdpForStream(StreamNode* node);
-	StreamNode* findStreamByRtspPath(const std::string& path);
+	std::string buildSdpForStream(const std::shared_ptr<StreamNode>& node);
+	std::shared_ptr<StreamNode> findStreamByRtspPath(const std::string& path);
 
 	// RTSP 推流接收
 	void rtpRecvThread(std::shared_ptr<RtspRecvSession> session);
 	void rtpTcpRecvLoop(StreamNode::SocketHandle tcpSock,
-		std::shared_ptr<RtspRecvSession> session, StreamNode* streamNode);
+		std::shared_ptr<RtspRecvSession> session, std::shared_ptr<StreamNode> streamNode);
 	void cleanupPushSession(const std::string& sessionId);
 
 	std::thread m_rtspThread_;

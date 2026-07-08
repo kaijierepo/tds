@@ -80,18 +80,32 @@ void StreamServer::initDtlsCertificate() {
     LOG("[DTLS] Certificate initialized, fingerprint: %s", m_dtlsFingerprint.c_str());
 }
 
-StreamNode* StreamServer::getStreamNode(std::string tag)
+std::shared_ptr<StreamNode> StreamServer::getStreamNodeByStreamUrl(std::string streamUrl)
 {
 	std::lock_guard<std::mutex> lock(nodeLock_);
-	auto it = m_mapStreamNodes.find(tag);
+	auto it = m_mapStreamNodes.find(streamUrl);
 	if (it != m_mapStreamNodes.end()) {
-		return it->second.get();
+		return it->second;
+	}
+	return nullptr;
+}
+
+std::shared_ptr<StreamNode> StreamServer::getStreamNodeByTag(std::string tag)
+{
+	std::lock_guard<std::mutex> lock(nodeLock_);
+	for (const auto& pair : m_mapStreamNodes)
+	{
+		if (pair.second &&
+			pair.second->config_.tag == tag)
+		{
+			return pair.second;
+		}
 	}
 	return nullptr;
 }
 
 
-StreamNode* StreamServer::getStreamNodeByIp(const std::string& ip)
+std::shared_ptr<StreamNode> StreamServer::getStreamNodeByIp(const std::string& ip)
 {
 	std::lock_guard<std::mutex> lock(nodeLock_);
 	for (const auto& pair : m_mapStreamNodes) 
@@ -99,7 +113,21 @@ StreamNode* StreamServer::getStreamNodeByIp(const std::string& ip)
 		if (pair.second &&
 			pair.second->config_.source_url.find(ip) != std::string::npos) 
 		{
-			return pair.second.get();
+			return pair.second;
+		}
+	}
+	return nullptr;
+}
+
+std::shared_ptr<StreamNode> StreamServer::getStreamNodeBySrcUrl(const std::string& srcUrl)
+{
+	std::lock_guard<std::mutex> lock(nodeLock_);
+	for (const auto& pair : m_mapStreamNodes)
+	{
+		if (pair.second &&
+			pair.second->config_.source_url == srcUrl)
+		{
+			return pair.second;
 		}
 	}
 	return nullptr;
@@ -143,54 +171,58 @@ bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& r
 
 bool StreamServer::rpc_startStreamNode(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	string srcUrl, destUrl;
+	string srcUrl, destUrl,streamUrl;
 	yyjson_val* yyv = yyjson_obj_get(params, "srcUrl");
 	if (yyv)
 		srcUrl = yyjson_get_str(yyv);
 	yyv = yyjson_obj_get(params,"destUrl");
 	if(yyv)
 		 destUrl = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "streamUrl");
+	if (yyv)
+		streamUrl = yyjson_get_str(yyv);
+
 	{
-		std::lock_guard<std::mutex> lock(nodeLock_url_);
-		if (m_mapStreamNodes_urlID.find(srcUrl) != m_mapStreamNodes_urlID.end()) {
+		std::shared_ptr<StreamNode> p = getStreamNodeBySrcUrl(srcUrl);
+		if (p) {
 			LOG("[流媒体] StreamNode 已在运行 for src url: %s", srcUrl.c_str());
 			return true;
 		}
 	}
 
 	// 2. 创建新的 StreamNode
-	auto relay = std::make_unique<StreamNode>();
+	auto sn = std::make_unique<StreamNode>();
 
 	// 设置回调
-	relay->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
+	sn->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
 		// 可以在这里处理帧，例如存档或分析
 		});
-	relay->setStatusCallback([](StreamNode::State state, const std::string& msg) {
+	sn->setStatusCallback([](StreamNode::State state, const std::string& msg) {
 		LOG("[StreamNode] Status: %d - %s", static_cast<int>(state), msg.c_str());
 		});
-	relay->setErrorCallback([](const std::string& error, int code) {
+	sn->setErrorCallback([](const std::string& error, int code) {
 		LOG("[StreamNode] Error (%d): %s", code, error.c_str());
 		});
-	// 3. 配置 relay
+	// 3. 配置 sn
 
-	// 3. 配置 relay
+	// 3. 配置 sn
 	StreamNode::Config config;
 	config.source_url = srcUrl; // 源地址
 	// 提取用户名和密码
-	bool isSuccess = relay->extractRtspAuthInfo(config);
+	bool isSuccess = sn->extractRtspAuthInfo(config);
 
 	config.target_url = destUrl;
 	config.retry_interval = 3000;
 	config.max_retries = 0; // 无限重试
 	config.rtp_timeout = 10000;
 
-	// 4. 启动 relay
+	// 4. 启动 sn
 	LOG("[流媒体] 启动 StreamNode (内置模式)，源: %s, 目标: %s",
 		config.source_url.c_str(), config.target_url.c_str());
 
-	if (relay->start(config)) {
-		std::lock_guard<std::mutex> lock(nodeLock_url_);
-		m_mapStreamNodes_urlID[srcUrl] = std::move(relay);
+	if (sn->start(config)) {
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		m_mapStreamNodes[streamUrl] = std::move(sn);
 	}
 	else {
 		LOG("[流媒体] 启动 StreamNode 失败 for srcUrl: %s", srcUrl.c_str());
@@ -247,7 +279,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	if (yyjson_is_int(yyv)) {
 		clientRtpPort = yyjson_get_int(yyv);
 	}
-	StreamNode* rc = getStreamNode(tag);
+	auto rc = getStreamNodeByTag(tag);
 	if (rc) {
 		StreamNode::STREAM_SESSION si = rc->pull_session_;
 		si.session_type_ = StreamNode::SERVER_PULL;
@@ -405,11 +437,11 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 	yyv = yyjson_obj_get(params, "preSeconds");
 	if (yyv)
 		preTime = yyjson_get_int(yyv);
-	StreamNode* rc = nullptr;
+	std::shared_ptr<StreamNode> rc = nullptr;
 	if (!ip.empty()) {
 		rc = getStreamNodeByIp(ip);
 	} else if (!tag.empty()) {
-		rc = getStreamNode(tag);
+		rc = getStreamNodeByTag(tag);
 	}
 	if (rc) {
 		std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);  // 与 doRtpRecv 录制线程互斥
@@ -452,11 +484,11 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
-	StreamNode* rc = nullptr;
+	std::shared_ptr<StreamNode> rc = nullptr;
 	if (!ip.empty()) {
 		rc = getStreamNodeByIp(ip);
 	} else if (!tag.empty()) {
-		rc = getStreamNode(tag);
+		rc = getStreamNodeByTag(tag);
 	}
 	if (rc) {
 		std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);  // 与 doRtpRecv 录制线程互斥
@@ -539,7 +571,7 @@ bool StreamServer::rpc_getStreamInfo(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 		return true;
 	}
 
-	StreamNode* rc = getStreamNode(streamId);
+	auto rc = getStreamNodeByTag(streamId);
 	if (rc == nullptr)
 	{
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_NO_STREAM_SRC, "no stream src of this tag");
@@ -645,7 +677,7 @@ bool StreamServer::rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, 
 
 bool StreamServer::openStream(string tag,string srcUrl, string pushTo)
 {
-	StreamNode* sn = getStreamNode(tag);
+	std::shared_ptr<StreamNode> sn = getStreamNodeByTag(tag);
 
 	if (sn) {
 		if (sn->config_.source_url == srcUrl && sn->config_.target_url == pushTo) {
@@ -665,7 +697,7 @@ bool StreamServer::openStream(string tag,string srcUrl, string pushTo)
 		}
 	}
 	else {
-		sn = new StreamNode();
+		sn = std::make_shared<StreamNode>();
 	}
 
 
@@ -682,7 +714,7 @@ bool StreamServer::openStream(string tag,string srcUrl, string pushTo)
 	bool ret;
 	if (sn->start(config)) {
 		std::lock_guard<std::mutex> lock(nodeLock_);
-		m_mapStreamNodes[tag] = std::shared_ptr<StreamNode>(sn);
+		m_mapStreamNodes[tag] = sn;
 		ret = true;
 	}
 	else {
@@ -1128,9 +1160,9 @@ void StreamServer::serveDefaultFolder(const std::string& folderName) {
 }
 
 // 按需加载本地文件流：有客户端拉流时才读文件、创建 StreamNode、启动喂流线程
-StreamNode* StreamServer::loadLocalFileStream(const std::string& tag) {
+std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string& tag) {
 	// 先检查是否已存在
-	StreamNode* existing = getStreamNode(tag);
+	auto existing = getStreamNodeByTag(tag);
 	if (existing) return existing;
 
 	// 从映射表查找文件路径
@@ -1212,12 +1244,12 @@ StreamNode* StreamServer::loadLocalFileStream(const std::string& tag) {
 
 	LOG("[LocalFileStream] Loaded on demand: file=%s, tag=%s, nals=%zu",
 		filePath.c_str(), tag.c_str(), ctx->nals.size());
-	return node.get();
+	return node;
 }
 
 // 检查并停止没有客户端的本地文件流
 void StreamServer::cleanupIdleLocalStream(const std::string& tag) {
-	StreamNode* node = getStreamNode(tag);
+	auto node = getStreamNodeByTag(tag);
 	if (!node) return;
 
 	// 检查是否还有客户端
@@ -1480,7 +1512,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 
 	std::string sessionId;
 	std::string streamTag;
-	StreamNode* streamNode = nullptr;
+	std::shared_ptr<StreamNode> streamNode = nullptr;
 	StreamNode::STREAM_SESSION rtspSession;
 	bool sessionSetup = false;
 
@@ -1594,7 +1626,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 
 				std::lock_guard<std::mutex> lock(nodeLock_);
 				m_mapStreamNodes[tag] = node;
-				streamNode = m_mapStreamNodes[tag].get();
+				streamNode = m_mapStreamNodes[tag];
 				LOG("[RTSP-Server] Created new StreamNode for push tag=%s, codec=%s, pt=%d",
 					tag.c_str(), videoInfo.codec.c_str(), videoInfo.payload_type);
 			}
@@ -2218,7 +2250,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 	LOG("[RTSP-Server] Client handler finished for %s", clientIp.c_str());
 }
 
-std::string StreamServer::buildSdpForStream(StreamNode* node) {
+std::string StreamServer::buildSdpForStream(const std::shared_ptr<StreamNode>& node) {
 	const auto& si = node->pull_session_;
 	std::ostringstream sdp;
 
@@ -2243,7 +2275,7 @@ std::string StreamServer::buildSdpForStream(StreamNode* node) {
 	return sdp.str();
 }
 
-StreamNode* StreamServer::findStreamByRtspPath(const std::string& path) {
+std::shared_ptr<StreamNode> StreamServer::findStreamByRtspPath(const std::string& path) {
 	// 路径格式: /tag → 去除前导 / 得到 tag
 	std::string tag = path;
 	if (!tag.empty() && tag[0] == '/') {
@@ -2251,23 +2283,15 @@ StreamNode* StreamServer::findStreamByRtspPath(const std::string& path) {
 	}
 
 	// 先精确匹配 tag
-	StreamNode* node = getStreamNode(tag);
+	std::shared_ptr<StreamNode> node = getStreamNodeByTag(tag);
 	if (node) return node;
-
-	// 再尝试在 url_id map 中查找
-	std::lock_guard<std::mutex> lock(nodeLock_url_);
-	for (const auto& pair : m_mapStreamNodes_urlID) {
-		if (pair.second && pair.second->config_.tag == tag) {
-			return pair.second.get();
-		}
-	}
 
 	// 遍历 m_mapStreamNodes 找匹配
 	{
 		std::lock_guard<std::mutex> lock(nodeLock_);
 		for (const auto& pair : m_mapStreamNodes) {
 			if (pair.second && pair.second->config_.tag == tag) {
-				return pair.second.get();
+				return pair.second;
 			}
 		}
 	}
@@ -2280,7 +2304,7 @@ StreamNode* StreamServer::findStreamByRtspPath(const std::string& path) {
 // ============================================================================
 
 void StreamServer::rtpTcpRecvLoop(StreamNode::SocketHandle tcpSock,
-	std::shared_ptr<RtspRecvSession> session, StreamNode* streamNode) {
+	std::shared_ptr<RtspRecvSession> session, std::shared_ptr<StreamNode> streamNode) {
 	if (!session || !streamNode || tcpSock == StreamNode::kInvalidSocket) {
 		LOG("[RTSP-TcpRecv] Invalid parameters, exit");
 		return;
@@ -2407,12 +2431,12 @@ void StreamServer::rtpRecvThread(std::shared_ptr<RtspRecvSession> session) {
 	LOG("[RTSP-Recv] Thread started for tag=%s, session=%s, port=%d",
 		session->tag.c_str(), session->session_id.c_str(), session->server_rtp_port);
 
-	StreamNode* streamNode = nullptr;
+	std::shared_ptr<StreamNode> streamNode = nullptr;
 	{
 		std::lock_guard<std::mutex> lock(nodeLock_);
 		auto it = m_mapStreamNodes.find(session->tag);
 		if (it != m_mapStreamNodes.end()) {
-			streamNode = it->second.get();
+			streamNode = it->second;
 		}
 	}
 
