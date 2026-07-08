@@ -245,10 +245,10 @@ public:
     };
 
     enum STREAM_SESSION_TYPE {
-        CLINET_PULL,    //自身作为客户端，向服务端拉流
-		CLINET_PUSH,    //自身作为客户端，向服务端推流
-		SERVER_PULL,    //自身作为服务端，接收客户端拉流
-		SERVER_PUSH     //自身作为服务端，接收客户端推流
+        ORIGIN_PULL,    //自身作为客户端，向服务端拉流； 主动从流媒体源获取流
+		RELAY_PUSH,    //自身作为客户端，向服务端推流;  转发到另外一个流媒体服务器
+		CLIENT_PULL,    //自身作为服务端，接收客户端拉流
+		CLIENT_PUBLISH     //自身作为服务端，接收客户端推流
     };
 
     enum SESSION_STATE {
@@ -425,14 +425,12 @@ public:
     std::string target_session_;
 
     // 流信息
-    STREAM_SESSION pull_session_;
+    STREAM_SESSION session_origin_pull_;
+    STREAM_SESSION session_relay_push_;
+	std::vector<std::shared_ptr<STREAM_SESSION>> session_list_client_pull_;
+	std::mutex session_list_client_pull_mutex_;
+
     STREAM_SESSION pull_audio_session_;
-    STREAM_SESSION push_session_;
-
-    // 播放客户段（使用 shared_ptr 避免 vector 扩容导致 ICE 线程中的指针失效）
-	std::vector<std::shared_ptr<STREAM_SESSION>> client_sessions_;
-	std::mutex client_sessions_mutex_;
-
 
     std::string target_rtp_host_;   // 目标RTP主机地址
 

@@ -1466,7 +1466,7 @@ int StreamNode::getBufferedSeconds()
     uint32_t diff = newest_ts - oldest_ts; // 无符号差值，处理 32 位回绕
 
     // 获取时钟频率（ticks per second），RTCP/SDP 中给出，视频常见为 90000
-    uint32_t clock = (pull_session_.clock_rate > 0) ? static_cast<uint32_t>(pull_session_.clock_rate) : 90000u;
+    uint32_t clock = (session_origin_pull_.clock_rate > 0) ? static_cast<uint32_t>(session_origin_pull_.clock_rate) : 90000u;
     if (clock == 0) clock = 90000u;
 
     // 整数秒（截断子秒）。如果存在刻度差但小于1秒，返回1以提示非空缓冲
@@ -1500,8 +1500,8 @@ void StreamNode::addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt)
         uint32_t newest_ts = rtp_buffer_.back()->timestamp;
 
         // 获取时钟频率（每秒刻度数），若 SDP 未提供则默认使用常见的视频值 90000Hz。
-        uint32_t clock = (pull_session_.clock_rate > 0) ?
-            static_cast<uint32_t>(pull_session_.clock_rate) : 90000u;
+        uint32_t clock = (session_origin_pull_.clock_rate > 0) ?
+            static_cast<uint32_t>(session_origin_pull_.clock_rate) : 90000u;
         if (clock == 0) clock = 90000u;
 
         // 当最旧包到最新包的时间差超过配置的秒数窗口时，逐个删除最旧包。
@@ -1607,11 +1607,11 @@ bool StreamNode::doStreamPush() {
     }
 
     // 生成目标SDP
-    push_session_ = pull_session_;
+    session_relay_push_ = session_origin_pull_;
     {
         std::string track_control = "trackID=0";
-        if (!pull_session_.control_url.empty()) {
-            std::string src = pull_session_.control_url;
+        if (!session_origin_pull_.control_url.empty()) {
+            std::string src = session_origin_pull_.control_url;
             auto pos = src.find_last_of('/');
             track_control = (pos == std::string::npos) ? src : src.substr(pos + 1);
             if (track_control.empty() || track_control == "*" ||
@@ -1620,10 +1620,10 @@ bool StreamNode::doStreamPush() {
                 track_control = "trackID=0";
             }
         }
-        push_session_.control_url = track_control;
+        session_relay_push_.control_url = track_control;
     }
 
-    std::string target_sdp = generateSDP(push_session_, STREAM_SESSION());
+    std::string target_sdp = generateSDP(session_relay_push_, STREAM_SESSION());
 
     // 发送ANNOUNCE到目标
     if (!rtspAnnounce(*target_conn_, config_.target_url, target_sdp, target_session_)) {
@@ -1640,8 +1640,8 @@ bool StreamNode::doStreamPush() {
         }
         else {
             // 填写 client_port，格式 "RTP-RTCP"
-            push_session_.client_port = std::to_string(push_session_.client_rtp_port) + "-" + std::to_string(push_session_.client_rtcp_port);
-            logInfo("Push stream: Using UDP mode, client_port=" + push_session_.client_port);
+            session_relay_push_.client_port = std::to_string(session_relay_push_.client_rtp_port) + "-" + std::to_string(session_relay_push_.client_rtcp_port);
+            logInfo("Push stream: Using UDP mode, client_port=" + session_relay_push_.client_port);
         }
     }
 
@@ -1650,37 +1650,37 @@ bool StreamNode::doStreamPush() {
     }
 
     // 发送SETUP到目标
-    if (!rtspSetup(*target_conn_, config_.target_url, target_session_, push_session_, true)) {
+    if (!rtspSetup(*target_conn_, config_.target_url, target_session_, session_relay_push_, true)) {
         setError("SETUP failed for target", 3008);
         return false;
     }
 
     // 解析目标服务器端口
     {
-        logInfo("Target SETUP Transport: " + push_session_.transport);
+        logInfo("Target SETUP Transport: " + session_relay_push_.transport);
         const std::string key = "server_port=";
-        size_t pos = push_session_.transport.find(key);
+        size_t pos = session_relay_push_.transport.find(key);
         if (pos != std::string::npos) {
             pos += key.size();
-            while (pos < push_session_.transport.size() &&
-                (push_session_.transport[pos] == ' ' || push_session_.transport[pos] == '\t')) {
+            while (pos < session_relay_push_.transport.size() &&
+                (session_relay_push_.transport[pos] == ' ' || session_relay_push_.transport[pos] == '\t')) {
                 ++pos;
             }
             int port = 0;
-            while (pos < push_session_.transport.size() &&
-                push_session_.transport[pos] >= '0' && push_session_.transport[pos] <= '9') {
-                port = port * 10 + (push_session_.transport[pos] - '0');
+            while (pos < session_relay_push_.transport.size() &&
+                session_relay_push_.transport[pos] >= '0' && session_relay_push_.transport[pos] <= '9') {
+                port = port * 10 + (session_relay_push_.transport[pos] - '0');
                 ++pos;
             }
             if (port > 0 && port <= 65535) {
-                push_session_.server_rtp_port = port;
+                session_relay_push_.server_rtp_port = port;
             }
         }
     }
 
-    logInfo("Target RTP port: " + std::to_string(push_session_.server_rtp_port));
-    if (push_session_.server_rtp_port == 0) {
-        setError("Missing/invalid server_port in target Transport: " + push_session_.transport, 3010);
+    logInfo("Target RTP port: " + std::to_string(session_relay_push_.server_rtp_port));
+    if (session_relay_push_.server_rtp_port == 0) {
+        setError("Missing/invalid server_port in target Transport: " + session_relay_push_.transport, 3010);
         return false;
     }
 
@@ -1727,7 +1727,7 @@ bool StreamNode::doStreamPull() {
     }
 
     // 解析SDP
-    if (!parseSDP(sdp, pull_session_, pull_audio_session_)) {
+    if (!parseSDP(sdp, session_origin_pull_, pull_audio_session_)) {
         setError("Failed to parse SDP", 2004);
         return false;
     }
@@ -1739,7 +1739,7 @@ bool StreamNode::doStreamPull() {
     LOG("[StreamNode]tag=%s, sdp received: %s,streamInfo:%s,audioControl:%s",
         config_.tag.c_str(), 
         sdp_for_log.c_str(),
-        pull_session_.control_url.c_str(),
+        session_origin_pull_.control_url.c_str(),
         pull_audio_session_.control_url.c_str());
 
     setState(State::CONNECTED, "Source connected");
@@ -1760,41 +1760,41 @@ bool StreamNode::doStreamPull() {
     }
 
     if (pullUseUDP) {
-        pull_session_.client_port = std::to_string(pull_session_.client_rtp_port) + "-" + std::to_string(pull_session_.client_rtcp_port);
+        session_origin_pull_.client_port = std::to_string(session_origin_pull_.client_rtp_port) + "-" + std::to_string(session_origin_pull_.client_rtcp_port);
     }
     else {
-        pull_session_.client_port = "0-0";  // TCP模式不需要client_port
+        session_origin_pull_.client_port = "0-0";  // TCP模式不需要client_port
     }
 
     LOG("[StreamNode]tag=%s,SETUP,mode=%s,local rtp/rtcp port=%s",
         config_.tag.c_str(),
         pullUseUDP ? "udp" : "tcp",
-        pull_session_.client_port.c_str()
+        session_origin_pull_.client_port.c_str()
     );
 
     // 发送SETUP到源
-    if (!rtspSetup(*source_conn_, config_.source_url, source_session_, pull_session_)) {
+    if (!rtspSetup(*source_conn_, config_.source_url, source_session_, session_origin_pull_)) {
         setError("SETUP failed for source", 3003);
         return false;
     }
 
     // 解析传输信息
-    std::istringstream transport_stream(pull_session_.transport);
+    std::istringstream transport_stream(session_origin_pull_.transport);
     std::string token;
     while (std::getline(transport_stream, token, ';')) {
         if (token.find("server_port=") != std::string::npos) {
             size_t pos = token.find('=');
-            pull_session_.server_port = token.substr(pos + 1);
+            session_origin_pull_.server_port = token.substr(pos + 1);
 
             // 解析RTP端口
-            size_t dash = pull_session_.server_port.find('-');
+            size_t dash = session_origin_pull_.server_port.find('-');
             if (dash != std::string::npos) {
-                pull_session_.server_rtp_port = std::stoi(pull_session_.server_port.substr(0, dash));
+                session_origin_pull_.server_rtp_port = std::stoi(session_origin_pull_.server_port.substr(0, dash));
             }
         }
         else if (token.find("source=") != std::string::npos) {
             size_t pos = token.find('=');
-            pull_session_.remote_host = token.substr(pos + 1);
+            session_origin_pull_.remote_host = token.substr(pos + 1);
         }
     }
 
@@ -1802,7 +1802,7 @@ bool StreamNode::doStreamPull() {
     LOG("[StreamNode]tag=%s,SETUP success,mode=%s,server port=%s",
         config_.tag.c_str(),
         pullUseUDP ? "udp" : "tcp",
-        pull_session_.server_port.c_str()
+        session_origin_pull_.server_port.c_str()
     );
 
     // 发送PLAY
@@ -1904,8 +1904,8 @@ void StreamNode::doRtpRecv() {
             RTPPacket& packet = *pPkt;
             if (packet.parse(buffer.data(), received)) {
                 // 捕获实际 SSRC（用于 SDP 声明，只记录一次）
-                if (pull_session_.video_ssrc == 0 && packet.ssrc != 0) {
-                    pull_session_.video_ssrc = packet.ssrc;
+                if (session_origin_pull_.video_ssrc == 0 && packet.ssrc != 0) {
+                    session_origin_pull_.video_ssrc = packet.ssrc;
                     LOG("[StreamNode] Captured video SSRC=%u", packet.ssrc);
                 }
 
@@ -1930,7 +1930,7 @@ void StreamNode::doRtpRecv() {
                         std::vector<std::shared_ptr<RTPPacket>> pre_packets;
                         {
                             std::lock_guard<std::mutex> lock(queue_mutex_);
-                            uint32_t _clock = (pull_session_.clock_rate > 0) ? static_cast<uint32_t>(pull_session_.clock_rate) : 90000u;
+                            uint32_t _clock = (session_origin_pull_.clock_rate > 0) ? static_cast<uint32_t>(session_origin_pull_.clock_rate) : 90000u;
                             for (auto it = rtp_buffer_.rbegin(); it != rtp_buffer_.rend(); ++it) {
                                 if (packet.timestamp - (*it)->timestamp <= static_cast<uint64_t>(rec_ctrl_.preSeconds) * _clock) {
                                     pre_packets.push_back(*it);
@@ -2000,10 +2000,10 @@ void StreamNode::teardown() {
     target_session_.clear();
     target_rtp_host_.clear();
 
-    pull_session_.client_rtp_port = 0;
-    pull_session_.client_rtcp_port = 0;
-    push_session_.client_rtp_port = 0;
-    push_session_.client_rtcp_port = 0;
+    session_origin_pull_.client_rtp_port = 0;
+    session_origin_pull_.client_rtcp_port = 0;
+    session_relay_push_.client_rtp_port = 0;
+    session_relay_push_.client_rtcp_port = 0;
 
     // 清除认证信息（保留用户名密码）
     source_auth_.realm.clear();
@@ -2082,15 +2082,15 @@ bool StreamNode::createUDPPullSocket() {
 
         if (::bind(static_cast<SOCKET_TYPE>(rtcp_sock), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) == 0) {
             // 成功获取到一对连续端口
-            pull_session_.rtp_socket = rtp_sock;
-            pull_session_.rtcp_socket = rtcp_sock;
-            pull_session_.client_rtp_port = rtp_port;
-            pull_session_.client_rtcp_port = rtcp_port;
+            session_origin_pull_.rtp_socket = rtp_sock;
+            session_origin_pull_.rtcp_socket = rtcp_sock;
+            session_origin_pull_.client_rtp_port = rtp_port;
+            session_origin_pull_.client_rtcp_port = rtcp_port;
 
-            logInfo("UDP pull sockets created: rtp_fd=" + std::to_string(pull_session_.rtp_socket) +
-                    " rtp_port=" + std::to_string(pull_session_.client_rtp_port) +
-                    " rtcp_fd=" + std::to_string(pull_session_.rtcp_socket) +
-                    " rtcp_port=" + std::to_string(pull_session_.client_rtcp_port));
+            logInfo("UDP pull sockets created: rtp_fd=" + std::to_string(session_origin_pull_.rtp_socket) +
+                    " rtp_port=" + std::to_string(session_origin_pull_.client_rtp_port) +
+                    " rtcp_fd=" + std::to_string(session_origin_pull_.rtcp_socket) +
+                    " rtcp_port=" + std::to_string(session_origin_pull_.client_rtcp_port));
             return true;
         }
 
@@ -2100,10 +2100,10 @@ bool StreamNode::createUDPPullSocket() {
     }
 
     logError("Failed to create consecutive UDP pull sockets for RTP/RTCP");
-    pull_session_.rtp_socket = kInvalidSocket;
-    pull_session_.rtcp_socket = kInvalidSocket;
-    pull_session_.client_rtp_port = 0;
-    pull_session_.client_rtcp_port = 0;
+    session_origin_pull_.rtp_socket = kInvalidSocket;
+    session_origin_pull_.rtcp_socket = kInvalidSocket;
+    session_origin_pull_.client_rtp_port = 0;
+    session_origin_pull_.client_rtcp_port = 0;
     return false;
 }
 
@@ -2166,15 +2166,15 @@ bool StreamNode::createUDPPushSocket() {
 
         if (::bind(static_cast<SOCKET_TYPE>(rtcp_sock), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) == 0) {
             // 成功获取到一对连续端口
-            push_session_.rtp_socket = rtp_sock;
-            push_session_.rtcp_socket = rtcp_sock;
-            push_session_.client_rtp_port = rtp_port;
-            push_session_.client_rtcp_port = rtcp_port;
+            session_relay_push_.rtp_socket = rtp_sock;
+            session_relay_push_.rtcp_socket = rtcp_sock;
+            session_relay_push_.client_rtp_port = rtp_port;
+            session_relay_push_.client_rtcp_port = rtcp_port;
 
-            logInfo("UDP push sockets created: rtp_fd=" + std::to_string(push_session_.rtp_socket) +
-                " rtp_port=" + std::to_string(push_session_.client_rtp_port = rtp_port) +
-                " rtcp_fd=" + std::to_string(push_session_.rtcp_socket) +
-                " rtcp_port=" + std::to_string(push_session_.client_rtcp_port));
+            logInfo("UDP push sockets created: rtp_fd=" + std::to_string(session_relay_push_.rtp_socket) +
+                " rtp_port=" + std::to_string(session_relay_push_.client_rtp_port = rtp_port) +
+                " rtcp_fd=" + std::to_string(session_relay_push_.rtcp_socket) +
+                " rtcp_port=" + std::to_string(session_relay_push_.client_rtcp_port));
             return true;
         }
 
@@ -2184,10 +2184,10 @@ bool StreamNode::createUDPPushSocket() {
     }
 
     logError("Failed to create consecutive UDP push sockets for RTP/RTCP");
-    push_session_.rtp_socket = kInvalidSocket;
-    push_session_.rtcp_socket = kInvalidSocket;
-    push_session_.client_rtp_port = 0;
-    push_session_.client_rtcp_port = 0;
+    session_relay_push_.rtp_socket = kInvalidSocket;
+    session_relay_push_.rtcp_socket = kInvalidSocket;
+    session_relay_push_.client_rtp_port = 0;
+    session_relay_push_.client_rtcp_port = 0;
     return false;
 }
 bool StreamNode::createUDPServerSocket(STREAM_SESSION& streamInfo)
@@ -2275,30 +2275,30 @@ bool StreamNode::createUDPServerSocket(STREAM_SESSION& streamInfo)
     return false;
 }
 void StreamNode::closeUDPSockets() {
-    if (pull_session_.rtp_socket != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(pull_session_.rtp_socket));
-        pull_session_.rtp_socket = kInvalidSocket;
+    if (session_origin_pull_.rtp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(session_origin_pull_.rtp_socket));
+        session_origin_pull_.rtp_socket = kInvalidSocket;
     }
-    if (pull_session_.rtcp_socket != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(pull_session_.rtcp_socket));
-        pull_session_.rtcp_socket = kInvalidSocket;
-    }
-
-
-    if (push_session_.rtp_socket != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(push_session_.rtp_socket));
-        push_session_.rtp_socket = kInvalidSocket;
-    }
-    if (push_session_.rtcp_socket != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(push_session_.rtcp_socket));
-        push_session_.rtcp_socket = kInvalidSocket;
+    if (session_origin_pull_.rtcp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(session_origin_pull_.rtcp_socket));
+        session_origin_pull_.rtcp_socket = kInvalidSocket;
     }
 
 
-    pull_session_.client_rtp_port = 0;
-    pull_session_.client_rtcp_port = 0;
-    push_session_.client_rtp_port = 0;
-    push_session_.client_rtcp_port = 0;
+    if (session_relay_push_.rtp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(session_relay_push_.rtp_socket));
+        session_relay_push_.rtp_socket = kInvalidSocket;
+    }
+    if (session_relay_push_.rtcp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(session_relay_push_.rtcp_socket));
+        session_relay_push_.rtcp_socket = kInvalidSocket;
+    }
+
+
+    session_origin_pull_.client_rtp_port = 0;
+    session_origin_pull_.client_rtcp_port = 0;
+    session_relay_push_.client_rtp_port = 0;
+    session_relay_push_.client_rtcp_port = 0;
 }
 
 bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast) {
@@ -2378,7 +2378,7 @@ bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast) {
 bool StreamNode::sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_SESSION& rtspSession) {
     int remoteRtpPort = 0;
     int remoteRtcpPort = 0;
-    if (rtspSession.session_type_ == CLINET_PULL || rtspSession.session_type_ == CLINET_PUSH) {
+    if (rtspSession.session_type_ == ORIGIN_PULL || rtspSession.session_type_ == RELAY_PUSH) {
         remoteRtpPort = rtspSession.server_rtp_port;
         remoteRtcpPort = rtspSession.server_rtcp_port;
     }
@@ -2432,14 +2432,14 @@ bool StreamNode::sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_S
 
 
 int StreamNode::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
-    if (pull_session_.rtp_socket == kInvalidSocket) {
+    if (session_origin_pull_.rtp_socket == kInvalidSocket) {
         return -1;
     }
 
     struct sockaddr_in from_addr;
     socklen_t from_len = sizeof(from_addr);
 
-    int received = recvfrom(static_cast<SOCKET_TYPE>(pull_session_.rtp_socket),
+    int received = recvfrom(static_cast<SOCKET_TYPE>(session_origin_pull_.rtp_socket),
                              (char*)buffer, (int)size, 0,
                              (struct sockaddr*)&from_addr, &from_len);
 
@@ -2677,9 +2677,9 @@ struct SessionDtlsState {
 
 void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     std::vector<std::shared_ptr<StreamNode::STREAM_SESSION>> playClients;
-    client_sessions_mutex_.lock();
-    playClients = client_sessions_;
-    client_sessions_mutex_.unlock();
+    session_list_client_pull_mutex_.lock();
+    playClients = session_list_client_pull_;
+    session_list_client_pull_mutex_.unlock();
     // 序列化RTP包
     auto data = packet.serialize();
 
@@ -2758,8 +2758,8 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
         // 获取 client_sessions_ 快照（避免持锁遍历）
         std::vector<std::shared_ptr<STREAM_SESSION>> sessions;
         {
-            std::lock_guard<std::mutex> lock(client_sessions_mutex_);
-            sessions = client_sessions_;
+            std::lock_guard<std::mutex> lock(session_list_client_pull_mutex_);
+            sessions = session_list_client_pull_;
         }
         for (auto& session : sessions) {
             if (!session || !session->is_webrtc) continue;
@@ -2863,7 +2863,7 @@ void StreamNode::forwardRTPPacket(const RTPPacket & packet) {
     
     if (config_.push_mode == TransportMode::UDP) {
         // UDP推流
-        if (sendUDPDataToSession(data.data(), data.size(),push_session_)) {
+        if (sendUDPDataToSession(data.data(), data.size(),session_relay_push_)) {
             std::lock_guard<std::mutex> lock(stats_mutex_);
             stats_.bytes_forwarded += data.size();
             stats_.frames_forwarded++;
@@ -3405,8 +3405,8 @@ void StreamNode::stopAllIceThreads() {
     // 获取所有 client_sessions_ 快照，停止其中的 WebRTC ICE 线程
     std::vector<std::shared_ptr<STREAM_SESSION>> sessions;
     {
-        std::lock_guard<std::mutex> lock(client_sessions_mutex_);
-        sessions = client_sessions_;
+        std::lock_guard<std::mutex> lock(session_list_client_pull_mutex_);
+        sessions = session_list_client_pull_;
     }
 
     for (auto& s : sessions) {

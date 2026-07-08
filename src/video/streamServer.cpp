@@ -284,8 +284,8 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	}
 	auto rc = getStreamNodeByTag(tag);
 	if (rc) {
-		StreamNode::STREAM_SESSION si = rc->pull_session_;
-		si.session_type_ = StreamNode::SERVER_PULL;
+		StreamNode::STREAM_SESSION si = rc->session_origin_pull_;
+		si.session_type_ = StreamNode::CLIENT_PULL;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
 		rc->createUDPServerSocket(si);
@@ -400,9 +400,9 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 
 		// 先推入列表，使用 shared_ptr 确保 vector 扩容时 ICE 线程持有的指针不会失效
 		auto sessionPtr = std::make_shared<StreamNode::STREAM_SESSION>(si);
-		rc->client_sessions_mutex_.lock();
-		rc->client_sessions_.push_back(sessionPtr);
-		rc->client_sessions_mutex_.unlock();
+		rc->session_list_client_pull_mutex_.lock();
+		rc->session_list_client_pull_.push_back(sessionPtr);
+		rc->session_list_client_pull_mutex_.unlock();
 
 		// 启动 ICE-Lite 线程，监听该会话的 UDP 端口并响应 STUN Binding Request
 		rc->startIceHandleThread(sessionPtr);
@@ -556,31 +556,7 @@ bool StreamServer::rpc_removeRecordFile(yyjson_val* params, RPC_RESP& rpcResp, R
 	return true;
 }
 
-bool StreamServer::rpc_getStreamInfo(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
-{
-	string streamId;
-	yyjson_val* yyv = yyjson_obj_get(params, "streamId");
-	if (yyv)
-		streamId = yyjson_get_str(yyv);
-	yyv = yyjson_obj_get(params, "tag");
-	if (yyv)
-	{
-		streamId = yyjson_get_str(yyv);
-		streamId = TAG::addRoot(streamId, session.org);
-	}
-	if (streamId == "")
-	{
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param missing,streamid or tag is not specified");
-		return true;
-	}
-
-	auto rc = getStreamNodeByTag(streamId);
-	if (rc == nullptr)
-	{
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_NO_STREAM_SRC, "no stream src of this tag");
-		return true;
-	}
-
+json getStreamInfo(shared_ptr<StreamNode> rc) {
 	json jSi;
 	jSi["srcUrl"] = rc->config_.source_url;
 	jSi["destUrl"] = rc->config_.target_url;
@@ -604,8 +580,56 @@ bool StreamServer::rpc_getStreamInfo(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 	jStatis["reconnectCount"] = statis.reconnect_count;
 	jSi["statis"] = jStatis;
 	jSi["startTime"] = statis.start_time.time_since_epoch().count();
-	rpcResp.result = jSi.dump();
-	return true;
+	json clientSession;
+	std::lock_guard<std::mutex> lock(rc->session_list_client_pull_mutex_);
+	for (const auto& pair : rc->session_list_client_pull_)
+	{
+
+	}
+
+	return jSi;
+}
+
+bool StreamServer::rpc_getStreamInfo(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string streamId;
+	yyjson_val* yyv = yyjson_obj_get(params, "url");
+	if (yyv)
+		streamId = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "tag");
+	if (yyv)
+	{
+		streamId = yyjson_get_str(yyv);
+		streamId = TAG::addRoot(streamId, session.org);
+	}
+	if (streamId == "")
+	{
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param missing,streamid or tag is not specified");
+		return true;
+	}
+
+	if (streamId != "*") {
+		shared_ptr<StreamNode> rc = getStreamNodeByTag(streamId);
+		if (rc == nullptr)
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_NO_STREAM_SRC, "no stream src of this tag");
+			return true;
+		}
+		json jsn = getStreamInfo(rc);
+		rpcResp.result = jsn.dump();
+		return true;
+	}
+	else {
+		json jsnList = json::array();
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		for (const auto& pair : m_mapStreamNodes)
+		{
+			json j = getStreamInfo(pair.second);
+			jsnList.push_back(j);
+		}
+		rpcResp.result = jsnList.dump();
+		return true;
+	}
 }
 
 bool StreamServer::rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
@@ -1136,9 +1160,9 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 		// 没有客户端时等待，避免无效循环消耗 CPU
 		bool hasClients = false;
 		{
-			ctx->node->client_sessions_mutex_.lock();
-			hasClients = !ctx->node->client_sessions_.empty();
-			ctx->node->client_sessions_mutex_.unlock();
+			ctx->node->session_list_client_pull_mutex_.lock();
+			hasClients = !ctx->node->session_list_client_pull_.empty();
+			ctx->node->session_list_client_pull_mutex_.unlock();
 		}
 		if (!hasClients) {
 			// 没有客户端时等待，避免无效循环消耗 CPU
@@ -1297,23 +1321,23 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	node->config_ = cfg;
 
 	// 设置 pull_session_ 的编码信息
-	node->pull_session_.codec = "H264";
-	node->pull_session_.payload_type = 96;
-	node->pull_session_.clock_rate = 90000;
-	node->pull_session_.sps = sps;
-	node->pull_session_.pps = pps;
-	node->pull_session_.video_ssrc = 0x4C4F4341;
+	node->session_origin_pull_.codec = "H264";
+	node->session_origin_pull_.payload_type = 96;
+	node->session_origin_pull_.clock_rate = 90000;
+	node->session_origin_pull_.sps = sps;
+	node->session_origin_pull_.pps = pps;
+	node->session_origin_pull_.video_ssrc = 0x4C4F4341;
 
 	// 构建 fmtp（包含 sprop-parameter-sets）
 	if (!sps.empty() && !pps.empty()) {
 		std::string spsB64 = StreamNode::base64Encode(std::string((char*)sps.data(), sps.size()));
 		std::string ppsB64 = StreamNode::base64Encode(std::string((char*)pps.data(), pps.size()));
-		node->pull_session_.fmtp = "profile-level-id=42C01F;packetization-mode=1;sprop-parameter-sets="
+		node->session_origin_pull_.fmtp = "profile-level-id=42C01F;packetization-mode=1;sprop-parameter-sets="
 			+ spsB64 + "," + ppsB64;
 	}
 
-	node->pull_session_.session_type_ = StreamNode::SERVER_PULL;
-	node->pull_session_.control_url = "trackID=0";
+	node->session_origin_pull_.session_type_ = StreamNode::ORIGIN_PULL;
+	node->session_origin_pull_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;
 	node->state_ = StreamNode::State::PLAYING;
@@ -1449,22 +1473,22 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	cfg.rtp_timeout = 0;
 	node->config_ = cfg;
 
-	node->pull_session_.codec = "H264";
-	node->pull_session_.payload_type = 96;
-	node->pull_session_.clock_rate = 90000;
-	node->pull_session_.sps = sps;
-	node->pull_session_.pps = pps;
-	node->pull_session_.video_ssrc = 0x4C4F4341;
+	node->session_origin_pull_.codec = "H264";
+	node->session_origin_pull_.payload_type = 96;
+	node->session_origin_pull_.clock_rate = 90000;
+	node->session_origin_pull_.sps = sps;
+	node->session_origin_pull_.pps = pps;
+	node->session_origin_pull_.video_ssrc = 0x4C4F4341;
 
 	if (!sps.empty() && !pps.empty()) {
 		std::string spsB64 = StreamNode::base64Encode(std::string((char*)sps.data(), sps.size()));
 		std::string ppsB64 = StreamNode::base64Encode(std::string((char*)pps.data(), pps.size()));
-		node->pull_session_.fmtp = "profile-level-id=42C01F;packetization-mode=1;sprop-parameter-sets="
+		node->session_origin_pull_.fmtp = "profile-level-id=42C01F;packetization-mode=1;sprop-parameter-sets="
 			+ spsB64 + "," + ppsB64;
 	}
 
-	node->pull_session_.session_type_ = StreamNode::SERVER_PULL;
-	node->pull_session_.control_url = "trackID=0";
+	node->session_origin_pull_.session_type_ = StreamNode::ORIGIN_PULL;
+	node->session_origin_pull_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;
 	node->state_ = StreamNode::State::PLAYING;
@@ -1515,9 +1539,9 @@ void StreamServer::cleanupIdleLocalStream(const std::string& tag) {
 	if (!node) return;
 
 	// 检查是否还有客户端
-	node->client_sessions_mutex_.lock();
-	bool hasClients = !node->client_sessions_.empty();
-	node->client_sessions_mutex_.unlock();
+	node->session_list_client_pull_mutex_.lock();
+	bool hasClients = !node->session_list_client_pull_.empty();
+	node->session_list_client_pull_mutex_.unlock();
 
 	if (hasClients) return;
 
@@ -1880,8 +1904,8 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				auto node = std::make_shared<StreamNode>();
 				// 直接设置 pull_session_ 信息（跳过 doStreamPull）
 				node->config_ = cfg;
-				node->pull_session_ = videoInfo;
-				node->pull_session_.session_type_ = StreamNode::SERVER_PULL;
+				node->session_origin_pull_ = videoInfo;
+				node->session_origin_pull_.session_type_ = StreamNode::ORIGIN_PULL;
 				node->isPulling_ = true;  // 标记为"有流数据"，使 DESCRIBE 不会等待
 				node->running_ = true;
 				node->state_ = StreamNode::State::PLAYING;
@@ -1894,8 +1918,8 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 			}
 			else {
 				// 已存在的节点，更新编码信息
-				streamNode->pull_session_ = videoInfo;
-				streamNode->pull_session_.session_type_ = StreamNode::SERVER_PULL;
+				streamNode->session_origin_pull_ = videoInfo;
+				streamNode->session_origin_pull_.session_type_ = StreamNode::ORIGIN_PULL;
 				streamNode->isPulling_ = true;
 			}
 
@@ -2074,6 +2098,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				// ---- 推流模式 SETUP ----
 				rtspSession.client_rtp_port = clientRtpPort;
 				rtspSession.client_rtcp_port = clientRtcpPort;
+				rtspSession.session_type_ = StreamNode::CLIENT_PUBLISH;
 
 				if (isTcpTransport && interleavedRtp >= 0) {
 					// ---- TCP interleaved 模式：RTP 数据通过 RTSP TCP 连接传输 ----
@@ -2207,12 +2232,12 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 					streamTag.c_str(), clientIp.c_str(), clientRtpPort, clientRtcpPort,
 					serverRtpPort, serverRtcpPort);
 				}
-			}
-			else {
+		}
+		else {
 				// ---- 拉流模式 SETUP ----
 				// 复制流信息，设置会话参数
-				rtspSession = streamNode->pull_session_;
-				rtspSession.session_type_ = StreamNode::SERVER_PULL;
+				rtspSession = streamNode->session_origin_pull_;
+				rtspSession.session_type_ = StreamNode::CLIENT_PULL;
 				rtspSession.is_webrtc = false;
 				rtspSession.client_rtp_port = clientRtpPort;
 				rtspSession.client_rtcp_port = clientRtcpPort;
@@ -2317,9 +2342,9 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 
 			// 将 RTSP 拉流会话加入 client_sessions_ 列表
 			auto sessionPtr = std::make_shared<StreamNode::STREAM_SESSION>(rtspSession);
-			streamNode->client_sessions_mutex_.lock();
-			streamNode->client_sessions_.push_back(sessionPtr);
-			streamNode->client_sessions_mutex_.unlock();
+			streamNode->session_list_client_pull_mutex_.lock();
+			streamNode->session_list_client_pull_.push_back(sessionPtr);
+			streamNode->session_list_client_pull_mutex_.unlock();
 
 			LOG("[RTSP-Server] Stream %s started playing to %s:%d (RTP port %d)",
 				streamTag.c_str(), clientIp.c_str(), rtspSession.client_rtp_port, rtspSession.server_rtp_port);
@@ -2446,15 +2471,15 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 			}
 			// 清理 TCP interleaved 拉流会话
 			if (!isPushMode && streamNode && rtspSession.transport_mode == StreamNode::TransportMode::TCP) {
-				streamNode->client_sessions_mutex_.lock();
-				auto& sessions = streamNode->client_sessions_;
+				streamNode->session_list_client_pull_mutex_.lock();
+				auto& sessions = streamNode->session_list_client_pull_;
 				sessions.erase(
 					std::remove_if(sessions.begin(), sessions.end(),
 						[&](const std::shared_ptr<StreamNode::STREAM_SESSION>& s) {
 							return s->tcp_socket == clientSock;
 						}),
 					sessions.end());
-				streamNode->client_sessions_mutex_.unlock();
+				streamNode->session_list_client_pull_mutex_.unlock();
 				// 检查本地文件流是否空闲
 				cleanupIdleLocalStream(streamTag);
 			}
@@ -2477,29 +2502,29 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 
 	// 清理 TCP interleaved 拉流会话
 	if (!isPushMode && streamNode && rtspSession.transport_mode == StreamNode::TransportMode::TCP) {
-		streamNode->client_sessions_mutex_.lock();
-		auto& sessions = streamNode->client_sessions_;
+		streamNode->session_list_client_pull_mutex_.lock();
+		auto& sessions = streamNode->session_list_client_pull_;
 		sessions.erase(
 			std::remove_if(sessions.begin(), sessions.end(),
 				[&](const std::shared_ptr<StreamNode::STREAM_SESSION>& s) {
 					return s->tcp_socket == clientSock;
 				}),
 			sessions.end());
-		streamNode->client_sessions_mutex_.unlock();
+		streamNode->session_list_client_pull_mutex_.unlock();
 		LOG("[RTSP-Server] TCP interleaved pull session cleaned for %s", clientIp.c_str());
 		cleanupIdleLocalStream(streamTag);
 	}
 	// 清理 UDP 拉流会话（非 TCP interleaved 的普通拉流）
 	if (!isPushMode && streamNode && rtspSession.transport_mode != StreamNode::TransportMode::TCP) {
-		streamNode->client_sessions_mutex_.lock();
-		auto& sessions = streamNode->client_sessions_;
+		streamNode->session_list_client_pull_mutex_.lock();
+		auto& sessions = streamNode->session_list_client_pull_;
 		sessions.erase(
 			std::remove_if(sessions.begin(), sessions.end(),
 				[&](const std::shared_ptr<StreamNode::STREAM_SESSION>& s) {
 					return s->remote_host == clientIp;
 				}),
 			sessions.end());
-		streamNode->client_sessions_mutex_.unlock();
+		streamNode->session_list_client_pull_mutex_.unlock();
 		cleanupIdleLocalStream(streamTag);
 	}
 
@@ -2513,7 +2538,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 }
 
 std::string StreamServer::buildSdpForStream(const std::shared_ptr<StreamNode>& node) {
-	const auto& si = node->pull_session_;
+	const auto& si = node->session_origin_pull_;
 	std::ostringstream sdp;
 
 	// 获取本机 IP
@@ -2658,8 +2683,8 @@ void StreamServer::rtpTcpRecvLoop(StreamNode::SocketHandle tcpSock,
 			StreamNode::RTPPacket& packet = *pPkt;
 
 			if (packet.parse(buffer.data(), length)) {
-				if (streamNode->pull_session_.video_ssrc == 0 && packet.ssrc != 0) {
-					streamNode->pull_session_.video_ssrc = packet.ssrc;
+				if (streamNode->session_origin_pull_.video_ssrc == 0 && packet.ssrc != 0) {
+					streamNode->session_origin_pull_.video_ssrc = packet.ssrc;
 					LOG("[RTSP-TcpRecv] Captured video SSRC=%u from push", packet.ssrc);
 				}
 
@@ -2741,8 +2766,8 @@ void StreamServer::rtpRecvThread(std::shared_ptr<RtspRecvSession> session) {
 
 			if (packet.parse(buffer.data(), received)) {
 				// 更新 SSRC
-				if (streamNode->pull_session_.video_ssrc == 0 && packet.ssrc != 0) {
-					streamNode->pull_session_.video_ssrc = packet.ssrc;
+				if (streamNode->session_origin_pull_.video_ssrc == 0 && packet.ssrc != 0) {
+					streamNode->session_origin_pull_.video_ssrc = packet.ssrc;
 					LOG("[RTSP-Recv] Captured video SSRC=%u from push", packet.ssrc);
 				}
 
@@ -2769,8 +2794,8 @@ void StreamServer::rtpRecvThread(std::shared_ptr<RtspRecvSession> session) {
 							std::vector<std::shared_ptr<StreamNode::RTPPacket>> pre_packets;
 							{
 								std::lock_guard<std::mutex> qlock(streamNode->queue_mutex_);
-								uint32_t _clock = (streamNode->pull_session_.clock_rate > 0) ?
-									static_cast<uint32_t>(streamNode->pull_session_.clock_rate) : 90000u;
+								uint32_t _clock = (streamNode->session_origin_pull_.clock_rate > 0) ?
+									static_cast<uint32_t>(streamNode->session_origin_pull_.clock_rate) : 90000u;
 								for (auto it = streamNode->rtp_buffer_.rbegin();
 									it != streamNode->rtp_buffer_.rend(); ++it) {
 									if (packet.timestamp - (*it)->timestamp <=
