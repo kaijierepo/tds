@@ -121,6 +121,7 @@ public:
         int buffer_size = 65536;     // 缓冲区大小
         bool verbose = false;        // 详细日志
         std::string tag;
+        std::string streamUrl;
         
         // 拉流（从源获取）传输模式
         TransportMode pull_mode = TransportMode::UDP;
@@ -192,7 +193,7 @@ public:
     // 公共接口
     bool start(const Config& config);
     void stop();
-    void restart();
+
 
     // 状态查询
     State getState();

@@ -11,6 +11,8 @@ public:
 	StreamServer() {};
 	~StreamServer() {};
 
+	bool run();
+
 	bool handleRpc(std::string method, yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_startStreamNode(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_playWebRtc(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);

@@ -815,16 +815,7 @@ bool TDS_imp::run(string cmdline) {
 	prj.loadRtDB();
 	prj.runRtDB();
 
-	streamSrv.initDtlsCertificate();
-
-	// 启动 RTSP 服务端（配置项: rtspServerPort，默认 0=不启动）
-	int rtspPort = tds->conf->getInt("rtspServerPort", 554);
-	if (rtspPort > 0 && rtspPort <= 65535) {
-		streamSrv.startRtspServer(rtspPort);
-	}
-
-	// 默认加载 tds.exe 同级目录下 rtsp 文件夹的 h264 文件作为流媒体源
-	streamSrv.serveDefaultFolder("rtsp");
+	streamSrv.run();
 
 	//create browser window
 	if (conf->uiMode == "chrome") {

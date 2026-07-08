@@ -664,11 +664,6 @@ void StreamNode::stop() {
     setState(State::IDLE, "Stopped");
 }
 
-void StreamNode::restart() {
-    stop();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    start(config_);
-}
 
 StreamNode::State StreamNode::getState() {
     std::lock_guard<std::mutex> lock(state_mutex_);

@@ -12,6 +12,21 @@
 
 StreamServer streamSrv;
 
+bool StreamServer::run() {
+	initDtlsCertificate();
+
+	// 启动 RTSP 服务端（配置项: rtspServerPort，默认 0=不启动）
+	int rtspPort = tds->conf->getInt("rtspServerPort", 554);
+	if (rtspPort > 0 && rtspPort <= 65535) {
+		startRtspServer(rtspPort);
+	}
+
+	// 默认加载 tds.exe 同级目录下 rtsp 文件夹的 h264 文件作为流媒体源
+	serveDefaultFolder("rtsp");
+
+	return true;
+}
+
 // ============================================================================
 // DTLS 证书初始化
 // ============================================================================

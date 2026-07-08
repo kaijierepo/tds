@@ -99,6 +99,8 @@
 
 ..\src 为源代码
 
+..\src\video 为流媒体相关实现的源代码，对应 streamServer.md文件
+
 ..\out 为编译程序输出目录
 
 ..\msvc\tds.sln 为visual studio工程
