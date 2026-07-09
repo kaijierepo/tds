@@ -2113,6 +2113,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 			}
 
 		if (isPushMode && transportMode == "record") {
+				bool isExtraTrack = (pushSession != nullptr);
 				// ---- 推流模式 SETUP ----
 				rtspSession.client_rtp_port = clientRtpPort;
 				rtspSession.client_rtcp_port = clientRtcpPort;
@@ -2124,6 +2125,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 						streamTag.c_str(), interleavedRtp, interleavedRtcp);
 
 					// 创建推流接收会话（使用 TCP 连接接收 RTP interleaved 数据）
+					if (!isExtraTrack) {
 					pushSession = std::make_shared<RtspRecvSession>();
 					pushSession->rtp_sock = StreamNode::kInvalidSocket;  // 不使用 UDP
 					pushSession->rtcp_sock = StreamNode::kInvalidSocket;
@@ -2137,8 +2139,13 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 					pushSession->state = RSS_WAITING_RTP;
 
 					{
-						std::lock_guard<std::mutex> lock(m_pushSessionsMutex_);
-						m_pushSessions_[sessionId] = pushSession;
+					 std::lock_guard<std::mutex> lock(m_pushSessionsMutex_);
+					 m_pushSessions_[sessionId] = pushSession;
+					}
+					LOG("[RTSP-Server] Push SETUP TCP: tag=%s, channels=%d-%d",
+					streamTag.c_str(), interleavedRtp, interleavedRtcp);
+					} else {
+						LOG("[RTSP-Server] Push SETUP TCP extra track ignored (tag=%s)", streamTag.c_str());
 					}
 
 					std::ostringstream resp;
@@ -2216,23 +2223,32 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				setsockopt(rtpSock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
 #endif
 
-				// 创建推流接收会话
-				pushSession = std::make_shared<RtspRecvSession>();
-				pushSession->rtp_sock = rtpSock;
-				pushSession->rtcp_sock = rtcpSock;
-				pushSession->tcp_sock = clientSock;  // 保存 RTSP 控制连接，RTP 超时时可关闭
-				pushSession->server_rtp_port = serverRtpPort;
-				pushSession->server_rtcp_port = serverRtcpPort;
-				pushSession->tag = streamTag;
-				pushSession->session_id = sessionId;
-				pushSession->client_ip = clientIp;
-				pushSession->client_rtp_port = clientRtpPort;
-				pushSession->client_rtcp_port = clientRtcpPort;
-				pushSession->state = RSS_WAITING_RTP;
+				if (!isExtraTrack) {
+					// 第一个 track（视频）：创建推流接收会话
+					pushSession = std::make_shared<RtspRecvSession>();
+					pushSession->rtp_sock = rtpSock;
+					pushSession->rtcp_sock = rtcpSock;
+					pushSession->tcp_sock = clientSock;
+					pushSession->server_rtp_port = serverRtpPort;
+					pushSession->server_rtcp_port = serverRtcpPort;
+					pushSession->tag = streamTag;
+					pushSession->session_id = sessionId;
+					pushSession->client_ip = clientIp;
+					pushSession->client_rtp_port = clientRtpPort;
+					pushSession->client_rtcp_port = clientRtcpPort;
+					pushSession->state = RSS_WAITING_RTP;
 
-				{
+					{
 					std::lock_guard<std::mutex> lock(m_pushSessionsMutex_);
 					m_pushSessions_[sessionId] = pushSession;
+					}
+					 LOG("[RTSP-Server] Push SETUP: tag=%s, client=%s:%d-%d, server=%d-%d",
+							streamTag.c_str(), clientIp.c_str(), clientRtpPort, clientRtcpPort,
+							serverRtpPort, serverRtcpPort);
+					} else {
+					// 额外 track（音频等）：回复有效端口号但不覆写 pushSession
+					LOG("[RTSP-Server] Push SETUP extra track (UDP): tag=%s, server=%d-%d",
+						streamTag.c_str(), serverRtpPort, serverRtcpPort);
 				}
 
 				std::ostringstream resp;
@@ -2247,9 +2263,6 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				sendResponse(cseq, resp.str());
 
 				sessionSetup = true;
-				LOG("[RTSP-Server] Push SETUP: tag=%s, client=%s:%d-%d, server=%d-%d",
-					streamTag.c_str(), clientIp.c_str(), clientRtpPort, clientRtcpPort,
-					serverRtpPort, serverRtcpPort);
 				}
 		}
 		else {
