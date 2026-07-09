@@ -1554,13 +1554,21 @@ void StreamServer::cleanupIdleLocalStream(const std::string& tag) {
 	if (hasClients) return;
 
 	// 没有客户端了，停止喂流线程
+	// 只处理本地文件流：推流(push)创建的 StreamNode 不在此管理
+	bool isLocalStream = false;
 	{
 		std::lock_guard<std::mutex> lock(g_localStreamMutex);
 		auto it = g_localStreams.find(tag);
 		if (it != g_localStreams.end()) {
 			it->second->running_ = false;
 			g_localStreams.erase(it);
+			isLocalStream = true;
 		}
+	}
+
+	if (!isLocalStream) {
+		LOG("[LocalFileStream] Tag=%s is not a local file stream, skip cleanup", tag.c_str());
+		return;
 	}
 
 	// 移除 StreamNode
@@ -2175,6 +2183,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 					getsockname(static_cast<SOCKET_TYPE>(rtpSock), (struct sockaddr*)&bindAddr, &addrLen);
 					serverRtpPort = ntohs(bindAddr.sin_port);
 				}
+				bindAddr.sin_port = 0;  // 重置端口，否则会被 getsockname 覆写为 RTP 端口号
 				if (::bind(static_cast<SOCKET_TYPE>(rtcpSock), (struct sockaddr*)&bindAddr, sizeof(bindAddr)) == 0) {
 					socklen_t addrLen = sizeof(bindAddr);
 					getsockname(static_cast<SOCKET_TYPE>(rtcpSock), (struct sockaddr*)&bindAddr, &addrLen);
@@ -2770,7 +2779,7 @@ void StreamServer::rtpRecvThread(std::shared_ptr<RtspRecvSession> session) {
 
 		if (received > 12) {
 			lastPacketTime = std::chrono::steady_clock::now();
-			// 解析 RTP 包
+			// 诊断：每秒输出一次收包统计
 			auto pPkt = std::make_shared<StreamNode::RTPPacket>();
 			StreamNode::RTPPacket& packet = *pPkt;
 
