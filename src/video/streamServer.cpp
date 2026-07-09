@@ -1973,6 +1973,13 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 			streamNode = findStreamByRtspPath(path);
 
 			if (!streamNode) {
+				// 可能已被 cleanupIdleLocalStream 清理，尝试按需重新加载
+				std::string loadTag = path;
+				if (!loadTag.empty() && loadTag[0] == '/') loadTag = loadTag.substr(1);
+				streamNode = loadLocalFileStream(loadTag);
+			}
+
+			if (!streamNode) {
 				std::ostringstream resp;
 				resp << "RTSP/1.0 404 Not Found\r\n";
 				resp << "CSeq: " << cseq << "\r\n";
