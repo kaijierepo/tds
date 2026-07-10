@@ -270,7 +270,8 @@ void DtlsTransport::exportSrptKeys() {
 
     int ret = mbedtls_ssl_export_keying_material(
         &ssl_, keyblk, sizeof(keyblk),
-        label, strlen(label), nullptr, 0, 1);
+        // use_context=0 means no context value is appended to the PRF seed
+        label, strlen(label), nullptr, 0, 0);
 
     if (ret != 0) {
         LOG("[DTLS] mbedtls_ssl_export_keying_material failed: %d", ret);
