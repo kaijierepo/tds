@@ -369,8 +369,16 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                 dtlsState->seq_inited = true;
             }
 
-            // 如果当前包是 IDR 且 session 有 SPS/PPS，先发送 SPS/PPS RTP 包
-            if (!session->last_was_idr_ && isIdr 
+
+            // 第一个 IDR 到达前：丢弃所有非 IDR 包，避免浏览器收到无法解码的数据
+            // 浏览器需要 SPS/PPS + IDR 才能初始化解码器，在此之前收到的数据全部无效
+            if (!session->last_was_idr_ && !isIdr) {
+                continue;
+            }
+
+            // 如果当前包是 IDR 且 session 有 SPS/PPS，且尚未发送过，则先发送 SPS/PPS RTP 包
+            // sps_pps_sent_ 确保 SPS/PPS 仅在首次 IDR 前注入一次（后续 GOP 的 IDR 不需要重复注入）
+            if (!session->sps_pps_sent_ && isIdr 
                 && !session->sps.empty() && !session->pps.empty()) {
                 // 辅助函数：发送单个 NAL 的 RTP 包，使用 per-session 独立序列号
                 auto sendSingleNalRtp = [&](const std::vector<uint8_t>& nal) {
@@ -402,7 +410,8 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
 
                 sendSingleNalRtp(session->sps);
                 sendSingleNalRtp(session->pps);
-                LOG("SRTP: injected SPS (%zu bytes, NAL type=0x%02x) + PPS (%zu bytes, NAL type=0x%02x) before IDR, seq_start=%u",
+                session->sps_pps_sent_ = true;
+                LOG("SRTP: injected SPS (%zu bytes, NAL type=0x%02x) + PPS (%zu bytes, NAL type=0x%02x) before first IDR, seq_start=%u",
                     session->sps.size(),
                     session->sps.empty() ? 0 : (session->sps[0] & 0x1F),
                     session->pps.size(),

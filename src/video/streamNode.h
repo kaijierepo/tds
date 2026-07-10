@@ -302,6 +302,7 @@ public:
         void* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
 
 		bool last_was_idr_ = false; // 记录上一个处理的是否为 IDR，用于判断连续的 IDR
+        bool sps_pps_sent_ = false; // 记录 SPS/PPS 是否已在此会话中发送过（只在首个 IDR 前注入一次）
 
         // ---- 以下成员仅 WebRTC (is_webrtc=true) 使用 ----
         // ICE 处理线程（由 startIceHandleThread 创建，stopAllIceThreads 回收）
@@ -334,6 +335,7 @@ public:
             , dtls_transport_(other.dtls_transport_)
             , srtp_context_(other.srtp_context_)
             , last_was_idr_(other.last_was_idr_)
+            , sps_pps_sent_(other.sps_pps_sent_)
             // ice_thread_ 默认构造（空线程）
             // ice_running_ 保持默认 true
         {}
@@ -362,6 +364,7 @@ public:
                 dtls_transport_ = other.dtls_transport_;
                 srtp_context_ = other.srtp_context_;
                 last_was_idr_ = other.last_was_idr_;
+                sps_pps_sent_ = other.sps_pps_sent_;
                 // ice_thread_ 和 ice_running_ 不拷贝
             }
             return *this;
