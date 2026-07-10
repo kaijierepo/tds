@@ -418,7 +418,9 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                     session->pps.empty() ? 0 : (session->pps[0] & 0x1F),
                     dtlsState->local_seq - 2);
             }
-            session->last_was_idr_ = isIdr;
+            // 一旦见过第一个 IDR，就永久标记为 true，不再变回 false
+            // 修复：FU-A IDR 的非起始分片 isIdr=false，会错误地将 last_was_idr_ 重置为 false
+            if (isIdr) session->last_was_idr_ = true;
 
             // 用 per-session 独立序列号+PT 替换原始 seq/PT 后发送
             std::vector<uint8_t> rtpVec(data.begin(), data.end());
