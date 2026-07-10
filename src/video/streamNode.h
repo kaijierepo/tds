@@ -299,10 +299,8 @@ public:
         void* dtls_transport_ = nullptr;  // 指向 SessionDtlsState 实例
         void* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
 
-        //一个IDR 会被分成多个NALU， 一个NALU 会被分成多个RTP packet发送
-        //当录制.h264或者发送webrtc的rtp是，在连续的多个IDR nalu之前，需要加入sps/pps
-        //last_nalu_was_idr_ 变量用于确认上一个不是idr,下一个是idr的nalu时，发送一次sps/pps
-        bool last_nalu_was_idr_ = false; //判断上一个是否是IDR的RTP包，一般一个IDR帧会分成多个
+        // 新会话首次发送数据标记：首次先发 SPS/PPS + 缓存的关键帧，再开始转发实时流
+        bool is_first_send_ = true;
 
         // ---- 以下成员仅 WebRTC (is_webrtc=true) 使用 ----
         // ICE 处理线程（由 startIceHandleThread 创建，stopAllIceThreads 回收）
@@ -426,6 +424,15 @@ public:
 	std::vector<std::shared_ptr<STREAM_SESSION>> session_list_client_pull_;
 	std::mutex session_list_client_pull_mutex_;
 
+    //一个IDR 会被分成多个NALU， 一个NALU 会被分成多个RTP packet发送
+    //当录制.h264或者发送webrtc的rtp是，在连续的多个IDR nalu之前，需要加入sps/pps
+    //last_nalu_was_idr_ 变量用于确认上一个不是idr,下一个是idr的nalu时，发送一次sps/pps
+    bool last_nalu_was_idr_ = false; //判断上一个是否是IDR的RTP包，一般一个IDR帧会分成多个
+
+    // 最近一个关键帧的 RTP 原始数据缓存（新会话首次发送时使用，加速出图）
+    std::vector<std::vector<uint8_t>> keyframe_cache_;
+    bool keyframe_caching_ = false;  // 当前是否正在缓存关键帧（遇到IDR开始，marker=1结束）
+
     STREAM_SESSION pull_audio_session_;
 
     std::string target_rtp_host_;   // 目标RTP主机地址
@@ -467,8 +474,10 @@ public:
     // 工作线程
     void controlThread();
     void rtpHandleThread();
+    bool checkIsIdrNalu(const RTPPacket& packet);
     bool doStreamPull();
     bool doStreamPush();
+    void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, StreamNode::STREAM_SESSION& session);
     void doRtpRecv();
 
 
