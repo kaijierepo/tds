@@ -125,13 +125,34 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
             uint8_t tid[12];
             memcpy(tid, buf + 8, 12);
 
-            LOG("[STUN] Received Binding Request from %s:%d (peer.sin_port=%d)",
-                inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), (int)peer.sin_port);
+            // 解析请求中的 USERNAME 属性（RFC 5245 §7.1.2.2 要求响应中回显）
+            std::string reqUsername;
+            {
+                uint16_t msgLength = (buf[2] << 8) | buf[3];
+                int attrPos = 20;
+                int attrEnd = attrPos + msgLength;
+                while (attrPos + 4 <= attrEnd && attrPos + 4 <= len) {
+                    uint16_t attrType = (buf[attrPos] << 8) | buf[attrPos + 1];
+                    uint16_t attrLen = (buf[attrPos + 2] << 8) | buf[attrPos + 3];
+                    int paddedLen = (attrLen + 3) & ~3;  // 4-byte aligned
+                    if (attrType == 0x0006) {  // USERNAME
+                        int valLen = attrLen;
+                        if (attrPos + 4 + valLen <= len) {
+                            reqUsername.assign((const char*)(buf + attrPos + 4), valLen);
+                        }
+                        break;
+                    }
+                    attrPos += 4 + paddedLen;
+                }
+            }
+
+            LOG("[STUN] Received Binding Request from %s:%d, username=%s",
+                inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), reqUsername.c_str());
 
             // ---- 构造 Binding Success Response（含 MESSAGE-INTEGRITY） ----
-            // ICE 要求 Success Response 必须包含 MESSAGE-INTEGRITY，
+            // ICE 要求 Success Response 必须包含 MESSAGE-INTEGRITY 和 USERNAME，
             // 否则浏览器会丢弃响应并持续重试。
-            uint8_t response[128] = {};
+            uint8_t response[256] = {};
             int pos = 0;
             // STUN Header (20 bytes)
             response[pos++] = 0x01; response[pos++] = 0x01;  // Binding Success Response
@@ -154,6 +175,17 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
             response[pos++] = (xorAddr >> 16) & 0xFF;
             response[pos++] = (xorAddr >> 8)  & 0xFF;
             response[pos++] = xorAddr & 0xFF;
+
+            // USERNAME - 回显请求中的 USERNAME（RFC 5245 §7.1.2.2 MUST）
+            int usernameLen = (int)reqUsername.length();
+            if (usernameLen > 0) {
+                int paddedLen = (usernameLen + 3) & ~3;
+                response[pos++] = 0x00; response[pos++] = 0x06;  // attr type = USERNAME
+                response[pos++] = (usernameLen >> 8) & 0xFF;
+                response[pos++] = usernameLen & 0xFF;
+                memcpy(response + pos, reqUsername.data(), usernameLen);
+                pos += paddedLen;
+            }
 
             // MESSAGE-INTEGRITY (24 bytes: type 2 + len 2 + hmac 20)
             int miPos = pos;
