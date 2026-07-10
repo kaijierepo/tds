@@ -372,7 +372,14 @@ compile_cpp_if_needed ./io_server/proto_eip.cpp ./io_server/proto_eip.o
 compile_cpp_if_needed ./io_server/proto_tb3386.cpp ./io_server/proto_tb3386.o
 compile_cpp_if_needed ./io_server/proto_ws.cpp ./io_server/proto_ws.o
 compile_cpp_if_needed ./video/streamServer.cpp ./video/streamServer.o
+compile_cpp_if_needed ./video/streamServer_file.cpp ./video/streamServer_file.o
+compile_cpp_if_needed ./video/streamServer_rtsp.cpp ./video/streamServer_rtsp.o
+compile_cpp_if_needed ./video/streamServer_rpc.cpp ./video/streamServer_rpc.o
 compile_cpp_if_needed ./video/streamNode.cpp ./video/streamNode.o
+compile_cpp_if_needed ./video/streamNode_rtsp.cpp ./video/streamNode_rtsp.o
+compile_cpp_if_needed ./video/streamNode_rtp.cpp ./video/streamNode_rtp.o
+compile_cpp_if_needed ./video/streamNode_socket.cpp ./video/streamNode_socket.o
+compile_cpp_if_needed ./video/streamNode_webrtc.cpp ./video/streamNode_webrtc.o
 compile_cpp_if_needed ./video/dtls_transport.cpp ./video/dtls_transport.o
 compile_cpp_if_needed ./video/srtp_protect.cpp ./video/srtp_protect.o
 
@@ -470,6 +477,10 @@ obj_files="\
 ./io_server/proto_ws.o \
 ./video/streamServer.o \
 ./video/streamNode.o \
+./video/streamNode_rtsp.o \
+./video/streamNode_rtp.o \
+./video/streamNode_socket.o \
+./video/streamNode_webrtc.o \
 ./video/dtls_transport.o \
 ./video/srtp_protect.o \
 "
