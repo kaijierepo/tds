@@ -534,6 +534,10 @@ public:
     void startIceHandleThread(std::shared_ptr<STREAM_SESSION> session);
     void stopAllIceThreads();
 
+    // WebRTC SDP Answer 构建（设置 si.is_webrtc/ice_ufrag/ice_pwd/sdp）
+    static void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
+                                      const std::string& dtlsFingerprint);
+
     // 日志
     void logInfo(const std::string& msg) const;
     void logError(const std::string& msg) const;

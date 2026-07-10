@@ -3,6 +3,8 @@
 #include "streamNode_webrtc.h"
 #include <psa/crypto.h>
 #include <logger.h>
+#include <sstream>
+#include <random>
 
 // ============================================================================
 // ICE-Lite + DTLS + SRTP (WebRTC) 实现 — 每客户端一线程
@@ -374,4 +376,103 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
         session->dtls_transport_ = nullptr;
         session->srtp_context_   = nullptr;
     }
+}
+
+// ============================================================================
+// WebRTC SDP Answer 构建 — 生成 ICE 凭据、编码 sprop-parameter-sets、组装 SDP
+// ============================================================================
+
+void StreamNode::buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
+                                       const std::string& dtlsFingerprint) {
+    // 生成 ICE 凭据（每个会话随机，长度符合 RFC 5245 要求）
+    std::string iceUfrag;
+    std::string icePwd;
+    {
+        static const char alphanum[] =
+            "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/";
+        std::mt19937 rng(std::random_device{}());
+        std::uniform_int_distribution<> dist(0, sizeof(alphanum) - 2);
+        for (int i = 0; i < 8; i++) iceUfrag += alphanum[dist(rng)];
+        for (int i = 0; i < 22; i++) icePwd += alphanum[dist(rng)];
+    }
+
+    // 标记为 WebRTC 会话并写入 ICE 凭据
+    si.is_webrtc = true;
+    si.ice_ufrag = iceUfrag;
+    si.ice_pwd = icePwd;
+
+    // 将 SPS/PPS 编码为 Base64（用于 SDP sprop-parameter-sets）
+    // 格式: <sps_base64>,<pps_base64>
+    std::string spropParamSets;
+    if (!si.sps.empty() && !si.pps.empty()) {
+        std::string sps_raw(reinterpret_cast<const char*>(si.sps.data()), si.sps.size());
+        std::string pps_raw(reinterpret_cast<const char*>(si.pps.data()), si.pps.size());
+        std::string sps_b64 = StreamNode::base64Encode(sps_raw);
+        std::string pps_b64 = StreamNode::base64Encode(pps_raw);
+        spropParamSets = sps_b64 + "," + pps_b64;
+    }
+
+    std::ostringstream sdp;
+    sdp << "v=0\r\n";
+    sdp << "o=- 0 0 IN IP4 " << serverIp << "\r\n";
+    sdp << "s=TDS\r\n";
+    sdp << "t=0 0\r\n";
+    sdp << "m=video " << si.server_rtp_port
+        << " UDP/TLS/RTP/SAVPF " << si.payload_type << "\r\n";
+    sdp << "c=IN IP4 " << serverIp << "\r\n";
+    sdp << "a=mid:0\r\n";                             // 媒体流标识（匹配浏览器 Offer）
+    sdp << "a=rtpmap:" << si.payload_type
+        << " " << si.codec << "/" << si.clock_rate << "\r\n";
+
+    // 构造 fmtp 行：如果已有 fmtp 则在其后追加 sprop-parameter-sets，
+    // 否则从 sps/pps 构造完整 fmtp
+    std::string fmtpLine;
+    if (!si.fmtp.empty()) {
+        fmtpLine = si.fmtp;
+    }
+    if (!spropParamSets.empty()) {
+        // 如果原有 fmtp 已有 sprop-parameter-sets，则不重复添加
+        if (fmtpLine.find("sprop-parameter-sets") == std::string::npos) {
+            if (!fmtpLine.empty()) fmtpLine += ";";
+            fmtpLine += "sprop-parameter-sets=" + spropParamSets;
+        }
+    }
+    // 确保 packetization-mode 存在（RFC 6184 必需，默认 mode=1 支持 FU-A/STAP-A）
+    if (!fmtpLine.empty() && fmtpLine.find("packetization-mode") == std::string::npos) {
+        fmtpLine = "packetization-mode=1;" + fmtpLine;
+    }
+    // 确保 profile-level-id 存在
+    if (!fmtpLine.empty() && fmtpLine.find("profile-level-id") == std::string::npos) {
+        if (si.sps.size() >= 3) {
+            char buf[16];
+            snprintf(buf, sizeof(buf), "profile-level-id=%02X%02X%02X",
+                si.sps[0], si.sps[1], si.sps[2]);
+            fmtpLine = std::string(buf) + ";" + fmtpLine;
+        } else {
+            fmtpLine = "profile-level-id=42C01F;" + fmtpLine;
+        }
+    }
+    // 确保 level-asymmetry-allowed 存在
+    if (!fmtpLine.empty() && fmtpLine.find("level-asymmetry-allowed") == std::string::npos) {
+        fmtpLine += ";level-asymmetry-allowed=1";
+    }
+    if (!fmtpLine.empty()) {
+        sdp << "a=fmtp:" << si.payload_type << " " << fmtpLine << "\r\n";
+    }
+
+    sdp << "a=rtcp-mux\r\n";                           // RTCP 复用 RTP 端口
+    sdp << "a=rtcp-rsize\r\n";                         // 精简 RTCP
+    sdp << "a=sendonly\r\n";                            // 服务端仅发送视频
+    sdp << "a=setup:passive\r\n";                       // DTLS server
+    sdp << "a=ice-lite\r\n";                            // ICE-Lite 模式
+    sdp << "a=ice-ufrag:" << iceUfrag << "\r\n";
+    sdp << "a=ice-pwd:" << icePwd << "\r\n";
+    sdp << "a=fingerprint:sha-256 " << dtlsFingerprint << "\r\n";
+    // SSRC 声明：使用实际流中的 SSRC（如果尚未捕获则用 1 作为占位符）
+    uint32_t declaredSsrc = si.video_ssrc ? si.video_ssrc : 1;
+    sdp << "a=ssrc:" << declaredSsrc << " cname:TDS\r\n";
+    sdp << "a=candidate:1 1 UDP 2130706431 "
+        << serverIp << " " << si.server_rtp_port << " typ host\r\n";
+
+    si.sdp = sdp.str();
 }
