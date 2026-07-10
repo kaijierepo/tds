@@ -146,8 +146,26 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
                 }
             }
 
-            LOG("[STUN] Received Binding Request from %s:%d, username=%s",
-                inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), reqUsername.c_str());
+            // 检查 USE-CANDIDATE (0x0025)，用于诊断 ICE nomination 状态
+            bool hasUseCandidate = false;
+            {
+                uint16_t msgLength = (buf[2] << 8) | buf[3];
+                int attrPos = 20;
+                int attrEnd = attrPos + msgLength;
+                while (attrPos + 4 <= attrEnd && attrPos + 4 <= len) {
+                    uint16_t attrType = (buf[attrPos] << 8) | buf[attrPos + 1];
+                    uint16_t attrLen = (buf[attrPos + 2] << 8) | buf[attrPos + 3];
+                    int paddedLen = (attrLen + 3) & ~3;
+                    if (attrType == 0x0025) {  // USE-CANDIDATE
+                        hasUseCandidate = true;
+                        break;
+                    }
+                    attrPos += 4 + paddedLen;
+                }
+            }
+
+            LOG("[STUN] Received Binding Request from %s:%d, username=%s, useCandidate=%d",
+                inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), reqUsername.c_str(), hasUseCandidate);
 
             // ---- 构造 Binding Success Response（含 MESSAGE-INTEGRITY） ----
             // ICE 要求 Success Response 必须包含 MESSAGE-INTEGRITY 和 USERNAME，
@@ -185,6 +203,12 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
                 response[pos++] = usernameLen & 0xFF;
                 memcpy(response + pos, reqUsername.data(), usernameLen);
                 pos += paddedLen;
+            }
+
+            // USE-CANDIDATE - 回显请求中的 USE-CANDIDATE（RFC 8445 §8.1.1.2）
+            if (hasUseCandidate) {
+                response[pos++] = 0x00; response[pos++] = 0x25;  // attr type = USE-CANDIDATE
+                response[pos++] = 0x00; response[pos++] = 0x00;  // attr len = 0
             }
 
             // MESSAGE-INTEGRITY (24 bytes: type 2 + len 2 + hmac 20)
@@ -314,9 +338,19 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
                     inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), pos, dbg);
             }
 
-            sendto(static_cast<SOCKET_TYPE>(session->rtp_socket),
-                   (const char*)response, pos, 0,
-                   (struct sockaddr*)&peer, sizeof(peer));
+            int sent = sendto(static_cast<SOCKET_TYPE>(session->rtp_socket),
+                            (const char*)response, pos, 0,
+                            (struct sockaddr*)&peer, sizeof(peer));
+            if (sent < 0) {
+#ifdef _WIN32
+                int err = WSAGetLastError();
+                LOG("[STUN] sendto FAILED: ret=%d, WSAError=%d, target=%s:%d, len=%d",
+                    sent, err, inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), pos);
+#else
+                LOG("[STUN] sendto FAILED: ret=%d, errno=%d, target=%s:%d, len=%d",
+                    sent, errno, inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), pos);
+#endif
+            }
 
             // ICE 连通性确认：收到 Binding Request 并回复 Response
             // 只在初始状态(0)时升级为1，避免 keep-alive Binding Request 把 SRTP 激活(3)降级
@@ -398,7 +432,13 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
             }
         }
         else {
-            // 未知协议，忽略
+            // 未知协议，打印前20字节以诊断
+            char hx[128] = {};
+            int hoff = 0;
+            for (int i = 0; i < len && i < 40 && hoff < 100; i++)
+                hoff += sprintf(hx + hoff, "%02x", (unsigned char)buf[i]);
+            LOG("[ICE] Unknown packet from %s:%d, len=%d, firstByte=0x%02x, hex=%s",
+                inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), len, firstByte, hx);
         }
     }
 
