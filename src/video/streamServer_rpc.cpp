@@ -186,12 +186,18 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	if (yyjson_is_int(yyv)) {
 		clientRtpPort = yyjson_get_int(yyv);
 	}
-	auto rc = getStreamNodeByTag(tag);
+		auto rc = getStreamNodeByTag(tag);
 	if (rc) {
 		StreamNode::STREAM_SESSION si = rc->session_origin_pull_;
 		si.session_type_ = StreamNode::CLIENT_PULL;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
+		// 从浏览器 Offer 中解析 H264 payload type（避免 PT 冲突）
+		int h264PT = rc->parseH264PTFromOffer(sdpOffer);
+		if (h264PT > 0) {
+			si.payload_type = h264PT;
+			LOG("[WebRTC] using H264 PT=%d from Offer", h264PT);
+		}
 		rc->createUDPServerSocket(si);
 
 		std::string serverIp = session.localIP;

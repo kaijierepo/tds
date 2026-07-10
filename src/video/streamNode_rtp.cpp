@@ -384,7 +384,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                 auto sendSingleNalRtp = [&](const std::vector<uint8_t>& nal) {
                     std::vector<uint8_t> nalData(12 + nal.size());
                     nalData[0] = 0x80;  // V=2, P=0, X=0, CC=0
-                    nalData[1] = (0 << 7) | (packet.payload_type & 0x7F);  // marker=0
+                    nalData[1] = (0 << 7) | (session->payload_type & 0x7F);  // marker=0, 使用会话 PT
                     nalData[2] = (dtlsState->local_seq >> 8) & 0xFF;
                     nalData[3] = dtlsState->local_seq & 0xFF;
                     nalData[4] = (packet.timestamp >> 24) & 0xFF;
@@ -420,8 +420,9 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             }
             session->last_was_idr_ = isIdr;
 
-            // 用 per-session 独立序列号替换原始 seq 后发送
+            // 用 per-session 独立序列号+PT 替换原始 seq/PT 后发送
             std::vector<uint8_t> rtpVec(data.begin(), data.end());
+            rtpVec[1] = (rtpVec[1] & 0x80) | (session->payload_type & 0x7F);  // 保留 marker, 重映射 PT
             rtpVec[2] = (dtlsState->local_seq >> 8) & 0xFF;
             rtpVec[3] = dtlsState->local_seq & 0xFF;
             dtlsState->local_seq++;

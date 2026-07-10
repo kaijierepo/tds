@@ -540,6 +540,8 @@ public:
     // WebRTC SDP Answer 构建（设置 si.is_webrtc/ice_ufrag/ice_pwd/sdp）
     static void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
                                       const std::string& dtlsFingerprint);
+    // 从浏览器 SDP Offer 中提取 H264 payload type
+    static int parseH264PTFromOffer(const std::string& sdpOffer);
 
     // 日志
     void logInfo(const std::string& msg) const;

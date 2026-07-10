@@ -128,6 +128,7 @@
 #define MBEDTLS_SSL_MAX_EARLY_DATA_SIZE  0
 
 #define MBEDTLS_SSL_KEYING_MATERIAL_EXPORT /* SRTP key export (RFC 5705) */
+#define MBEDTLS_SSL_KEEP_RANDBYTES         /* Keep randbytes in transform for keying material export */
 #define MBEDTLS_DEBUG_C                    /* Debug logging */
 
 /* ===================================================================

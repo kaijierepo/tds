@@ -414,6 +414,30 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
 // WebRTC SDP Answer 构建 — 生成 ICE 凭据、编码 sprop-parameter-sets、组装 SDP
 // ============================================================================
 
+// 从浏览器 SDP Offer 中解析 H264 payload type（返回 0 表示未找到）
+int StreamNode::parseH264PTFromOffer(const std::string& sdpOffer) {
+    int h264PT = 0;
+    std::istringstream ss(sdpOffer);
+    std::string line;
+    while (std::getline(ss, line)) {
+        // 匹配 "a=rtpmap:<PT> H264/90000" 或 "a=rtpmap:<PT> H264/90000\r"
+        if (line.find("a=rtpmap:") == 0 || line.find("a=rtpmap:") != std::string::npos) {
+            size_t rtpmapPos = line.find("a=rtpmap:");
+            if (rtpmapPos == std::string::npos) continue;
+            size_t ptStart = rtpmapPos + 9;  // strlen("a=rtpmap:")
+            size_t ptEnd = line.find(' ', ptStart);
+            if (ptEnd == std::string::npos) continue;
+            std::string ptStr = line.substr(ptStart, ptEnd - ptStart);
+            // 检查是否是 H264
+            if (line.find("H264") != std::string::npos) {
+                h264PT = std::stoi(ptStr);
+                break;  // 使用第一个 H264 PT
+            }
+        }
+    }
+    return h264PT;
+}
+
 void StreamNode::buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
                                        const std::string& dtlsFingerprint) {
     // 生成 ICE 凭据（每个会话随机，长度符合 RFC 5245 要求）
@@ -449,10 +473,13 @@ void StreamNode::buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& ser
     sdp << "o=- 0 0 IN IP4 " << serverIp << "\r\n";
     sdp << "s=TDS\r\n";
     sdp << "t=0 0\r\n";
+    sdp << "a=group:BUNDLE 0\r\n";                     // 匹配浏览器 Offer 的 BUNDLE 标签
+    sdp << "a=msid-semantic: WMS\r\n";                 // WebRTC 必须：媒体流标识语义
     sdp << "m=video " << si.server_rtp_port
         << " UDP/TLS/RTP/SAVPF " << si.payload_type << "\r\n";
     sdp << "c=IN IP4 " << serverIp << "\r\n";
     sdp << "a=mid:0\r\n";                             // 媒体流标识（匹配浏览器 Offer）
+    sdp << "a=msid:TDS-stream TDS-video\r\n";          // 映射到浏览器 MediaStream
     sdp << "a=rtpmap:" << si.payload_type
         << " " << si.codec << "/" << si.clock_rate << "\r\n";
 
@@ -496,15 +523,19 @@ void StreamNode::buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& ser
     sdp << "a=rtcp-rsize\r\n";                         // 精简 RTCP
     sdp << "a=sendonly\r\n";                            // 服务端仅发送视频
     sdp << "a=setup:passive\r\n";                       // DTLS server
+    sdp << "a=ice-options:trickle\r\n";                  // 支持增量 ICE
     sdp << "a=ice-lite\r\n";                            // ICE-Lite 模式
     sdp << "a=ice-ufrag:" << iceUfrag << "\r\n";
     sdp << "a=ice-pwd:" << icePwd << "\r\n";
     sdp << "a=fingerprint:sha-256 " << dtlsFingerprint << "\r\n";
     // SSRC 声明：使用实际流中的 SSRC（如果尚未捕获则用 1 作为占位符）
+    // 必须包含 msid 属性，浏览器才能将 SSRC 绑定到 <video> 元素并触发 ontrack
     uint32_t declaredSsrc = si.video_ssrc ? si.video_ssrc : 1;
+    sdp << "a=ssrc:" << declaredSsrc << " msid:TDS-stream TDS-video\r\n";
     sdp << "a=ssrc:" << declaredSsrc << " cname:TDS\r\n";
     sdp << "a=candidate:1 1 UDP 2130706431 "
         << serverIp << " " << si.server_rtp_port << " typ host\r\n";
+    sdp << "a=end-of-candidates\r\n";                    // 无更多候选，触发 ICE 完成
 
     si.sdp = sdp.str();
 }
