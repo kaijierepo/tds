@@ -104,10 +104,12 @@
 
 .\doc 为项目文档目录
 
+
 #### 调试
 .\msvc\tds.sln 是visual stuio工程，你可以直接编译x64 debug版本进行调试
 .\out\tds\tds.exe 编译后的程序目录
 .\out\log 是tds的日志目录
+.\out\tds\ui 是tds的web页面目录
 MSBuild.exe 请在以下目录查找：
 D:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\amd64\MSBuild.exe
 
@@ -153,7 +155,8 @@ StreamServer支持4种工作模式。
 作为RTSP服务，接收RTSP客户端拉流, CLIENT_PULL模式。
 作为RTSP服务，接收RTSP客户端推流, CLIENT_PUSH模式。
 StreamServer支持webrtc，其中srtp使用mbedtls实现。
-
+.\out\tds\ui\app\webrtc\index.html 是webrtc的测试页面
+.\out\tds\ui\app\webrtc-debug-client.js 是仿真浏览器webrtc客户端的nodejs程序
 
 
 
