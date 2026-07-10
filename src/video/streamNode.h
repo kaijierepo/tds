@@ -544,17 +544,6 @@ public:
     static std::string base64Encode(const std::string& input);
 
 private:
-    // MD5相关函数（内部实现）
-    struct MD5Context {
-        uint32_t state[4];    // 状态 (ABCD)
-        uint32_t count[2];    // 位数，模2^64 (低位在前)
-        uint8_t buffer[64];   // 输入缓冲区
-    };
-
-    static void md5Init(MD5Context* context);
-    static void md5Update(MD5Context* context, const uint8_t* data, size_t length);
-    static void md5Final(MD5Context* context, uint8_t digest[16]);
-    static void md5Transform(uint32_t state[4], const uint8_t block[64]);
     static std::string md5Hex(const std::string& input);
 
     // ICE-Lite 工作循环（由每个 WebRTC session 的 ice_thread_ 执行）
