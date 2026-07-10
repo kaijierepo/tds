@@ -196,6 +196,34 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 
 		std::string serverIp = session.localIP;
 		if (serverIp.empty()) serverIp = "0.0.0.0";
+		// SDP 规范要求 c= 行和 candidate 行使用数字 IP 地址，
+		// 浏览器严格解析无法接受主机名（如 "localhost"），
+		// 因此如果 localIP 不是数字 IP，则尝试解析为主机名
+		else {
+			bool isNumericIp = true;
+			for (char c : serverIp) {
+				if (!((c >= '0' && c <= '9') || c == '.')) {
+					isNumericIp = false;
+					break;
+				}
+			}
+			if (!isNumericIp) {
+				struct addrinfo hints = {}, *res = nullptr;
+				hints.ai_family = AF_INET;
+				hints.ai_socktype = SOCK_DGRAM;
+				std::string hostname = serverIp;
+				if (getaddrinfo(hostname.c_str(), nullptr, &hints, &res) == 0 && res) {
+					char ipstr[INET_ADDRSTRLEN] = {};
+					inet_ntop(AF_INET,
+						&((struct sockaddr_in*)res->ai_addr)->sin_addr,
+						ipstr, sizeof(ipstr));
+					serverIp = ipstr;
+					freeaddrinfo(res);
+					LOG("[WebRTC] resolved hostname '%s' to IP '%s'",
+						hostname.c_str(), serverIp.c_str());
+				}
+			}
+		}
 
 		std::string fingerprint = m_dtlsFingerprint.empty()
 			? "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:"
