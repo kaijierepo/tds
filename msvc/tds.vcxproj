@@ -688,8 +688,14 @@
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\video\streamNode.cpp" />
+    <ClCompile Include="..\src\video\streamNode_rtsp.cpp" />
+    <ClCompile Include="..\src\video\streamNode_rtp.cpp" />
+    <ClCompile Include="..\src\video\streamNode_socket.cpp" />
     <ClCompile Include="..\src\video\streamNode_webrtc.cpp" />
     <ClCompile Include="..\src\video\streamServer.cpp" />
+    <ClCompile Include="..\src\video\streamServer_file.cpp" />
+    <ClCompile Include="..\src\video\streamServer_rtsp.cpp" />
+    <ClCompile Include="..\src\video\streamServer_rpc.cpp" />
     <ClCompile Include="..\src\video\dtls_transport.cpp" />
     <ClCompile Include="..\src\video\srtp_protect.cpp" />
     <!-- === mbedtls SSL/X.509 library === -->
