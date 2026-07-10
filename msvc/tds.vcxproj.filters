@@ -282,6 +282,9 @@
     <ClCompile Include="..\src\video\streamNode.cpp">
       <Filter>video</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\video\streamNode_webrtc.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\func_module\tdsConf.cpp">
       <Filter>framework</Filter>
     </ClCompile>
@@ -864,6 +867,9 @@
       <Filter>framework</Filter>
     </ClInclude>
     <ClInclude Include="..\src\video\streamNode.h">
+      <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\video\streamNode_webrtc.h">
       <Filter>video</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\tdsConf.h">

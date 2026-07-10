@@ -688,6 +688,7 @@
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\video\streamNode.cpp" />
+    <ClCompile Include="..\src\video\streamNode_webrtc.cpp" />
     <ClCompile Include="..\src\video\streamServer.cpp" />
     <ClCompile Include="..\src\video\dtls_transport.cpp" />
     <ClCompile Include="..\src\video\srtp_protect.cpp" />
@@ -890,6 +891,7 @@
     <ClInclude Include="..\src\script\unicode_gen_def.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\video\streamNode.h" />
+    <ClInclude Include="..\src\video\streamNode_webrtc.h" />
     <ClInclude Include="..\src\video\streamServer.h" />
     <ClInclude Include="..\src\video\dtls_transport.h" />
     <ClInclude Include="..\src\video\srtp_protect.h" />
