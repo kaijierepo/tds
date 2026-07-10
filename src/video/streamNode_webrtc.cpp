@@ -542,10 +542,11 @@ void StreamNode::buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& ser
     }
     // 确保 profile-level-id 存在
     if (!fmtpLine.empty() && fmtpLine.find("profile-level-id") == std::string::npos) {
-        if (si.sps.size() >= 3) {
+        if (si.sps.size() >= 4 && (si.sps[0] & 0x1F) == NAL_TYPE_SPS) {
+            // sps 包含完整 NAL 单元，profile-level-id 取自 SPS RBSP 第 1-3 字节
             char buf[16];
             snprintf(buf, sizeof(buf), "profile-level-id=%02X%02X%02X",
-                si.sps[0], si.sps[1], si.sps[2]);
+                si.sps[1], si.sps[2], si.sps[3]);
             fmtpLine = std::string(buf) + ";" + fmtpLine;
         } else {
             fmtpLine = "profile-level-id=42C01F;" + fmtpLine;

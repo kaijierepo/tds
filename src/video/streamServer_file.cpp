@@ -513,9 +513,13 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	if (!sps.empty() && !pps.empty()) {
 		std::string spsB64 = StreamNode::base64Encode(std::string((char*)sps.data(), sps.size()));
 		std::string ppsB64 = StreamNode::base64Encode(std::string((char*)pps.data(), pps.size()));
-		// 从 SPS 的前 3 字节动态计算 profile-level-id
+		// sps 存储完整 NAL 单元（含 NAL header），profile-level-id 对应 SPS RBSP 第 1-3 字节
 		char profileId[8];
-		snprintf(profileId, sizeof(profileId), "%02X%02X%02X", sps[0], sps[1], sps[2]);
+		if (sps.size() >= 4) {
+			snprintf(profileId, sizeof(profileId), "%02X%02X%02X", sps[1], sps[2], sps[3]);
+		} else {
+			snprintf(profileId, sizeof(profileId), "42C01F");
+		}
 		node->session_origin_pull_.fmtp = std::string("profile-level-id=") + profileId
 			+ ";packetization-mode=1;sprop-parameter-sets="
 			+ spsB64 + "," + ppsB64;
@@ -677,9 +681,13 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	if (!sps.empty() && !pps.empty()) {
 		std::string spsB64 = StreamNode::base64Encode(std::string((char*)sps.data(), sps.size()));
 		std::string ppsB64 = StreamNode::base64Encode(std::string((char*)pps.data(), pps.size()));
-		// 从 SPS 的前 3 字节动态计算 profile-level-id
+		// sps 存储完整 NAL 单元（含 NAL header），profile-level-id 对应 SPS RBSP 第 1-3 字节
 		char profileId[8];
-		snprintf(profileId, sizeof(profileId), "%02X%02X%02X", sps[0], sps[1], sps[2]);
+		if (sps.size() >= 4) {
+			snprintf(profileId, sizeof(profileId), "%02X%02X%02X", sps[1], sps[2], sps[3]);
+		} else {
+			snprintf(profileId, sizeof(profileId), "42C01F");
+		}
 		node->session_origin_pull_.fmtp = std::string("profile-level-id=") + profileId
 			+ ";packetization-mode=1;sprop-parameter-sets="
 			+ spsB64 + "," + ppsB64;
