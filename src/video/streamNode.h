@@ -299,6 +299,11 @@ public:
         void* dtls_transport_ = nullptr;  // 指向 SessionDtlsState 实例
         void* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
 
+        //一个IDR 会被分成多个NALU， 一个NALU 会被分成多个RTP packet发送
+        //当录制.h264或者发送webrtc的rtp是，在连续的多个IDR nalu之前，需要加入sps/pps
+        //last_nalu_was_idr_ 变量用于确认上一个不是idr,下一个是idr的nalu时，发送一次sps/pps
+        bool last_nalu_was_idr_ = false; //判断上一个是否是IDR的RTP包，一般一个IDR帧会分成多个
+
         // ---- 以下成员仅 WebRTC (is_webrtc=true) 使用 ----
         // ICE 处理线程（由 startIceHandleThread 创建，stopAllIceThreads 回收）
         std::thread ice_thread_;

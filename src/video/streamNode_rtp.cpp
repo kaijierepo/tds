@@ -320,26 +320,29 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     // 遍历所有 client_sessions_，对 DTLS+SRTP 已完成的会话通过 SRTP 加密后发送视频
     {
         // 检测当前包是否包含 IDR NAL（用于在 IDR 前插入 SPS/PPS）
-        bool isIdr = false;
+        bool isIdrNalu = false;
         if (!packet.payload.empty()) {
             uint8_t nalHeader = packet.payload[0];
             uint8_t nalType = nalHeader & 0x1F;
+            // 源RTP流中的SPS/PPS直接忽略，webrtc服务自己注入
+            if (nalType == NAL_TYPE_SPS || nalType == NAL_TYPE_PPS) return;
             if (nalType == NAL_TYPE_IDR) {
-                isIdr = true;
+                isIdrNalu = true;
             } else if (nalType == NAL_TYPE_FU_A && packet.payload.size() > 1) {
                 // FU-A: 第二个字节是 FU header，其中低 5 位是 NAL type
+                // FU-A: 单个nalu拆多个rtp packet
                 uint8_t fuHeader = packet.payload[1];
                 uint8_t fuNalType = fuHeader & 0x1F;
-                bool start = (fuHeader & 0x80) != 0; // S 位
-                bool end = (fuHeader & 0x40) != 0;   // E 位
-				if (fuNalType == NAL_TYPE_IDR && start) { // 只有 FU-A 的第一个包（S=1）才算是 IDR 的开始
-                    isIdr = true;
+				if (fuNalType == NAL_TYPE_IDR ) { 
+                    isIdrNalu = true;
                 }
             } else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 2) {
                 // STAP-A: [NAL header(1B)][NALU1 size(2B)][NALU1 data...]...
+                // STAP-A: 一个rtp packet多个nalu，若含SPS/PPS则忽略整个包
                 uint8_t firstNalType = packet.payload[3] & 0x1F;
+                if (firstNalType == NAL_TYPE_SPS || firstNalType == NAL_TYPE_PPS) return;
                 if (firstNalType == NAL_TYPE_IDR) {
-                    isIdr = true;
+                    isIdrNalu = true;
                 }
             }
         }
@@ -370,7 +373,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             }
 
             //每个IDR之前发送 SPS/PPS 
-            if (isIdr && !session->sps.empty() && !session->pps.empty()) {
+            if (isIdrNalu && session->last_nalu_was_idr_ == false && !session->sps.empty() && !session->pps.empty()) {
                 // 辅助函数：发送单个 NAL 的 RTP 包，使用 per-session 独立序列号
                 auto sendSingleNalRtp = [&](const std::vector<uint8_t>& nal) {
                     std::vector<uint8_t> nalData(12 + nal.size());
@@ -401,7 +404,10 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
 
                 sendSingleNalRtp(session->sps);
                 sendSingleNalRtp(session->pps);
+
+                LOG("send sps/pps");
             }
+            session->last_nalu_was_idr_ = isIdrNalu;
 
 
             // 用 per-session 独立序列号+PT 替换原始 seq/PT 后发送
