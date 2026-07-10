@@ -217,12 +217,12 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
             response[pos++] = 0x00; response[pos++] = 0x14;  // attr len = 20
             pos += 20;  // HMAC-SHA1 占位
 
-            // ---- 添加 FINGERPRINT 占位（CRC-32，必须放在最后）----
+            // ---- 设置 STUN 头长度（不含 FINGERPRINT，符合 RFC 5389）----
+            // HMAC 覆盖范围：header + 所有属性（含 MESSAGE-INTEGRITY 头但不含其值，
+            // 且不含 FINGERPRINT），RFC 5389 §15.4
             int attrLen = pos - 20;
             response[lenPos]     = (attrLen >> 8) & 0xFF;
             response[lenPos + 1] = attrLen & 0xFF;
-
-            // ★ 关键：先设置最终长度（含 FINGERPRINT），再计算 HMAC。
             const std::string& icePwd = session->ice_pwd;
             if (!icePwd.empty()) {
                 psa_mac_operation_t macOp = psa_mac_operation_init();
@@ -276,8 +276,8 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
                 int finalAttrLen = pos - 20;
                 response[lenPos]     = (finalAttrLen >> 8) & 0xFF;
                 response[lenPos + 1] = finalAttrLen & 0xFF;
-                // 计算 CRC-32（覆盖整个 STUN 消息，不含 FINGERPRINT 属性本身）
-                // 即：header + 所有属性（不含 FINGERPRINT 的 type/length/value）
+
+                // CRC-32 表
                 static const uint32_t crcTable[256] = {
                     0x00000000,0x77073096,0xee0e612c,0x990951ba,0x076dc419,0x706af48f,0xe963a535,0x9e6495a3,
                     0x0edb8832,0x79dcb8a4,0xe0d5e91e,0x97d2d988,0x09b64c2b,0x7eb17cbd,0xe7b82d07,0x90bf1d91,
