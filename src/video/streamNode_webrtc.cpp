@@ -406,6 +406,9 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
                 } else if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED) {
                     // DTLS Cookie 验证：等待客户端重发带 Cookie 的 ClientHello
                     // 这是正常流程，退出循环等待下一个数据包
+                    // 重置超时计时器：doHandshakeStep 循环可能耗时较长，
+                    // 避免在回到主循环顶部时立即触发 8s 超时
+                    dtls_start = std::chrono::steady_clock::now();
                     break;
                 } else if (ret == 0) {
                     // 中间步骤成功（如 HELLO_REQUEST→CLIENT_HELLO 状态转换），

@@ -493,8 +493,8 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	auto node = std::make_shared<StreamNode>();
 	StreamNode::Config cfg;
 	cfg.tag = tag;
-	cfg.source_url = "file://" + filePath;
-	cfg.target_url = "";
+	cfg.origin_pull_url = "file://" + filePath;
+	cfg.relay_push_url = "";
 	cfg.retry_interval = 0;
 	cfg.max_retries = 0;
 	cfg.rtp_timeout = 0;
@@ -525,7 +525,7 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 			+ spsB64 + "," + ppsB64;
 	}
 
-	node->session_origin_pull_.session_type_ = StreamNode::ORIGIN_PULL;
+	node->session_origin_pull_.session_type_ = ORIGIN_PULL;
 	node->session_origin_pull_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;
@@ -664,8 +664,8 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	auto node = std::make_shared<StreamNode>();
 	StreamNode::Config cfg;
 	cfg.tag = tag;
-	cfg.source_url = "file://" + filePath;
-	cfg.target_url = "";
+	cfg.origin_pull_url = "file://" + filePath;
+	cfg.relay_push_url = "";
 	cfg.retry_interval = 0;
 	cfg.max_retries = 0;
 	cfg.rtp_timeout = 0;
@@ -693,7 +693,7 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 			+ spsB64 + "," + ppsB64;
 	}
 
-	node->session_origin_pull_.session_type_ = StreamNode::ORIGIN_PULL;
+	node->session_origin_pull_.session_type_ = ORIGIN_PULL;
 	node->session_origin_pull_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;

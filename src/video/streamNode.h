@@ -71,6 +71,13 @@ struct SrptContext;
 #define NAL_TYPE_STAP_A           24
 #define NAL_TYPE_FU_A             28
 
+enum STREAM_SESSION_TYPE {
+    ORIGIN_PULL,    //自身作为客户端，向服务端拉流； 主动从流媒体源获取流
+    RELAY_PUSH,    //自身作为客户端，向服务端推流;  转发到另外一个流媒体服务器
+    CLIENT_PULL,    //自身作为服务端，接收客户端拉流
+    CLIENT_PUBLISH     //自身作为服务端，接收客户端推流
+};
+
 class StreamNode {
 public:
     enum State {
@@ -107,8 +114,8 @@ public:
 
     // 配置结构
     struct Config {
-        std::string source_url;      // 源RTSP地址
-        std::string target_url;       // 目标RTSP地址
+        std::string origin_pull_url;      // 源RTSP地址
+        std::string relay_push_url;       // 目标RTSP地址
         std::string source_username; // 源用户名（可选）
         std::string source_password;  // 源密码（可选）
         std::string target_username;  // 目标用户名（可选）
@@ -204,6 +211,8 @@ public:
     void setErrorCallback(ErrorCallback cb);
 
     bool extractRtspAuthInfo(StreamNode::Config& config);
+    std::string getSessionTypeDesc(STREAM_SESSION_TYPE sessionType);
+
 
 public:
 #ifdef _WIN32
@@ -240,13 +249,6 @@ public:
 
         bool parse(const uint8_t* data, size_t size);
         std::vector<uint8_t> serialize() const;
-    };
-
-    enum STREAM_SESSION_TYPE {
-        ORIGIN_PULL,    //自身作为客户端，向服务端拉流； 主动从流媒体源获取流
-		RELAY_PUSH,    //自身作为客户端，向服务端推流;  转发到另外一个流媒体服务器
-		CLIENT_PULL,    //自身作为服务端，接收客户端拉流
-		CLIENT_PUBLISH     //自身作为服务端，接收客户端推流
     };
 
     enum SESSION_STATE {

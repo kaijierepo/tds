@@ -110,7 +110,7 @@ std::shared_ptr<StreamNode> StreamServer::getStreamNodeByIp(const std::string& i
 	for (const auto& pair : m_mapStreamNodes) 
 	{
 		if (pair.second &&
-			pair.second->config_.source_url.find(ip) != std::string::npos) 
+			pair.second->config_.origin_pull_url.find(ip) != std::string::npos) 
 		{
 			return pair.second;
 		}
@@ -124,7 +124,7 @@ std::shared_ptr<StreamNode> StreamServer::getStreamNodeBySrcUrl(const std::strin
 	for (const auto& pair : m_mapStreamNodes)
 	{
 		if (pair.second &&
-			pair.second->config_.source_url == srcUrl)
+			pair.second->config_.origin_pull_url == srcUrl)
 		{
 			return pair.second;
 		}
@@ -139,19 +139,19 @@ bool StreamServer::openStream(string tag,string srcUrl, string pushTo)
 	std::shared_ptr<StreamNode> sn = getStreamNodeByTag(tag);
 
 	if (sn) {
-		if (sn->config_.source_url == srcUrl && sn->config_.target_url == pushTo) {
+		if (sn->config_.origin_pull_url == srcUrl && sn->config_.relay_push_url == pushTo) {
 			LOG("[流媒体] 媒体源已打开，收到重复打开请求，忽略, 位号:%s, 当前配置地址:%s",
-				tag.c_str(), sn->config_.source_url.c_str());
+				tag.c_str(), sn->config_.origin_pull_url.c_str());
 			return false;
 		}
-		if (sn->config_.source_url != srcUrl) {
+		if (sn->config_.origin_pull_url != srcUrl) {
 			LOG("[流媒体] 媒体源变更，重启streamNode，当前拉流地址:%s, 新地址:%s",
-				sn->config_.source_url.c_str(), srcUrl.c_str());
+				sn->config_.origin_pull_url.c_str(), srcUrl.c_str());
 			closeStream(tag);
 		}
-		if (sn->config_.target_url != pushTo) {
+		if (sn->config_.relay_push_url != pushTo) {
 			LOG("[流媒体] 推流地址变更，重启streamNode, 当前推流地址:%s, 新地址:%s",
-				sn->config_.target_url.c_str(), pushTo.c_str());
+				sn->config_.relay_push_url.c_str(), pushTo.c_str());
 			closeStream(tag);
 		}
 	}
@@ -161,10 +161,10 @@ bool StreamServer::openStream(string tag,string srcUrl, string pushTo)
 
 
 	StreamNode::Config config;
-	config.source_url = srcUrl; 
+	config.origin_pull_url = srcUrl; 
 	// 提取用户名和密码
 	bool isSuccess = sn->extractRtspAuthInfo(config);
-	config.target_url = pushTo; // 目标地址
+	config.relay_push_url = pushTo; // 目标地址
 	config.retry_interval = 3000;
 	config.max_retries = 0; // 无限重试
 	config.rtp_timeout = 10000;

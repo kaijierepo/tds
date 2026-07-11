@@ -336,8 +336,8 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				// 创建一个只用于接收的 StreamNode（不发起拉流）
 				StreamNode::Config cfg;
 				cfg.tag = tag;
-				cfg.source_url = "";  // 没有源，纯接收端
-				cfg.target_url = "";
+				cfg.origin_pull_url = "";  // 没有源，纯接收端
+				cfg.relay_push_url = "";
 				cfg.retry_interval = 3000;
 				cfg.max_retries = 0;
 				cfg.rtp_timeout = 10000;
@@ -346,7 +346,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				// 直接设置 pull_session_ 信息（跳过 doStreamPull）
 				node->config_ = cfg;
 				node->session_origin_pull_ = videoInfo;
-				node->session_origin_pull_.session_type_ = StreamNode::ORIGIN_PULL;
+				node->session_origin_pull_.session_type_ = ORIGIN_PULL;
 				node->isPulling_ = true;  // 标记为"有流数据"，使 DESCRIBE 不会等待
 				node->running_ = true;
 				node->state_ = StreamNode::State::PLAYING;
@@ -360,7 +360,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 			else {
 				// 已存在的节点，更新编码信息
 				streamNode->session_origin_pull_ = videoInfo;
-				streamNode->session_origin_pull_.session_type_ = StreamNode::ORIGIN_PULL;
+				streamNode->session_origin_pull_.session_type_ = ORIGIN_PULL;
 				streamNode->isPulling_ = true;
 			}
 
@@ -542,7 +542,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				// ---- 推流模式 SETUP ----
 				rtspSession.client_rtp_port = clientRtpPort;
 				rtspSession.client_rtcp_port = clientRtcpPort;
-				rtspSession.session_type_ = StreamNode::CLIENT_PUBLISH;
+				rtspSession.session_type_ = CLIENT_PUBLISH;
 
 				if (isTcpTransport && interleavedRtp >= 0) {
 					// ---- TCP interleaved 模式：RTP 数据通过 RTSP TCP 连接传输 ----
@@ -694,7 +694,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				// ---- 拉流模式 SETUP ----
 				// 复制流信息，设置会话参数
 				rtspSession = streamNode->session_origin_pull_;
-				rtspSession.session_type_ = StreamNode::CLIENT_PULL;
+				rtspSession.session_type_ = CLIENT_PULL;
 				rtspSession.is_webrtc = false;
 				rtspSession.client_rtp_port = clientRtpPort;
 				rtspSession.client_rtcp_port = clientRtcpPort;

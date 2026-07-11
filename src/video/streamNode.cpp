@@ -420,7 +420,7 @@ bool StreamNode::start(const Config& config) {
     control_thread_ = std::thread(&StreamNode::controlThread, this);
 	control_thread_.detach();
 
-    LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), config_.source_url.c_str(), config_.target_url.c_str());
+    LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), config_.origin_pull_url.c_str(), config_.relay_push_url.c_str());
 
     return true;
 }
@@ -700,7 +700,7 @@ bool StreamNode::extractRtspAuthInfo(StreamNode::Config& config) {
     std::smatch matchResult;
 
     // 匹配URL并提取用户名和密码
-    if (std::regex_match(config.source_url, matchResult, rtspRegex)) {
+    if (std::regex_match(config.origin_pull_url, matchResult, rtspRegex)) {
         if (matchResult.size() >= 3) {
             config.source_username = matchResult[1].str();
             config.source_password = matchResult[2].str();
@@ -712,4 +712,23 @@ bool StreamNode::extractRtspAuthInfo(StreamNode::Config& config) {
     config.source_username = "";
     config.source_password = "";
     return false;
+}
+
+std::string StreamNode::getSessionTypeDesc(STREAM_SESSION_TYPE sessionType)
+{
+    if (sessionType == STREAM_SESSION_TYPE::ORIGIN_PULL) {
+        return "origin_pull";
+    }
+    else if (sessionType == STREAM_SESSION_TYPE::RELAY_PUSH) {
+        return "relay_push";
+    }
+    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_PULL) {
+        return "client_pull";
+    }
+    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_PUBLISH) {
+        return "client_publish";
+    }
+
+
+    return "unknown";
 }

@@ -8,8 +8,8 @@
 
 json getStreamInfo(shared_ptr<StreamNode> rc) {
 	json jSi;
-	jSi["srcUrl"] = rc->config_.source_url;
-	jSi["destUrl"] = rc->config_.target_url;
+	jSi["originPullUrl"] = rc->config_.origin_pull_url;
+	jSi["relayPushUrl"] = rc->config_.relay_push_url;
 	json jRtpBuffer;
 	jRtpBuffer["size"] = rc->rtp_buffer_.size();
 	jRtpBuffer["maxSeconds"] = rc->rtp_buffer_max_seconds_;
@@ -30,12 +30,19 @@ json getStreamInfo(shared_ptr<StreamNode> rc) {
 	jStatis["reconnectCount"] = statis.reconnect_count;
 	jSi["statis"] = jStatis;
 	jSi["startTime"] = statis.start_time.time_since_epoch().count();
-	json clientSession;
+	json clientSession = json::array();
 	std::lock_guard<std::mutex> lock(rc->session_list_client_pull_mutex_);
-	for (const auto& pair : rc->session_list_client_pull_)
+	for (const auto& session : rc->session_list_client_pull_)
 	{
-
+		json j;
+		j["sessionType"] = rc->getSessionTypeDesc(session->session_type_);
+		j["clientRtpPort"] = session->client_rtp_port;
+		j["clientRtcpPort"] = session->client_rtcp_port;
+		j["serverRtpPort"] = session->server_rtp_port;
+		j["serverRtcpPort"] = session->server_rtcp_port;
+		clientSession.push_back(j);
 	}
+	jSi["clientSessions"] = clientSession;
 
 	return jSi;
 }
@@ -112,18 +119,18 @@ bool StreamServer::rpc_startStreamNode(yyjson_val* params, RPC_RESP& rpcResp, RP
 
 	// 3. 配置 sn
 	StreamNode::Config config;
-	config.source_url = srcUrl; // 源地址
+	config.origin_pull_url = srcUrl; // 源地址
 	// 提取用户名和密码
 	bool isSuccess = sn->extractRtspAuthInfo(config);
 
-	config.target_url = destUrl;
+	config.relay_push_url = destUrl;
 	config.retry_interval = 3000;
 	config.max_retries = 0; // 无限重试
 	config.rtp_timeout = 10000;
 
 	// 4. 启动 sn
 	LOG("[流媒体] 启动 StreamNode (内置模式)，源: %s, 目标: %s",
-		config.source_url.c_str(), config.target_url.c_str());
+		config.origin_pull_url.c_str(), config.relay_push_url.c_str());
 
 	if (sn->start(config)) {
 		std::lock_guard<std::mutex> lock(nodeLock_);
@@ -189,7 +196,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		auto rc = getStreamNodeByTag(tag);
 	if (rc) {
 		StreamNode::STREAM_SESSION si = rc->session_origin_pull_;
-		si.session_type_ = StreamNode::CLIENT_PULL;
+		si.session_type_ = CLIENT_PULL;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
 		// 从浏览器 Offer 中解析 H264 payload type（避免 PT 冲突）
