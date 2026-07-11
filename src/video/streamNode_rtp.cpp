@@ -371,7 +371,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     for (auto& session : playClients) {
         if (!session || !session->is_webrtc) continue;
         // state: 3=SRTP激活（is_webrtc 下 S3_SRTP_ACTIVE 即为激活态）
-        if (session->state != SESSION_STATE::S3_SRTP_ACTIVE) continue;
+        if (session->state != WEBRTC_SESSION_STATE::SRTP_ACTIVE) continue;
 
         // 通过 SessionDtlsState 正确访问 DTLS 和 SRTP 上下文
         auto* dtlsState = static_cast<SessionDtlsState*>(session->dtls_transport_);

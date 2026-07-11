@@ -94,7 +94,7 @@ public:
 
     /**
      * @brief 运行 DTLS 握手的主循环步骤（非阻塞）
-     *        在 iceHandleLoop 中每收到 DTLS 包时调用
+     *        在 rtcSessionHandleThread 中每收到 DTLS 包时调用
      * @return 0=成功, MBEDTLS_ERR_SSL_WANT_READ/WRITE=需等待,
      *         其他=错误
      */

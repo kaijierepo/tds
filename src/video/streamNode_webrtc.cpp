@@ -10,7 +10,7 @@
 // ICE-Lite + DTLS + SRTP (WebRTC) 实现 — 每客户端一线程
 // ============================================================================
 
-void StreamNode::startIceHandleThread(std::shared_ptr<STREAM_SESSION> session) {
+void StreamNode::startRtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session) {
     if (!session || session->rtp_socket == kInvalidSocket || !session->is_webrtc) {
         return;
     }
@@ -26,14 +26,14 @@ void StreamNode::startIceHandleThread(std::shared_ptr<STREAM_SESSION> session) {
                (const char*)&tv, sizeof(tv));
 #endif
 
-    session->ice_running_ = true;
-    session->ice_thread_ = std::thread(&StreamNode::iceHandleLoop, this, session);
+    session->rtc_handle_thread_running_ = true;
+    session->rtc_handle_thread_ = std::thread(&StreamNode::rtcSessionHandleThread, this, session);
 
     logInfo("ICE thread started for socket fd=" + std::to_string(session->rtp_socket)
             + " ufrag=" + session->ice_ufrag);
 }
 
-void StreamNode::stopAllIceThreads() {
+void StreamNode::stopAllRtcHandleThreads() {
     // 获取所有 client_sessions_ 快照，停止其中的 WebRTC ICE 线程
     std::vector<std::shared_ptr<STREAM_SESSION>> sessions;
     {
@@ -44,9 +44,9 @@ void StreamNode::stopAllIceThreads() {
     for (auto& s : sessions) {
         if (!s || !s->is_webrtc) continue;
 
-        s->ice_running_ = false;
-        if (s->ice_thread_.joinable()) {
-            s->ice_thread_.join();
+        s->rtc_handle_thread_running_ = false;
+        if (s->rtc_handle_thread_.joinable()) {
+            s->rtc_handle_thread_.join();
         }
         // 清理 DTLS 状态（iceHandleLoop 退出时通常已清理，这里兜底）
         if (s->dtls_transport_) {
@@ -58,7 +58,8 @@ void StreamNode::stopAllIceThreads() {
     }
 }
 
-void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
+
+void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session) {
     uint8_t buf[2048];
 
     // 初始化本会话的 DTLS 状态
@@ -82,7 +83,7 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
 
     auto dtls_start = std::chrono::steady_clock::now();
 
-    while (session->ice_running_) {
+    while (session->rtc_handle_thread_running_) {
         struct sockaddr_in peer;
         socklen_t peerLen = sizeof(peer);
         int len = recvfrom(static_cast<SOCKET_TYPE>(session->rtp_socket),
@@ -90,12 +91,12 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
                            (struct sockaddr*)&peer, &peerLen);
 
         // 检查 DTLS 握手是否超时（8秒内 state 未到 3）
-        if (session->state >= S1_ICE_CONNECTED && session->state < S3_SRTP_ACTIVE) {
+        if (session->state >= DTLS_HANDSHAKE && session->state < SRTP_ACTIVE) {
             auto now = std::chrono::steady_clock::now();
             if (now - dtls_start > std::chrono::seconds(8)) {
                 LOG("[ICE] DTLS handshake timeout (8s), state=%d",
                     (int)session->state);
-                session->ice_running_ = false;
+                session->rtc_handle_thread_running_ = false;
                 break;
             }
         }
@@ -354,8 +355,8 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
 
             // ICE 连通性确认：收到 Binding Request 并回复 Response
             // 只在初始状态(0)时升级为1，避免 keep-alive Binding Request 把 SRTP 激活(3)降级
-            if (session->state == SESSION_STATE::S0_WAITING_ICE) {
-                session->state = SESSION_STATE::S1_ICE_CONNECTED;
+            if (session->state == WEBRTC_SESSION_STATE::ICE) {
+                session->state = WEBRTC_SESSION_STATE::DTLS_HANDSHAKE;
                 dtls_start = std::chrono::steady_clock::now();  // 开始 DTLS 握手计时
             }
         }
@@ -385,7 +386,7 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
                 // 握手成功：doHandshakeStep 内部已设置 handshake_done_ 并导出密钥
                 if (dtls_state->dtls.isHandshakeDone()) {
                     dtls_state->srtp_ready = true;
-                    session->state = SESSION_STATE::S2_DTLS_COMPLETED; // DTLS 完成
+                    session->state = WEBRTC_SESSION_STATE::SRTP_ACTIVE; 
 
                     // 初始化 SRTP 上下文（服务端使用 server_write_key）
                     const auto& keys = dtls_state->dtls.getKeyingMaterial();
@@ -394,7 +395,7 @@ void StreamNode::iceHandleLoop(std::shared_ptr<STREAM_SESSION> session) {
                             keys, true, /* is_server */
                             0);         // ssrc 将在发送时设置
 
-                        session->state = SESSION_STATE::S3_SRTP_ACTIVE; // SRTP 激活
+                        session->state = WEBRTC_SESSION_STATE::SRTP_ACTIVE; // SRTP 激活
                         LOG("[ICE] DTLS handshake + SRTP keys ready for socket fd="
                             + std::to_string(session->rtp_socket));
                     }

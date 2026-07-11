@@ -251,11 +251,10 @@ public:
         std::vector<uint8_t> serialize() const;
     };
 
-    enum SESSION_STATE {
-        S0_WAITING_ICE = 0,
-        S1_ICE_CONNECTED,
-        S2_DTLS_COMPLETED,
-        S3_SRTP_ACTIVE
+    enum WEBRTC_SESSION_STATE {
+        ICE = 0,
+        DTLS_HANDSHAKE,
+        SRTP_ACTIVE
 	};
 
     // 媒体流信息
@@ -292,7 +291,7 @@ public:
         bool is_webrtc = false;
         std::string ice_ufrag;
         std::string ice_pwd;
-        SESSION_STATE state = SESSION_STATE::S0_WAITING_ICE;
+        WEBRTC_SESSION_STATE state = WEBRTC_SESSION_STATE::ICE;
 
         // 从实际 RTP 流中捕获的视频 SSRC（用于 SDP 声明）
         uint32_t      video_ssrc = 0;
@@ -305,9 +304,9 @@ public:
         bool is_first_send_ = true;
 
         // ---- 以下成员仅 WebRTC (is_webrtc=true) 使用 ----
-        // ICE 处理线程（由 startIceHandleThread 创建，stopAllIceThreads 回收）
-        std::thread ice_thread_;
-        std::atomic<bool> ice_running_{true};
+        // ICE 处理线程（由 startRtcSessionHandleThread 创建，stopAllIceThreads 回收）
+        std::thread rtc_handle_thread_;
+        std::atomic<bool> rtc_handle_thread_running_{true};
 
         STREAM_SESSION() = default;
         STREAM_SESSION(STREAM_SESSION&&) = default;
@@ -538,8 +537,8 @@ public:
     int receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port);
 
     // ICE-Lite (WebRTC) — 每客户端一线程处理 STUN 请求
-    void startIceHandleThread(std::shared_ptr<STREAM_SESSION> session);
-    void stopAllIceThreads();
+    void startRtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);
+    void stopAllRtcHandleThreads();
 
     // WebRTC SDP Answer 构建（设置 si.is_webrtc/ice_ufrag/ice_pwd/sdp）
     static void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
@@ -560,5 +559,5 @@ private:
     static std::string md5Hex(const std::string& input);
 
     // ICE-Lite 工作循环（由每个 WebRTC session 的 ice_thread_ 执行）
-    void iceHandleLoop(std::shared_ptr<STREAM_SESSION> session);
+    void rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);
 };

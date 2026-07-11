@@ -251,7 +251,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		rc->session_list_client_pull_.push_back(sessionPtr);
 		rc->session_list_client_pull_mutex_.unlock();
 
-		rc->startIceHandleThread(sessionPtr);
+		rc->startRtcSessionHandleThread(sessionPtr);
 
 #ifdef _WIN32
 		Sleep(1000);

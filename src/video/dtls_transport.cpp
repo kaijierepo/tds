@@ -54,7 +54,7 @@ int DtlsTransport::bio_recv(void* ctx, unsigned char* buf, size_t len) {
         return MBEDTLS_ERR_NET_RECV_FAILED;
 
     // 只从内部缓冲区读取，不直接读 socket
-    // 所有数据统一由 iceHandleLoop 的 recvfrom → feedData 路径喂入
+    // 所有数据统一由 rtcSessionHandleThread 的 recvfrom → feedData 路径喂入
     {
         std::lock_guard<std::mutex> lock(self->recv_buf_mutex_);
         if (!self->recv_buf_.empty()) {

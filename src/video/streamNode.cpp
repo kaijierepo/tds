@@ -434,7 +434,7 @@ void StreamNode::stop() {
     cv_.notify_all();
 
     // 停止所有 ICE 线程
-    stopAllIceThreads();
+    stopAllRtcHandleThreads();
 
     if (rtp_handle_thread_.joinable()) {
         rtp_handle_thread_.join();
