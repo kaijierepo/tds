@@ -722,13 +722,18 @@ std::string StreamNode::getSessionTypeDesc(STREAM_SESSION_TYPE sessionType)
     else if (sessionType == STREAM_SESSION_TYPE::RELAY_PUSH) {
         return "relay_push";
     }
-    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_PULL) {
-        return "client_pull";
+    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_RTSP_PULL) {
+        return "client_rtsp_pull";
     }
-    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_PUBLISH) {
-        return "client_publish";
+    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_RTSP_PUBLISH) {
+        return "client_rtsp_publish";
     }
-
+    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PULL) {
+        return "client_webrtc_pull";
+    }
+    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PUBLISH) {
+        return "client_webrtc_publish";
+    }
 
     return "unknown";
 }

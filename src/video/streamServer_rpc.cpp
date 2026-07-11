@@ -8,6 +8,8 @@
 
 json getStreamInfo(shared_ptr<StreamNode> rc) {
 	json jSi;
+	jSi["streamUrl"] = rc->config_.streamUrl;
+	jSi["tag"] = rc->config_.tag;
 	jSi["originPullUrl"] = rc->config_.origin_pull_url;
 	jSi["relayPushUrl"] = rc->config_.relay_push_url;
 	json jRtpBuffer;
@@ -40,6 +42,26 @@ json getStreamInfo(shared_ptr<StreamNode> rc) {
 		j["clientRtcpPort"] = session->client_rtcp_port;
 		j["serverRtpPort"] = session->server_rtp_port;
 		j["serverRtcpPort"] = session->server_rtcp_port;
+		std::time_t tt = std::chrono::system_clock::to_time_t(session->last_stun_bind_req_time);
+		// 转换为 tm 结构（本地时间）
+		std::tm local_tm;
+#ifdef _WIN32
+		localtime_s(&local_tm, &tt);
+#else
+		localtime_r(&tt, &local_tm);
+#endif
+		char buffer[24] = {0}; // YYYY-MM-DD HH:MM:SS.xxx 共23字符 + '\0'
+		std::snprintf(buffer, sizeof(buffer),
+			"%04d-%02d-%02d %02d:%02d:%02d.%03lld",
+			local_tm.tm_year + 1900,
+			local_tm.tm_mon + 1,
+			local_tm.tm_mday,
+			local_tm.tm_hour,
+			local_tm.tm_min,
+			local_tm.tm_sec,
+			0);
+		string sTime = buffer;
+		j["lastStunBindReqTime"] = sTime;
 		clientSession.push_back(j);
 	}
 	jSi["clientSessions"] = clientSession;
@@ -196,7 +218,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		auto rc = getStreamNodeByTag(tag);
 	if (rc) {
 		StreamNode::STREAM_SESSION si = rc->session_origin_pull_;
-		si.session_type_ = CLIENT_PULL;
+		si.session_type_ = CLIENT_WEBRTC_PULL;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
 		// 从浏览器 Offer 中解析 H264 payload type（避免 PT 冲突）

@@ -542,7 +542,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				// ---- 推流模式 SETUP ----
 				rtspSession.client_rtp_port = clientRtpPort;
 				rtspSession.client_rtcp_port = clientRtcpPort;
-				rtspSession.session_type_ = CLIENT_PUBLISH;
+				rtspSession.session_type_ = CLIENT_RTSP_PUBLISH;
 
 				if (isTcpTransport && interleavedRtp >= 0) {
 					// ---- TCP interleaved 模式：RTP 数据通过 RTSP TCP 连接传输 ----
@@ -694,7 +694,7 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				// ---- 拉流模式 SETUP ----
 				// 复制流信息，设置会话参数
 				rtspSession = streamNode->session_origin_pull_;
-				rtspSession.session_type_ = CLIENT_PULL;
+				rtspSession.session_type_ = CLIENT_RTSP_PULL;
 				rtspSession.is_webrtc = false;
 				rtspSession.client_rtp_port = clientRtpPort;
 				rtspSession.client_rtcp_port = clientRtcpPort;

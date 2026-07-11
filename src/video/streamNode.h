@@ -42,7 +42,7 @@
 class DtlsTransport;
 class SrptProtect;
 struct SrptContext;
-
+struct SessionDtlsState;
 // RTP包结�?
 // NAL header (1 byte) format: F(1) | NRI(2) | Type(5)
 // - F: forbidden_zero_bit
@@ -74,8 +74,10 @@ struct SrptContext;
 enum STREAM_SESSION_TYPE {
     ORIGIN_PULL,    //自身作为客户端，向服务端拉流； 主动从流媒体源获取流
     RELAY_PUSH,    //自身作为客户端，向服务端推流;  转发到另外一个流媒体服务器
-    CLIENT_PULL,    //自身作为服务端，接收客户端拉流
-    CLIENT_PUBLISH     //自身作为服务端，接收客户端推流
+    CLIENT_RTSP_PULL,    //自身作为服务端，接收rtsp客户端拉流
+    CLIENT_RTSP_PUBLISH,     //自身作为服务端，接收rtsp客户端推流
+    CLIENT_WEBRTC_PULL,    //自身作为服务端，接收webrtc客户端拉流
+    CLIENT_WEBRTC_PUBLISH     //自身作为服务端，接收webrtc客户端推流
 };
 
 class StreamNode {
@@ -270,6 +272,7 @@ public:
         std::vector<uint8_t> pps;
         std::string sdp;
         STREAM_SESSION_TYPE session_type_;
+        std::chrono::system_clock::time_point last_stun_bind_req_time;
 
         // 传输信息
         TransportMode transport_mode = TransportMode::UDP;
@@ -560,4 +563,16 @@ private:
 
     // ICE-Lite 工作循环（由每个 WebRTC session 的 ice_thread_ 执行）
     void rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);
+
+    // ICE-Lite STUN 处理：解析 Binding Request 并回复 Binding Success Response
+    void webrtcSession_handle_STUN(std::shared_ptr<STREAM_SESSION> session,
+                                    uint8_t* buf, int len,
+                                    struct sockaddr_in& peer,
+                                    std::chrono::steady_clock::time_point& dtls_start);
+    // DTLS 握手处理：喂入数据并推进握手状态机
+    void webrtcSession_handle_DTLS(std::shared_ptr<STREAM_SESSION> session,
+                                    SessionDtlsState* dtls_state,
+                                    uint8_t* buf, int len,
+                                    struct sockaddr_in& peer,
+                                    std::chrono::steady_clock::time_point& dtls_start);
 };
