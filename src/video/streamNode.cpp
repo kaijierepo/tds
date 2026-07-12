@@ -166,7 +166,7 @@ size_t IsValidPkt_HTTP(std::string& strData, size_t iLen) {
 // Connection 实现
 // ============================================================================
 
-StreamNode::Connection::Connection() : sockfd_(StreamNode::kInvalidSocket) {
+StreamNode::Connection::Connection() : sockfd_(kInvalidSocket) {
 }
 
 StreamNode::Connection::~Connection() {
@@ -178,8 +178,8 @@ bool StreamNode::Connection::connect(const std::string& host, int port, int time
     last_error_ = 0;
 
     // 创建socket
-    sockfd_ = static_cast<StreamNode::SocketHandle>(socket(AF_INET, SOCK_STREAM, 0));
-    if (sockfd_ == StreamNode::kInvalidSocket) {
+    sockfd_ = static_cast<SocketHandle>(socket(AF_INET, SOCK_STREAM, 0));
+    if (sockfd_ == kInvalidSocket) {
         last_error_ = SOCKET_ERROR_NUM;
         return false;
     }
@@ -200,7 +200,7 @@ bool StreamNode::Connection::connect(const std::string& host, int port, int time
         if (!server) {
             last_error_ = SOCKET_ERROR_NUM;
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
-            sockfd_ = StreamNode::kInvalidSocket;
+            sockfd_ = kInvalidSocket;
             return false;
         }
         memcpy(&serv_addr.sin_addr, server->h_addr, server->h_length);
@@ -210,7 +210,7 @@ bool StreamNode::Connection::connect(const std::string& host, int port, int time
     if (::connect(static_cast<SOCKET_TYPE>(sockfd_), (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
         last_error_ = SOCKET_ERROR_NUM;
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
-        sockfd_ = StreamNode::kInvalidSocket;
+        sockfd_ = kInvalidSocket;
         return false;
     }
 
@@ -230,9 +230,9 @@ bool StreamNode::Connection::connect(const std::string& host, int port, int time
 }
 
 void StreamNode::Connection::disconnect() {
-    if (sockfd_ != StreamNode::kInvalidSocket) {
+    if (sockfd_ != kInvalidSocket) {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
-        sockfd_ = StreamNode::kInvalidSocket;
+        sockfd_ = kInvalidSocket;
     }
     host_.clear();
     port_ = 0;
@@ -240,11 +240,11 @@ void StreamNode::Connection::disconnect() {
 }
 
 bool StreamNode::Connection::isConnected() const {
-    return sockfd_ != StreamNode::kInvalidSocket;
+    return sockfd_ != kInvalidSocket;
 }
 
 int StreamNode::Connection::send(const void* data, size_t size, int timeout_ms) {
-    if (sockfd_ == StreamNode::kInvalidSocket) return -1;
+    if (sockfd_ == kInvalidSocket) return -1;
 
     if (timeout_ms > 0) {
         setSocketTimeout(timeout_ms);
@@ -280,7 +280,7 @@ int StreamNode::Connection::send(const void* data, size_t size, int timeout_ms) 
 }
 
 int StreamNode::Connection::receive(void* buffer, size_t size, int timeout_ms) {
-    if (sockfd_ == StreamNode::kInvalidSocket) return -1;
+    if (sockfd_ == kInvalidSocket) return -1;
 
     if (timeout_ms > 0) {
         setSocketTimeout(timeout_ms);
@@ -303,7 +303,7 @@ int StreamNode::Connection::receive(void* buffer, size_t size, int timeout_ms) {
 }
 
 int StreamNode::Connection::receiveHttpResp(std::string& response, int timeout_ms) {
-    if (sockfd_ == StreamNode::kInvalidSocket) return -1;
+    if (sockfd_ == kInvalidSocket) return -1;
 
     int total = 0;
     char buf[1000] = { 0 };
@@ -356,7 +356,7 @@ int StreamNode::Connection::receiveHttpResp(std::string& response, int timeout_m
 }
 
 bool StreamNode::Connection::setSocketTimeout(int timeout_ms) {
-    if (sockfd_ == StreamNode::kInvalidSocket) return false;
+    if (sockfd_ == kInvalidSocket) return false;
 
 #ifdef _WIN32
     DWORD tv = timeout_ms;
@@ -737,3 +737,4 @@ std::string StreamNode::getSessionTypeDesc(STREAM_SESSION_TYPE sessionType)
 
     return "unknown";
 }
+

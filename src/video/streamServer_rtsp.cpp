@@ -22,13 +22,13 @@ void StreamServer::stopRtspServer() {
 	m_rtspRunning_ = false;
 
 	// 关闭监听 socket 以唤醒 accept
-	if (m_rtspListenSock_ != StreamNode::kInvalidSocket) {
+	if (m_rtspListenSock_ != kInvalidSocket) {
 #ifdef _WIN32
 		closesocket(static_cast<SOCKET>(m_rtspListenSock_));
 #else
 		close(m_rtspListenSock_);
 #endif
-		m_rtspListenSock_ = StreamNode::kInvalidSocket;
+		m_rtspListenSock_ = kInvalidSocket;
 	}
 
 	if (m_rtspThread_.joinable()) {
@@ -41,14 +41,14 @@ void StreamServer::stopRtspServer() {
 		for (auto& pair : m_pushSessions_) {
 			if (pair.second) {
 				pair.second->recv_running_ = false;
-				if (pair.second->rtp_sock != StreamNode::kInvalidSocket) {
+				if (pair.second->rtp_sock != kInvalidSocket) {
 #ifdef _WIN32
 					closesocket(static_cast<SOCKET>(pair.second->rtp_sock));
 #else
 					close(pair.second->rtp_sock);
 #endif
 				}
-				if (pair.second->rtcp_sock != StreamNode::kInvalidSocket) {
+				if (pair.second->rtcp_sock != kInvalidSocket) {
 #ifdef _WIN32
 					closesocket(static_cast<SOCKET>(pair.second->rtcp_sock));
 #else
@@ -64,9 +64,9 @@ void StreamServer::stopRtspServer() {
 }
 
 void StreamServer::rtspListenLoop(int port) {
-	StreamNode::SocketHandle listenSock = static_cast<StreamNode::SocketHandle>(
+	SocketHandle listenSock = static_cast<SocketHandle>(
 		socket(AF_INET, SOCK_STREAM, 0));
-	if (listenSock == StreamNode::kInvalidSocket) {
+	if (listenSock == kInvalidSocket) {
 		LOG("[RTSP-Server] Failed to create listen socket");
 		return;
 	}
@@ -122,11 +122,11 @@ void StreamServer::rtspListenLoop(int port) {
 	while (m_rtspRunning_) {
 		struct sockaddr_in clientAddr;
 		socklen_t clientLen = sizeof(clientAddr);
-		StreamNode::SocketHandle clientSock = static_cast<StreamNode::SocketHandle>(
+		SocketHandle clientSock = static_cast<SocketHandle>(
 			accept(static_cast<SOCKET_TYPE>(listenSock),
 				(struct sockaddr*)&clientAddr, &clientLen));
 
-		if (clientSock == StreamNode::kInvalidSocket) {
+		if (clientSock == kInvalidSocket) {
 			continue; // 超时或停止
 		}
 
@@ -142,17 +142,17 @@ void StreamServer::rtspListenLoop(int port) {
 	}
 
 	// 清理
-	if (m_rtspListenSock_ != StreamNode::kInvalidSocket) {
+	if (m_rtspListenSock_ != kInvalidSocket) {
 #ifdef _WIN32
 		closesocket(static_cast<SOCKET>(m_rtspListenSock_));
 #else
 		close(m_rtspListenSock_);
 #endif
-		m_rtspListenSock_ = StreamNode::kInvalidSocket;
+		m_rtspListenSock_ = kInvalidSocket;
 	}
 }
 
-void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const std::string& clientIp) {
+void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& clientIp) {
 	// 设置 socket 读超时 10 秒
 #ifdef _WIN32
 	int timeout_ms = 10000;
@@ -552,8 +552,8 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 					// 创建推流接收会话（使用 TCP 连接接收 RTP interleaved 数据）
 					if (!isExtraTrack) {
 					pushSession = std::make_shared<RtspRecvSession>();
-					pushSession->rtp_sock = StreamNode::kInvalidSocket;  // 不使用 UDP
-					pushSession->rtcp_sock = StreamNode::kInvalidSocket;
+					pushSession->rtp_sock = kInvalidSocket;  // 不使用 UDP
+					pushSession->rtcp_sock = kInvalidSocket;
 					pushSession->tcp_sock = clientSock;  // 使用当前 RTSP TCP 连接
 					pushSession->is_tcp_interleaved = true;
 					pushSession->interleaved_rtp = interleavedRtp;
@@ -587,12 +587,12 @@ void StreamServer::handleRtspClient(StreamNode::SocketHandle clientSock, const s
 				}
 				else {
 				// ---- UDP 推流模式：服务端创建 UDP socket 接收客户端 RTP ----
-				StreamNode::SocketHandle rtpSock = static_cast<StreamNode::SocketHandle>(
+				SocketHandle rtpSock = static_cast<SocketHandle>(
 					socket(AF_INET, SOCK_DGRAM, 0));
-				StreamNode::SocketHandle rtcpSock = static_cast<StreamNode::SocketHandle>(
+				SocketHandle rtcpSock = static_cast<SocketHandle>(
 					socket(AF_INET, SOCK_DGRAM, 0));
 
-				if (rtpSock == StreamNode::kInvalidSocket || rtcpSock == StreamNode::kInvalidSocket) {
+				if (rtpSock == kInvalidSocket || rtcpSock == kInvalidSocket) {
 					LOG("[RTSP-Server] Failed to create UDP sockets for push");
 					std::ostringstream resp;
 					resp << "RTSP/1.0 500 Internal Server Error\r\n";
@@ -1047,9 +1047,9 @@ std::shared_ptr<StreamNode> StreamServer::findStreamByRtspPath(const std::string
 // RTSP 推流接收：TCP interleaved 模式 — 从 RTSP TCP 连接读取 $channel length RTP_data
 // ============================================================================
 
-void StreamServer::rtpTcpRecvLoop(StreamNode::SocketHandle tcpSock,
+void StreamServer::rtpTcpRecvLoop(SocketHandle tcpSock,
 	std::shared_ptr<RtspRecvSession> session, std::shared_ptr<StreamNode> streamNode) {
-	if (!session || !streamNode || tcpSock == StreamNode::kInvalidSocket) {
+	if (!session || !streamNode || tcpSock == kInvalidSocket) {
 		LOG("[RTSP-TcpRecv] Invalid parameters, exit");
 		return;
 	}
@@ -1167,7 +1167,7 @@ void StreamServer::rtpTcpRecvLoop(StreamNode::SocketHandle tcpSock,
 // ============================================================================
 
 void StreamServer::rtpRecvThread(std::shared_ptr<RtspRecvSession> session) {
-	if (!session || session->rtp_sock == StreamNode::kInvalidSocket) {
+	if (!session || session->rtp_sock == kInvalidSocket) {
 		LOG("[RTSP-Recv] Invalid session, thread exit");
 		return;
 	}
@@ -1280,7 +1280,7 @@ void StreamServer::rtpRecvThread(std::shared_ptr<RtspRecvSession> session) {
 				LOG("[RTSP-Recv] No RTP data for %lld seconds, closing RTSP connection for tag=%s",
 					(long long)idleSec, session->tag.c_str());
 				// 关闭 RTSP 控制连接，触发 handleRtspClient 信令线程退出
-				if (session->tcp_sock != StreamNode::kInvalidSocket) {
+				if (session->tcp_sock != kInvalidSocket) {
 #ifdef _WIN32
 					shutdown(static_cast<SOCKET>(session->tcp_sock), SD_BOTH);
 					// closesocket not used here — tcp_sock owned by handleRtspClient
@@ -1288,7 +1288,7 @@ void StreamServer::rtpRecvThread(std::shared_ptr<RtspRecvSession> session) {
 					shutdown(session->tcp_sock, SHUT_RDWR);
 					// close not used here — tcp_sock owned by handleRtspClient
 #endif
-					session->tcp_sock = StreamNode::kInvalidSocket;
+					session->tcp_sock = kInvalidSocket;
 				}
 				break;
 			}
@@ -1322,11 +1322,11 @@ void StreamServer::cleanupPushSession(const std::string& sessionId) {
 	// 关闭 socket
 	if (session->is_tcp_interleaved) {
 		// TCP 连接由 handleRtspClient 管理，不在此关闭
-		session->tcp_sock = StreamNode::kInvalidSocket;
+		session->tcp_sock = kInvalidSocket;
 	}
 	else {
 		// 关闭 RTSP 控制连接，触发 handleRtspClient 信令线程退出
-		if (session->tcp_sock != StreamNode::kInvalidSocket) {
+		if (session->tcp_sock != kInvalidSocket) {
 #ifdef _WIN32
 			shutdown(static_cast<SOCKET>(session->tcp_sock), SD_BOTH);
 			// closesocket not used here — tcp_sock owned by handleRtspClient
@@ -1334,23 +1334,23 @@ void StreamServer::cleanupPushSession(const std::string& sessionId) {
 			shutdown(session->tcp_sock, SHUT_RDWR);
 			// close not used here — tcp_sock owned by handleRtspClient
 #endif
-			session->tcp_sock = StreamNode::kInvalidSocket;
+			session->tcp_sock = kInvalidSocket;
 		}
-		if (session->rtp_sock != StreamNode::kInvalidSocket) {
+		if (session->rtp_sock != kInvalidSocket) {
 #ifdef _WIN32
 			closesocket(static_cast<SOCKET>(session->rtp_sock));
 #else
 			close(session->rtp_sock);
 #endif
-			session->rtp_sock = StreamNode::kInvalidSocket;
+			session->rtp_sock = kInvalidSocket;
 		}
-		if (session->rtcp_sock != StreamNode::kInvalidSocket) {
+		if (session->rtcp_sock != kInvalidSocket) {
 #ifdef _WIN32
 			closesocket(static_cast<SOCKET>(session->rtcp_sock));
 #else
 			close(session->rtcp_sock);
 #endif
-			session->rtcp_sock = StreamNode::kInvalidSocket;
+			session->rtcp_sock = kInvalidSocket;
 		}
 	}
 }

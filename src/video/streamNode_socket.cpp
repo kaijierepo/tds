@@ -416,7 +416,7 @@ bool StreamNode::sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_S
         stats_.errors++;
         return false;
     }
-
+    rtspSession.rtpBytesSended += sent;
     return true;
 }
 

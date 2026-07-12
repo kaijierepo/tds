@@ -62,6 +62,10 @@ json getStreamInfo(shared_ptr<StreamNode> rc) {
 			0);
 		string sTime = buffer;
 		j["lastStunBindReqTime"] = sTime;
+		if (session->session_type_ == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PULL) {
+			j["webRtcState"] = session->getWebRtcStateDesc();
+		}
+
 		clientSession.push_back(j);
 	}
 	jSi["clientSessions"] = clientSession;

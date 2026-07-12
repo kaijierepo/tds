@@ -37,7 +37,7 @@ DtlsTransport::~DtlsTransport() {
 // ---- 静态 BIO 回调 --------------------------------------------------------
 int DtlsTransport::bio_send(void* ctx, const unsigned char* buf, size_t len) {
     auto* self = static_cast<DtlsTransport*>(ctx);
-    if (!self->peer_set_ || self->sock_ == StreamNode::kInvalidSocket)
+    if (!self->peer_set_ || self->sock_ == kInvalidSocket)
         return MBEDTLS_ERR_NET_SEND_FAILED;
     int ret = sendto(static_cast<SOCKET_TYPE>(self->sock_),
                      (const char*)buf, (int)len, 0,
@@ -50,7 +50,7 @@ int DtlsTransport::bio_send(void* ctx, const unsigned char* buf, size_t len) {
 
 int DtlsTransport::bio_recv(void* ctx, unsigned char* buf, size_t len) {
     auto* self = static_cast<DtlsTransport*>(ctx);
-    if (!self->peer_set_ || self->sock_ == StreamNode::kInvalidSocket)
+    if (!self->peer_set_ || self->sock_ == kInvalidSocket)
         return MBEDTLS_ERR_NET_RECV_FAILED;
 
     // 只从内部缓冲区读取，不直接读 socket
@@ -461,7 +461,7 @@ cleanup:
 }
 
 // ---- Socket 绑定 -----------------------------------------------------------
-void DtlsTransport::setSocket(StreamNode::SocketHandle sock,
+void DtlsTransport::setSocket(SocketHandle sock,
                                const struct sockaddr_in& peer_addr) {
     sock_ = sock;
     peer_addr_ = peer_addr;

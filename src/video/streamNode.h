@@ -13,30 +13,9 @@
 #include <chrono>
 #include <cstdint>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#define SOCKET_ERROR_NUM WSAGetLastError()
-#define CLOSE_SOCKET closesocket
-#define SOCKET_TYPE SOCKET
-#define INVALID_SOCKET_VALUE INVALID_SOCKET
-#else
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <regex>
-#define SOCKET_ERROR_NUM errno
-#define CLOSE_SOCKET close
-#define SOCKET_TYPE int
-#define INVALID_SOCKET_VALUE -1
-#endif
+#include "streamCommon.h"
+
+#include "streamNode_webrtc.h"
 
 // 前向声明 DTLS/SRTP 类型（避免头文件循环依赖）
 class DtlsTransport;
@@ -217,13 +196,6 @@ public:
 
 
 public:
-#ifdef _WIN32
-    using SocketHandle = SOCKET;
-    static constexpr SocketHandle kInvalidSocket = INVALID_SOCKET;
-#else
-    using SocketHandle = int;
-    static constexpr SocketHandle kInvalidSocket = -1;
-#endif
 
     // RTSP消息结构
     struct RTSPMessage {
@@ -290,18 +262,20 @@ public:
 		int interleaved_rtp = -1;      // TCP interleaved RTP 通道号
 		int interleaved_rtcp = -1;     // TCP interleaved RTCP 通道号
 
+        long long rtpBytesSended = 0;
+
         // ICE-Lite (WebRTC) 字段
         bool is_webrtc = false;
         std::string ice_ufrag;
         std::string ice_pwd;
-        WEBRTC_SESSION_STATE state = WEBRTC_SESSION_STATE::ICE;
+        WEBRTC_SESSION_STATE webrtc_state = WEBRTC_SESSION_STATE::ICE;
 
         // 从实际 RTP 流中捕获的视频 SSRC（用于 SDP 声明）
         uint32_t      video_ssrc = 0;
 
         // DTLS/SRTP 状态（per-session，由 ice 线程管理）
-        void* dtls_transport_ = nullptr;  // 指向 SessionDtlsState 实例
-        void* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
+        SessionDtlsState* dtls_transport_ = nullptr;  // 指向 SessionDtlsState 实例
+        SrptProtect::Context* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
 
         // 新会话首次发送数据标记：首次先发 SPS/PPS + 缓存的关键帧，再开始转发实时流
         bool is_first_send_ = true;
@@ -333,7 +307,7 @@ public:
             , interleaved_rtp(other.interleaved_rtp), interleaved_rtcp(other.interleaved_rtcp)
             , is_webrtc(other.is_webrtc)
             , ice_ufrag(other.ice_ufrag), ice_pwd(other.ice_pwd)
-            , state(other.state), video_ssrc(other.video_ssrc)
+            , webrtc_state(other.webrtc_state), video_ssrc(other.video_ssrc)
             , dtls_transport_(other.dtls_transport_)
             , srtp_context_(other.srtp_context_)
         {}
@@ -358,12 +332,14 @@ public:
                 interleaved_rtp = other.interleaved_rtp; interleaved_rtcp = other.interleaved_rtcp;
                 is_webrtc = other.is_webrtc;
                 ice_ufrag = other.ice_ufrag; ice_pwd = other.ice_pwd;
-                state = other.state; video_ssrc = other.video_ssrc;
+                webrtc_state = other.webrtc_state; video_ssrc = other.video_ssrc;
                 dtls_transport_ = other.dtls_transport_;
                 srtp_context_ = other.srtp_context_;
             }
             return *this;
         }
+
+        std::string getWebRtcStateDesc();
     };
 
     // URL解析

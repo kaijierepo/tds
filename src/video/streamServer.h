@@ -75,9 +75,9 @@ public:
 	// 通过 RTSP 推流创建的接收会话管理
 	enum RtspRecvSessionState { RSS_IDLE, RSS_WAITING_RTP, RSS_RECEIVING };
 	struct RtspRecvSession {
-		StreamNode::SocketHandle rtp_sock = StreamNode::kInvalidSocket;
-		StreamNode::SocketHandle rtcp_sock = StreamNode::kInvalidSocket;
-		StreamNode::SocketHandle tcp_sock = StreamNode::kInvalidSocket;  // TCP interleaved 模式使用的 RTSP 连接
+		SocketHandle rtp_sock = kInvalidSocket;
+		SocketHandle rtcp_sock = kInvalidSocket;
+		SocketHandle tcp_sock = kInvalidSocket;  // TCP interleaved 模式使用的 RTSP 连接
 		int server_rtp_port = 0;
 		int server_rtcp_port = 0;
 		std::string tag;               // 关联的 stream tag
@@ -99,19 +99,19 @@ public:
 private:
 	// RTSP 服务端监听线程
 	void rtspListenLoop(int port);
-	void handleRtspClient(StreamNode::SocketHandle clientSock, const std::string& clientIp);
+	void handleRtspClient(SocketHandle clientSock, const std::string& clientIp);
 	std::string buildSdpForStream(const std::shared_ptr<StreamNode>& node);
 	std::shared_ptr<StreamNode> findStreamByRtspPath(const std::string& path);
 
 	// RTSP 推流接收
 	void rtpRecvThread(std::shared_ptr<RtspRecvSession> session);
-	void rtpTcpRecvLoop(StreamNode::SocketHandle tcpSock,
+	void rtpTcpRecvLoop(SocketHandle tcpSock,
 		std::shared_ptr<RtspRecvSession> session, std::shared_ptr<StreamNode> streamNode);
 	void cleanupPushSession(const std::string& sessionId);
 
 	std::thread m_rtspThread_;
 	std::atomic<bool> m_rtspRunning_{false};
-	StreamNode::SocketHandle m_rtspListenSock_ = StreamNode::kInvalidSocket;
+	SocketHandle m_rtspListenSock_ = kInvalidSocket;
 };
 
 extern StreamServer streamSrv;

@@ -15,8 +15,8 @@
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/timing.h"
+#include "streamCommon.h"
 
-#include "streamNode.h"
 
 /**
  * @brief DTLS 传输层：封装 mbedtls DTLS 握手与 SRTP keying material 导出
@@ -110,10 +110,10 @@ public:
     static std::string getFingerprint(const mbedtls_x509_crt& cert);
 
     /// 生成自签 ECDSA P-256 证书（输出参数 cert_str、key_str）
-    static void generateSelfSignedCert(string cn, std::string& cert_str, std::string& key_str);
+    static void generateSelfSignedCert(std::string cn, std::string& cert_str, std::string& key_str);
 
     /// 设置 socket 和对端地址（在 ice 线程中绑定）
-    void setSocket(StreamNode::SocketHandle sock,
+    void setSocket(SocketHandle sock,
                    const struct sockaddr_in& peer_addr);
 
     /// 获取对端地址
@@ -130,7 +130,7 @@ private:
     mbedtls_ssl_cookie_ctx     cookie_ctx_;
     mbedtls_timing_delay_context timer_;
 
-    StreamNode::SocketHandle sock_ = StreamNode::kInvalidSocket;
+    SocketHandle sock_ = kInvalidSocket;
     struct sockaddr_in       peer_addr_;
     bool peer_set_ = false;
 
