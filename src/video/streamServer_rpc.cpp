@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "streamServer.h"
+#include "streamNode_webrtc.h"
 #include "logger.h"
 
 // ============================================================================
@@ -64,6 +65,15 @@ json getStreamInfo(shared_ptr<StreamNode> rc) {
 		j["lastStunBindReqTime"] = sTime;
 		if (session->session_type_ == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PULL) {
 			j["webRtcState"] = session->getWebRtcStateDesc();
+			if (session->dtls_transport_) {
+				SessionDtlsState* dtls = static_cast<SessionDtlsState*>(session->dtls_transport_);
+				if (dtls->dtls.isHandshakeDone()) {
+					const char* dtlsCipher = dtls->dtls.getDtlsCipherName();
+					const char* srtpProfile = dtls->dtls.getSrtpProfileName();
+					if (dtlsCipher) j["dtlsCipher"] = dtlsCipher;
+					if (srtpProfile) j["srtpCipher"] = srtpProfile;
+				}
+			}
 		}
 
 		clientSession.push_back(j);

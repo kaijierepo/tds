@@ -299,6 +299,25 @@ void DtlsTransport::exportSrptKeys() {
     LOG("[DTLS] SRTP keys exported OK");
 }
 
+// ---- 加密套件查询 -----------------------------------------------------------
+const char* DtlsTransport::getDtlsCipherName() const {
+    if (!handshake_done_) return nullptr;
+    return mbedtls_ssl_get_ciphersuite(&ssl_);
+}
+
+const char* DtlsTransport::getSrtpProfileName() const {
+    if (!handshake_done_) return nullptr;
+    mbedtls_dtls_srtp_info info;
+    mbedtls_ssl_get_dtls_srtp_negotiation_result(&ssl_, &info);
+    switch (info.MBEDTLS_PRIVATE(chosen_dtls_srtp_profile)) {
+        case MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_80: return "AES_CM_128_HMAC_SHA1_80";
+        case MBEDTLS_TLS_SRTP_AES128_CM_HMAC_SHA1_32: return "AES_CM_128_HMAC_SHA1_32";
+        case MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_80:      return "NULL_HMAC_SHA1_80";
+        case MBEDTLS_TLS_SRTP_NULL_HMAC_SHA1_32:      return "NULL_HMAC_SHA1_32";
+        default: return nullptr;
+    }
+}
+
 // ---- 证书指纹 -------------------------------------------------------------
 std::string DtlsTransport::getFingerprint(const mbedtls_x509_crt& cert) {
     unsigned char hash[32];

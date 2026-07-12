@@ -106,6 +106,12 @@ public:
     /// 获取导出的 SRTP keying material
     const SrptKeyingMaterial& getKeyingMaterial() const { return keying_material_; }
 
+    /// 获取协商的 DTLS 加密套件名称（如 "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256"）
+    const char* getDtlsCipherName() const;
+
+    /// 获取协商的 SRTP 保护 profile 名称（如 "AES_CM_128_HMAC_SHA1_80"）
+    const char* getSrtpProfileName() const;
+
     /// 获取证书 SHA-256 指纹（格式: "AB:CD:..."，用于 SDP）
     static std::string getFingerprint(const mbedtls_x509_crt& cert);
 

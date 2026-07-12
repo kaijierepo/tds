@@ -48,7 +48,7 @@ SrptProtect::initFromDtls(const DtlsTransport::SrptKeyingMaterial& keys,
     memcpy(ctx.encrypt_key, master_key, 16);
 
     // k_a = master_key 填充到 20 bytes (HMAC-SHA1 需要 20 bytes)
-    // 前 16 字节与 encrypt_key 相同，后 4 字节补 0x00
+    // RFC 3711 §4.3: "the auth key is padded to the right with zeros"
     memcpy(ctx.auth_key, master_key, 16);
     memset(ctx.auth_key + 16, 0, 4);
 
