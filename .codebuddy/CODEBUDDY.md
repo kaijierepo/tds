@@ -113,6 +113,11 @@
 MSBuild.exe 请在以下目录查找：
 D:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\amd64\MSBuild.exe
 
+#### 编码规范
+* 不要使用auto关键字
+* 不要出现无语义的变量命名，除非这个变量只在附近几行代码使用。例如 char buff[2048], 根据实际作用，命名为 char rtcp_recv_buff[2048]
+
+
 
 #### TDS产品简介
 

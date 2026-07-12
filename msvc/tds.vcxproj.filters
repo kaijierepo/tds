@@ -522,9 +522,6 @@
     <ClCompile Include="..\src\common\crypto\psa\drivers\builtin\src\sha512.c">
       <Filter>common\crypto\mbedtls</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\video\srtp_protect.cpp">
-      <Filter>common\crypto\mbedtls</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\common\crypto\library\ssl_ciphersuites.c">
       <Filter>common\crypto\mbedtls</Filter>
     </ClCompile>
@@ -587,6 +584,27 @@
     </ClCompile>
     <ClCompile Include="..\src\common\crypto\library\x509write_crt.c">
       <Filter>common\crypto\mbedtls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\streamNode_rtp.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\streamNode_rtsp.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\streamNode_socket.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\streamServer_file.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\streamServer_rpc.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\streamServer_rtsp.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\srtp_protect.cpp">
+      <Filter>video</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -884,8 +902,11 @@
     <ClInclude Include="..\src\video\dtls_transport.h">
       <Filter>common\crypto\mbedtls</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\video\streamCommon.h">
+      <Filter>video</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\video\srtp_protect.h">
-      <Filter>common\crypto\mbedtls</Filter>
+      <Filter>video</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
