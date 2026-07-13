@@ -59,7 +59,7 @@ static bool parseH264File(const std::string& filePath,
 		LOG("[LocalFileStream] Failed to read file: %s", filePath.c_str());
 		return false;
 	}
-	LOG("[LocalFileStream] Read file %s, size=%lld bytes", filePath.c_str(), (long long)fileSize);
+	//LOG("[LocalFileStream] Read file %s, size=%lld bytes", filePath.c_str(), (long long)fileSize);
 
 	// 按 Annex B 起始码 0x00000001 或 0x000001 拆分 NAL 单元
 	size_t pos = 0;
@@ -100,8 +100,8 @@ static bool parseH264File(const std::string& filePath,
 		pos = nextStart;
 	}
 
-	LOG("[LocalFileStream] Parsed %zu NALs (SPS=%zu bytes, PPS=%zu bytes)",
-		nals.size(), sps.size(), pps.size());
+	//LOG("[LocalFileStream] Parsed %zu NALs (SPS=%zu bytes, PPS=%zu bytes)",
+	//	nals.size(), sps.size(), pps.size());
 	return !nals.empty();
 }
 
@@ -334,8 +334,8 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 	uint32_t clockRate = (uint32_t)ctx->clock_rate;
 
 
-	LOG("[LocalFileStream] Feed loop started: tag=%s, nals=%zu",
-		tag.c_str(), nals.size());
+	//LOG("[LocalFileStream] Feed loop started: tag=%s, nals=%zu",
+	//	tag.c_str(), nals.size());
 
 	size_t nalIdx = 0;
 	while (ctx->running_ && ctx->node->running_) {
@@ -443,7 +443,7 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 		}
 	}
 
-	LOG("[LocalFileStream] Feed loop ended: tag=%s", tag.c_str());
+	//LOG("[LocalFileStream] Feed loop ended: tag=%s", tag.c_str());
 }
 
 bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::string& url) {
@@ -568,8 +568,8 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 		ctx->feed_thread_ = std::thread(localFileFeedLoop, ctx);
 		ctx->feed_thread_.detach();
 
-	LOG("[LocalFileStream] Started serving: file=%s, url=%s, tag=%s, nals=%zu",
-		filePath.c_str(), url.c_str(), tag.c_str(), ctx->nals.size());
+	//LOG("[LocalFileStream] Started serving: file=%s, url=%s, tag=%s, nals=%zu",
+	//	filePath.c_str(), url.c_str(), tag.c_str(), ctx->nals.size());
 	return true;
 }
 
@@ -734,8 +734,8 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	ctx->feed_thread_ = std::thread(localFileFeedLoop, ctx);
 	ctx->feed_thread_.detach();
 
-	LOG("[LocalFileStream] Loaded on demand: file=%s, tag=%s, nals=%zu",
-		filePath.c_str(), tag.c_str(), ctx->nals.size());
+	//LOG("[LocalFileStream] Loaded on demand: file=%s, tag=%s, nals=%zu",
+	//	filePath.c_str(), tag.c_str(), ctx->nals.size());
 	return node;
 }
 
