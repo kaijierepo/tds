@@ -690,6 +690,10 @@ static JSValue qjs_mqttPublish(JSContext* ctx, JSValueConst this_val, int argc, 
     if(JS_IsString(argv[1]))
         data = JS_ToCString(ctx, argv[1]);
 
+    // 主题为空时，回退使用"上级MQTT服务(masterDS)"配置的 pubTopics
+    if (topic.empty() && !mqttSrv.m_masterDSConf.empty())
+        topic = mqttSrv.m_masterDSConf[0].pubTopics;
+
     mqttSrv.mqttPublish(topic,data);
 
     return JS_NULL;
