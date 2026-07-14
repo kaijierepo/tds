@@ -66,9 +66,11 @@ public:
                          std::vector<uint8_t>& out_rtp);
 
     /// AES-128-CTR keystream 生成
+    /// @param skip_bytes 跳过前 N 字节密钥流（用于 RTP 头等不加密部分，KDF 调用时传 0）
     static void aesCtrCrypt(const uint8_t* key, size_t key_len,
                             const uint8_t* iv,  size_t iv_len,
-                            uint8_t* data, size_t data_len);
+                            uint8_t* data, size_t data_len,
+                            size_t skip_bytes = 0);
 
     /// SRTP IV 构造 (RFC 3711 §4.1.1)
     static void buildIv(uint8_t iv[16], const uint8_t* salt,

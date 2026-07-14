@@ -28,6 +28,38 @@
 // SrptProtect 实现
 // ============================================================================
 
+/* ---------- RFC 3711 §4.3 Key Derivation Function ---------- */
+// Derives SRTP session keys from master key/salt using AES-CM PRF.
+// With key_derivation_rate=0 (WebRTC default):
+//   key_id = <label> || 0x000000000000  (7B, right-aligned to 14B)
+//   x = key_id XOR master_salt
+//   session_key = PRF_n(master_key, x) = first n bits of AES-CTR keystream
+static void deriveSessionKey(const uint8_t* master_key, size_t key_len,
+                             const uint8_t* master_salt, size_t salt_len,
+                             uint8_t label, size_t out_len,
+                             uint8_t* out_key) {
+    // Build x = master_salt XOR key_id (14 bytes)
+    // key_id: bytes 0..6=0, byte 7=label, bytes 8..13=0
+    uint8_t x[14];
+    memcpy(x, master_salt, 14);
+    if (label != 0x00) {
+        x[7] ^= label;  // Only byte 7 differs from zero in key_id
+    }
+
+    // Pad to 16 bytes for AES-CTR counter block
+    uint8_t iv[16];
+    memcpy(iv, x, 14);
+    iv[14] = 0;
+    iv[15] = 0;
+
+    // PRF_n = first n bytes of AES-CTR keystream
+    // aesCtrCrypt XORs data with keystream; all-zeros → pure keystream
+    std::vector<uint8_t> prf_out(out_len, 0);
+    SrptProtect::aesCtrCrypt(master_key, key_len, iv, 16,
+                             prf_out.data(), out_len);
+    memcpy(out_key, prf_out.data(), out_len);
+}
+
 /* ---------- SrptProtect::initFromDtls ---------- */
 SrptProtect::Context
 SrptProtect::initFromDtls(const DtlsTransport::SrptKeyingMaterial& keys,
@@ -41,19 +73,12 @@ SrptProtect::initFromDtls(const DtlsTransport::SrptKeyingMaterial& keys,
     const uint8_t* master_key  = is_server ? keys.server_write_key : keys.client_write_key;
     const uint8_t* master_salt = is_server ? keys.server_write_salt : keys.client_write_salt;
 
-    // RFC 3711 §4.3, key_derivation_rate = 0 (WebRTC 默认):
-    //   session keys 直接使用 master key 和 master salt
-    //
-    // k_e = master_key (16 bytes)
-    memcpy(ctx.encrypt_key, master_key, 16);
-
-    // k_a = master_key 填充到 20 bytes (HMAC-SHA1 需要 20 bytes)
-    // RFC 3711 §4.3: "the auth key is padded to the right with zeros"
-    memcpy(ctx.auth_key, master_key, 16);
-    memset(ctx.auth_key + 16, 0, 4);
-
-    // k_s = master_salt (14 bytes)
-    memcpy(ctx.encrypt_salt, master_salt, 14);
+    // RFC 3711 §4.3: with key_derivation_rate=0 (WebRTC default),
+    // session keys are derived from master key/salt via AES-CM PRF.
+    // libsrtp (Chrome) also runs this KDF with KDR=0.
+    deriveSessionKey(master_key, 16, master_salt, 14, 0x00, 16, ctx.encrypt_key);
+    deriveSessionKey(master_key, 16, master_salt, 14, 0x01, 20, ctx.auth_key);
+    deriveSessionKey(master_key, 16, master_salt, 14, 0x02, 14, ctx.encrypt_salt);
 
     // 诊断日志: 打印完整 key material 用于对比浏览器端密钥
     {
@@ -166,7 +191,7 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
         verify_ctx.rollover_counter = 0;       // 重置 ROC
         std::vector<uint8_t> out_rtp;
         int vr = unprotect(verify_ctx, encrypted, out_rtp);
-        char hex_buf[256];
+        char hex_buf[512];
         if (vr == 0 && out_rtp.size() == rtp.size()) {
             snprintf(hex_buf, sizeof(hex_buf),
                 "SRTP self-check #%d: OK (rtp_size=%zu, match=%s)",
@@ -253,9 +278,12 @@ int SrptProtect::unprotect(Context& ctx,
 }
 
 /* ---------- AES-CTR (using mbedtls) ---------- */
+// RFC 3711 §4.1.1: SRTP AES-ICM 是字节级计数器模式。
+// skip_bytes 用于跳过数据前 N 字节的密钥流（例如跳过 12 字节的 RTP 头）。
 void SrptProtect::aesCtrCrypt(const uint8_t* key, size_t key_len,
                                const uint8_t* iv,  size_t iv_len,
-                               uint8_t* data, size_t data_len) {
+                               uint8_t* data, size_t data_len,
+                               size_t skip_bytes) {
     if (data_len == 0) return;
 
     mbedtls_aes_context aes;
@@ -267,6 +295,19 @@ void SrptProtect::aesCtrCrypt(const uint8_t* key, size_t key_len,
     if (iv_len < 16) memset(counter + iv_len, 0, 16 - iv_len);
 
     uint8_t keystream[16];
+
+    // 跳过前 skip_bytes 字节的密钥流（对应 RTP header 等不加密部分）
+    size_t skipped = 0;
+    while (skipped < skip_bytes) {
+        mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, counter, keystream);
+        size_t to_skip = (std::min)(skip_bytes - skipped, size_t(16));
+        skipped += to_skip;
+        // 计数器递增（大端）
+        for (int i = 15; i >= 0; i--) {
+            if (++counter[i] != 0) break;
+        }
+    }
+
     size_t offset = 0;
     while (offset < data_len) {
         mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, counter, keystream);

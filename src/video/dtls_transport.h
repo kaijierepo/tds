@@ -26,6 +26,14 @@
  *   2. 导出 SRTP keying material (RFC 5764)
  *   3. 提供 SRTP 加密上下文
  */
+/// 标准 P_SHA256 PRF 所需的 TLS 握手参数
+struct TlsKeyExportParams {
+    bool captured = false;
+    unsigned char master_secret[48];
+    unsigned char client_random[32];
+    unsigned char server_random[32];
+};
+
 class DtlsTransport {
 public:
     /// SRTP 密钥材料 （RFC 5764 profile）
@@ -151,6 +159,9 @@ private:
     /// bio_recv 优先从此缓冲区读取，避免 socket 已被排空导致读不到数据
     std::mutex recv_buf_mutex_;
     std::deque<uint8_t> recv_buf_;
+
+    /// 标准 P_SHA256 PRF 所需的 TLS 握手参数（从 mbedtls export keys 回调捕获）
+    TlsKeyExportParams tls_keys_;
 
     void exportSrptKeys();
     static int bio_send(void* ctx, const unsigned char* buf, size_t len);

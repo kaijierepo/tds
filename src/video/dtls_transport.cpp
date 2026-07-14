@@ -3,8 +3,75 @@
 #include "logger.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/debug.h"
+#include "mbedtls/md.h"
 #include <sstream>
 #include <iomanip>
+
+// ============================================================================
+// 标准 TLS 1.2 P_SHA256 PRF（绕过 mbedtls PSA PRF）
+// ============================================================================
+
+// mbedtls 4.x 的 PSA TLS 1.2 PRF 在 DTLS-SRTP keying material 导出时
+// 产生与标准 RFC 5246/5705 不一致的输出（BoringSSL/Chrome 使用标准实现）。
+// 因此在此处直接实现标准 P_SHA256 以替代 mbedtls_ssl_export_keying_material。
+
+static void pSha256Prf(const unsigned char* secret, size_t secret_len,
+                       const unsigned char* seed, size_t seed_len,
+                       unsigned char* output, size_t output_len) {
+    // P_SHA256(secret, seed) = HMAC_SHA256(secret, A(1) + seed) |
+    //                           HMAC_SHA256(secret, A(2) + seed) | ...
+    // where A(0) = seed, A(i) = HMAC_SHA256(secret, A(i-1))
+    //
+    // 使用 mbedtls_md_hmac() 一次性计算 HMAC，避免 mbedtls 4.x 中
+    // starts/update/finish 状态机可能的兼容性问题。
+
+    unsigned char A[32];
+    size_t offset = 0;
+
+    // A(1) = HMAC_SHA256(secret, seed)
+    mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
+                    secret, secret_len, seed, seed_len, A);
+
+    while (offset < output_len) {
+        // output += HMAC_SHA256(secret, A || seed)
+        unsigned char hmac_input[32 + 83]; // A(32) + max seed
+        size_t input_len = 32 + seed_len;
+        memcpy(hmac_input, A, 32);
+        memcpy(hmac_input + 32, seed, seed_len);
+
+        unsigned char block[32];
+        mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
+                        secret, secret_len, hmac_input, input_len, block);
+
+        size_t to_copy = output_len - offset;
+        if (to_copy > 32) to_copy = 32;
+        memcpy(output + offset, block, to_copy);
+        offset += to_copy;
+
+        if (offset < output_len) {
+            // A(i+1) = HMAC_SHA256(secret, A(i))
+            mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
+                            secret, secret_len, A, 32, A);
+        }
+    }
+}
+
+// 回调：捕获 master_secret 和 random values
+static void captureTlsKeys(void* p_expkey,
+                           mbedtls_ssl_key_export_type type,
+                           const unsigned char* secret, size_t secret_len,
+                           const unsigned char client_random[32],
+                           const unsigned char server_random[32],
+                           mbedtls_tls_prf_types tls_prf_type) {
+    if (type == MBEDTLS_SSL_KEY_EXPORT_TLS12_MASTER_SECRET) {
+        auto* params = static_cast<TlsKeyExportParams*>(p_expkey);
+        size_t copy_len = secret_len < sizeof(params->master_secret) ? secret_len : sizeof(params->master_secret);
+        memcpy(params->master_secret, secret, copy_len);
+        memcpy(params->client_random, client_random, 32);
+        memcpy(params->server_random, server_random, 32);
+        params->captured = true;
+    }
+}
 
 // ============================================================================
 // DtlsTransport 实现
@@ -200,6 +267,10 @@ void DtlsTransport::startHandshake() {
     mbedtls_ssl_set_timer_cb(&ssl_, &timer_,
                               timing_set_delay, timing_get_delay);
 
+    // 注册回调以捕获 master_secret + client_random + server_random
+    // 用于在 exportSrptKeys 中执行标准 P_SHA256 替代 PSA PRF
+    mbedtls_ssl_set_export_keys_cb(&ssl_, captureTlsKeys, &tls_keys_);
+
     LOG("[DTLS] Handshake started");
 }
 
@@ -265,18 +336,31 @@ int DtlsTransport::doHandshakeStep() {
 // ---- SRTP Key 导出 --------------------------------------------------------
 void DtlsTransport::exportSrptKeys() {
     // RFC 5764 §4.2: use_srtp DTLS-SRTP keying material export
+    // 使用标准 P_SHA256 PRF 替代 mbedtls PSA PRF（PSA 版本与 BoringSSL/Chrome 不兼容）
     unsigned char keyblk[60]; // 2 * (16 key + 14 salt) = 60 bytes
     const char* label = "EXTRACTOR-dtls_srtp";
+    size_t label_len = strlen(label);
 
-    int ret = mbedtls_ssl_export_keying_material(
-        &ssl_, keyblk, sizeof(keyblk),
-        // use_context=0 means no context value is appended to the PRF seed
-        label, strlen(label), nullptr, 0, 0);
+    if (tls_keys_.captured) {
+        // 构建种子：label || client_random || server_random
+        unsigned char seed[19 + 32 + 32];
+        memcpy(seed, label, label_len);
+        memcpy(seed + label_len, tls_keys_.client_random, 32);
+        memcpy(seed + label_len + 32, tls_keys_.server_random, 32);
 
-    if (ret != 0) {
-        LOG("[DTLS] mbedtls_ssl_export_keying_material failed: %d", ret);
-        memset(keyblk, 0x42, sizeof(keyblk));
-        LOG("[DTLS] WARNING: Using fallback zero keys — INSECURE!");
+        pSha256Prf(tls_keys_.master_secret, sizeof(tls_keys_.master_secret),
+                   seed, label_len + 64,
+                   keyblk, sizeof(keyblk));
+    } else {
+        // 回调未触发时回退到 mbedtls PSA PRF
+        LOG("[DTLS] WARNING: TLS keys not captured, falling back to mbedtls exporter");
+        int ret = mbedtls_ssl_export_keying_material(
+            &ssl_, keyblk, sizeof(keyblk),
+            label, label_len, nullptr, 0, 0);
+        if (ret != 0) {
+            LOG("[DTLS] mbedtls_ssl_export_keying_material failed: %d", ret);
+            memset(keyblk, 0x42, sizeof(keyblk));
+        }
     }
 
     // 拆分 keying material
