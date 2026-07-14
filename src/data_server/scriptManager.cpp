@@ -105,7 +105,11 @@ static bool writeFile(std::string path, char* data, size_t len)
 
 static bool renameFile(const std::string& oldPath, const std::string& newPath) {
 	try {
+#ifdef _WIN32
+		stdfs::rename(utf8_to_utf16(oldPath), utf8_to_utf16(newPath));
+#else
 		stdfs::rename(oldPath, newPath);
+#endif
 		return true;
 	}
 	catch (const std::exception& e) {
@@ -694,7 +698,7 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		}
 	}
 
-	if (!oldName.empty()) {
+	if (!oldName.empty() && oldName != name) {
 		if (m_mapScripts.find(oldName) == m_mapScripts.end()) {
 			json jError = "specified script not found";
 			rpcResp.error = jError.dump();
@@ -705,7 +709,7 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		std::string oldPath = m_confPath + "/scripts/" + oldName;
 		std::string newPath = m_confPath + "/scripts/" + name;
 
-		SCRIPT_INFO& si = m_mapScripts[oldName];
+		SCRIPT_INFO si = m_mapScripts[oldName];
 		success = renameFile(oldPath.c_str(), newPath.c_str());
 
 		if (!success) {
