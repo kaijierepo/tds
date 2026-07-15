@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
+#include <chrono>
 #include "common.h"
 #include "tdsConf.h"
 #include "scriptEngine.h"
@@ -25,13 +26,16 @@ MqttSrv::MqttSrv()
 
 MqttSrv::~MqttSrv()
 {
+	stop();
 }
 
-bool MqttSrv::run() {
-	
+bool MqttSrv::loadConfFromFile() {
+	m_masterDSConf.clear();
+
 	string s;
 	string p = tds->conf->confPath + "/masterDS.json";
 	if (fs::readFile(p, s)) {
+		m_lastLoadedContent = s;
 		yyjson_doc *doc = yyjson_read(s.c_str(), s.size(), 0);
 		if (doc) {
 			yyjson_val* root = yyjson_doc_get_root(doc);
@@ -43,69 +47,162 @@ bool MqttSrv::run() {
 					continue;
 
 				string proto = yyjson_get_str(yy_proto);
-                if (proto == "mqtt") { 
-                    MASTER_SRV_CONF conf;
+				if (proto == "mqtt") { 
+					MASTER_SRV_CONF conf;
 					yyjson_val* yy_ip = yyjson_obj_get(item, "ip");
 					conf.ip = yyjson_get_str(yy_ip);
-                    yyjson_val* yy_port = yyjson_obj_get(item, "port");
-                    if(yyjson_is_int(yy_port))
-                        conf.port = yyjson_get_int(yy_port);
-                    else if (yyjson_is_str(yy_port)) {
-                        conf.port = str::toInt(yyjson_get_str(yy_port));
-                    }
-                    yyjson_val* yy_user = yyjson_obj_get(item, "user");
-                    if(yy_user)
-                        conf.user = yyjson_get_str(yy_user);
-                    yyjson_val* yy_pwd = yyjson_obj_get(item, "pwd");
-                    if(yy_pwd)
-                        conf.pwd = yyjson_get_str(yy_pwd);
-                    yyjson_val* yy_qos = yyjson_obj_get(item, "qos");
-                    if(yy_qos)
-                        conf.qos = yyjson_get_int(yy_qos);
-                    yyjson_val* yy_subTopics = yyjson_obj_get(item, "subTopics");
-                    if (yy_subTopics)
-                        conf.subTopics = yyjson_get_str(yy_subTopics);
-                    yyjson_val* yy_pubTopics = yyjson_obj_get(item, "pubTopics");
-                    if (yy_pubTopics)
-                        conf.pubTopics = yyjson_get_str(yy_pubTopics);
-                    yyjson_val* yy_recvScript = yyjson_obj_get(item, "recvScript");
-                    if(yy_recvScript)
-                        conf.recvScript = yyjson_get_str(yy_recvScript);
+					yyjson_val* yy_port = yyjson_obj_get(item, "port");
+					if(yyjson_is_int(yy_port))
+						conf.port = yyjson_get_int(yy_port);
+					else if (yyjson_is_str(yy_port)) {
+						conf.port = str::toInt(yyjson_get_str(yy_port));
+					}
+					yyjson_val* yy_user = yyjson_obj_get(item, "user");
+					if(yy_user)
+						conf.user = yyjson_get_str(yy_user);
+					yyjson_val* yy_pwd = yyjson_obj_get(item, "pwd");
+					if(yy_pwd)
+						conf.pwd = yyjson_get_str(yy_pwd);
+					yyjson_val* yy_qos = yyjson_obj_get(item, "qos");
+					if(yy_qos)
+						conf.qos = yyjson_get_int(yy_qos);
+					yyjson_val* yy_subTopics = yyjson_obj_get(item, "subTopics");
+					if (yy_subTopics)
+						conf.subTopics = yyjson_get_str(yy_subTopics);
+					yyjson_val* yy_pubTopics = yyjson_obj_get(item, "pubTopics");
+					if (yy_pubTopics)
+						conf.pubTopics = yyjson_get_str(yy_pubTopics);
+					yyjson_val* yy_recvScript = yyjson_obj_get(item, "recvScript");
+					if(yy_recvScript)
+						conf.recvScript = yyjson_get_str(yy_recvScript);
 					yyjson_val* yy_sendScript = yyjson_obj_get(item, "sendScript");
-                    if(yy_sendScript)
-                        conf.sendScript = yyjson_get_str(yy_sendScript);
-                    yyjson_val* yy_cycleScript = yyjson_obj_get(item, "cycleScript");
-                    if(yy_cycleScript)
-                        conf.cycleScript = yyjson_get_str(yy_cycleScript);
-                    yyjson_val* yy_intervel = yyjson_obj_get(item, "intervel");
-                    if (yyjson_is_int(yy_intervel))
-                        conf.intervel = yyjson_get_int(yy_intervel);
-                    else if (yyjson_is_str(yy_intervel)) {
-                        conf.intervel = str::toInt(yyjson_get_str(yy_intervel));
-                    }
-                    yyjson_val* yy_clientID = yyjson_obj_get(item, "clientID");
-                    if(yy_clientID)
-                    conf.clientID = yyjson_get_str(yy_clientID);
-                    yyjson_val* yy_connectScript = yyjson_obj_get(item, "connectScript");
-                    if(yy_connectScript)
-                        conf.connectScript = yyjson_get_str(yy_connectScript);
-                    yyjson_val* yy_format = yyjson_obj_get(item, "format");
-                    if (yy_format)
-                        conf.format = yyjson_get_str(yy_format);
+					if(yy_sendScript)
+						conf.sendScript = yyjson_get_str(yy_sendScript);
+					yyjson_val* yy_cycleScript = yyjson_obj_get(item, "cycleScript");
+					if(yy_cycleScript)
+						conf.cycleScript = yyjson_get_str(yy_cycleScript);
+					yyjson_val* yy_intervel = yyjson_obj_get(item, "intervel");
+					if (yyjson_is_int(yy_intervel))
+						conf.intervel = yyjson_get_int(yy_intervel);
+					else if (yyjson_is_str(yy_intervel)) {
+						conf.intervel = str::toInt(yyjson_get_str(yy_intervel));
+					}
+					yyjson_val* yy_clientID = yyjson_obj_get(item, "clientID");
+					if(yy_clientID)
+					conf.clientID = yyjson_get_str(yy_clientID);
+					yyjson_val* yy_connectScript = yyjson_obj_get(item, "connectScript");
+					if(yy_connectScript)
+						conf.connectScript = yyjson_get_str(yy_connectScript);
+					yyjson_val* yy_format = yyjson_obj_get(item, "format");
+					if (yy_format)
+						conf.format = yyjson_get_str(yy_format);
 					m_masterDSConf.push_back(conf);
 				}
 			}
+			yyjson_doc_free(doc);
 		}
+		else {
+			LOG("[MQTT-DS] failed to parse masterDS.json");
+			return false;
+		}
+	}
+	else {
+		LOG("[MQTT-DS] masterDS.json not found: %s", p.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+bool MqttSrv::run() {
+	std::lock_guard<std::mutex> lk(m_mqttMutex);
+	if (!loadConfFromFile()) {
+		LOG("[MQTT-DS] no valid masterDS config, skip MQTT startup");
+		return false;
 	}
 
 	for(int i = 0; i < m_masterDSConf.size(); i++){
-        LOG("[MQTT-DS]started,%s:%d,password:%s,qos:%d,subTopic:%s,pubTopic:%s,format:%s,sendScript:%s,recvScript:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].pubTopics.c_str(), m_masterDSConf[i].format.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
-        MqttClt* clt = new MqttClt();
-        clt->run(m_masterDSConf[i]);
-        m_mqttClts.push_back(clt);
+		LOG("[MQTT-DS]started,%s:%d,password:%s,qos:%d,subTopic:%s,pubTopic:%s,format:%s,sendScript:%s,recvScript:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].pubTopics.c_str(), m_masterDSConf[i].format.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
+		MqttClt* clt = new MqttClt();
+		clt->run(m_masterDSConf[i]);
+		m_mqttClts.push_back(clt);
 	}
 
-    return true;
+	startWatch();
+	return true;
+}
+
+bool MqttSrv::reload() {
+	std::lock_guard<std::mutex> lk(m_mqttMutex);
+	LOG("[MQTT-DS] reloading masterDS.json...");
+
+	// 1. 停止所有旧的 MQTT 客户端连接
+	for (int i = 0; i < m_mqttClts.size(); i++) {
+		if (m_mqttClts[i]) {
+			m_mqttClts[i]->stop();
+			delete m_mqttClts[i];
+		}
+	}
+	m_mqttClts.clear();
+
+	// 2. 重新加载配置文件
+	if (!loadConfFromFile()) {
+		LOG("[MQTT-DS] reload failed: cannot parse masterDS.json");
+		return false;
+	}
+
+	// 3. 启动新的 MQTT 客户端连接
+	for (int i = 0; i < m_masterDSConf.size(); i++) {
+		LOG("[MQTT-DS]reloaded,%s:%d,password:%s,qos:%d,subTopic:%s,pubTopic:%s,format:%s,sendScript:%s,recvScript:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].pubTopics.c_str(), m_masterDSConf[i].format.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
+		MqttClt* clt = new MqttClt();
+		clt->run(m_masterDSConf[i]);
+		m_mqttClts.push_back(clt);
+	}
+
+	LOG("[MQTT-DS] reload completed, %d connections restarted", m_mqttClts.size());
+	return true;
+}
+
+void MqttSrv::startWatch() {
+	if (m_bWatchRunning) return;
+	m_bWatchRunning = true;
+	m_watchThread = std::thread(&MqttSrv::watchLoop, this);
+}
+
+void MqttSrv::watchLoop() {
+	while (m_bWatchRunning) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+		if (!m_bWatchRunning) break;
+
+		string p = tds->conf->confPath + "/masterDS.json";
+		string s;
+		bool changed = false;
+		{
+			std::lock_guard<std::mutex> lk(m_mqttMutex);
+			if (fs::readFile(p, s) && s != m_lastLoadedContent) {
+				changed = true;
+			}
+		}
+		if (changed) {
+			LOG("[MQTT-DS] masterDS.json changed, auto reloading...");
+			reload();
+		}
+	}
+}
+
+void MqttSrv::stop() {
+	m_bWatchRunning = false;
+	if (m_watchThread.joinable()) {
+		m_watchThread.join();
+	}
+	std::lock_guard<std::mutex> lk(m_mqttMutex);
+	for (int i = 0; i < m_mqttClts.size(); i++) {
+		if (m_mqttClts[i]) {
+			m_mqttClts[i]->stop();
+			delete m_mqttClts[i];
+		}
+	}
+	m_mqttClts.clear();
 }
 
 
@@ -207,7 +304,7 @@ void thread_mqtt_client_comm(void* p)
     opts.version = 4;
     opts.user = mg_str(pDev->m_conf.user.c_str());
     opts.pass = mg_str(pDev->m_conf.pwd.c_str());
-    opts.client_id = mg_str("tds");
+    opts.client_id = mg_str(pDev->m_conf.clientID.empty() ? "tds" : pDev->m_conf.clientID.c_str());
 
     string server = "mqtt://" + pDev->m_conf.ip + ":" + to_string(pDev->m_conf.port);
     c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn, pDev);

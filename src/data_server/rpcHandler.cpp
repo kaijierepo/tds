@@ -3373,6 +3373,16 @@ bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& r
 	else if (handleMethodCall_utils(method, params, rpcResp, session)) {
 		bHandled = true;
 	}
+	else if (method == "reloadMasterDS") {
+		LOG("[RPC] reloadMasterDS called");
+		if (mqttSrv.reload()) {
+			rpcResp.result = RPC_OK;
+		}
+		else {
+			rpcResp.error = "\"reloadMasterDS failed\"";
+		}
+		bHandled = true;
+	}
 	else {
 		bHandled = false;
 	}

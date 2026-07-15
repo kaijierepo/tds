@@ -1,5 +1,8 @@
 #pragma once
 #include <string>
+#include <thread>
+#include <mutex>
+#include <atomic>
 #include "mongoose.h"
 #include "scriptEngine.h"
 #include "common.h"
@@ -57,6 +60,7 @@ class MqttSrv
 public:
 	bool run();
 	void stop();
+	bool reload();
 	MqttSrv();
 	virtual ~MqttSrv();
 
@@ -65,6 +69,16 @@ public:
 
 	std::vector<MASTER_SRV_CONF> m_masterDSConf;
 	std::vector<MqttClt*> m_mqttClts;
+
+private:
+	bool loadConfFromFile();
+	void startWatch();
+	void watchLoop();
+
+	std::thread m_watchThread;
+	std::atomic<bool> m_bWatchRunning{false};
+	std::mutex m_mqttMutex;
+	std::string m_lastLoadedContent;
 };
 
 
