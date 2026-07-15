@@ -483,7 +483,12 @@ void MqttClt::onTdsNotify(string method,string params)
         mqttPublish(m_conf.pubTopics, params);
         return;
     }
-    mqttPublish(method, params);
+
+    // 自定义格式：由"数据发送脚本"负责上送，不再走默认格式的上送逻辑
+    if (m_conf.sendScript != "") {
+        string strResult, strOutput;
+        scriptManager.runScript(m_conf.sendScript, params, strResult, strOutput);
+    }
 }
 
 void MqttClt::onMqttConnected()
