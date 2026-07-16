@@ -1144,10 +1144,6 @@ void OBJ::treeStatus2ListStatus(json& tree, json& list, map<string, bool>& onlin
 	if (tree["online"].is_boolean()) {
 		bool online = tree["online"].get<bool>();
 		onlineStatus[tag] = online;
-
-		if (tag.find("杭州607会议室.电源时序器") != string::npos) {
-			LOG("同步对象在线状态,位号:%s,状态;%d", tag.c_str(), online ? 1 : 0);
-		}
 	}
 
 	string name = tree["name"];
