@@ -136,7 +136,7 @@ void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session)
         // ---- 协议分流 ----
         // STUN:  0x00 (Binding Request) 或 0x01 (Binding Success/Error)
         // DTLS:  0x14 (ChangeCipherSpec), 0x15 (Alert), 0x16 (Handshake), 0x17 (AppData)
-        // SRTP:  首字节 0x80 (RTP version 2, 无扩展/CSRC)
+        // RTP/RTCP: 高 2 位为 0b10 (V=2), 即首字节 0x80~0xBF
 
         // === STUN ===
         if (firstByte == 0x00 || firstByte == 0x01) {
@@ -146,15 +146,23 @@ void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session)
         else if (firstByte >= 0x14 && firstByte <= 0x18) {
             webrtcSession_handle_DTLS(session, dtls_state, buf, len, peer, dtls_start);
         }
-        // === SRTP (来自客户端的加密 RTP) ===
-        else if (firstByte == 0x80 && dtls_state->srtp_ready) {
-            std::vector<uint8_t> srtpPkt(buf, buf + len);
-            std::vector<uint8_t> rtpPkt;
-            int ur = SrptProtect::unprotect(dtls_state->srtp_ctx, srtpPkt, rtpPkt);
-            if (ur == 0) {
-                // 解密成功，RTCP 或 RTCP 回传处理
-                // 对于 WebRTC 服务端，客户端通常不发送 RTP，这里忽略
+        // === SRTP / SRTCP (来自客户端的加密 RTP/RTCP) ===
+        else if ((firstByte & 0xC0) == 0x80 && dtls_state->srtp_ready) {
+            if (len < 2) continue;
+            uint8_t secondByte = buf[1];
+            // RTCP 包类型: 200=SR, 201=RR, 202=SDES, 203=BYE, 204=APP
+            // 非加密 RTCP 的 PT 在第二个字节；SRTCP 加密后该字段也被加密。
+            // 通过首字节区分：RTP 通常 0x80（无 CSRC）；0x81+ 大概率是 SRTCP（含 RC 字段）。
+            if (firstByte == 0x80 && len >= 12) {
+                // SRTP（来自客户端的加密 RTP，例如 NACK/PLI/FIR 反馈）
+                std::vector<uint8_t> srtpPkt(buf, buf + len);
+                std::vector<uint8_t> rtpPkt;
+                int ur = SrptProtect::unprotect(dtls_state->srtp_ctx, srtpPkt, rtpPkt);
+                if (ur == 0) {
+                    // 解密成功，WebRTC 服务端通常忽略客户端 RTP
+                }
             }
+            // else: SRTCP（加密的 RTCP Receiver Report 等），当前仅静默接收
         }
         else {
             // 未知协议，打印前20字节以诊断
@@ -417,7 +425,7 @@ void StreamNode::webrtcSession_handle_STUN(std::shared_ptr<STREAM_SESSION> sessi
         response[fpValuePos++] = crc & 0xFF;
     }
 
-    // 打印调试信息
+    // 打印调试信息（已禁用）
     {
         char dbg[256] = {};
         int n = 0;
