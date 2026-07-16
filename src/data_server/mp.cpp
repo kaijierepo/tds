@@ -1026,17 +1026,18 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime) {
 	}
 
 	if (memcmp(dataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0) {
-		string sLastVal = m_curVal;
+		//string sLastVal = m_curVal;
 		//特殊情况，数据更新时间没有改变，但是数据却改变了，可能发生在二次计算监控点利用脚本算出了一个错误数值
 		//后续脚本更新，算出正确数值，但是由于时间都使用了计算脚本引用的监控点的时间，该监控点更新时间不改变的话
 		//数值无法更新进入计算监测点
-		if (sLastVal != newVal) { 
-			timeopt::now(&t);
-			dataTime = &t;
-		}
-		else {
-			return;
-		}
+		//if (sLastVal != newVal) { 
+		//	timeopt::now(&t);
+		//	dataTime = &t;
+		//}
+		//else {
+		//	return;
+		//}
+		return;
 	}
 
 	//数字类型进行kb处理和上下限处理
