@@ -96,8 +96,8 @@ SrptProtect::initFromDtls(const DtlsTransport::SrptKeyingMaterial& keys,
         LOG("%s", hex_buf);
     }
 
-    // 重放窗口初始化 — 0xFFFF 确保第一个包总是能通过重放检测
-    ctx.highest_seq = 0xFFFF;
+    // first_packet 标记：首个包总是通过 ROC/重放检测，避免 sentinel 值与合法 seq 65535 冲突
+    ctx.first_packet = true;
 
     ctx.initialized = true;
     return ctx;
@@ -116,9 +116,8 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
     uint16_t seq = ((uint16_t)rtp[2] << 8) | rtp[3];
 
     // 检测序号回绕 (seq wraparound):
-    //   highest_seq 初始为 0xFFFF，第一个包总是 newest
-    //   如果 seq << (highest_seq & 0xFFFF) 且差距 > 0x8000 → 回绕
-    if (ctx.highest_seq != 0xFFFF) {
+    //   使用 first_packet 标记避免 highest_seq 的 sentinel 值与合法 seq 65535 冲突
+    if (!ctx.first_packet) {
         uint16_t prev_seq = ctx.highest_seq & 0xFFFF;
         if (seq < prev_seq && prev_seq - seq > 0x8000) {
             ctx.rollover_counter++;
@@ -128,8 +127,9 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
 
     // 更新最高序号
     uint32_t full_seq = (ctx.rollover_counter << 16) | seq;
-    if (ctx.highest_seq == 0xFFFF || full_seq > ctx.highest_seq) {
+    if (ctx.first_packet || full_seq > ctx.highest_seq) {
         ctx.highest_seq = full_seq;
+        ctx.first_packet = false;
     }
 
     // 构建 IV — 使用 RTP 包头中的实际 SSRC
@@ -146,7 +146,7 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
     aesCtrCrypt(ctx.encrypt_key, 16, iv, 16,
                 encrypted.data() + 12, payload_len);
 
-    // 诊断日志: 前 5 个包打印关键参数
+    // HMAC-SHA1 认证标签（截断至 80 bits = 10 bytes）
     static int pkt_count = 0;
     if (pkt_count < 5) {
         char hex_buf[256];
@@ -162,8 +162,6 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
         LOG("%s", hex_buf);
         pkt_count++;
     }
-
-    // HMAC-SHA1 认证标签（截断至 80 bits = 10 bytes）
     // RFC 3711 §4.2: HMAC 输入 = 认证部分 (RTP header + encrypted payload) || ROC
     // ROC (Rollover Counter) 以大端 4 字节形式追加到认证数据后
     uint8_t auth_tag[20];
@@ -183,26 +181,6 @@ SrptProtect::protect(Context& ctx, const std::vector<uint8_t>& rtp) {
              hmac_input.data(), hmac_input.size(),
              auth_tag);
     memcpy(encrypted.data() + 12 + payload_len, auth_tag, 10);
-
-    // ★ 自检验证: 用独立 context 做 unprotect，验证加密/认证正确
-    if (pkt_count < 5) {
-        Context verify_ctx = ctx;
-        verify_ctx.highest_seq = seq - 1;     // 小于当前 seq，保证通过重放检测
-        verify_ctx.rollover_counter = 0;       // 重置 ROC
-        std::vector<uint8_t> out_rtp;
-        int vr = unprotect(verify_ctx, encrypted, out_rtp);
-        char hex_buf[512];
-        if (vr == 0 && out_rtp.size() == rtp.size()) {
-            snprintf(hex_buf, sizeof(hex_buf),
-                "SRTP self-check #%d: OK (rtp_size=%zu, match=%s)",
-                pkt_count, rtp.size(),
-                memcmp(rtp.data(), out_rtp.data(), rtp.size())==0 ? "YES" : "NO");
-        } else {
-            snprintf(hex_buf, sizeof(hex_buf),
-                "SRTP self-check #%d: FAIL ret=%d", pkt_count, vr);
-        }
-        LOG("%s", hex_buf);
-    }
 
     return encrypted;
 }
@@ -230,10 +208,10 @@ int SrptProtect::unprotect(Context& ctx,
     }
 
     // ★ 重放检测修正：
-    //   第一个包 (highest_seq=0xFFFF 初始化值) 总是通过
-    //   后续包要求严格递增（允许合理的乱序范围）
+    //   使用 first_packet 标记避免 sentinel 值与合法 seq 65535 冲突
+    //   首个包总是通过，后续包要求严格递增
     uint32_t full_index = (roc << 16) | seq;
-    if (ctx.highest_seq != 0xFFFF  // 不是初始状态
+    if (!ctx.first_packet
         && full_index <= ctx.highest_seq) {
         return -2;  // 重放或旧包
     }
@@ -273,6 +251,7 @@ int SrptProtect::unprotect(Context& ctx,
     // 更新状态
     ctx.highest_seq = full_index;
     ctx.rollover_counter = roc;
+    ctx.first_packet = false;
 
     return 0;
 }

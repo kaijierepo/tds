@@ -27,6 +27,7 @@ public:
         uint32_t rollover_counter = 0;   // ROC (16-bit seq wrap counter)
         uint16_t highest_seq = 0;        // 已收到的最高序号（防重放）
         bool     initialized = false;
+        bool     first_packet = true;     // 首个包标记（避免 sentinel 值与合法 seq 65535 冲突）
 
         void clear() { memset(this, 0, sizeof(*this)); }
     };
