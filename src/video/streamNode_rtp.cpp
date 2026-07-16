@@ -365,9 +365,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     // === WebRTC SRTP 发送路径 ===
     // 遍历所有 client_sessions_，对 DTLS+SRTP 已完成的会话通过 SRTP 加密后发送视频
     uint8_t nalType = packet.payload[0] & 0x1F;
-    if (nalType == NAL_TYPE_SPS || nalType == NAL_TYPE_PPS) {
-        return;
-    }
+
     for (auto& session : playClients) {
         if (!session || !session->is_webrtc) continue;
         // state: 3=SRTP激活（is_webrtc 下 S3_SRTP_ACTIVE 即为激活态）
@@ -381,16 +379,49 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
         DtlsTransport& dtls = dtlsState->dtls;
         SrptProtect::Context& srtpCtx = dtlsState->srtp_ctx;
 
+        // 从源流动态缓存 SPS/PPS（当相机 SDP 不含 sprop-parameter-sets 时，
+        // 后续的 IDR 前插入和首次发送逻辑依赖缓存的 SPS/PPS）
+        // 注意：SPS/PPS 可能以 Single NAL、STAP-A 或 FU-A 格式到达
+        if (nalType == NAL_TYPE_SPS) {
+            session->sps = packet.payload;
+        } else if (nalType == NAL_TYPE_PPS) {
+            session->pps = packet.payload;
+        } else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 3) {
+            // STAP-A: [STAP-A header(1B)] [NALU1 size(2B)] [NALU1 data] ...
+            size_t off = 1;
+            while (off + 2 <= packet.payload.size()) {
+                uint16_t L = (packet.payload[off] << 8) | packet.payload[off + 1];
+                off += 2;
+                if (L == 0 || off + L > packet.payload.size()) break;
+                uint8_t subType = packet.payload[off] & 0x1F;
+                if (subType == NAL_TYPE_SPS) {
+                    session->sps = std::vector<uint8_t>(
+                        packet.payload.begin() + off,
+                        packet.payload.begin() + off + L);
+                } else if (subType == NAL_TYPE_PPS) {
+                    session->pps = std::vector<uint8_t>(
+                        packet.payload.begin() + off,
+                        packet.payload.begin() + off + L);
+                }
+                off += L;
+            }
+        } else if (nalType == NAL_TYPE_FU_A && packet.payload.size() > 1) {
+            // FU-A 极少用于 SPS/PPS（SPS/PPS 通常很小无需分片），暂不处理
+        }
+
         // 初始化 per-session 序列号（以原始流第一个包的 seq 为基准）
         if (!dtlsState->seq_inited) {
             dtlsState->local_seq = packet.sequence_number;
             dtlsState->seq_inited = true;
         }
 
+        // 确定本会话使用的 SSRC，必须与 SDP Answer 中声明的 a=ssrc: 一致
+        uint32_t sessionSsrc = session->video_ssrc ? session->video_ssrc : 1;
+
         // 辅助函数：发送单个 NAL 的 RTP 包，使用 per-session 独立序列号和时间戳
         auto sendSingleNalRtp = [&](const std::vector<uint8_t>& nal, uint32_t ts) {
             std::vector<uint8_t> nalData(12 + nal.size());
-            nalData[0] = 0x80;  // V=2, P=0, X=0, CC=0
+            nalData[0] = 0x80;  // V=2
             nalData[1] = (0 << 7) | (session->payload_type & 0x7F);  // marker=0
             nalData[2] = (dtlsState->local_seq >> 8) & 0xFF;
             nalData[3] = dtlsState->local_seq & 0xFF;
@@ -398,10 +429,10 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             nalData[5] = (ts >> 16) & 0xFF;
             nalData[6] = (ts >> 8) & 0xFF;
             nalData[7] = ts & 0xFF;
-            nalData[8]  = (packet.ssrc >> 24) & 0xFF;
-            nalData[9]  = (packet.ssrc >> 16) & 0xFF;
-            nalData[10] = (packet.ssrc >> 8) & 0xFF;
-            nalData[11] = packet.ssrc & 0xFF;
+            nalData[8]  = (sessionSsrc >> 24) & 0xFF;
+            nalData[9]  = (sessionSsrc >> 16) & 0xFF;
+            nalData[10] = (sessionSsrc >> 8) & 0xFF;
+            nalData[11] = sessionSsrc & 0xFF;
             memcpy(&nalData[12], nal.data(), nal.size());
 
             dtlsState->local_seq++;
@@ -421,10 +452,15 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
             if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
             for (auto& kfData : keyframe_cache_) {
+                // 关键帧缓存中的 RTP 包：替换 SSRC/PT/seq
                 std::vector<uint8_t> rtpVec(kfData.begin(), kfData.end());
                 rtpVec[1] = (rtpVec[1] & 0x80) | (session->payload_type & 0x7F);
                 rtpVec[2] = (dtlsState->local_seq >> 8) & 0xFF;
                 rtpVec[3] = dtlsState->local_seq & 0xFF;
+                rtpVec[8]  = (sessionSsrc >> 24) & 0xFF;
+                rtpVec[9]  = (sessionSsrc >> 16) & 0xFF;
+                rtpVec[10] = (sessionSsrc >> 8) & 0xFF;
+                rtpVec[11] = sessionSsrc & 0xFF;
                 dtlsState->local_seq++;
                 auto srtpPkt = SrptProtect::protect(srtpCtx, rtpVec);
                 if (!srtpPkt.empty()) {
@@ -443,11 +479,15 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             LOG("send sps/pps");
         }
 
-        // 用 per-session 独立序列号+PT 替换原始 seq/PT 后发送
+        // 用 per-session 独立序列号+PT+SSRC 替换原始值后发送
         std::vector<uint8_t> rtpVec(data.begin(), data.end());
         rtpVec[1] = (rtpVec[1] & 0x80) | (session->payload_type & 0x7F);  // 保留 marker, 重映射 PT
         rtpVec[2] = (dtlsState->local_seq >> 8) & 0xFF;
         rtpVec[3] = dtlsState->local_seq & 0xFF;
+        rtpVec[8]  = (sessionSsrc >> 24) & 0xFF;
+        rtpVec[9]  = (sessionSsrc >> 16) & 0xFF;
+        rtpVec[10] = (sessionSsrc >> 8) & 0xFF;
+        rtpVec[11] = sessionSsrc & 0xFF;
         dtlsState->local_seq++;
 
         std::vector<uint8_t> srtpPkt = SrptProtect::protect(srtpCtx, rtpVec);
@@ -458,15 +498,13 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
             (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
 
-        // 前 5 次打印发送状态
-        static int srtp_send_count = 0;
-        if (srtp_send_count < 5) {
-            char ipbuf[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &peerAddr.sin_addr, ipbuf, sizeof(ipbuf));
-            LOG("SRTP send #%d: sent=%d/%zu to %s:%u",
-                srtp_send_count, sent, srtpPkt.size(),
-                ipbuf, ntohs(peerAddr.sin_port));
-            srtp_send_count++;
+        if (sent < 0) {
+#ifdef _WIN32
+            int err = WSAGetLastError();
+            LOG("[SRTP] sendto FAILED, err=%d, pkt=%zu", err, srtpPkt.size());
+#else
+            LOG("[SRTP] sendto FAILED, errno=%d, pkt=%zu", errno, srtpPkt.size());
+#endif
         }
 
         if (sent > 0) {
