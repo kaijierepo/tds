@@ -427,7 +427,7 @@ public:
 
 	//static
 	static bool m_bDefaultOnline;
-	static void treeStatus2ListStatus(json& tree, json& list, json& onlineStatus, std::string tag);
+	static void treeStatus2ListStatus(json& tree, json& list, map<string, bool>& onlineStatus, std::string tag);
 
 	//function
 	void loadTask(json& jTask);

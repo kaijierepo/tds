@@ -1130,7 +1130,7 @@ OBJ* OBJ::createObjBranchByTag(string tag)
 	}
 	return pChild;
 }
-void OBJ::treeStatus2ListStatus(json& tree, json& list,json& onlineStatus, string tag)
+void OBJ::treeStatus2ListStatus(json& tree, json& list, map<string, bool>& onlineStatus, string tag)
 {
 	if (tree["level"] == "mp") {
 		json jDe;
@@ -1141,12 +1141,13 @@ void OBJ::treeStatus2ListStatus(json& tree, json& list,json& onlineStatus, strin
 	}
 
 	//自定义对象同步在线状态
-	if (tree["type"] != "" && tree["online"].is_boolean()) {
-		json jos;
-		jos["tag"] = tag;
-		jos["online"] = tree["online"];
-		onlineStatus.push_back(jos);
-		//LOG("同步对象在线状态,位号:%s,状态;%d", tag.c_str(), jos["online"].get<bool>() ? 1 : 0);
+	if (tree["online"].is_boolean()) {
+		bool online = tree["online"].get<bool>();
+		onlineStatus[tag] = online;
+
+		if (tag.find("杭州607会议室.电源时序器") != string::npos) {
+			LOG("同步对象在线状态,位号:%s,状态;%d", tag.c_str(), online ? 1 : 0);
+		}
 	}
 
 	string name = tree["name"];

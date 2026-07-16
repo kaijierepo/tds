@@ -41,6 +41,62 @@ project::~project()
 
 }
 
+bool project::setObjOnline(string tag) {
+	// debug code
+	//if (tag == "浙江.杭州.杭州607会议室.电源时序器") {
+	//	LOG("[对象上线  ]位号:%s", tag.c_str());
+	//}
+
+	OBJ* p = prj.queryObj(tag);
+	if (p) {
+		if (p->m_bOnline == false) {
+			p->m_bOnline = true;
+
+			//直属监控点设置为在线
+			if (p->m_strIoAddrBind != "") {
+				p->setChildMpOnline();
+			}
+
+			string sParams = "{\"tag\":\"" + tag + "\"}";
+			rpcSrv.notify("objOnline", sParams);
+		}
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+bool project::setObjOffline(string tag) {
+	// debug code
+	//if (tag == "浙江.杭州.杭州607会议室.电源时序器") {
+	//	LOG("[对象掉线  ]位号:%s", tag.c_str());
+	//}
+
+	OBJ* p = prj.queryObj(tag);
+	if (p) {
+		if (p->m_bOnline) {
+			p->m_bOnline = false;
+
+			if (p->m_strIoAddrBind != "") {
+				p->setChildMpOffline();
+			}
+
+			//LOG("[对象掉线  ]位号:%s", tag.c_str());
+			string sParams = "{\"tag\":\"" + tag + "\"}";
+			rpcSrv.notify("onObjOffline", sParams);
+		}
+
+		if (p->m_bChildTds) { //设置所有子对象掉线
+			p->recursiveSetOffline();
+		}
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 json project::getTypeTagByTag(string tag)
 {
 	json typeTag;

@@ -4606,25 +4606,21 @@ void rpcHandler::rpc_input(json params, RPC_RESP& resp, RPC_SESSION& session) {
 		}
 
 		json jDeList = json::array();
-		json jOnlineStatusList = json::array();
+		map<string,bool> jOnlineStatusList;
 
 		//params为子服务上送的对象树，rootTag为子服务在上级服务中的位号
 		//数据值和在线状态都来自于io设备采集，因此统一用input接口输入
 		OBJ::treeStatus2ListStatus(params, jDeList, jOnlineStatusList, rootTag);
 
 		//对于对象，更新在线状态
-		for (int i = 0; i < jOnlineStatusList.size(); i++) {
-			json& os = jOnlineStatusList[i];
-
-			if (os["online"].is_boolean()) {
-				if (os["online"].get<bool>() == true) {
-					RPC_RESP respTmp;
-					rpc_onObjOnline(os, respTmp, session);
-				}
-				else if (os["online"].get<bool>() == false) {
-					RPC_RESP respTmp;
-					rpc_onObjOffline(os, respTmp, session);
-				}
+		for (auto& i: jOnlineStatusList) {
+			bool online = i.second;
+			string tag = i.first;
+			if (online) {
+				prj.setObjOnline(tag);
+			}
+			else{
+				prj.setObjOffline(tag);
 			}
 		}
 
@@ -6368,18 +6364,8 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 
 void rpcHandler::rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	string tag = params["tag"];
-	OBJ* p = prj.queryObj(tag, session.language);
-	if (p) {
-		if (p->m_bOnline == false) {
-			p->m_bOnline = true;
-
-			if (p->m_strIoAddrBind != "") {
-				p->setChildMpOnline();
-			}
-
-			//LOG("[对象上线  ]位号:%s", tag.c_str());
-			rpcSrv.notify("objOnline", params.dump());
-		}
+	bool ok = prj.setObjOnline(tag);
+	if (ok) {
 		rpcResp.result = RPC_OK;
 	}
 	else {
@@ -6389,22 +6375,8 @@ void rpcHandler::rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION& se
 
 void rpcHandler::rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	string tag = params["tag"];
-	OBJ* p = prj.queryObj(tag, session.language);
-	if (p) {
-		if (p->m_bOnline) {
-			p->m_bOnline = false;
-
-			if (p->m_strIoAddrBind != "") {
-				p->setChildMpOffline();
-			}
-
-			//LOG("[对象掉线  ]位号:%s", tag.c_str());
-			rpcSrv.notify("onObjOffline", params.dump());
-		}
-	
-		if (p->m_bChildTds) { //设置所有子对象掉线
-			p->recursiveSetOffline();
-		}
+	bool ok = prj.setObjOffline(tag);
+	if (ok) {
 		rpcResp.result = RPC_OK;
 	}
 	else {

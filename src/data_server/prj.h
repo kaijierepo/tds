@@ -93,6 +93,9 @@ public:
 	project();
 	virtual ~project();
 
+	bool setObjOnline(string tag);
+	bool setObjOffline(string tag);
+
 	json getTypeTagByTag(std::string tag); //tag可以比当前对象树的配置更深
 
 	void saveRtStatus();

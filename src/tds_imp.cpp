@@ -960,6 +960,14 @@ void TDS_imp::callAsyn(string method, string& param, int delay)
 				rpcSrv.rpc_input(jparam,resp,session);
 				});
 		}
+		else if (method == "objOnline") {
+			thread t(thread_handleRpcCall, method, param, delay);
+			t.detach();
+		}
+		else if (method == "objOffline") {
+			thread t(thread_handleRpcCall, method, param, delay);
+			t.detach();
+		}
 		else {
 			thread t(thread_handleRpcCall, method, param, delay);
 			t.detach();
