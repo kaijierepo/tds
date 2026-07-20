@@ -23,6 +23,10 @@ public:
         uint8_t  encrypt_key[16] = {};   // AES-128 key
         uint8_t  encrypt_salt[14] = {};  // SRTP master salt
         uint8_t  auth_key[20] = {};       // HMAC-SHA1 key (derived)
+        // SRTCP 会话密钥（RFC 3711 §4.3 标签 0x03/0x04/0x05），用于解密浏览器反馈的 RTCP
+        uint8_t  rtcp_encrypt_key[16] = {};
+        uint8_t  rtcp_encrypt_salt[14] = {};
+        uint8_t  rtcp_auth_key[20] = {};
         uint32_t ssrc = 0;
         uint32_t rollover_counter = 0;   // ROC (16-bit seq wrap counter)
         uint16_t highest_seq = 0;        // 已收到的最高序号（防重放）
@@ -65,6 +69,19 @@ public:
     static int unprotect(Context& ctx,
                          const std::vector<uint8_t>& srtp,
                          std::vector<uint8_t>& out_rtp);
+
+    /**
+     * @brief SRTCP 解密 (RFC 3711 §3.4)
+     *
+     * 结构: [RTCP compound(前8B明文,其余加密)] [E+SRTCP index(4B)] [auth tag(10B)]
+     * @param ctx        SRTP 上下文（使用其 rtcp_* 会话密钥）
+     * @param srtcp      完整的 SRTCP 包
+     * @param out_rtcp   输出：解密后的 RTCP compound（不含 index 与 tag）
+     * @return 0=成功, -1=认证失败或格式错误
+     */
+    static int unprotectRtcp(Context& ctx,
+                             const uint8_t* srtcp, size_t len,
+                             std::vector<uint8_t>& out_rtcp);
 
     /// AES-128-CTR keystream 生成
     /// @param skip_bytes 跳过前 N 字节密钥流（用于 RTP 头等不加密部分，KDF 调用时传 0）

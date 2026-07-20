@@ -80,6 +80,11 @@ SrptProtect::initFromDtls(const DtlsTransport::SrptKeyingMaterial& keys,
     deriveSessionKey(master_key, 16, master_salt, 14, 0x01, 20, ctx.auth_key);
     deriveSessionKey(master_key, 16, master_salt, 14, 0x02, 14, ctx.encrypt_salt);
 
+    // SRTCP 会话密钥（标签 0x03=加密, 0x04=认证, 0x05=盐），用于解密浏览器反馈的 RTCP
+    deriveSessionKey(master_key, 16, master_salt, 14, 0x03, 16, ctx.rtcp_encrypt_key);
+    deriveSessionKey(master_key, 16, master_salt, 14, 0x04, 20, ctx.rtcp_auth_key);
+    deriveSessionKey(master_key, 16, master_salt, 14, 0x05, 14, ctx.rtcp_encrypt_salt);
+
     // 诊断日志: 打印完整 key material 用于对比浏览器端密钥
     {
         char hex_buf[512];
@@ -252,6 +257,48 @@ int SrptProtect::unprotect(Context& ctx,
     ctx.highest_seq = full_index;
     ctx.rollover_counter = roc;
     ctx.first_packet = false;
+
+    return 0;
+}
+
+/* ---------- unprotectRtcp: SRTCP → RTCP (RFC 3711 §3.4) ---------- */
+int SrptProtect::unprotectRtcp(Context& ctx,
+                                const uint8_t* srtcp, size_t len,
+                                std::vector<uint8_t>& out_rtcp) {
+    // 最小 SRTCP: RTCP 头(8) + SRTCP index(4) + auth tag(10)
+    if (len < 8 + 4 + 10) return -1;
+
+    size_t rtcp_len = len - 4 - 10;         // 加密的 RTCP compound 长度（含明文前 8B）
+
+    // 读取 E 标志 + SRTCP index（明文，位于 tag 之前）
+    const uint8_t* idx_ptr = srtcp + rtcp_len;
+    uint32_t e_index = ((uint32_t)idx_ptr[0] << 24) | ((uint32_t)idx_ptr[1] << 16)
+                     | ((uint32_t)idx_ptr[2] << 8) | idx_ptr[3];
+    bool encrypted = (e_index & 0x80000000u) != 0;
+    uint32_t srtcp_index = e_index & 0x7FFFFFFFu;
+
+    // 验证 HMAC-SHA1-80：认证范围 = RTCP compound + (E+index) 共 rtcp_len+4 字节
+    uint8_t expected_tag[20];
+    hmacSha1(ctx.rtcp_auth_key, 20, srtcp, rtcp_len + 4, expected_tag);
+    if (memcmp(srtcp + rtcp_len + 4, expected_tag, 10) != 0) {
+        return -1;  // 认证失败
+    }
+
+    out_rtcp.assign(srtcp, srtcp + rtcp_len);
+
+    // E=0 表示未加密（少见），直接返回明文
+    if (!encrypted) return 0;
+
+    // 加密区从字节 8 开始（前 8B: V/P/RC,PT,length,SSRC 为明文）
+    if (rtcp_len <= 8) return 0;  // 无加密载荷
+    uint32_t sender_ssrc = ((uint32_t)out_rtcp[4] << 24) | ((uint32_t)out_rtcp[5] << 16)
+                         | ((uint32_t)out_rtcp[6] << 8) | out_rtcp[7];
+
+    // IV 与 SRTP 相同构造，index 换为 SRTCP index（buildIv 内部计算 index*2^16）
+    uint8_t iv[16];
+    buildIv(iv, ctx.rtcp_encrypt_salt, sender_ssrc, srtcp_index);
+    aesCtrCrypt(ctx.rtcp_encrypt_key, 16, iv, 16,
+                out_rtcp.data() + 8, rtcp_len - 8);
 
     return 0;
 }

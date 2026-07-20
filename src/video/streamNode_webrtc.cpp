@@ -63,12 +63,8 @@ void StreamNode::stopAllRtcHandleThreads() {
         if (s->rtc_handle_thread_.joinable()) {
             s->rtc_handle_thread_.join();
         }
-        // 清理 DTLS 状态（iceHandleLoop 退出时通常已清理，这里兜底）
-        if (s->dtls_transport_) {
-            delete static_cast<SessionDtlsState*>(s->dtls_transport_);
-            s->dtls_transport_ = nullptr;
-            s->srtp_context_   = nullptr;
-        }
+        // 清理 DTLS 状态（ICE 线程退出时已释放局部 shared_ptr，这里丢弃会话持有的引用）
+        std::atomic_store(&s->dtls_transport_, std::shared_ptr<SessionDtlsState>());
         logInfo("ICE thread stopped for socket fd=" + std::to_string(s->rtp_socket));
     }
 }
@@ -77,9 +73,9 @@ void StreamNode::stopAllRtcHandleThreads() {
 void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session) {
     uint8_t buf[2048];
 
-    // 初始化本会话的 DTLS 状态
-    SessionDtlsState* dtls_state = new SessionDtlsState();
-    session->dtls_transport_ = dtls_state;
+    // 初始化本会话的 DTLS 状态（shared_ptr 管理，RTP 发送线程可安全持有引用）
+    std::shared_ptr<SessionDtlsState> dtls_state = std::make_shared<SessionDtlsState>();
+    std::atomic_store(&session->dtls_transport_, dtls_state);
     session->srtp_context_   = &dtls_state->srtp_ctx;
 
     // 使用 StreamServer 的共享证书初始化 DTLS
@@ -144,43 +140,58 @@ void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session)
         }
         // === DTLS ===
         else if (firstByte >= 0x14 && firstByte <= 0x18) {
-            webrtcSession_handle_DTLS(session, dtls_state, buf, len, peer, dtls_start);
+            webrtcSession_handle_DTLS(session, dtls_state.get(), buf, len, peer, dtls_start);
         }
         // === SRTP / SRTCP (来自客户端的加密 RTP/RTCP) ===
         else if ((firstByte & 0xC0) == 0x80 && dtls_state->srtp_ready) {
             if (len < 2) continue;
-            uint8_t secondByte = buf[1];
-            // RTCP 包类型: 200=SR, 201=RR, 202=SDES, 203=BYE, 204=APP
-            // 非加密 RTCP 的 PT 在第二个字节；SRTCP 加密后该字段也被加密。
-            // 通过首字节区分：RTP 通常 0x80（无 CSRC）；0x81+ 大概率是 SRTCP（含 RC 字段）。
-            if (firstByte == 0x80 && len >= 12) {
-                // SRTP（来自客户端的加密 RTP，例如 NACK/PLI/FIR 反馈）
+            // 浏览器作为纯接收端只回传 RTCP 反馈。首包 PT(明文,buf[1]) 落在 200..206
+            // 即为 RTCP compound，交由 SRTCP 处理解密后解析 PLI/FIR/NACK。
+            uint8_t pt = buf[1];
+            if (pt >= 200 && pt <= 206) {
+                webrtcSession_handle_SRTCP(session, dtls_state.get(), buf, len, peer);
+            }
+            else {
+                // 客户端 RTP（纯接收场景一般不会出现），保持原样静默解密
                 std::vector<uint8_t> srtpPkt(buf, buf + len);
                 std::vector<uint8_t> rtpPkt;
-                int ur = SrptProtect::unprotect(dtls_state->srtp_ctx, srtpPkt, rtpPkt);
-                if (ur == 0) {
-                    // 解密成功，WebRTC 服务端通常忽略客户端 RTP
-                }
+                SrptProtect::unprotect(dtls_state->recv_ctx, srtpPkt, rtpPkt);
             }
-            // else: SRTCP（加密的 RTCP Receiver Report 等），当前仅静默接收
         }
         else {
-            // 未知协议，打印前20字节以诊断
+            // 未知协议，打印前40字节以诊断
             char hx[128] = {};
             int hoff = 0;
             for (int i = 0; i < len && i < 40 && hoff < 100; i++)
                 hoff += sprintf(hx + hoff, "%02x", (unsigned char)buf[i]);
-            LOG("[ICE] Unknown packet from %s:%d, len=%d, firstByte=0x%02x, hex=%s",
-                inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), len, firstByte, hx);
+            LOG("[ICE] Unknown packet from %s:%d, len=%d, firstByte=0x%02x, "
+                "srtp_ready=%d, dtls_state=%p, hex=%s",
+                inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), len, firstByte,
+                (int)dtls_state->srtp_ready, (void*)dtls_state.get(), hx);
+            // 诊断：打印所有 client_pull 会话，确认是否存在多个会话并存、哪个 srtp_ready=false
+            {
+                static long unknownCount = 0;
+                if ((++unknownCount % 100) == 1) {
+                    std::lock_guard<std::mutex> lock(session_list_client_pull_mutex_);
+                    LOG("[ICE] client_pull session count = %d",
+                        (int)session_list_client_pull_.size());
+                    for (auto& s : session_list_client_pull_) {
+                        std::shared_ptr<SessionDtlsState> st_shared =
+                            std::atomic_load(&s->dtls_transport_);
+                        SessionDtlsState* st = st_shared.get();
+                        LOG("[ICE]   session fd=%d srtp_ready=%d webrtc_state=%d",
+                            (int)s->rtp_socket, st ? (int)st->srtp_ready : -1,
+                            (int)s->webrtc_state);
+                    }
+                }
+            }
         }
     }
 
-    // 清理本会话的 DTLS 状态
-    if (dtls_state) {
-        delete dtls_state;
-        session->dtls_transport_ = nullptr;
-        session->srtp_context_   = nullptr;
-    }
+    // 清理本会话的 DTLS 状态：丢弃会话持有的引用即可，
+    // 对象由本函数的局部 shared_ptr dtls_state 在函数返回时释放（不再裸 delete）
+    std::atomic_store(&session->dtls_transport_, std::shared_ptr<SessionDtlsState>());
+    session->srtp_context_   = nullptr;
 
     // 从 session_list_client_pull_ 中移除本会话
     {
@@ -200,6 +211,72 @@ void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session)
     // 在线程返回前 detach，使其与 thread 对象分离，避免后续析构 session 时崩溃。
     if (session->rtc_handle_thread_.joinable()) {
         session->rtc_handle_thread_.detach();
+    }
+}
+
+
+// ============================================================================
+// WebRTC SRTCP 反馈处理：解密浏览器回传的 RTCP compound，
+// 识别 PLI/FIR（请求关键帧）与 NACK（按序号重传缓存的 SRTP 包，修复花屏）
+// ============================================================================
+
+void StreamNode::webrtcSession_handle_SRTCP(std::shared_ptr<STREAM_SESSION> session,
+                                             SessionDtlsState* dtls_state,
+                                             uint8_t* buf, int len,
+                                             struct sockaddr_in& peer) {
+    // 解密整个 SRTCP compound（NACK 的丢包序号位于加密段，必须解密后才能读取）
+    std::vector<uint8_t> rtcp;
+    if (SrptProtect::unprotectRtcp(dtls_state->recv_ctx, buf, (size_t)len, rtcp) != 0) {
+        return;  // 认证失败或格式错误
+    }
+
+    // 从重传缓存取出已加密的 SRTP 包并原样重发（不触碰 srtp_ctx/local_seq）
+    int resent = 0;
+    auto retransmit = [&](uint16_t seq) {
+        std::lock_guard<std::mutex> lk(dtls_state->rtx_mutex_);
+        RtxCachedPacket& slot = dtls_state->rtx_buf_[seq % SessionDtlsState::kRtxBufSize];
+        if (slot.valid && slot.seq == seq && !slot.data.empty()) {
+            sendto(session->rtp_socket, (const char*)slot.data.data(),
+                   (int)slot.data.size(), 0,
+                   (const struct sockaddr*)&peer, sizeof(peer));
+            resent++;
+        }
+    };
+
+    // 遍历 compound 中的各 RTCP 包（单包长度 = (length+1)*4 字节）
+    size_t off = 0;
+    while (off + 4 <= rtcp.size()) {
+        uint8_t  fmt  = rtcp[off] & 0x1F;
+        uint8_t  pt   = rtcp[off + 1];
+        uint16_t words = ((uint16_t)rtcp[off + 2] << 8) | rtcp[off + 3];
+        size_t   pkt_len = ((size_t)words + 1) * 4;
+        if (off + pkt_len > rtcp.size()) break;
+
+        if (pt == 206 && (fmt == 1 || fmt == 4)) {
+            // PSFB: PLI(1)/FIR(4) → 请求重发关键帧
+            LOG("[ICE] client feedback %s, request keyframe resend",
+                fmt == 1 ? "PLI" : "FIR");
+            dtls_state->request_keyframe_resend_ = true;
+        }
+        else if (pt == 205 && fmt == 1) {
+            // RTPFB Generic NACK: 头部 12B(公共头8B+media SSRC 4B)，FCI 从 off+12 起
+            // 每个 FCI = PID(2B) + BLP(2B)：PID 丢失，BLP 第 i 位置1表示 PID+i+1 也丢失
+            size_t fci = off + 12;
+            while (fci + 4 <= off + pkt_len) {
+                uint16_t pid = ((uint16_t)rtcp[fci] << 8) | rtcp[fci + 1];
+                uint16_t blp = ((uint16_t)rtcp[fci + 2] << 8) | rtcp[fci + 3];
+                retransmit(pid);
+                for (int b = 0; b < 16; b++) {
+                    if (blp & (1 << b)) retransmit((uint16_t)(pid + b + 1));
+                }
+                fci += 4;
+            }
+        }
+        off += pkt_len;
+    }
+
+    if (resent > 0) {
+        LOG("[ICE] NACK: retransmitted %d cached packet(s)", resent);
     }
 }
 
@@ -501,6 +578,10 @@ void StreamNode::webrtcSession_handle_DTLS(std::shared_ptr<STREAM_SESSION> sessi
                 dtls_state->srtp_ctx = SrptProtect::initFromDtls(
                     keys, true, /* is_server */
                     0);         // ssrc 将在发送时设置
+                // 接收方向上下文（client_write 主密钥），用于解密浏览器反馈的 SRTCP(NACK/PLI)
+                dtls_state->recv_ctx = SrptProtect::initFromDtls(
+                    keys, false, /* is_server=false */
+                    0);
 
                 session->webrtc_state = WEBRTC_SESSION_STATE::SRTP_ACTIVE; // SRTP 激活
                 LOG("[ICE] DTLS handshake + SRTP keys ready for socket fd="
@@ -642,6 +723,11 @@ void StreamNode::buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& ser
     if (!fmtpLine.empty()) {
         sdp << "a=fmtp:" << si.payload_type << " " << fmtpLine << "\r\n";
     }
+
+    // 声明支持 RTCP 反馈：否则浏览器不会发送 PLI/FIR，解码卡顿时无法主动请求关键帧
+    sdp << "a=rtcp-fb:" << si.payload_type << " nack\r\n";
+    sdp << "a=rtcp-fb:" << si.payload_type << " nack pli\r\n";
+    sdp << "a=rtcp-fb:" << si.payload_type << " ccm fir\r\n";
 
     sdp << "a=rtcp-mux\r\n";                           // RTCP 复用 RTP 端口
     sdp << "a=rtcp-rsize\r\n";                         // 精简 RTCP

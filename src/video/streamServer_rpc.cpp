@@ -66,7 +66,7 @@ json getStreamInfo(shared_ptr<StreamNode> rc) {
 		if (session->session_type_ == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PULL) {
 			j["webRtcState"] = session->getWebRtcStateDesc();
 			if (session->dtls_transport_) {
-				SessionDtlsState* dtls = static_cast<SessionDtlsState*>(session->dtls_transport_);
+				SessionDtlsState* dtls = session->dtls_transport_.get();
 				if (dtls->dtls.isHandshakeDone()) {
 					const char* dtlsCipher = dtls->dtls.getDtlsCipherName();
 					const char* srtpProfile = dtls->dtls.getSrtpProfileName();

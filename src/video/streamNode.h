@@ -274,7 +274,9 @@ public:
         uint32_t      video_ssrc = 0;
 
         // DTLS/SRTP 状态（per-session，由 ice 线程管理）
-        SessionDtlsState* dtls_transport_ = nullptr;  // 指向 SessionDtlsState 实例
+        // 用 shared_ptr 管理：RTP 发送线程与 ICE 线程并发持有同一实例，
+        // 引用计数保证最后使用者释放前对象不被析构，杜绝 Use-After-Free
+        std::shared_ptr<SessionDtlsState> dtls_transport_ = nullptr;
         SrptProtect::Context* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
 
         // 新会话首次发送数据标记：首次先发 SPS/PPS + 缓存的关键帧，再开始转发实时流
@@ -551,4 +553,10 @@ private:
                                     uint8_t* buf, int len,
                                     struct sockaddr_in& peer,
                                     std::chrono::steady_clock::time_point& dtls_start);
+    // SRTCP 反馈处理：解密浏览器的 RTCP compound，识别 PLI/FIR（请求关键帧）
+    // 与 NACK（按序号从重传缓存重发已加密的 SRTP 包）
+    void webrtcSession_handle_SRTCP(std::shared_ptr<STREAM_SESSION> session,
+                                     SessionDtlsState* dtls_state,
+                                     uint8_t* buf, int len,
+                                     struct sockaddr_in& peer);
 };
