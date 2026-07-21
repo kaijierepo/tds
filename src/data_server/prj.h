@@ -6,6 +6,7 @@ using json = nlohmann::json;
 #include "tdsSession.h"
 #include "tds.h"
 #include <shared_mutex>
+#include <mutex>
 #include "scriptManager.h"
 
 class StreamNode;
@@ -68,6 +69,10 @@ public:
 	bool loadConf(json& jConf,bool bCreate=true);
 	bool loadConf(yyjson_val* conf, bool bCreate = true);
 	bool saveConfFile();
+	//在持有 m_csPrj 写锁时调用，序列化整棵监控对象树为 mo.json 字符串。
+	//单独抽出是为了让冷重载(setObj 带 children)在锁内拿到与变更原子的一致快照，
+	//从而把耗时的磁盘写与广播放到锁外执行，避免阻塞并发的 getObj 刷新读导致前端卡死。
+	std::string serializeConf();
 	void clear();
 	void getMpTypeList(json& mpTypeList);
 
@@ -83,6 +88,7 @@ public:
 	std::vector<MP*> getAllEzvizMp();
 
 	std::string m_moConfFileDump; //字符串配置数据//最近一次保存的缓存，如果前端获取整颗树，直接获取此处加快速度
+	std::mutex m_csMoConfDump;    //保护 m_moConfFileDump 的读写，避免与 getObjTree 形成数据竞争
 	map<std::string, MP*> m_mapAllMP;
 
 	bool m_enableEzviz;

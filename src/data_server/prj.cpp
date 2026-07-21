@@ -221,7 +221,8 @@ bool project::loadConfFile() {
 	return loadConf(conf);
 }
 
-bool project::saveConfFile() {
+std::string project::serializeConf() {
+	shared_lock<shared_mutex> lock(prj.m_csPrj); //与并发 getObj 读不互斥，仅在写锁持有者变更树时短暂等待
 	yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
 	yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
 	mut_root = yyjson_mut_obj(mut_doc);
@@ -233,22 +234,33 @@ bool project::saveConfFile() {
 	q.getStatus = false;
 	q.getConfDetail = false;
 
-	bool bSaved = false;
 	toJson(mut_root, mut_doc, q);
 
-	size_t len;
+	size_t len = 0;
 	char* p = yyjson_mut_val_write(mut_root, YYJSON_WRITE_PRETTY_NO_SPACES|YYJSON_WRITE_PRETTY, &len);
-	if (len == 0) {
-		LOG("[error]critical error,mo tree to json fail");
+	std::string s;
+	if (p != nullptr && len > 0) {
+		s.assign(p, len);
 	}
-	else {
-		if (p) {
-			bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p, len);
-			free(p);
-		}
-	}
-	
+	free(p);
 	yyjson_mut_doc_free(mut_doc);
+	return s;
+}
+
+bool project::saveConfFile() {
+	std::string s = serializeConf();
+	if (s.empty()) {
+		LOG("[error]critical error,mo tree to json fail");
+		return false;
+	}
+
+	bool bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", s);
+	if (bSaved) {
+		//保存成功后同步刷新整树缓存，避免 getObjTree 继续返回旧的 mo.json 内容。
+		//否则前端需要重启 tds 才能看到最新配置。
+		lock_guard<mutex> lock(m_csMoConfDump);
+		m_moConfFileDump = s;
+	}
 	return bSaved;
 }
 
@@ -534,6 +546,7 @@ bool project::handleRpc(string method, yyjson_val* params, RPC_RESP& resp, RPC_S
 	}
 	else if (method == "getObjTree") {
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
+		lock_guard<mutex> dumpLock(prj.m_csMoConfDump);
 		resp.result = prj.m_moConfFileDump;
 	}
 	else if (method == "getObjGroups") {
@@ -554,6 +567,19 @@ bool project::handleRpc(string method, yyjson_val* params, RPC_RESP& resp, RPC_S
 		resp.result = sGroups;
 	}
 	else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo") {
+		//整树刷新(getMOTree: tag为空且获取子节点、不带状态/类型过滤)直接返回已缓存的
+		//序列化结果，避免每次重新序列化整棵监控对象树(节点越多越慢)，导致前端刷新“卡死”。
+		OBJ_PROP_SEL qFast = OBJ::parseQuerier(params);
+		yyjson_val* yyv_tag = yyjson_obj_get(params, "tag");
+		string fastTag = yyv_tag ? yyjson_get_str(yyv_tag) : "";
+		if (qFast.getChild && qFast.leafType == "" && qFast.getStatus == false
+			&& fastTag == "" && !prj.m_moConfFileDump.empty()
+			&& (session.user == "admin" || session.user == "")) {
+			shared_lock<shared_mutex> lock(prj.m_csPrj);
+			lock_guard<mutex> dumpLock(prj.m_csMoConfDump);
+			resp.result = prj.m_moConfFileDump;
+			return true;
+		}
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
 		session.tStartHandle = getTick();
 
@@ -682,31 +708,43 @@ void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& ses
 
 			OBJ* pmo = prj.queryObj(tag, session.language);
 			if (pmo) {
-				//要修改树结构,冷重载。锁住对象锁
-				if (yyjson_obj_get(params, "children")) {
+			//要修改树结构,冷重载。锁住对象锁
+			if (yyjson_obj_get(params, "children")) {
+				{
 					unique_lock<shared_mutex> lock(prj.m_csPrj);
 					LOCK_THREAD_RECORDER recorder(&prj.m_prjWriteLockThread, sys::getThreadId());
 
 					pmo->loadConf(params, false);
 
-					//持久化
-					bool bSaved = prj.saveConfFile();
-					if (!bSaved) {
-						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "save mo.json file fail; maybe file is set to readonly");
-						LOG("[error]保存mo.json失败;检查该文件是否被设置成了只读属性");
-						return;
-					}
-
-					std::map<string, SCRIPT_INFO> expScripts;
+					//更新变量表达式脚本表，需要在锁内遍历树
 					prj.getAllVarExpScript();
-
-					//数据服务自己缓存状态，并重新加载，此处不应从ioSrv同步数据，后续应当删除。
-					//ioSrv.updateTag2IOAddrBinding();
-					//ioSrv.updateAllChanVal();
-					string sp = "{}";
-					rpcSrv.notify("objTreeUpdated", sp);
-					result = "\"ok\"";
 				}
+
+				//锁外：序列化 + 落盘 + 广播。
+				//序列化(serializeConf)内部按 shared_lock 读取，与并发的 getObj 刷新读不互斥；
+				//磁盘写与广播也不再持有写锁，避免大配置树下保存时阻塞前端刷新读导致“卡死”。
+				std::string serializedMo = prj.serializeConf();
+				bool bSaved = false;
+				if (!serializedMo.empty()) {
+					bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", serializedMo);
+					if (bSaved) {
+						lock_guard<mutex> dumpLock(prj.m_csMoConfDump);
+						prj.m_moConfFileDump = serializedMo;
+					}
+				}
+				if (!bSaved) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "save mo.json file fail; maybe file is set to readonly");
+					LOG("[error]保存mo.json失败;检查该文件是否被设置成了只读属性");
+					return;
+				}
+
+				//数据服务自己缓存状态，并重新加载，此处不应从ioSrv同步数据，后续应当删除。
+				//ioSrv.updateTag2IOAddrBinding();
+				//ioSrv.updateAllChanVal();
+				string sp = "{}";
+				rpcSrv.notify("objTreeUpdated", sp);
+				result = "\"ok\"";
+			}
 				//热重载
 				else {
 					pmo->loadConf(params);
