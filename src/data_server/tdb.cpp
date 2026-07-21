@@ -4078,7 +4078,7 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, std::string&
 	return true;
 }
 
-bool TDB::Insert(std::string strTag, int iVal, DB_TIME* stTime)
+bool TDB::Insert(std::string strTag, int iVal, DB_TIME* stTime, bool buffered)
 {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
@@ -4091,7 +4091,7 @@ bool TDB::Insert(std::string strTag, int iVal, DB_TIME* stTime)
 	return InsertValJsonStr(strTag, dbt, s);
 }
 
-bool TDB::Insert(std::string strTag, long long iVal, DB_TIME* stTime)
+bool TDB::Insert(std::string strTag, long long iVal, DB_TIME* stTime, bool buffered)
 {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
@@ -4104,7 +4104,7 @@ bool TDB::Insert(std::string strTag, long long iVal, DB_TIME* stTime)
 	return InsertValJsonStr(strTag, dbt, s);
 }
 
-bool TDB::Insert(std::string strTag, bool bVal, DB_TIME* stTime) {
+bool TDB::Insert(std::string strTag, bool bVal, DB_TIME* stTime, bool buffered) {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
 		dbt = *stTime;
@@ -4116,7 +4116,7 @@ bool TDB::Insert(std::string strTag, bool bVal, DB_TIME* stTime) {
 	return InsertValJsonStr(strTag, dbt, s);
 }
 
-bool TDB::Insert(std::string strTag, double dbVal, DB_TIME* stTime)
+bool TDB::Insert(std::string strTag, double dbVal, DB_TIME* stTime, bool buffered)
 {
 	DB_TIME dbt;
 	if (stTime != nullptr) {
@@ -5934,16 +5934,35 @@ yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
 	return new_doc;
 }
 
-bool TDB::Insert(std::string strTag, DB_TIME stTime, int& iVal)
-{
-	std::string s = formatStr("%d", iVal);
-	return InsertValJsonStr(strTag, stTime, s);
-}
 
-bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal)
+
+bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal,bool buffered)
 {
 	if (!m_enableDB)
 		return false;
+
+	if (buffered && m_enableInsertBuff) {
+		m_csInsertBuff.lock();
+		auto iter = m_insertBuff.find(strTag);
+		if (iter == m_insertBuff.end()) {
+			std::vector<DE_BUFF> vec;
+			m_insertBuff[strTag] = vec;
+			iter = m_insertBuff.find(strTag);
+		}
+		m_csInsertBuff.unlock();
+
+		DE_BUFF deb;
+		deb.time = stTime;
+		deb.sVal = sVal;;
+		iter->second.push_back(deb);
+		if (iter->second.size() > m_insertBuffSize) {
+			InsertValJsonStrBuffer(strTag, iter->second);
+			iter->second.clear();
+		}
+		return true;
+	}
+
+
 	std::string folderPath = getPath_dataFolder(strTag, stTime);
 	std::string dlPath = folderPath + "/" + m_dbFmt.deListName;
 	if (!folderExist(folderPath))
@@ -6055,19 +6074,100 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 	return true;
 }
 
-bool TDB::Insert(std::string strTag, DB_TIME stTime, long long& iVal)
+FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time,bool firstDe) {
+	FILE* fp = nullptr;
+
+	std::string folderPath = getPath_dataFolder(tag, time);
+	std::string dlPath = folderPath + "/" + m_dbFmt.deListName;
+	if (!folderExist(folderPath))
+		DB_FS::createFolderOfPath(folderPath.c_str());
+
+	bool bAppend = false;
+	if (fileExist(dlPath))
+	{
+#ifdef _WIN32
+		fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
+#else
+		fp = fopen(dlPath.c_str(), "rb+");
+#endif
+		fseek(fp, 0L, SEEK_END);
+		long len = ftell(fp);
+
+		if (len > 0)
+		{
+			fseek(fp, len - 1, SEEK_SET);  //overwrite last ] charactor
+			firstDe = false;
+			return fp;
+		}
+	}
+
+	//file not exist or empty file
+#ifdef _WIN32
+	fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"wb+");
+#else
+	fp = fopen(dlPath.c_str(), "wb+");
+#endif
+	static std::string s = "[";
+	fwrite(s.c_str(), 1, s.length(), fp);
+	firstDe = true;
+	return fp;
+}
+
+
+bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuff)
+{
+	DB_TIME stLastTime;
+	DB_TIME stTime;
+	FILE* fp = nullptr;
+	bool firstDeInFile = false;
+	for (int i = 0; i < deBuff.size(); i++) {
+		DE_BUFF deb = deBuff[i];
+		stTime = deb.time;
+		//buffer de belongs to different file
+		if (stTime.wDay != stLastTime.wDay) {
+			if (fp) {
+				fwrite("]", 1, 1, fp);
+				fclose(fp);
+			}
+			fp = getDBFileHandle(strTag, stTime, firstDeInFile);
+			if (!fp)
+				return false;
+		}
+		stLastTime = stTime;
+
+		if (!firstDeInFile)
+			fwrite(",", 1, 1, fp);
+
+		std::string deData = "{\n\"time\":\"" + stTime.toStr() + "\",\n\"" + m_dbFmt.deItemKey_value + "\":" + deb.sVal + "\n}";
+		fwrite(deData.c_str(), 1, deData.length(), fp);
+	}
+
+	if (fp) {
+		fwrite("]", 1, 1, fp);
+		fclose(fp);
+	}
+}
+
+
+bool TDB::Insert(std::string strTag, DB_TIME stTime, int& iVal, bool buffered)
 {
 	std::string s = formatStr("%d", iVal);
 	return InsertValJsonStr(strTag, stTime, s);
 }
 
-bool TDB::Insert(std::string strTag, DB_TIME stTime, double& dbVal)
+bool TDB::Insert(std::string strTag, DB_TIME stTime, long long& iVal, bool buffered)
+{
+	std::string s = formatStr("%d", iVal);
+	return InsertValJsonStr(strTag, stTime, s);
+}
+
+bool TDB::Insert(std::string strTag, DB_TIME stTime, double& dbVal, bool buffered)
 {
 	std::string s = formatStr("%f", dbVal);
 	return InsertValJsonStr(strTag, stTime, s);
 }
 
-bool TDB::Insert(std::string strTag, DB_TIME stTime, float& fVal)
+bool TDB::Insert(std::string strTag, DB_TIME stTime, float& fVal, bool buffered)
 {
 	std::string s = formatStr("%f", fVal);
 	return InsertValJsonStr(strTag, stTime, s);

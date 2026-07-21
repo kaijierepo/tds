@@ -28,6 +28,7 @@ SOFTWARE.
 
 #pragma once
 #include <map>
+#include <unordered_map>
 #include <set>
 #include <mutex>
 #ifdef ENABLE_QJS
@@ -107,6 +108,9 @@ struct DB_TIME {
 
 	bool operator==(const DB_TIME& right) const {
 		return 0 == memcmp(this, &right,sizeof(DB_TIME));
+	}
+	bool operator!=(const DB_TIME& right) const {
+		return 0 != memcmp(this, &right, sizeof(DB_TIME));
 	}
 	bool isLeapYear() const {
 		return (wYear % 4 == 0 && wYear % 100 != 0) || (wYear % 400 == 0);
@@ -599,6 +603,11 @@ public:
 	}
 };
 
+struct DE_BUFF {
+	DB_TIME time;
+	std::string sVal;
+};
+
 //a data set specified by time and tag
 //key tag can be exact tag, or fuzzy tag with * to represent multi tags
 class DATA_SET {
@@ -927,6 +936,8 @@ public:
 	bool Open_gbk(std::string strDBUrl, fp_getTagsByTagSelector f = nullptr, std::string name = "");
 	bool setBufferTTL(std::string bufferTTL);
 	bool m_enableDB = true;
+	bool m_enableInsertBuff = false;
+	int m_insertBuffSize = 80;
 	DB_FMT m_dbFmt;
 	bool m_bEnableFsBuff;
 	FS_BUFF m_FsBuff;
@@ -975,14 +986,14 @@ public:
 
 	// db.insert functions
 	// insert basic val type,use reference ,avoid force conversion
-	bool Insert(std::string strTag, DB_TIME stTime, double& dbVal);
-	bool Insert(std::string strTag, DB_TIME stTime, int& iVal);
-	bool Insert(std::string strTag, DB_TIME stTime, long long& iVal);
-	bool Insert(std::string strTag, DB_TIME stTime, float& fVal);
-	bool Insert(std::string strTag, bool bVal, DB_TIME* stTime=nullptr);
-	bool Insert(std::string strTag, double dbVal, DB_TIME* stTime = nullptr);
-	bool Insert(std::string strTag, int iVal, DB_TIME* stTime = nullptr);
-	bool Insert(std::string strTag, long long iVal, DB_TIME* stTime = nullptr);
+	bool Insert(std::string strTag, DB_TIME stTime, double& dbVal,bool buffered =false);
+	bool Insert(std::string strTag, DB_TIME stTime, int& iVal, bool buffered = false);
+	bool Insert(std::string strTag, DB_TIME stTime, long long& iVal, bool buffered = false);
+	bool Insert(std::string strTag, DB_TIME stTime, float& fVal, bool buffered = false);
+	bool Insert(std::string strTag, bool bVal, DB_TIME* stTime=nullptr, bool buffered = false);
+	bool Insert(std::string strTag, double dbVal, DB_TIME* stTime = nullptr, bool buffered = false);
+	bool Insert(std::string strTag, int iVal, DB_TIME* stTime = nullptr, bool buffered = false);
+	bool Insert(std::string strTag, long long iVal, DB_TIME* stTime = nullptr, bool buffered = false);
 
 	// insert complex data type
 	// custom data element in json format
@@ -1007,6 +1018,8 @@ public:
 
 	TDB* getChildDB(std::string dbName);
 	std::map<std::string, TDB*> m_childDB;
+
+	FILE* getDBFileHandle(std::string tag, DB_TIME time,bool firstDe);
 //private func
 public:
 	// convert old datalist file to new format
@@ -1018,7 +1031,11 @@ public:
 	bool parseDESelector(const std::string& sParams, DE_SELECTOR& deSelector, std::string& err);
 	int dhmsSpan2Seconds(std::string timeSpan);
 	//insert
-	bool InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal);
+	bool InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal, bool buffered = false);
+	bool InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuff);
+	std::unordered_map<std::string,std::vector<DE_BUFF>> m_insertBuff;
+	std::mutex m_csInsertBuff;
+
 	//select
 	bool Select_Step_selectTags(DE_SELECTOR& deSel, SELECT_RLT& rlt);
 	bool Select_Step_loadFile(DE_SELECTOR& deSel, std::vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
