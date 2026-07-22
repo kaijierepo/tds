@@ -4078,97 +4078,6 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, std::string&
 	return true;
 }
 
-bool TDB::Insert(std::string strTag, int iVal, DB_TIME* stTime, bool buffered)
-{
-	DB_TIME dbt;
-	if (stTime != nullptr) {
-		dbt = *stTime;
-	}
-	else {
-		dbt.setNow();
-	}
-	std::string s = std::to_string(iVal);
-	return InsertValJsonStr(strTag, dbt, s);
-}
-
-bool TDB::Insert(std::string strTag, long long iVal, DB_TIME* stTime, bool buffered)
-{
-	DB_TIME dbt;
-	if (stTime != nullptr) {
-		dbt = *stTime;
-	}
-	else {
-		dbt.setNow();
-	}
-	std::string s = std::to_string(iVal);
-	return InsertValJsonStr(strTag, dbt, s);
-}
-
-bool TDB::Insert(std::string strTag, bool bVal, DB_TIME* stTime, bool buffered) {
-	DB_TIME dbt;
-	if (stTime != nullptr) {
-		dbt = *stTime;
-	}
-	else {
-		dbt.setNow();
-	}
-	std::string s = bVal ? "true" : "false";
-	return InsertValJsonStr(strTag, dbt, s);
-}
-
-bool TDB::Insert(std::string strTag, double dbVal, DB_TIME* stTime, bool buffered)
-{
-	DB_TIME dbt;
-	if (stTime != nullptr) {
-		dbt = *stTime;
-	}
-	else {
-		dbt.setNow();
-	}
-	std::string s = std::to_string(dbVal);
-	return InsertValJsonStr(strTag, dbt, s);
-}
-
-bool TDB::Insert(std::string strTag, std::string& sDeIdx, std::string& sDeCurve, DB_TIME* time) {
-	if (!m_enableDB)
-		return false;
-	DB_TIME stTime;
-	if (time) {
-		stTime = *time;
-	}
-	else {
-		stTime = TIME_OPT::now();
-	}
-
-	std::string deListFolderPath = getPath_dataFolder(strTag, stTime);
-	if (!folderExist(deListFolderPath))
-		DB_FS::createFolderOfPath(deListFolderPath.c_str());
-
-	yyjson_doc* doc = yyjson_read(sDeIdx.c_str(), sDeIdx.length(), 0);
-	yyjson_mut_doc* mdoc = yyjson_doc_mut_copy(doc, NULL);
-	yyjson_val* yyDe = yyjson_doc_get_root(doc);
-	yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
-	//if (yyjson_obj_get(yyDe, "time") == nullptr) {
-	yyjson_mut_val* timeKey = yyjson_mut_strcpy(mdoc, "time");
-	yyjson_mut_val* timeVal;
-	std::string sTime = stTime.toStr(true);
-	timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
-	yyjson_mut_obj_put(yymDe, timeKey, timeVal);
-	//}
-
-	std::string deFilePath = deListFolderPath + "/" + stTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
-	DB_FS::writeFile(deFilePath, (char*)sDeCurve.c_str(), sDeCurve.length());
-
-	std::string dataListPath;
-	dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
-	saveDeToDataListFile(dataListPath, yymDe);
-
-	yyjson_mut_doc_free(mdoc);
-	yyjson_doc_free(doc);
-
-	return true;
-}
-
 bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, std::vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result) {
 	if (m_timeUnit == BY_DAY) {
 		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++) {
@@ -6152,25 +6061,116 @@ bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuf
 bool TDB::Insert(std::string strTag, DB_TIME stTime, int& iVal, bool buffered)
 {
 	std::string s = formatStr("%d", iVal);
-	return InsertValJsonStr(strTag, stTime, s);
+	return InsertValJsonStr(strTag, stTime, s,buffered);
 }
 
 bool TDB::Insert(std::string strTag, DB_TIME stTime, long long& iVal, bool buffered)
 {
 	std::string s = formatStr("%d", iVal);
-	return InsertValJsonStr(strTag, stTime, s);
+	return InsertValJsonStr(strTag, stTime, s, buffered);
 }
 
 bool TDB::Insert(std::string strTag, DB_TIME stTime, double& dbVal, bool buffered)
 {
 	std::string s = formatStr("%f", dbVal);
-	return InsertValJsonStr(strTag, stTime, s);
+	return InsertValJsonStr(strTag, stTime, s, buffered);
 }
 
 bool TDB::Insert(std::string strTag, DB_TIME stTime, float& fVal, bool buffered)
 {
 	std::string s = formatStr("%f", fVal);
-	return InsertValJsonStr(strTag, stTime, s);
+	return InsertValJsonStr(strTag, stTime, s, buffered);
+}
+
+bool TDB::Insert(std::string strTag, int iVal, DB_TIME* stTime, bool buffered)
+{
+	DB_TIME dbt;
+	if (stTime != nullptr) {
+		dbt = *stTime;
+	}
+	else {
+		dbt.setNow();
+	}
+	std::string s = std::to_string(iVal);
+	return InsertValJsonStr(strTag, dbt, s, buffered);
+}
+
+bool TDB::Insert(std::string strTag, long long iVal, DB_TIME* stTime, bool buffered)
+{
+	DB_TIME dbt;
+	if (stTime != nullptr) {
+		dbt = *stTime;
+	}
+	else {
+		dbt.setNow();
+	}
+	std::string s = std::to_string(iVal);
+	return InsertValJsonStr(strTag, dbt, s, buffered);
+}
+
+bool TDB::Insert(std::string strTag, bool bVal, DB_TIME* stTime, bool buffered) {
+	DB_TIME dbt;
+	if (stTime != nullptr) {
+		dbt = *stTime;
+	}
+	else {
+		dbt.setNow();
+	}
+	std::string s = bVal ? "true" : "false";
+	return InsertValJsonStr(strTag, dbt, s, buffered);
+}
+
+bool TDB::Insert(std::string strTag, double dbVal, DB_TIME* stTime, bool buffered)
+{
+	DB_TIME dbt;
+	if (stTime != nullptr) {
+		dbt = *stTime;
+	}
+	else {
+		dbt.setNow();
+	}
+	std::string s = std::to_string(dbVal);
+	return InsertValJsonStr(strTag, dbt, s, buffered);
+}
+
+bool TDB::Insert(std::string strTag, std::string& sDeIdx, std::string& sDeCurve, DB_TIME* time) {
+	if (!m_enableDB)
+		return false;
+	DB_TIME stTime;
+	if (time) {
+		stTime = *time;
+	}
+	else {
+		stTime = TIME_OPT::now();
+	}
+
+	std::string deListFolderPath = getPath_dataFolder(strTag, stTime);
+	if (!folderExist(deListFolderPath))
+		DB_FS::createFolderOfPath(deListFolderPath.c_str());
+
+	yyjson_doc* doc = yyjson_read(sDeIdx.c_str(), sDeIdx.length(), 0);
+	yyjson_mut_doc* mdoc = yyjson_doc_mut_copy(doc, NULL);
+	yyjson_val* yyDe = yyjson_doc_get_root(doc);
+	yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
+	//if (yyjson_obj_get(yyDe, "time") == nullptr) {
+	yyjson_mut_val* timeKey = yyjson_mut_strcpy(mdoc, "time");
+	yyjson_mut_val* timeVal;
+	std::string sTime = stTime.toStr(true);
+	timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
+	yyjson_mut_obj_put(yymDe, timeKey, timeVal);
+	//}
+
+	std::string deFilePath = deListFolderPath + "/" + stTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
+	DB_FS::writeFile(deFilePath, (char*)sDeCurve.c_str(), sDeCurve.length());
+
+	std::string dataListPath;
+	dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+	saveDeToDataListFile(dataListPath, yymDe);
+
+	yyjson_mut_doc_free(mdoc);
+	yyjson_doc_free(doc);
+
+	return true;
 }
 
 void TDB::rpc_db_merge(std::string& sParams, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
