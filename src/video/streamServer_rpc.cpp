@@ -3,27 +3,50 @@
 #include "streamNode_webrtc.h"
 #include "logger.h"
 
+string toTimeStr(std::chrono::system_clock::time_point tp) {
+	std::time_t tt = std::chrono::system_clock::to_time_t(tp);
+	// 转换为 tm 结构（本地时间）
+	std::tm local_tm;
+#ifdef _WIN32
+	localtime_s(&local_tm, &tt);
+#else
+	localtime_r(&tt, &local_tm);
+#endif
+	char buffer[24] = { 0 }; // YYYY-MM-DD HH:MM:SS.xxx 共23字符 + '\0'
+	std::snprintf(buffer, sizeof(buffer),
+		"%04d-%02d-%02d %02d:%02d:%02d.%03lld",
+		local_tm.tm_year + 1900,
+		local_tm.tm_mon + 1,
+		local_tm.tm_mday,
+		local_tm.tm_hour,
+		local_tm.tm_min,
+		local_tm.tm_sec,
+		0);
+	string sTime = buffer;
+	return sTime;
+}
+
 // ============================================================================
 // RPC 处理
 // ============================================================================
 
-json getStreamInfo(shared_ptr<StreamNode> rc) {
+json getStreamInfo(shared_ptr<StreamNode> sn) {
 	json jSi;
-	jSi["streamUrl"] = rc->config_.streamUrl;
-	jSi["tag"] = rc->config_.tag;
-	jSi["originPullUrl"] = rc->config_.origin_pull_url;
-	jSi["relayPushUrl"] = rc->config_.relay_push_url;
+	jSi["streamUrl"] = sn->config_.streamUrl;
+	jSi["tag"] = sn->config_.tag;
+	jSi["originPullUrl"] = sn->config_.origin_pull_url;
+	jSi["relayPushUrl"] = sn->config_.relay_push_url;
 	json jRtpBuffer;
-	jRtpBuffer["size"] = rc->rtp_buffer_.size();
-	jRtpBuffer["maxSeconds"] = rc->rtp_buffer_max_seconds_;
-	jRtpBuffer["bufferedSeconds"] = rc->getBufferedSeconds();
+	jRtpBuffer["size"] = sn->rtp_buffer_.size();
+	jRtpBuffer["maxSeconds"] = sn->rtp_buffer_max_seconds_;
+	jRtpBuffer["bufferedSeconds"] = sn->getBufferedSeconds();
 	jSi["rtpBuffer"] = jRtpBuffer;
 	json jRecCtrl;
-	jRecCtrl["recording"] = rc->rec_ctrl_.recording;
-	jRecCtrl["preSeconds"] = rc->rec_ctrl_.preSeconds;
+	jRecCtrl["recording"] = sn->rec_ctrl_.recording;
+	jRecCtrl["preSeconds"] = sn->rec_ctrl_.preSeconds;
 	jSi["recordCtrl"] = jRecCtrl;
 	json jStatis;
-	StreamNode::Statistics statis = rc->getStatistics();
+	StreamNode::Statistics statis = sn->getStatistics();
 	jStatis["bitrate"] = statis.bitrate;
 	jStatis["fps"] = statis.fps;
 	jStatis["frameReceived"] = statis.frames_received;
@@ -32,37 +55,20 @@ json getStreamInfo(shared_ptr<StreamNode> rc) {
 	jStatis["bytesForwarded"] = statis.bytes_forwarded;
 	jStatis["reconnectCount"] = statis.reconnect_count;
 	jSi["statis"] = jStatis;
-	jSi["startTime"] = statis.start_time.time_since_epoch().count();
+	jSi["openTime"] = toTimeStr(sn->open_time_);
+	
 	json clientSession = json::array();
-	std::lock_guard<std::mutex> lock(rc->session_list_client_pull_mutex_);
-	for (const auto& session : rc->session_list_client_pull_)
+	std::lock_guard<std::mutex> lock(sn->session_list_client_pull_mutex_);
+	for (const auto& session : sn->session_list_client_pull_)
 	{
 		json j;
-		j["sessionType"] = rc->getSessionTypeDesc(session->session_type_);
+		j["sessionType"] = sn->getSessionTypeDesc(session->session_type_);
 		j["clientRtpPort"] = session->client_rtp_port;
 		j["clientRtcpPort"] = session->client_rtcp_port;
 		j["serverRtpPort"] = session->server_rtp_port;
 		j["serverRtcpPort"] = session->server_rtcp_port;
-		std::time_t tt = std::chrono::system_clock::to_time_t(session->last_stun_bind_req_time);
-		// 转换为 tm 结构（本地时间）
-		std::tm local_tm;
-#ifdef _WIN32
-		localtime_s(&local_tm, &tt);
-#else
-		localtime_r(&tt, &local_tm);
-#endif
-		char buffer[24] = {0}; // YYYY-MM-DD HH:MM:SS.xxx 共23字符 + '\0'
-		std::snprintf(buffer, sizeof(buffer),
-			"%04d-%02d-%02d %02d:%02d:%02d.%03lld",
-			local_tm.tm_year + 1900,
-			local_tm.tm_mon + 1,
-			local_tm.tm_mday,
-			local_tm.tm_hour,
-			local_tm.tm_min,
-			local_tm.tm_sec,
-			0);
-		string sTime = buffer;
-		j["lastStunBindReqTime"] = sTime;
+		
+		j["lastStunBindReqTime"] = toTimeStr(session->last_stun_bind_req_time);
 		if (session->session_type_ == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PULL) {
 			j["webRtcState"] = session->getWebRtcStateDesc();
 			if (session->dtls_transport_) {
@@ -86,11 +92,19 @@ json getStreamInfo(shared_ptr<StreamNode> rc) {
 bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session) {
 	bool bHandled = true;
 
-	if (method == "startStreamNode") {
-		rpc_startStreamNode(params, rpcResp, session);
+	if (method == "openStream") {
+		rpc_openStream(params, rpcResp, session);
 	}
-	else if (method == "stopStreamNode") {
+	else if (method == "closeStream") {
+		//if (yyv)
+		//	op.streamUrl = yyjson_get_str(yyv);
+		//yyv = yyjson_obj_get(params, "tag");
+		//bool opend = streamSrv.closeStream(tag);
 
+		//if (opend)
+		//	rpcResp.result = RPC_OK;
+		//else
+		//	rpcResp.error = RPC_FAIL;
 	}
 	else if (method == "playWebRtc") {
 		rpc_playWebRtc(params, rpcResp, session);
@@ -117,66 +131,38 @@ bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& r
 	return bHandled;
 }
 
-bool StreamServer::rpc_startStreamNode(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool StreamServer::rpc_openStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	string srcUrl, destUrl,streamUrl;
-	yyjson_val* yyv = yyjson_obj_get(params, "srcUrl");
+	STREAM_OPEN_PARAM op;
+	yyjson_val* yyv = yyjson_obj_get(params, "originUrl");
 	if (yyv)
-		srcUrl = yyjson_get_str(yyv);
-	yyv = yyjson_obj_get(params,"destUrl");
+		op.originPullUrl = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params,"relayUrl");
 	if(yyv)
-		 destUrl = yyjson_get_str(yyv);
+		op.relayPushUrl = yyjson_get_str(yyv);
 	yyv = yyjson_obj_get(params, "streamUrl");
 	if (yyv)
-		streamUrl = yyjson_get_str(yyv);
+		op.streamUrl = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "tag");
+	if(yyv)
+		op.tag = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "pushTo"); //兼容 pushTo 和 pushToTag
+	if (yyv)
+		op.pushToTag = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "pushToTag");
+	if (yyv)
+		op.pushToTag = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "pushToIP");
+	if (yyv)
+		op.pushToIP = yyjson_get_str(yyv);
 
-	{
-		std::shared_ptr<StreamNode> p = getStreamNodeBySrcUrl(srcUrl);
-		if (p) {
-			LOG("[流媒体] StreamNode 已在运行 for src url: %s", srcUrl.c_str());
-			return true;
-		}
-	}
-
-	// 2. 创建新的 StreamNode
-	auto sn = std::make_unique<StreamNode>();
-
-	// 设置回调
-	sn->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
-		// 可以在这里处理帧，例如存档或分析
-		});
-	sn->setStatusCallback([](StreamNode::State state, const std::string& msg) {
-		LOG("[StreamNode] Status: %d - %s", static_cast<int>(state), msg.c_str());
-		});
-	sn->setErrorCallback([](const std::string& error, int code) {
-		LOG("[StreamNode] Error (%d): %s", code, error.c_str());
-		});
-	// 3. 配置 sn
-
-	// 3. 配置 sn
-	StreamNode::Config config;
-	config.origin_pull_url = srcUrl; // 源地址
-	// 提取用户名和密码
-	bool isSuccess = sn->extractRtspAuthInfo(config);
-
-	config.relay_push_url = destUrl;
-	config.retry_interval = 3000;
-	config.max_retries = 0; // 无限重试
-	config.rtp_timeout = 10000;
-
-	// 4. 启动 sn
-	LOG("[流媒体] 启动 StreamNode (内置模式)，源: %s, 目标: %s",
-		config.origin_pull_url.c_str(), config.relay_push_url.c_str());
-
-	if (sn->start(config)) {
-		std::lock_guard<std::mutex> lock(nodeLock_);
-		m_mapStreamNodes[streamUrl] = std::move(sn);
+	if (openStream(op)) {
+		rpcResp.result = RPC_OK;
 	}
 	else {
-		LOG("[流媒体] 启动 StreamNode 失败 for srcUrl: %s", srcUrl.c_str());
+		rpcResp.error = RPC_FAIL;
 	}
 
-	rpcResp.result = RPC_OK;
 	return true;
 }
 
@@ -213,35 +199,43 @@ bool StreamServer::rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp,
 
 bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	string tag;
+	string tag,streamUrl;
 	yyjson_val* yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "streamUrl");
+	if (yyv)
+		streamUrl = yyjson_get_str(yyv);
 
 	string sdpOffer;
 	yyv = yyjson_obj_get(params, "sdpOffer");
 	if (yyv)
 		sdpOffer = yyjson_get_str(yyv);
-	LOG("[WebRTC] playWebRtc tag=%s, sdpOffer=%zu bytes", tag.c_str(), sdpOffer.size());
+	LOG("[WebRTC] playWebRtc tag=%s,streamUrl=%s, sdpOffer=%zu bytes", tag.c_str(),streamUrl.c_str(), sdpOffer.size());
 
 	int clientRtpPort = 0;
 	yyv = yyjson_obj_get(params, "clientRtpPort");
 	if (yyjson_is_int(yyv)) {
 		clientRtpPort = yyjson_get_int(yyv);
 	}
-		auto rc = getStreamNodeByTag(tag);
-	if (rc) {
-		StreamNode::STREAM_SESSION si = rc->session_origin_pull_;
+	std::shared_ptr<StreamNode> sn;
+	if (streamUrl != "")
+		sn = getStreamNodeByStreamUrl(streamUrl);
+	else if(tag != "")
+		sn = getStreamNodeByTag(tag);
+
+	if (sn) {
+		StreamNode::STREAM_SESSION si = sn->session_origin_pull_;
 		si.session_type_ = CLIENT_WEBRTC_PULL;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
 		// 从浏览器 Offer 中解析 H264 payload type（避免 PT 冲突）
-		int h264PT = rc->parseH264PTFromOffer(sdpOffer);
+		int h264PT = sn->parseH264PTFromOffer(sdpOffer);
 		if (h264PT > 0) {
 			si.payload_type = h264PT;
 			LOG("[WebRTC] using H264 PT=%d from Offer", h264PT);
 		}
-		rc->createUDPServerSocket(si);
+		sn->createUDPServerSocket(si);
 
 		std::string serverIp = session.localIP;
 		if (serverIp.empty()) serverIp = "0.0.0.0";
@@ -279,15 +273,15 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			  "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
 			: m_dtlsFingerprint;
 
-		rc->buildWebRTCSdpAnswer(si, serverIp, fingerprint);
+		sn->buildWebRTCSdpAnswer(si, serverIp, fingerprint);
 		LOG("[WebRTC] SDP Answer:\n%s", si.sdp.c_str());
 
 		auto sessionPtr = std::make_shared<StreamNode::STREAM_SESSION>(si);
-		rc->session_list_client_pull_mutex_.lock();
-		rc->session_list_client_pull_.push_back(sessionPtr);
-		rc->session_list_client_pull_mutex_.unlock();
+		sn->session_list_client_pull_mutex_.lock();
+		sn->session_list_client_pull_.push_back(sessionPtr);
+		sn->session_list_client_pull_mutex_.unlock();
 
-		rc->startRtcSessionHandleThread(sessionPtr);
+		sn->startRtcSessionHandleThread(sessionPtr);
 
 #ifdef _WIN32
 		Sleep(1000);
@@ -295,6 +289,8 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		usleep(1000 * 1000);
 #endif
 		json j;
+		j["tag"] = sn->config_.tag;
+		j["streamUrl"] = sn->config_.streamUrl;
 		j["sdpAnswer"] = si.sdp;
 		j["serverRtpPort"] = si.server_rtp_port;
 		j["serverRtspPort"] = si.server_rtcp_port;
@@ -506,10 +502,18 @@ bool StreamServer::rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, 
 		yyjson_mut_obj_add_uint(doc, relay_obj, "errors", stats.errors);
 
 		using namespace std::chrono;
-		uint64_t start_time_ms = duration_cast<seconds>(stats.start_time.time_since_epoch()).count();
-		uint64_t last_frame_time_ms = duration_cast<seconds>(stats.last_frame_time.time_since_epoch()).count();
-		yyjson_mut_obj_add_uint(doc, relay_obj, "start_time_s", start_time_ms);
-		yyjson_mut_obj_add_uint(doc, relay_obj, "last_frame_time_s", last_frame_time_ms);
+		// 将 steady_clock 的时间点转换为 system_clock 的 Unix 时间戳（秒）
+		auto now_steady = steady_clock::now();
+		auto now_sys = system_clock::now();
+		auto elapsed_start = now_steady - stats.start_time;
+		auto start_time_sys = now_sys - duration_cast<system_clock::duration>(elapsed_start);
+		uint64_t start_time_sec = duration_cast<seconds>(start_time_sys.time_since_epoch()).count();
+		yyjson_mut_obj_add_uint(doc, relay_obj, "start_time_s", start_time_sec);
+
+		auto elapsed_last = now_steady - stats.last_frame_time;
+		auto last_frame_time_sys = now_sys - duration_cast<system_clock::duration>(elapsed_last);
+		uint64_t last_frame_time_sec = duration_cast<seconds>(last_frame_time_sys.time_since_epoch()).count();
+		yyjson_mut_obj_add_uint(doc, relay_obj, "last_frame_time_s", last_frame_time_sec);
 
 		yyjson_mut_obj_add_real(doc, relay_obj, "fps", stats.fps);
 		yyjson_mut_obj_add_real(doc, relay_obj, "bitrate_kbps", stats.bitrate);

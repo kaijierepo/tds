@@ -14,7 +14,7 @@ public:
 	bool run();
 
 	bool handleRpc(std::string method, yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool rpc_startStreamNode(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_openStream(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_playWebRtc(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_startRecord(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_stopRecord(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
@@ -23,11 +23,11 @@ public:
 	bool rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
-	bool openStream(string tag, string srcUrl, string pushTo = "");
+	bool openStream(const STREAM_OPEN_PARAM& openParam);
 
 	bool closeStream(string tag);
 
-	std::shared_ptr<StreamNode> getStreamNodeByStreamUrl(std::string tag);			   // 通过标签查找 StreamNode
+	std::shared_ptr<StreamNode> getStreamNodeByStreamUrl(std::string tag);			   // 通过url查找 StreamNode，包含 /符号
 	std::shared_ptr<StreamNode> getStreamNodeByTag(std::string tag);
 	std::shared_ptr<StreamNode> getStreamNodeByIp(const std::string& ip);  // 通过IP地址查找 StreamNode
 	std::shared_ptr<StreamNode> getStreamNodeBySrcUrl(const std::string& srcUrl);  // 通过IP地址查找 StreamNode
@@ -101,7 +101,6 @@ private:
 	void rtspListenLoop(int port);
 	void handleRtspClient(SocketHandle clientSock, const std::string& clientIp);
 	std::string buildSdpForStream(const std::shared_ptr<StreamNode>& node);
-	std::shared_ptr<StreamNode> findStreamByRtspPath(const std::string& path);
 
 	// RTSP 推流接收
 	void rtpRecvThread(std::shared_ptr<RtspRecvSession> session);

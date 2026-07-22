@@ -226,7 +226,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 		return true;
 	};
 
-	// 解析 RTSP URL 中的路径，用于匹配 stream tag
+	// 解析 RTSP URL 中的路径，包含符号 /
 	auto extractPathFromUrl = [](const std::string& url) -> std::string {
 		// rtsp://host:port/path → /path
 		size_t pos = url.find("://");
@@ -284,8 +284,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			streamTag.clear();
 
 			std::string path = extractPathFromUrl(url);
-			std::string tag = path;
-			if (!tag.empty() && tag[0] == '/') tag = tag.substr(1);
+			std::string streamUrl = path;
 
 			// 提取 ANNOUNCE body（SDP）
 			std::string sdpBody;
@@ -331,11 +330,12 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			}
 
 			// 查找或创建 StreamNode
-			streamNode = findStreamByRtspPath(path);
+			streamNode = getStreamNodeByStreamUrl(path);
 			if (!streamNode) {
 				// 创建一个只用于接收的 StreamNode（不发起拉流）
+				// 创建一个只用于接收的 StreamNode（不发起拉流）
 				StreamNode::Config cfg;
-				cfg.tag = tag;
+				cfg.streamUrl = streamUrl;
 				cfg.origin_pull_url = "";  // 没有源，纯接收端
 				cfg.relay_push_url = "";
 				cfg.retry_interval = 3000;
@@ -352,10 +352,10 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				node->state_ = StreamNode::State::PLAYING;
 
 				std::lock_guard<std::mutex> lock(nodeLock_);
-				m_mapStreamNodes[tag] = node;
-				streamNode = m_mapStreamNodes[tag];
+				m_mapStreamNodes[streamUrl] = node;
+				streamNode = m_mapStreamNodes[streamUrl];
 				LOG("[RTSP-Server] Created new StreamNode for push tag=%s, codec=%s, pt=%d",
-					tag.c_str(), videoInfo.codec.c_str(), videoInfo.payload_type);
+					streamUrl.c_str(), videoInfo.codec.c_str(), videoInfo.payload_type);
 			}
 			else {
 				// 已存在的节点，更新编码信息
@@ -371,7 +371,6 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			sessionId.clear();
 			pushSession.reset();
 
-			streamTag = tag;
 			isPushMode = true;
 
 			// 生成 session ID
@@ -400,10 +399,10 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 
 			std::string path = extractPathFromUrl(url);
 
-			// 尝试通过路径查找 stream（路径格式: /tag）
+			// 尝试通过路径查找 stream（路径格式: /XXX）
 			// 注：serveDefaultFolder 启动时已创建所有本地文件对应的 StreamNode，
 			// 此处直接查找即可，无需按需加载
-			streamNode = findStreamByRtspPath(path);
+			streamNode = getStreamNodeByStreamUrl(path);
 
 			if (!streamNode) {
 				// 可能已被 cleanupIdleLocalStream 清理，尝试按需重新加载
@@ -1017,30 +1016,6 @@ std::string StreamServer::buildSdpForStream(const std::shared_ptr<StreamNode>& n
 	}
 
 	return sdp.str();
-}
-
-std::shared_ptr<StreamNode> StreamServer::findStreamByRtspPath(const std::string& path) {
-	// 路径格式: /tag → 去除前导 / 得到 tag
-	std::string tag = path;
-	if (!tag.empty() && tag[0] == '/') {
-		tag = tag.substr(1);
-	}
-
-	// 先精确匹配 tag
-	std::shared_ptr<StreamNode> node = getStreamNodeByTag(tag);
-	if (node) return node;
-
-	// 遍历 m_mapStreamNodes 找匹配
-	{
-		std::lock_guard<std::mutex> lock(nodeLock_);
-		for (const auto& pair : m_mapStreamNodes) {
-			if (pair.second && pair.second->config_.tag == tag) {
-				return pair.second;
-			}
-		}
-	}
-
-	return nullptr;
 }
 
 // ============================================================================

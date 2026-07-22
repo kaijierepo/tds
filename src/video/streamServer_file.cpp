@@ -338,6 +338,7 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 	//	tag.c_str(), nals.size());
 
 	size_t nalIdx = 0;
+	bool wasIdle = true;  // 跟踪是否处于空闲态（无客户端），用于在首个客户端连接时重置启动时间
 	while (ctx->running_ && ctx->node->running_) {
 		// 没有客户端时：空转，不做任何操作，等待客户端连接
 		bool hasClients = false;
@@ -351,7 +352,16 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 			// 重置播放位置，确保有客户端时从头开始
 			nalIdx = 0;
 			timestamp = 0;
+			wasIdle = true;
 			continue;
+		}
+
+		// 从空闲态切换到活跃态时，重置启动时间为当前时间，确保统计中 startTime 反映实际媒体开始播放的时刻
+		if (wasIdle) {
+			std::lock_guard<std::mutex> lock(ctx->node->stats_mutex_);
+			ctx->node->stats_.start_time = std::chrono::steady_clock::now();
+			ctx->node->stats_.last_frame_time = std::chrono::steady_clock::now();
+			wasIdle = false;
 		}
 
 		const auto& nal = nals[nalIdx];
@@ -447,19 +457,11 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 }
 
 bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::string& url) {
-	// 从 url 提取 tag
-	std::string tag = url;
-	if (!tag.empty() && tag[0] == '/') tag = tag.substr(1);
-	if (tag.empty()) {
-		LOG("[LocalFileStream] Invalid url (empty tag): %s", url.c_str());
-		return false;
-	}
-
 	// 检查是否已存在同名流
 	{
 		std::lock_guard<std::mutex> lock(g_localStreamMutex);
-		if (g_localStreams.find(tag) != g_localStreams.end()) {
-			LOG("[LocalFileStream] Stream already exists for tag: %s", tag.c_str());
+		if (g_localStreams.find(url) != g_localStreams.end()) {
+			LOG("[LocalFileStream] Stream already exists for url: %s", url.c_str());
 			return false;
 		}
 	}
@@ -492,7 +494,7 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	// 创建 StreamNode
 	auto node = std::make_shared<StreamNode>();
 	StreamNode::Config cfg;
-	cfg.tag = tag;
+	cfg.streamUrl = url;
 	cfg.origin_pull_url = "file://" + filePath;
 	cfg.relay_push_url = "";
 	cfg.retry_interval = 0;
@@ -537,7 +539,7 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	// 加入全局 map
 	{
 		std::lock_guard<std::mutex> lock(nodeLock_);
-		m_mapStreamNodes[tag] = node;
+		m_mapStreamNodes[url] = node;
 	}
 
 	// 创建本地流上下文并启动喂流线程
@@ -562,7 +564,7 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	
 		{
 			std::lock_guard<std::mutex> lock(g_localStreamMutex);
-			g_localStreams[tag] = ctx;
+			g_localStreams[url] = ctx;
 		}
 	
 		ctx->feed_thread_ = std::thread(localFileFeedLoop, ctx);

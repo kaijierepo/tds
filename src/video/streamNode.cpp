@@ -384,6 +384,7 @@ bool StreamNode::Connection::setSocketTimeout(int timeout_ms) {
 // ============================================================================
 
 StreamNode::StreamNode() {
+    open_time_ = std::chrono::system_clock::now();
     stats_.start_time = std::chrono::steady_clock::now();
     stats_.last_frame_time = std::chrono::steady_clock::now();
 }
@@ -462,13 +463,18 @@ bool StreamNode::isRunning() {
 StreamNode::Statistics StreamNode::getStatistics() {
     std::lock_guard<std::mutex> lock(stats_mutex_);
 
-    // 计算实时统计
     auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration<double>(now - stats_.last_frame_time).count();
+    auto sinceLastFrame = std::chrono::duration<double>(now - stats_.last_frame_time).count();
 
-    if (elapsed > 0) {
-        stats_.fps = stats_.frames_received / elapsed;
-        stats_.bitrate = (stats_.bytes_received * 8 / 1000.0) / elapsed;
+    if (sinceLastFrame > 2.0) {
+        stats_.fps = 0.0;
+        stats_.bitrate = 0.0;
+    } else {
+        auto elapsed = std::chrono::duration<double>(now - stats_.start_time).count();
+        if (elapsed > 0) {
+            stats_.fps = stats_.frames_received / elapsed;
+            stats_.bitrate = (stats_.bytes_received * 8 / 1000.0) / elapsed;
+        }
     }
 
     return stats_;

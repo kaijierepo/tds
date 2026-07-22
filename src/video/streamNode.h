@@ -59,6 +59,15 @@ enum STREAM_SESSION_TYPE {
     CLIENT_WEBRTC_PUBLISH     //自身作为服务端，接收webrtc客户端推流
 };
 
+struct STREAM_OPEN_PARAM {
+    std::string tag;
+    std::string originPullUrl;
+    std::string relayPushUrl;
+    std::string pushToTag;
+    std::string streamUrl;
+    std::string pushToIP;
+};
+
 class StreamNode {
 public:
     enum State {
@@ -452,6 +461,7 @@ public:
 
     // 重连控制
     std::chrono::steady_clock::time_point last_reconnect_time_;
+    std::chrono::system_clock::time_point open_time_;
 
     // 工作线程
     void controlThread();

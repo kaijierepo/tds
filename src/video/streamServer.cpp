@@ -134,49 +134,70 @@ std::shared_ptr<StreamNode> StreamServer::getStreamNodeBySrcUrl(const std::strin
 
 
 
-bool StreamServer::openStream(string tag,string srcUrl, string pushTo)
+bool StreamServer::openStream(const STREAM_OPEN_PARAM& op)
 {
-	std::shared_ptr<StreamNode> sn = getStreamNodeByTag(tag);
+	std::shared_ptr<StreamNode> sn;
+	if (op.tag != "")
+		sn = getStreamNodeByTag(op.tag);
+	else if (op.originPullUrl != "")
+		sn = getStreamNodeBySrcUrl(op.originPullUrl);
 
 	if (sn) {
-		if (sn->config_.origin_pull_url == srcUrl && sn->config_.relay_push_url == pushTo) {
+		if (sn->config_.origin_pull_url == op.originPullUrl && sn->config_.relay_push_url == op.relayPushUrl) {
 			LOG("[流媒体] 媒体源已打开，收到重复打开请求，忽略, 位号:%s, 当前配置地址:%s",
-				tag.c_str(), sn->config_.origin_pull_url.c_str());
+				op.tag.c_str(), sn->config_.origin_pull_url.c_str());
 			return false;
 		}
-		if (sn->config_.origin_pull_url != srcUrl) {
+		if (sn->config_.origin_pull_url != op.originPullUrl) {
 			LOG("[流媒体] 媒体源变更，重启streamNode，当前拉流地址:%s, 新地址:%s",
-				sn->config_.origin_pull_url.c_str(), srcUrl.c_str());
-			closeStream(tag);
+				sn->config_.origin_pull_url.c_str(), op.originPullUrl.c_str());
+			closeStream(op.tag);
 		}
-		if (sn->config_.relay_push_url != pushTo) {
+		if (sn->config_.relay_push_url != op.relayPushUrl) {
 			LOG("[流媒体] 推流地址变更，重启streamNode, 当前推流地址:%s, 新地址:%s",
-				sn->config_.relay_push_url.c_str(), pushTo.c_str());
-			closeStream(tag);
+				sn->config_.relay_push_url.c_str(), op.relayPushUrl.c_str());
+			closeStream(op.tag);
 		}
 	}
 	else {
 		sn = std::make_shared<StreamNode>();
+		sn->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
+
+			});
+		sn->setStatusCallback([](StreamNode::State state, const std::string& msg) {
+			LOG("[StreamNode] Status: %d - %s", static_cast<int>(state), msg.c_str());
+			});
+		sn->setErrorCallback([](const std::string& error, int code) {
+			LOG("[StreamNode] Error (%d): %s", code, error.c_str());
+			});
 	}
 
 
 	StreamNode::Config config;
-	config.origin_pull_url = srcUrl; 
+	config.origin_pull_url = op.originPullUrl;
 	// 提取用户名和密码
 	bool isSuccess = sn->extractRtspAuthInfo(config);
-	config.relay_push_url = pushTo; // 目标地址
+	config.relay_push_url = op.relayPushUrl; // 目标地址
 	config.retry_interval = 3000;
 	config.max_retries = 0; // 无限重试
 	config.rtp_timeout = 10000;
-	config.tag = tag;
+	config.tag = op.tag;
+	if (op.streamUrl != "")
+		config.streamUrl = op.streamUrl;
+	else if (op.tag != "")
+		config.streamUrl = "/" + op.tag;
 
 	bool ret;
 	if (sn->start(config)) {
 		std::lock_guard<std::mutex> lock(nodeLock_);
-		m_mapStreamNodes[tag] = sn;
+		m_mapStreamNodes[op.streamUrl] = sn;
+		LOG("[StreamServer] openStream success,tag:%s,streamUrl:%s,originUrl:%s,relayUrl:%s,pushToTag:%s,pushToIP:%s",
+			op.tag.c_str(),op.streamUrl.c_str(),op.originPullUrl.c_str(),op.relayPushUrl.c_str(),op.pushToTag.c_str(),op.pushToIP.c_str());
 		ret = true;
 	}
 	else {
+		LOG("[StreamServer] openStream fail,tag:%s,streamUrl:%s,originUrl:%s,relayUrl:%s,pushToTag:%s,pushToIP:%s",
+			op.tag.c_str(), op.streamUrl.c_str(), op.originPullUrl.c_str(), op.relayPushUrl.c_str(), op.pushToTag.c_str(), op.pushToIP.c_str());
 		ret = false;
 	}
 

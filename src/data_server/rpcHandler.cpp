@@ -671,53 +671,12 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			}
 			return true;
 		}
-		else if (method == "openStream") {
-			MP* pmp = pObj;
-			if (!pmp) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
-				return true;
-			}
-			
-			string pushTo;
-			if (params.contains("pushTo")) {
-				string tag = params["pushTo"];
-				string pushToIP = session.remoteIP;
-				if (params["pushToIP"].is_string()) {
-					pushToIP = params["pushToIP"];
-				}
-
-				pushTo = "rtsp://" + pushToIP + "/stream/" + tag;
-			}
-			if (params.contains("pushToUrl")) {
-				pushTo = params["pushToUrl"].get<string>();
-			}
-
-			bool opend = streamSrv.openStream(tag, pushTo);
-
-			if (opend)
-				rpcResp.result = RPC_OK;
-			else
-				rpcResp.error = RPC_FAIL;
-
-			return true;
-		}
-		else if (method == "pushStream") {
-			return true;
-		}
 		else if (method == "keepStream") {
 			TIME st;
 			timeopt::now(&st);
 
 			m_mapPullerActive[tag] = st;
 			rpcResp.result = "\"ok\"";
-		}
-		else if (method == "closeStream") {
-			bool opend = streamSrv.closeStream(tag);
-
-			if (opend)
-				rpcResp.result = RPC_OK;
-			else
-				rpcResp.error = RPC_FAIL;
 		}
 	}
 	else {
