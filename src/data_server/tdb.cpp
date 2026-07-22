@@ -5851,6 +5851,7 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 		return false;
 
 	if (buffered && m_enableInsertBuff) {
+		// same tag is not concurrently written; lock only protects the m_insertBuff map structure
 		m_csInsertBuff.lock();
 		auto iter = m_insertBuff.find(strTag);
 		if (iter == m_insertBuff.end()) {
@@ -5983,7 +5984,7 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 	return true;
 }
 
-FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time,bool firstDe) {
+FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	FILE* fp = nullptr;
 
 	std::string folderPath = getPath_dataFolder(tag, time);
@@ -6055,6 +6056,7 @@ bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuf
 		fwrite("]", 1, 1, fp);
 		fclose(fp);
 	}
+	return true;
 }
 
 

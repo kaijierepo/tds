@@ -1019,7 +1019,7 @@ public:
 	TDB* getChildDB(std::string dbName);
 	std::map<std::string, TDB*> m_childDB;
 
-	FILE* getDBFileHandle(std::string tag, DB_TIME time,bool firstDe);
+	FILE* getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe);
 //private func
 public:
 	// convert old datalist file to new format
