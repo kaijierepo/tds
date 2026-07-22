@@ -5865,7 +5865,7 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 		deb.time = stTime;
 		deb.sVal = sVal;;
 		iter->second.push_back(deb);
-		if (iter->second.size() > m_insertBuffSize) {
+		if (iter->second.size() > m_insertBuffSize || iter->second[0].time.getTimePassSecond() > m_insertBuffSecond) {
 			InsertValJsonStrBuffer(strTag, iter->second);
 			iter->second.clear();
 		}

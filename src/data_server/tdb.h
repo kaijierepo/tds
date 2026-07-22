@@ -938,6 +938,7 @@ public:
 	bool m_enableDB = true;
 	bool m_enableInsertBuff = false;
 	int m_insertBuffSize = 80;
+	int m_insertBuffSecond = 5 * 60;
 	DB_FMT m_dbFmt;
 	bool m_bEnableFsBuff;
 	FS_BUFF m_FsBuff;
