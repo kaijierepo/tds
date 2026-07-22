@@ -5986,79 +5986,115 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 
 FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	FILE* fp = nullptr;
-
 	std::string folderPath = getPath_dataFolder(tag, time);
 	std::string dlPath = folderPath + "/" + m_dbFmt.deListName;
-	if (!folderExist(folderPath))
-		DB_FS::createFolderOfPath(folderPath.c_str());
 
-	bool bAppend = false;
-	if (fileExist(dlPath))
-	{
+	// Ensure the folder exists
+	if (!folderExist(folderPath)) {
+		DB_FS::createFolderOfPath(folderPath.c_str());
+	}
+
+	// Check if the file exists and is not empty
+	bool fileHasData = false;
+	if (fileExist(dlPath)) {
+#ifdef _WIN32
+		fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb");
+#else
+		fp = fopen(dlPath.c_str(), "rb");
+#endif
+		if (fp) {
+			fseek(fp, 0L, SEEK_END);
+			long len = ftell(fp);
+			fclose(fp); // Close the read-only handle immediately to prevent leaks
+			fp = nullptr;
+
+			if (len > 0) {
+				fileHasData = true;
+			}
+		}
+	}
+
+	if (fileHasData) {
+		// File has data: open in "rb+" to overwrite the trailing ']'
 #ifdef _WIN32
 		fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
 #else
 		fp = fopen(dlPath.c_str(), "rb+");
 #endif
-		fseek(fp, 0L, SEEK_END);
-		long len = ftell(fp);
-
-		if (len > 0)
-		{
-			fseek(fp, len - 1, SEEK_SET);  //overwrite last ] charactor
-			firstDe = false;
-			return fp;
+		if (fp) {
+			// Seek back 1 byte to overwrite the closing bracket
+			fseek(fp, -1L, SEEK_END);
+			firstDe = false; // Not the first element in this file
+		}
+	}
+	else {
+		// File does not exist or is empty: open in "wb+" (truncates the file)
+#ifdef _WIN32
+		fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"wb+");
+#else
+		fp = fopen(dlPath.c_str(), "wb+");
+#endif
+		if (fp) {
+			static const char* startBracket = "[";
+			fwrite(startBracket, 1, 1, fp);
+			firstDe = true; // This will be the first element in the new file
 		}
 	}
 
-	//file not exist or empty file
-#ifdef _WIN32
-	fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"wb+");
-#else
-	fp = fopen(dlPath.c_str(), "wb+");
-#endif
-	static std::string s = "[";
-	fwrite(s.c_str(), 1, s.length(), fp);
-	firstDe = true;
 	return fp;
 }
 
-
-bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuff)
-{
-	DB_TIME stLastTime;
-	DB_TIME stTime;
+bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuff) {
+	// Initialize to prevent undefined behavior on the first comparison
+	DB_TIME stLastTime = { 0 };
 	FILE* fp = nullptr;
 	bool firstDeInFile = false;
-	for (int i = 0; i < deBuff.size(); i++) {
-		DE_BUFF deb = deBuff[i];
-		stTime = deb.time;
-		//buffer de belongs to different file
+
+	for (size_t i = 0; i < deBuff.size(); i++) {
+		// Use const reference to avoid struct copying overhead
+		const DE_BUFF& deb = deBuff[i];
+		DB_TIME stTime = deb.time;
+
+		// Switch files when the day changes
 		if (stTime.wDay != stLastTime.wDay) {
 			if (fp) {
+				// Write the closing bracket before closing the old file
 				fwrite("]", 1, 1, fp);
 				fclose(fp);
+				fp = nullptr;
 			}
+			// Open the new file, firstDeInFile will be updated by getDBFileHandle
 			fp = getDBFileHandle(strTag, stTime, firstDeInFile);
-			if (!fp)
-				return false;
+			if (!fp) {
+				return false; // Failed to open file
+			}
 		}
 		stLastTime = stTime;
 
-		if (!firstDeInFile)
+		// Write separator comma
+		if (!firstDeInFile) {
 			fwrite(",", 1, 1, fp);
+		}
+		else {
+			// After writing the very first element, subsequent elements need a comma
+			firstDeInFile = false;
+		}
 
-		std::string deData = "{\n\"time\":\"" + stTime.toStr() + "\",\n\"" + m_dbFmt.deItemKey_value + "\":" + deb.sVal + "\n}";
+		// Build JSON string (reserve memory to improve performance)
+		std::string deData;
+		deData.reserve(128);
+		deData = "{\n\"time\":\"" + stTime.toStr() + "\",\n\"" + m_dbFmt.deItemKey_value + "\":" + deb.sVal + "\n}";
+
 		fwrite(deData.c_str(), 1, deData.length(), fp);
 	}
 
+	// Loop finished: close the last file properly
 	if (fp) {
 		fwrite("]", 1, 1, fp);
 		fclose(fp);
 	}
 	return true;
 }
-
 
 bool TDB::Insert(std::string strTag, DB_TIME stTime, int& iVal, bool buffered)
 {
