@@ -6046,7 +6046,7 @@ FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 
 bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuff) {
 	// Initialize to prevent undefined behavior on the first comparison
-	DB_TIME stLastTime = { 0 };
+	DB_TIME stLastTime;
 	FILE* fp = nullptr;
 	bool firstDeInFile = false;
 
