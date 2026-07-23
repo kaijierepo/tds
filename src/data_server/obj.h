@@ -25,12 +25,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
 #pragma once
 #include "json.hpp"
-
-#include "tdb.h"
 #include "common.h"
+#include <set>
+#include "database/tDatabase.h"
 using namespace std;
 using json = nlohmann::json;
 class OBJ;

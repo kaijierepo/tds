@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <mutex>
-#include "tdb.h"
+#include "database/tDatabase.h"
 #include "json.hpp"
 #include "tds.h"
 

@@ -38,7 +38,7 @@ SOFTWARE.
 #include "tAlmSrv.h"
 #include "logServer.h"
 #include "scriptManager.h"
-#include "tdb.h"
+#include "database/tDatabase.h"
 #include "tdsWatchDog.h"
 #include "userMng.h"
 #include "webSrv.h"

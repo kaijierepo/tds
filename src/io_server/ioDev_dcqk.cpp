@@ -9,7 +9,7 @@
 #include "base64.h"
 #include "mp.h"
 #include "tAlmSrv.h"
-#include "tdb.h"
+#include "database/tDatabase.h"
 #include <sstream>
 
 std::map<int, std::string> ioDev_dcqk::g_map0x97AlarmLevel = {

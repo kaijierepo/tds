@@ -364,54 +364,23 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     }
 
     // === WebRTC SRTP 发送路径 ===
-    // 遍历所有 client_sessions_，对 DTLS+SRTP 已完成的会话通过 SRTP 加密后发送视频
+        // 遍历所有 client_sessions_，对 DTLS+SRTP 已完成的会话通过 SRTP 加密后发送视频
     uint8_t nalType = packet.payload[0] & 0x1F;
-
+    if (nalType == NAL_TYPE_SPS || nalType == NAL_TYPE_PPS) {
+        return;
+    }
     for (auto& session : playClients) {
         if (!session || !session->is_webrtc) continue;
         // state: 3=SRTP激活（is_webrtc 下 S3_SRTP_ACTIVE 即为激活态）
         if (session->webrtc_state != WEBRTC_SESSION_STATE::SRTP_ACTIVE) continue;
 
         // 通过 SessionDtlsState 正确访问 DTLS 和 SRTP 上下文
-        // dtls_transport_ 为 shared_ptr（由 ICE 线程管理），原子加载快照后持有引用，
-        // 避免 ICE 线程释放后发送线程解引用产生 Use-After-Free
-        std::shared_ptr<SessionDtlsState> dtlsState_shared = std::atomic_load(&session->dtls_transport_);
-        SessionDtlsState* dtlsState = dtlsState_shared.get();
+        std::shared_ptr<SessionDtlsState> dtlsState = session->dtls_transport_;
         if (!dtlsState || !dtlsState->srtp_ready) continue;
         if (!dtlsState->dtls.isPeerSet()) continue;
 
         DtlsTransport& dtls = dtlsState->dtls;
         SrptProtect::Context& srtpCtx = dtlsState->srtp_ctx;
-
-        // 从源流动态缓存 SPS/PPS（当相机 SDP 不含 sprop-parameter-sets 时，
-        // 后续的 IDR 前插入和首次发送逻辑依赖缓存的 SPS/PPS）
-        // 注意：SPS/PPS 可能以 Single NAL、STAP-A 或 FU-A 格式到达
-        if (nalType == NAL_TYPE_SPS) {
-            session->sps = packet.payload;
-        } else if (nalType == NAL_TYPE_PPS) {
-            session->pps = packet.payload;
-        } else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 3) {
-            // STAP-A: [STAP-A header(1B)] [NALU1 size(2B)] [NALU1 data] ...
-            size_t off = 1;
-            while (off + 2 <= packet.payload.size()) {
-                uint16_t L = (packet.payload[off] << 8) | packet.payload[off + 1];
-                off += 2;
-                if (L == 0 || off + L > packet.payload.size()) break;
-                uint8_t subType = packet.payload[off] & 0x1F;
-                if (subType == NAL_TYPE_SPS) {
-                    session->sps = std::vector<uint8_t>(
-                        packet.payload.begin() + off,
-                        packet.payload.begin() + off + L);
-                } else if (subType == NAL_TYPE_PPS) {
-                    session->pps = std::vector<uint8_t>(
-                        packet.payload.begin() + off,
-                        packet.payload.begin() + off + L);
-                }
-                off += L;
-            }
-        } else if (nalType == NAL_TYPE_FU_A && packet.payload.size() > 1) {
-            // FU-A 极少用于 SPS/PPS（SPS/PPS 通常很小无需分片），暂不处理
-        }
 
         // 初始化 per-session 序列号（以原始流第一个包的 seq 为基准）
         if (!dtlsState->seq_inited) {
@@ -419,215 +388,93 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             dtlsState->seq_inited = true;
         }
 
-        auto now_steady = std::chrono::steady_clock::now();
-
-        // 确定本会话使用的 SSRC，必须与 SDP Answer 中声明的 a=ssrc: 一致
-        uint32_t sessionSsrc = session->video_ssrc ? session->video_ssrc : 1;
-
-        // 安全 MTU 上限：单个 RTP 负载（不含 12B RTP 头与 SRTP 认证标签）最大字节数。
-        // 取 1180 可保证叠加 SRTP 标签后在标准/隧道 MTU 下均不超 1500，避免弱网大包被丢弃。
-        const size_t kMaxRtpPayload = 1180;
-
-        // 关键帧最大发送间隔(ms)：超过则主动重发缓存的 IDR，限制解码卡顿的最长自愈时间，
-        // 不依赖浏览器是否发送 PLI。源端 GOP 已足够密时本逻辑不会触发。
-        const int kMaxIdrGapMs = 2000;
-
-        // 发送一个已构建好的 RTP 包（rtp[0..1] 含 V/PT/marker，rtp[4..11] 含 ts/ssrc 已填）：
-        // 在此填入 per-session 序列号、SRTP 加密并发送，随后序列号自增。
-        auto sendBuiltRtp = [&](std::vector<uint8_t>& rtp) {
-            uint16_t sentSeq = dtlsState->local_seq;
-            rtp[2] = (dtlsState->local_seq >> 8) & 0xFF;
-            rtp[3] = dtlsState->local_seq & 0xFF;
-            dtlsState->local_seq++;
-            auto srtpPkt = SrptProtect::protect(srtpCtx, rtp);
-            if (srtpPkt.empty()) return;
-
-            // 缓存已加密的 SRTP 包，供收到 NACK 时原样重传（修复弱网单包丢失导致的花屏）
-            {
-                std::lock_guard<std::mutex> lk(dtlsState->rtx_mutex_);
-                RtxCachedPacket& slot =
-                    dtlsState->rtx_buf_[sentSeq % SessionDtlsState::kRtxBufSize];
-                slot.seq = sentSeq;
-                slot.valid = true;
-                slot.data = srtpPkt;
-            }
-
-            const struct sockaddr_in& peerAddr = dtls.getPeerAddr();
-            int sent = sendto(session->rtp_socket,
-                (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
-                (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
-            if (sent < 0) {
-#ifdef _WIN32
-                int err = WSAGetLastError();
-                LOG("[SRTP] sendto FAILED, err=%d, pkt=%zu", err, srtpPkt.size());
-#else
-                LOG("[SRTP] sendto FAILED, errno=%d, pkt=%zu", errno, srtpPkt.size());
-#endif
-            }
-            if (sent > 0) {
-                std::lock_guard<std::mutex> lock(stats_mutex_);
-                stats_.bytes_forwarded += srtpPkt.size();
-                stats_.frames_forwarded++;
-            }
-        };
-
-        // 把一个 H.264 NALU（含其 NAL 头字节）重新打包成一个或多个 RTP 包发送：
-        // Single NAL（≤kMaxRtpPayload）直接发送；更大则用 FU-A 切分。
-        // STAP-A 聚合包先拆成单 NAL 逐发；相机已 FU-A 分片但单片仍过大的，按片再切小。
-        std::function<void(const std::vector<uint8_t>&, uint32_t, bool)> sendH264Nalu =
-            [&](const std::vector<uint8_t>& nalu, uint32_t ts, bool marker) {
-            if (nalu.empty()) return;
-            uint8_t nt = nalu[0] & 0x1F;
-
-            // STAP-A：拆成多个单 NAL 逐发（marker 仅落在最后一个子 NALU 上）
-            if (nt == NAL_TYPE_STAP_A) {
-                size_t off = 1;
-                while (off + 2 <= nalu.size()) {
-                    uint16_t L = (uint16_t(nalu[off]) << 8) | uint16_t(nalu[off + 1]);
-                    off += 2;
-                    if (L == 0 || off + L > nalu.size()) break;
-                    bool isLast = (off + L >= nalu.size());
-                    std::vector<uint8_t> sub(nalu.begin() + off, nalu.begin() + off + L);
-                    sendH264Nalu(sub, ts, marker && isLast);
-                    off += L;
-                }
-                return;
-            }
-
-            // 相机已 FU-A 分片：单 RTP 包内负载(含 2B FU 头)未超上限则原样重映射发送；
-            // 仍过大（弱网隧道场景）时按片再切成更小的 FU-A。
-            if (nt == NAL_TYPE_FU_A) {
-                if (nalu.size() <= kMaxRtpPayload) {
-                    std::vector<uint8_t> rtp(12 + nalu.size());
-                    rtp[0] = 0x80;
-                    rtp[1] = (marker ? 0x80 : 0x00) | (session->payload_type & 0x7F);
-                    rtp[4] = (ts >> 24) & 0xFF; rtp[5] = (ts >> 16) & 0xFF;
-                    rtp[6] = (ts >> 8) & 0xFF;  rtp[7] = ts & 0xFF;
-                    rtp[8] = (sessionSsrc >> 24) & 0xFF; rtp[9] = (sessionSsrc >> 16) & 0xFF;
-                    rtp[10] = (sessionSsrc >> 8) & 0xFF;  rtp[11] = sessionSsrc & 0xFF;
-                    memcpy(&rtp[12], nalu.data(), nalu.size());
-                    sendBuiltRtp(rtp);
-                }
-                else {
-                    uint8_t nri = nalu[0] & 0x60;
-                    uint8_t fuType = nalu[1] & 0x1F;
-                    bool camS = (nalu[1] & 0x80) != 0;
-                    bool camE = (nalu[1] & 0x40) != 0;
-                    size_t dataLen = nalu.size() - 2;
-                    size_t chunkMax = kMaxRtpPayload - 2;
-                    size_t pos = 0;
-                    while (pos < dataLen) {
-                        size_t frag = (dataLen - pos > chunkMax) ? chunkMax : (dataLen - pos);
-                        bool isFirst = (pos == 0) && camS;
-                        bool isLast = (pos + frag >= dataLen) && camE;
-                        std::vector<uint8_t> rtp(12 + 2 + frag);
-                        rtp[0] = 0x80;
-                        rtp[1] = ((isLast && marker) ? 0x80 : 0x00) | (session->payload_type & 0x7F);
-                        rtp[4] = (ts >> 24) & 0xFF; rtp[5] = (ts >> 16) & 0xFF;
-                        rtp[6] = (ts >> 8) & 0xFF;  rtp[7] = ts & 0xFF;
-                        rtp[8] = (sessionSsrc >> 24) & 0xFF; rtp[9] = (sessionSsrc >> 16) & 0xFF;
-                        rtp[10] = (sessionSsrc >> 8) & 0xFF;  rtp[11] = sessionSsrc & 0xFF;
-                        rtp[12] = 0x1C | nri;   // FU indicator, type=28
-                        rtp[13] = (uint8_t)(fuType | (isFirst ? 0x80 : 0) | (isLast ? 0x40 : 0));
-                        memcpy(&rtp[14], &nalu[2 + pos], frag);
-                        sendBuiltRtp(rtp);
-                        pos += frag;
-                    }
-                }
-                return;
-            }
-
-            // Single NAL（或未识别类型）：过大则 FU-A 切分，否则直接发送
-            if (nalu.size() <= kMaxRtpPayload) {
-                std::vector<uint8_t> rtp(12 + nalu.size());
-                rtp[0] = 0x80;
-                rtp[1] = (marker ? 0x80 : 0x00) | (session->payload_type & 0x7F);
-                rtp[4] = (ts >> 24) & 0xFF; rtp[5] = (ts >> 16) & 0xFF;
-                rtp[6] = (ts >> 8) & 0xFF;  rtp[7] = ts & 0xFF;
-                rtp[8] = (sessionSsrc >> 24) & 0xFF; rtp[9] = (sessionSsrc >> 16) & 0xFF;
-                rtp[10] = (sessionSsrc >> 8) & 0xFF;  rtp[11] = sessionSsrc & 0xFF;
-                memcpy(&rtp[12], nalu.data(), nalu.size());
-                sendBuiltRtp(rtp);
-            }
-            else {
-                uint8_t nri = nalu[0] & 0x60;
-                uint8_t nalType = nalu[0] & 0x1F;
-                size_t chunkMax = kMaxRtpPayload - 2;
-                size_t offset = 1;
-                bool first = true;
-                while (offset < nalu.size()) {
-                    size_t remain = nalu.size() - offset;
-                    size_t frag = (remain > chunkMax) ? chunkMax : remain;
-                    bool isLast = (offset + frag >= nalu.size());
-                    std::vector<uint8_t> rtp(12 + 2 + frag);
-                    rtp[0] = 0x80;
-                    rtp[1] = ((isLast && marker) ? 0x80 : 0x00) | (session->payload_type & 0x7F);
-                    rtp[4] = (ts >> 24) & 0xFF; rtp[5] = (ts >> 16) & 0xFF;
-                    rtp[6] = (ts >> 8) & 0xFF;  rtp[7] = ts & 0xFF;
-                    rtp[8] = (sessionSsrc >> 24) & 0xFF; rtp[9] = (sessionSsrc >> 16) & 0xFF;
-                    rtp[10] = (sessionSsrc >> 8) & 0xFF;  rtp[11] = sessionSsrc & 0xFF;
-                    rtp[12] = 0x1C | nri;   // FU indicator, type=28
-                    rtp[13] = (uint8_t)(nalType | (first ? 0x80 : 0) | (isLast ? 0x40 : 0));
-                    memcpy(&rtp[14], &nalu[offset], frag);
-                    sendBuiltRtp(rtp);
-                    offset += frag;
-                    first = false;
-                }
-            }
-        };
-
-        // 发送单个 NAL（SPS/PPS 等小包），marker=0
+        // 辅助函数：发送单个 NAL 的 RTP 包，使用 per-session 独立序列号和时间戳
         auto sendSingleNalRtp = [&](const std::vector<uint8_t>& nal, uint32_t ts) {
-            sendH264Nalu(nal, ts, false);
-        };
+            std::vector<uint8_t> nalData(12 + nal.size());
+            nalData[0] = 0x80;  // V=2, P=0, X=0, CC=0
+            nalData[1] = (0 << 7) | (session->payload_type & 0x7F);  // marker=0
+            nalData[2] = (dtlsState->local_seq >> 8) & 0xFF;
+            nalData[3] = dtlsState->local_seq & 0xFF;
+            nalData[4] = (ts >> 24) & 0xFF;
+            nalData[5] = (ts >> 16) & 0xFF;
+            nalData[6] = (ts >> 8) & 0xFF;
+            nalData[7] = ts & 0xFF;
+            nalData[8] = (packet.ssrc >> 24) & 0xFF;
+            nalData[9] = (packet.ssrc >> 16) & 0xFF;
+            nalData[10] = (packet.ssrc >> 8) & 0xFF;
+            nalData[11] = packet.ssrc & 0xFF;
+            memcpy(&nalData[12], nal.data(), nal.size());
 
-        // 重发缓存的关键帧（SPS+PPS+IDR 分片）。缓存的是相机原始 RTP 包（含 12B 头），
-        // 需解析出 NALU 后按安全 MTU 重新分片发送，避免大 IDR 包在弱网被 MTU 丢弃。
-        auto resendKeyframe = [&]() {
-            if (keyframe_cache_.empty()) return;
-            if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
-            if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
-            RTPPacket kfPkt;
-            for (auto& kfData : keyframe_cache_) {
-                if (!kfPkt.parse(kfData.data(), kfData.size())) continue;
-                sendH264Nalu(kfPkt.payload, packet.timestamp, kfPkt.marker);
+            dtlsState->local_seq++;
+
+            auto srtpPkt = SrptProtect::protect(srtpCtx, nalData);
+            if (!srtpPkt.empty()) {
+                const struct sockaddr_in& peerAddr = dtls.getPeerAddr();
+                sendto(session->rtp_socket,
+                    (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
+                    (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
             }
-        };
-
-        // 响应浏览器 PLI/FIR：ICE 线程检测到关键帧请求后置位，转发线程在此重发关键帧
-        if (dtlsState->request_keyframe_resend_) {
-            dtlsState->request_keyframe_resend_ = false;
-            resendKeyframe();
-            dtlsState->last_idr_sent_time_ = now_steady;
-            LOG("[WebRTC] keyframe resend triggered by client feedback");
-        }
-
-        // 主动重发：距上次发送关键帧超过阈值即重发缓存 IDR，限制解码卡顿的最长自愈时间，
-        // 不依赖浏览器是否发送 PLI（部分浏览器/场景下不会发）。源端 GOP 足够密时不触发。
-        if (now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(kMaxIdrGapMs)) {
-            resendKeyframe();
-            dtlsState->last_idr_sent_time_ = now_steady;
-            LOG("[WebRTC] periodic keyframe resend (gap>%dms)", kMaxIdrGapMs);
-        }
+            };
 
         // 新会话首次发送：SPS + PPS + 缓存的关键帧 RTP 数据
         if (session->is_first_send_) {
             session->is_first_send_ = false;
-            resendKeyframe();
-            dtlsState->last_idr_sent_time_ = now_steady;
+            if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
+            if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
+            for (auto& kfData : keyframe_cache_) {
+                std::vector<uint8_t> rtpVec(kfData.begin(), kfData.end());
+                rtpVec[1] = (rtpVec[1] & 0x80) | (session->payload_type & 0x7F);
+                rtpVec[2] = (dtlsState->local_seq >> 8) & 0xFF;
+                rtpVec[3] = dtlsState->local_seq & 0xFF;
+                dtlsState->local_seq++;
+                auto srtpPkt = SrptProtect::protect(srtpCtx, rtpVec);
+                if (!srtpPkt.empty()) {
+                    const struct sockaddr_in& peerAddr = dtls.getPeerAddr();
+                    sendto(session->rtp_socket,
+                        (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
+                        (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
+                }
+            }
             LOG("first send: sps/pps + %zu keyframe pkts for session", keyframe_cache_.size());
         }
-        // 每个IDR之前发送 SPS/PPS
+        // 每个IDR之前发送 SPS/PPS 
         else if (isIdrNalu && isLastIdrNalu == false && !session->sps.empty() && !session->pps.empty()) {
             sendSingleNalRtp(session->sps, packet.timestamp);
             sendSingleNalRtp(session->pps, packet.timestamp);
-            dtlsState->last_idr_sent_time_ = now_steady;
             LOG("send sps/pps");
         }
 
-        // 重新分片发送本帧 H.264 负载（安全 MTU，解决弱网大包被丢弃导致的冻结/花屏）
-        sendH264Nalu(packet.payload, packet.timestamp, packet.marker);
+        // 用 per-session 独立序列号+PT 替换原始 seq/PT 后发送
+        std::vector<uint8_t> rtpVec(data.begin(), data.end());
+        rtpVec[1] = (rtpVec[1] & 0x80) | (session->payload_type & 0x7F);  // 保留 marker, 重映射 PT
+        rtpVec[2] = (dtlsState->local_seq >> 8) & 0xFF;
+        rtpVec[3] = dtlsState->local_seq & 0xFF;
+        dtlsState->local_seq++;
 
+        std::vector<uint8_t> srtpPkt = SrptProtect::protect(srtpCtx, rtpVec);
+        if (srtpPkt.empty()) continue;
+
+        const struct sockaddr_in& peerAddr = dtls.getPeerAddr();
+        int sent = sendto(session->rtp_socket,
+            (const char*)srtpPkt.data(), (int)srtpPkt.size(), 0,
+            (const struct sockaddr*)&peerAddr, sizeof(peerAddr));
+
+        // 前 5 次打印发送状态
+        static int srtp_send_count = 0;
+        if (srtp_send_count < 5) {
+            char ipbuf[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &peerAddr.sin_addr, ipbuf, sizeof(ipbuf));
+            LOG("SRTP send #%d: sent=%d/%zu to %s:%u",
+                srtp_send_count, sent, srtpPkt.size(),
+                ipbuf, ntohs(peerAddr.sin_port));
+            srtp_send_count++;
+        }
+
+        if (sent > 0) {
+            std::lock_guard<std::mutex> lock(stats_mutex_);
+            stats_.bytes_forwarded += srtpPkt.size();
+            stats_.frames_forwarded++;
+        }
     }
 }
 

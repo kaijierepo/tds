@@ -30,7 +30,7 @@ SOFTWARE.
 #include "logger.h"
 #include "tds_imp.h"
 #include "tdsWatchDog.h"
-#include "tdb.h"
+#include "database/tDatabase.h"
 #include "statusServer.h"
 #include "base64.h"
 #include "prj.h"
