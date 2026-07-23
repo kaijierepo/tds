@@ -1,7 +1,11 @@
 ﻿#pragma once
 
 #include <mutex>
+#ifdef TDS
 #include "database/tDatabase.h"
+#else
+#include "tdb.h"
+#endif
 #include "tds.h"
 #include "json.hpp"
 #include "yyjson.h"
