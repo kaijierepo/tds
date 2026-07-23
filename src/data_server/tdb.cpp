@@ -1501,7 +1501,13 @@ bool TDB::InsertByDeType(std::string strTag, std::string& sDe, const std::string
 //1.存数据元文件(曲线、json)或存数据元相关文件(图片) 2.存数据元索引文件或数据元列表文件
 bool TDB::Insert(std::string strTag, std::string& sDe, DB_TIME* time,bool buffered)
 {
-	return InsertDeJsonStr(strTag,*time,sDe,buffered);
+	//data element with file data,write immidaitely ,deserialize de string, seperate file data into a file on disk
+	if (sDe.find("\"file\":") != std::string::npos) {
+		return InsertByDeType(strTag, sDe, "", time);
+	}
+	//just append to data list
+	else
+		return InsertDeJsonStr(strTag,*time,sDe,buffered);
 }
 
 struct DE_TEMP {
