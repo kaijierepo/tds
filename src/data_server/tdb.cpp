@@ -5984,7 +5984,7 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 	return InsertDeJsonStr(strTag, stTime, sVal, buffered);
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && _WIN32_WINNT>=0x0600 // XP system does not support the function 'SetFileInformationByHandle'.
 void* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 	std::string folderPath = getPath_dataFolder(tag, time);
@@ -6055,7 +6055,7 @@ void* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	return hFile;
 }
 #else
-FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
+void* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	FILE* fp = nullptr;
 	std::string folderPath = getPath_dataFolder(tag, time);
 	std::string dlPath = folderPath + "/" + m_dbFmt.deListName;
