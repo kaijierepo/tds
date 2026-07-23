@@ -340,6 +340,9 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 				+ rc->config_.tag + "_" + ts + ".h264";
 			rc->rec_ctrl_.startTime = std::chrono::steady_clock::now();
 			rc->rec_ctrl_.recording = true;
+			// 启动独立 I/O 线程，将磁盘写入与实时收包线程解耦
+			rc->record_io_running_ = true;
+			rc->record_io_thread_ = std::thread(&StreamNode::recordIoThread, rc.get());
 			rpcResp.result = RPC_OK;
 		}
 		else
@@ -372,10 +375,17 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		rc = getStreamNodeByTag(tag);
 	}
 	if (rc) {
-		std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);
-		if (rc->rec_ctrl_.recording == true)
+		bool wasRecording = false;
 		{
-			rc->rec_ctrl_.recording = false;
+			std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);
+			if (rc->rec_ctrl_.recording == true)
+			{
+				rc->rec_ctrl_.recording = false;
+				wasRecording = true;
+			}
+		}
+		if (wasRecording)
+		{
 			rc->flushRecordBuffer();
 
 			auto now = std::chrono::steady_clock::now();

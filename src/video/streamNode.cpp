@@ -445,6 +445,15 @@ void StreamNode::stop() {
         control_thread_.join();
     }
 
+    // 停止录像 I/O 线程（先置 false 唤醒，再 join 等待退出）
+    if (record_io_running_) {
+        record_io_running_ = false;
+        record_queue_cv_.notify_one();
+        if (record_io_thread_.joinable()) {
+            record_io_thread_.join();
+        }
+    }
+
     teardown();
 
     setState(State::IDLE, "Stopped");

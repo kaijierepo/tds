@@ -124,7 +124,7 @@ public:
         TransportMode push_mode = TransportMode::UDP;
         
         // UDP特定配置
-        int udp_recv_buffer_size = 524288;  // UDP接收缓冲区(512KB)，避免4K高码流内核丢包
+        int udp_recv_buffer_size = 4194304;  // UDP接收缓冲区(4MB)，避免4K高码流内核丢包
         int udp_send_buffer_size = 0;    // UDP发送缓冲区大小(0=系统默认)
         int udp_ttl = 64;                // TTL生存时间
         int udp_tos = 0xC0;              // Type of Service (Default: AF41 低延迟)
@@ -422,6 +422,9 @@ public:
 
     // 最近一个关键帧的 RTP 原始数据缓存（新会话首次发送时使用，加速出图）
     std::vector<std::vector<uint8_t>> keyframe_cache_;
+    // 保护 keyframe_cache_ 与 last_nalu_was_idr_：sendRTPPacketToClients 可能被多个线程并发调用
+    // (拉流线程 / 每个 RTSP 推流客户端独立线程 / 文件源线程)，无锁并发读写 std::vector 会造成堆破坏→double free
+    std::mutex keyframe_cache_mutex_;
     bool keyframe_caching_ = false;  // 当前是否正在缓存关键帧（遇到IDR开始，marker=1结束）
 
     STREAM_SESSION pull_audio_session_;
@@ -436,7 +439,7 @@ public:
     mutable std::mutex state_mutex_;
     mutable std::mutex stats_mutex_;
     mutable std::mutex queue_mutex_;
-    mutable std::recursive_mutex rec_mutex_;   // 保护 rec_ctrl_ 和 record_batch_buffer_
+    mutable std::recursive_mutex rec_mutex_;   // 保护 rec_ctrl_ 控制字段
     std::condition_variable cv_;
 
     // 数据队列
@@ -444,7 +447,13 @@ public:
     void addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt);
     int rtp_buffer_max_seconds_ = 60; 
     std::vector<std::shared_ptr<RTPPacket>> rtp_buffer_;
-    std::vector<std::shared_ptr<RTPPacket>> record_batch_buffer_;
+    // 录像 I/O 线程 — 生产者-消费者队列，将磁盘写入与实时收包线程解耦
+    std::queue<std::shared_ptr<RTPPacket>> record_queue_;
+    std::mutex record_queue_mutex_;
+    std::condition_variable record_queue_cv_;
+    std::thread record_io_thread_;
+    std::atomic<bool> record_io_running_{false};
+
     size_t max_queue_size_ = 50000;
 
     // 统计
@@ -499,7 +508,9 @@ public:
     void forwardRTPPacket(const RTPPacket& packet);
     void recordRTPPacket(std::shared_ptr<RTPPacket> pPkt);
     void flushRecordBuffer();
+    void recordIoThread();
     void writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs);
+    void writeRTPPacketToFile(std::shared_ptr<RTPPacket> pPkt, std::ofstream& ofs);
     std::string extractSessionID(const std::string& response);
     std::string extractTransport(const std::string& response);
 
