@@ -5981,7 +5981,7 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 {
 	std::string sDe = "{\n\"time\":\"" + stTime.toStr() + "\",\n\"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}";
 
-	return InsertDeJsonStr(strTag, stTime, sVal, buffered);
+	return InsertDeJsonStr(strTag, stTime, sDe, buffered);
 }
 
 #if defined(_WIN32) && _WIN32_WINNT>=0x0600 // XP system does not support the function 'SetFileInformationByHandle'.
