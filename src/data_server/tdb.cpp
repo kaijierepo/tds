@@ -1499,9 +1499,9 @@ bool TDB::InsertByDeType(std::string strTag, std::string& sDe, const std::string
 
 //1. std::store data element files (curves, JSON) or data element related files (images) 2. std::store data element index files or data element list files
 //1.存数据元文件(曲线、json)或存数据元相关文件(图片) 2.存数据元索引文件或数据元列表文件
-bool TDB::Insert(std::string strTag, std::string& sDe, DB_TIME* time)
+bool TDB::Insert(std::string strTag, std::string& sDe, DB_TIME* time,bool buffered)
 {
-	return InsertByDeType(strTag, sDe, "", time);
+	return InsertDeJsonStr(strTag,*time,sDe,buffered);
 }
 
 struct DE_TEMP {
@@ -5626,9 +5626,10 @@ void TDB::rpc_db_insert(yyjson_val* params, std::string& rlt, std::string& err, 
 		yyjson_val* yyv_tag = yyjson_obj_get(params, "tag");
 		std::string tag = yyjson_get_str(yyv_tag);
 		DB_TIME tNow;
+		std::string time;
 		yyjson_val* yyv_time = yyjson_obj_get(params, "time");
 		if (yyv_time) {
-			std::string time = yyjson_get_str(yyv_time);
+			time = yyjson_get_str(yyv_time);
 			if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
 				time += " 00:00:00";
 			}
@@ -5640,11 +5641,22 @@ void TDB::rpc_db_insert(yyjson_val* params, std::string& rlt, std::string& err, 
 		}
 		else {
 			tNow.setNow();
+			time = tNow.toStr();
+		}
+		bool buffered = false;
+		yyjson_val* yyv_buffered = yyjson_obj_get(params, "buffered");
+		if (yyv_buffered) {
+			buffered = yyjson_get_bool(yyv_buffered);
 		}
 
 		yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
 		yyjson_mut_val* yymv_params = yyjson_val_mut_copy(mut_doc, params);
 		yyjson_mut_obj_remove_key(yymv_params, "tag");
+		yyjson_mut_obj_remove_key(yymv_params, "buffered");
+
+		yyjson_mut_val* yymv_key = yyjson_mut_strcpy(mut_doc, "time");
+		yyjson_mut_val* yymv_time = yyjson_mut_strcpy(mut_doc, time.c_str());
+		yyjson_mut_obj_put(yymv_params, yymv_key, yymv_time);
 
 		std::string sDe;
 
@@ -5662,10 +5674,10 @@ void TDB::rpc_db_insert(yyjson_val* params, std::string& rlt, std::string& err, 
 		if (yyjson_is_str(yyv_db)) {
 			std::string dbName = yyjson_get_str(yyv_db);
 			TDB* tdb = db.getChildDB(dbName);
-			success = tdb->Insert(tag, sDe, &tNow);
+			success = tdb->Insert(tag, sDe, &tNow, buffered);
 		}
 		else
-			success = Insert(tag, sDe, &tNow);
+			success = Insert(tag, sDe, &tNow, buffered);
 		if(success)
 			rlt = "\"ok\"";
 		else
@@ -5844,8 +5856,7 @@ yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
 }
 
 
-
-bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal,bool buffered)
+bool TDB::InsertDeJsonStr(std::string strTag, DB_TIME stTime, std::string& sDe, bool buffered)
 {
 	if (!m_enableDB)
 		return false;
@@ -5863,9 +5874,9 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 
 		DE_BUFF deb;
 		deb.time = stTime;
-		deb.sVal = sVal;;
+		deb.sDe = sDe;
 		iter->second.push_back(deb);
-		if (iter->second.size() > m_insertBuffSize || iter->second[0].time.getTimePassSecond() > m_insertBuffSecond) {
+		if (iter->second[0].time.getTimePassSecond() > m_insertBuffSecond) {
 			InsertValJsonStrBuffer(strTag, iter->second);
 			iter->second.clear();
 		}
@@ -5878,29 +5889,9 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 	if (!folderExist(folderPath))
 		DB_FS::createFolderOfPath(folderPath.c_str());
 
-
-
-	if (m_bEnableFsBuff) {
-		bool bAppend = false;
-		m_FsBuff.m_csFsb.lock();
-		std::map<std::string, FILE_BUFF*>::iterator iter = m_FsBuff.m_mapFsBuff.find(dlPath);
-		if (iter != m_FsBuff.m_mapFsBuff.end()) {
-			std::string& fileData = iter->second->data;  // can be an empty file ,length is 0
-			if (fileData.size() > 0) {
-				fileData.resize(fileData.size() - 1);
-				fileData += ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";;
-			}
-			else {
-				fileData = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
-			}
-		}
-		m_FsBuff.m_csFsb.unlock();
-	}
-
 	bool bAppend = false;
 	if (fileExist(dlPath))
 	{
-		std::string appendData = ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";
 		DB_LOCK_GUARD dbLock(dlPath);
 #ifdef _WIN32
 		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
@@ -5931,7 +5922,7 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 					ftruncate(fileno(fp), 0);
 #endif
 					fseek(fp, 0L, SEEK_SET);
-					
+
 					// parse JSON
 					yyjson_doc* doc = yyjson_read(p, len, 0);
 					free(p);
@@ -5956,26 +5947,27 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 
 						yyjson_doc_free(doc);
 					}
-					if (!bConvertOld)
-						fwrite("[", 1, 1, fp);
-					fwrite(appendData.c_str(), 1, appendData.length(), fp);
-					bAppend = true; // end write
-					len = 0; // end write
+					if (!bConvertOld) { //old data but cannot upgrade
+						fseek(fp, 0L, SEEK_SET);
+						fwrite("[]", 1, 2, fp);
+					}
 				}
 			}
 
-
+			len = ftell(fp);
 			if (len > 0)
 			{
 				fseek(fp, len - 1, SEEK_SET);  //overwrite last ] charactor
-				fwrite(appendData.c_str(), 1, appendData.length(), fp);
+				fwrite(",", 1, 1, fp);
+				fwrite(sDe.c_str(), 1, sDe.length(), fp);
+				fwrite("]", 1, 1, fp);
 				bAppend = true;
 			}
 			fclose(fp);
 		}
 	}
 	if (!bAppend) {
-		std::string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
+		std::string s = "[" + sDe + "]";
 		if (!DB_FS::writeFile(dlPath, (unsigned char*)s.c_str(), s.length()))
 		{
 			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s.c_str());
@@ -5984,6 +5976,85 @@ bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal
 	return true;
 }
 
+
+bool TDB::InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal,bool buffered)
+{
+	std::string sDe = "{\n\"time\":\"" + stTime.toStr() + "\",\n\"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}";
+
+	return InsertDeJsonStr(strTag, stTime, sVal, buffered);
+}
+
+#ifdef _WIN32
+void* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	std::string folderPath = getPath_dataFolder(tag, time);
+	std::string dlPath = folderPath + "/" + m_dbFmt.deListName;
+
+	// Ensure the folder exists
+	if (!folderExist(folderPath)) {
+		DB_FS::createFolderOfPath(folderPath.c_str());
+	}
+
+	// Check if the file exists and is not empty
+	bool fileHasData = false;
+	if (fileExist(dlPath)) {
+		std::wstring wPath = DB_STR::utf8_to_utf16(dlPath);
+		// Open with shared access; only need GENERIC_READ for size check
+		HANDLE hCheck = CreateFileW(wPath.c_str(), GENERIC_READ,
+			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hCheck != INVALID_HANDLE_VALUE) {
+			LARGE_INTEGER fileSize;
+			if (GetFileSizeEx(hCheck, &fileSize) && fileSize.QuadPart > 0) {
+				fileHasData = true;
+			}
+			CloseHandle(hCheck);
+		}
+	}
+
+	std::wstring wPath = DB_STR::utf8_to_utf16(dlPath);
+
+	if (fileHasData) {
+		// File has data: open with GENERIC_READ | GENERIC_WRITE to overwrite the trailing ']'
+		// Use shared-open mode so concurrent fread operations from other code paths
+		// are not blocked while this handle holds the file.
+		hFile = CreateFileW(wPath.c_str(), GENERIC_READ | GENERIC_WRITE,
+			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile != INVALID_HANDLE_VALUE) {
+			// Set low I/O priority so that fread-intensive operations elsewhere
+			// on the system get preferential scheduling when I/O queues are deep.
+			FILE_IO_PRIORITY_HINT_INFO priorityHint;
+			priorityHint.PriorityHint = IoPriorityHintLow;
+			SetFileInformationByHandle(hFile, FileIoPriorityHintInfo, &priorityHint, sizeof(priorityHint));
+
+			// Seek back 1 byte to overwrite the closing bracket
+			SetFilePointer(hFile, -1, NULL, FILE_END);
+			firstDe = false;
+		}
+	}
+	else {
+		// File does not exist or is empty: create / truncate
+		hFile = CreateFileW(wPath.c_str(), GENERIC_READ | GENERIC_WRITE,
+			FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+			NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile != INVALID_HANDLE_VALUE) {
+			// Set low I/O priority so that fread-intensive operations elsewhere
+			// on the system get preferential scheduling when I/O queues are deep.
+			FILE_IO_PRIORITY_HINT_INFO priorityHint;
+			priorityHint.PriorityHint = IoPriorityHintLow;
+			SetFileInformationByHandle(hFile, FileIoPriorityHintInfo, &priorityHint, sizeof(priorityHint));
+
+			// Write the opening bracket of the JSON array
+			DWORD bytesWritten = 0;
+			WriteFile(hFile, "[", 1, &bytesWritten, NULL);
+			firstDe = true;
+		}
+	}
+
+	return hFile;
+}
+#else
 FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	FILE* fp = nullptr;
 	std::string folderPath = getPath_dataFolder(tag, time);
@@ -5997,11 +6068,7 @@ FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	// Check if the file exists and is not empty
 	bool fileHasData = false;
 	if (fileExist(dlPath)) {
-#ifdef _WIN32
-		fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb");
-#else
 		fp = fopen(dlPath.c_str(), "rb");
-#endif
 		if (fp) {
 			fseek(fp, 0L, SEEK_END);
 			long len = ftell(fp);
@@ -6016,11 +6083,7 @@ FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 
 	if (fileHasData) {
 		// File has data: open in "rb+" to overwrite the trailing ']'
-#ifdef _WIN32
-		fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
-#else
 		fp = fopen(dlPath.c_str(), "rb+");
-#endif
 		if (fp) {
 			// Seek back 1 byte to overwrite the closing bracket
 			fseek(fp, -1L, SEEK_END);
@@ -6029,11 +6092,7 @@ FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	}
 	else {
 		// File does not exist or is empty: open in "wb+" (truncates the file)
-#ifdef _WIN32
-		fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"wb+");
-#else
 		fp = fopen(dlPath.c_str(), "wb+");
-#endif
 		if (fp) {
 			static const char* startBracket = "[";
 			fwrite(startBracket, 1, 1, fp);
@@ -6043,7 +6102,65 @@ FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 
 	return fp;
 }
+#endif
 
+#ifdef _WIN32
+bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuff) {
+	// Initialize to prevent undefined behavior on the first comparison
+	DB_TIME stLastTime;
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	bool firstDeInFile = false;
+
+	for (size_t i = 0; i < deBuff.size(); i++) {
+		// Use const reference to avoid struct copying overhead
+		const DE_BUFF& deb = deBuff[i];
+		DB_TIME stTime = deb.time;
+
+		// Switch files when the day changes
+		if (stTime.wDay != stLastTime.wDay) {
+			if (hFile != INVALID_HANDLE_VALUE) {
+				// Write the closing bracket before closing the old file
+				DWORD bytesWritten = 0;
+				WriteFile(hFile, "]", 1, &bytesWritten, NULL);
+				CloseHandle(hFile);
+				hFile = INVALID_HANDLE_VALUE;
+			}
+			// Open the new file, firstDeInFile will be updated by getDBFileHandle
+			hFile = (HANDLE)getDBFileHandle(strTag, stTime, firstDeInFile);
+			if (hFile == INVALID_HANDLE_VALUE) {
+				return false; // Failed to open file
+			}
+		}
+		stLastTime = stTime;
+
+		// Write separator comma
+		if (!firstDeInFile) {
+			DWORD bytesWritten = 0;
+			WriteFile(hFile, ",", 1, &bytesWritten, NULL);
+		}
+		else {
+			// After writing the very first element, subsequent elements need a comma
+			firstDeInFile = false;
+		}
+
+		// Build JSON string (reserve memory to improve performance)
+		std::string deData;
+		deData.reserve(128);
+		deData = deb.sDe;
+
+		DWORD bytesWritten = 0;
+		WriteFile(hFile, deData.c_str(), (DWORD)deData.length(), &bytesWritten, NULL);
+	}
+
+	// Loop finished: close the last file properly
+	if (hFile != INVALID_HANDLE_VALUE) {
+		DWORD bytesWritten = 0;
+		WriteFile(hFile, "]", 1, &bytesWritten, NULL);
+		CloseHandle(hFile);
+	}
+	return true;
+}
+#else
 bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuff) {
 	// Initialize to prevent undefined behavior on the first comparison
 	DB_TIME stLastTime;
@@ -6083,7 +6200,7 @@ bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuf
 		// Build JSON string (reserve memory to improve performance)
 		std::string deData;
 		deData.reserve(128);
-		deData = "{\n\"time\":\"" + stTime.toStr() + "\",\n\"" + m_dbFmt.deItemKey_value + "\":" + deb.sVal + "\n}";
+		deData = deb.sDe;
 
 		fwrite(deData.c_str(), 1, deData.length(), fp);
 	}
@@ -6095,6 +6212,7 @@ bool TDB::InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuf
 	}
 	return true;
 }
+#endif
 
 bool TDB::Insert(std::string strTag, DB_TIME stTime, int& iVal, bool buffered)
 {

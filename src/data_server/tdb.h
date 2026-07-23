@@ -605,7 +605,7 @@ public:
 
 struct DE_BUFF {
 	DB_TIME time;
-	std::string sVal;
+	std::string sDe;
 };
 
 //a data set specified by time and tag
@@ -998,7 +998,7 @@ public:
 
 	// insert complex data type
 	// custom data element in json format
-	bool Insert(std::string strTag, std::string& sDe,DB_TIME* stTime = nullptr );
+	bool Insert(std::string strTag, std::string& sDe,DB_TIME* stTime = nullptr, bool buffered = false);
 	// curve type internal data type of tds, save to file  123000.curve.json in the same path with db.json(datalist file)
 	bool Insert(std::string strTag, std::string& sDeIdx,std::string& sDeCurve, DB_TIME* stTime = nullptr);
 	// custom data element in json format
@@ -1020,7 +1020,11 @@ public:
 	TDB* getChildDB(std::string dbName);
 	std::map<std::string, TDB*> m_childDB;
 
+#ifdef _WIN32
+	void* getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe);
+#else
 	FILE* getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe);
+#endif
 //private func
 public:
 	// convert old datalist file to new format
@@ -1032,6 +1036,7 @@ public:
 	bool parseDESelector(const std::string& sParams, DE_SELECTOR& deSelector, std::string& err);
 	int dhmsSpan2Seconds(std::string timeSpan);
 	//insert
+	bool InsertDeJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal, bool buffered = false);
 	bool InsertValJsonStr(std::string strTag, DB_TIME stTime, std::string& sVal, bool buffered = false);
 	bool InsertValJsonStrBuffer(std::string strTag, std::vector<DE_BUFF>& deBuff);
 	std::unordered_map<std::string,std::vector<DE_BUFF>> m_insertBuff;

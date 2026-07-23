@@ -707,6 +707,8 @@ bool TDS_imp::run(string cmdline) {
 		::db.m_currentPath   = tds->conf->currentPath;
 		::db.m_bEnableFsBuff = tds->conf->getInt("dbBuffer", 0) == 1 ? true : false;
 		::db.m_enableDB = tds->conf->getInt("enableDB", 1) == 1 ? true : false;
+		::db.m_insertBuffSecond = tds->conf->getInt("dbInsertBufferSecond", 5 * 60);
+		::db.m_enableInsertBuff = tds->conf->getInt("enableInsertBuffer", 0);
 
 		string recPath = tds->conf->dbPath + "/record";
 		fs::createFolderOfPath(recPath);
