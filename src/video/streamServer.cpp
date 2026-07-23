@@ -190,7 +190,7 @@ bool StreamServer::openStream(const STREAM_OPEN_PARAM& op)
 	bool ret;
 	if (sn->start(config)) {
 		std::lock_guard<std::mutex> lock(nodeLock_);
-		m_mapStreamNodes[op.streamUrl] = sn;
+		m_mapStreamNodes[config.streamUrl] = sn;
 		LOG("[StreamServer] openStream success,tag:%s,streamUrl:%s,originUrl:%s,relayUrl:%s,pushToTag:%s,pushToIP:%s",
 			op.tag.c_str(),op.streamUrl.c_str(),op.originPullUrl.c_str(),op.relayPushUrl.c_str(),op.pushToTag.c_str(),op.pushToIP.c_str());
 		ret = true;
@@ -206,20 +206,20 @@ bool StreamServer::openStream(const STREAM_OPEN_PARAM& op)
 
 bool StreamServer::closeStream(string tag)
 {
-	// 再尝试关闭 StreamNode
-	std::shared_ptr<StreamNode> sn;
-	{
-		std::lock_guard<std::mutex> lock(nodeLock_);
-		auto it = m_mapStreamNodes.find(tag);
-		if (it != m_mapStreamNodes.end()) {
-			sn = it->second;
-			m_mapStreamNodes.erase(it);
-			LOG("[流媒体] 正在停止 StreamNode for tag: %s", tag.c_str());
-		}
-	}
-
-	// 在锁外停止 relay，避免潜在死锁
+	// map key 是 streamUrl（如 "/tag"），而参数是纯 tag，
+	// 需要通过遍历匹配 config_.tag 来查找
+	std::shared_ptr<StreamNode> sn = getStreamNodeByTag(tag);
 	if (sn) {
+		{
+			std::lock_guard<std::mutex> lock(nodeLock_);
+			auto it = m_mapStreamNodes.find(sn->config_.streamUrl);
+			if (it != m_mapStreamNodes.end()) {
+				m_mapStreamNodes.erase(it);
+				LOG("[流媒体] 正在停止 StreamNode for tag: %s", tag.c_str());
+			}
+		}
+
+		// 在锁外停止 relay，避免潜在死锁
 		sn->stop();
 		LOG("[流媒体] StreamNode 已停止 for tag: %s", tag.c_str());
 	}

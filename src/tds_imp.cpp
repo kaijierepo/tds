@@ -569,6 +569,7 @@ void openAllStream() {
 			string tag = pmp->getTag();
 			STREAM_OPEN_PARAM op;
 			op.tag = tag;
+			op.streamUrl = "/" + tag;
 			op.originPullUrl = pmp->m_mediaUrl;
 			streamSrv.openStream(op);
 		}

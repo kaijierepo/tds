@@ -441,6 +441,7 @@ void thread_asynOpenStream(string tag) {
 	if (pmp) {
 		STREAM_OPEN_PARAM op;
 		op.tag = tag;
+		op.streamUrl = "/" + tag;
 		op.originPullUrl = pmp->m_mediaUrl;
 		streamSrv.openStream(op);
 	}
