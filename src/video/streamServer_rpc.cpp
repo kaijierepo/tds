@@ -30,12 +30,37 @@ string toTimeStr(std::chrono::system_clock::time_point tp) {
 // RPC 处理
 // ============================================================================
 
+// 将 SESSION_STATE 转为字符串
+static const char* sessionStateStr(SESSION_STATE st) {
+	switch (st) {
+	case SESSION_IDLE:         return "idle";
+	case SESSION_CONNECTING:   return "connecting";
+	case SESSION_HANDSHAKING:  return "handshaking";
+	case SESSION_STREAMING:    return "streaming";
+	case SESSION_ERROR:        return "error";
+	case SESSION_RECONNECTING: return "reconnecting";
+	default:                   return "unknown";
+	}
+}
+
 json getStreamInfo(shared_ptr<StreamNode> sn) {
 	json jSi;
 	jSi["streamUrl"] = sn->config_.streamUrl;
 	jSi["tag"] = sn->config_.tag;
-	jSi["originPullUrl"] = sn->config_.origin_pull_url;
-	jSi["relayPushUrl"] = sn->config_.relay_push_url;
+
+	// 源拉流信息
+	json jOrigin;
+	jOrigin["url"] = sn->config_.origin_pull_url;
+	jOrigin["state"] = sessionStateStr(sn->session_origin_pull_.state_);
+	jOrigin["codec"] = sn->session_origin_pull_.codec;
+	jSi["originPull"] = jOrigin;
+
+	// 转推流信息
+	json jRelay;
+	jRelay["url"] = sn->config_.relay_push_url;
+	jRelay["state"] = sessionStateStr(sn->session_relay_push_.state_);
+	jSi["relayPush"] = jRelay;
+
 	json jRtpBuffer;
 	jRtpBuffer["size"] = sn->rtp_buffer_.size();
 	jRtpBuffer["maxSeconds"] = sn->rtp_buffer_max_seconds_;
@@ -53,24 +78,29 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	jStatis["frameForwarded"] = statis.frames_forwarded;
 	jStatis["bytesReceived"] = statis.bytes_received;
 	jStatis["bytesForwarded"] = statis.bytes_forwarded;
+	jStatis["totalBytesReceived"] = statis.bytes_received;
 	jStatis["reconnectCount"] = statis.reconnect_count;
 	jSi["statis"] = jStatis;
 	jSi["openTime"] = toTimeStr(sn->open_time_);
 	
+	// 客户端会话列表（每 session 包含自身状态）
 	json clientSession = json::array();
 	std::lock_guard<std::mutex> lock(sn->session_list_client_pull_mutex_);
 	for (const auto& session : sn->session_list_client_pull_)
 	{
 		json j;
 		j["sessionType"] = sn->getSessionTypeDesc(session->session_type_);
+		j["state"] = sessionStateStr(session->state_);
+		j["stateDesc"] = session->getSessionStateDesc();
 		j["clientRtpPort"] = session->client_rtp_port;
 		j["clientRtcpPort"] = session->client_rtcp_port;
 		j["serverRtpPort"] = session->server_rtp_port;
 		j["serverRtcpPort"] = session->server_rtcp_port;
 		
 		j["lastStunBindReqTime"] = toTimeStr(session->last_stun_bind_req_time);
+		j["openTime"] = toTimeStr(session->open_time_);
+		j["bytesSended"] = session->rtpBytesSended;
 		if (session->session_type_ == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PULL) {
-			j["webRtcState"] = session->getWebRtcStateDesc();
 			if (session->dtls_transport_) {
 				SessionDtlsState* dtls = session->dtls_transport_.get();
 				if (dtls->dtls.isHandshakeDone()) {
@@ -121,8 +151,14 @@ bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& r
 	else if (method == "removeRecordFile") {
 		rpc_removeRecordFile(params, rpcResp, session);
 	}
+	else if (method == "getRecordList") {
+		rpc_getRecordList(params, rpcResp, session);
+	}
 	else if (method == "serveLocalFile") {
 		rpc_serveLocalFile(params, rpcResp, session);
+	}
+	else if (method == "setStream") {
+		rpc_setStream(params, rpcResp, session);
 	}
 	else {
 		bHandled = false;
@@ -225,9 +261,9 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		sn = getStreamNodeByTag(tag);
 
 	if (sn) {
-		// 按需启动拉流：如果 streamNode 处于 IDLE 或 S_ERROR 状态，启动拉流
-		if (sn->state_ == StreamNode::State::IDLE || sn->state_ == StreamNode::State::S_ERROR) {
-			LOG("[WebRTC] 按需启动拉流 tag=%s, state=%d", sn->config_.tag.c_str(), (int)sn->state_);
+		// 按需启动拉流：如果 origin pull session 处于 idle 或 error 状态，启动拉流
+		if (sn->session_origin_pull_.state_ == SESSION_STATE::SESSION_IDLE || sn->session_origin_pull_.state_ == SESSION_STATE::SESSION_ERROR) {
+			LOG("[WebRTC] 按需启动拉流 tag=%s, state=%d", sn->config_.tag.c_str(), (int)sn->session_origin_pull_.state_);
 			sn->start(sn->config_);
 
 			// 等待拉流准备好（15秒超时，200ms轮询）
@@ -295,6 +331,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		LOG("[WebRTC] SDP Answer:\n%s", si.sdp.c_str());
 
 		auto sessionPtr = std::make_shared<StreamNode::STREAM_SESSION>(si);
+		sessionPtr->open_time_ = std::chrono::system_clock::now();
 		sn->session_list_client_pull_mutex_.lock();
 		sn->session_list_client_pull_.push_back(sessionPtr);
 		sn->session_list_client_pull_mutex_.unlock();
@@ -458,6 +495,77 @@ bool StreamServer::rpc_removeRecordFile(yyjson_val* params, RPC_RESP& rpcResp, R
 	return true;
 }
 
+bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string tag;
+	yyjson_val* yyv = yyjson_obj_get(params, "tag");
+	if (yyv)
+		tag = yyjson_get_str(yyv);
+	if (tag.empty()) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param missing, tag is required");
+		return true;
+	}
+
+	std::string recordDir = tds->conf->dbPath + "/record/";
+	json records = json::array();
+
+	namespace fs = std::filesystem;
+	try {
+		if (!fs::exists(recordDir) || !fs::is_directory(recordDir)) {
+			rpcResp.result = records.dump();
+			return true;
+		}
+
+		std::string prefix = tag + "_";
+		for (const auto& entry : fs::directory_iterator(recordDir)) {
+			if (!entry.is_regular_file() || entry.path().extension() != ".h264")
+				continue;
+			std::string fname = entry.path().filename().string();
+			if (fname.find(prefix) != 0)
+				continue;
+
+			// parse time from filename: tag_YYYYMMDD_HHMMSS.h264
+			std::string tsStr;
+			size_t pos = fname.find("_", prefix.length());
+			if (pos != std::string::npos) {
+				tsStr = fname.substr(prefix.length(), pos - prefix.length());
+			} else {
+				tsStr = fname.substr(prefix.length(), fname.length() - 5); // strip .h264
+			}
+			// format: YYYYMMDD_HHMMSS -> "YYYY-MM-DD HH:MM:SS"
+			std::string formattedTime;
+			if (tsStr.length() >= 15 && tsStr[8] == '_') {
+				formattedTime = tsStr.substr(0, 4) + "-" + tsStr.substr(4, 2) + "-" + tsStr.substr(6, 2)
+					+ " " + tsStr.substr(9, 2) + ":" + tsStr.substr(11, 2) + ":" + tsStr.substr(13, 2);
+			} else {
+				formattedTime = tsStr;
+			}
+
+			std::string fileUrl = "/db/record/" + fname;
+			int fileSize = static_cast<int>(entry.file_size());
+
+			json jRec;
+			jRec["tag"] = tag;
+			jRec["time"] = formattedTime;
+			jRec["duration"] = 0;  // unknown from filename alone
+			jRec["preSeconds"] = 0;
+			jRec["fileUrl"] = fileUrl;
+			jRec["fileSize"] = fileSize;
+			records.push_back(jRec);
+		}
+	} catch (const std::exception& e) {
+		LOG("[录像列表] 扫描目录失败: %s, 错误: %s", recordDir.c_str(), e.what());
+	}
+
+	// sort by time descending (newest first)
+	std::sort(records.begin(), records.end(), [](const json& a, const json& b) {
+		return a["time"].get<std::string>() > b["time"].get<std::string>();
+	});
+
+	rpcResp.result = records.dump();
+	return true;
+}
+
 bool StreamServer::rpc_getStreamInfo(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string streamId;
@@ -559,5 +667,53 @@ bool StreamServer::rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, 
 	}
 
 	yyjson_mut_doc_free(doc);
+	return true;
+}
+
+bool StreamServer::rpc_setStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string tag;
+	yyjson_val* yyv = yyjson_obj_get(params, "tag");
+	if (yyv)
+		tag = yyjson_get_str(yyv);
+
+	string streamUrl;
+	yyv = yyjson_obj_get(params, "streamUrl");
+	if (yyv)
+		streamUrl = yyjson_get_str(yyv);
+
+	if (tag.empty() && streamUrl.empty()) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param missing, tag or streamUrl is required");
+		return true;
+	}
+
+	shared_ptr<StreamNode> sn = nullptr;
+	if (!tag.empty())
+		sn = getStreamNodeByTag(tag);
+	if (!sn && !streamUrl.empty())
+		sn = getStreamNodeByStreamUrl(streamUrl);
+
+	if (!sn) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "stream not found");
+		return true;
+	}
+
+	string relayUrl;
+	yyv = yyjson_obj_get(params, "relayUrl");
+	if (yyv)
+		relayUrl = yyjson_get_str(yyv);
+
+	if (sn->config_.relay_push_url == relayUrl) {
+		rpcResp.result = RPC_OK;
+		return true;
+	}
+
+	LOG("[流媒体] setStream tag=%s, streamUrl=%s, old_relay=%s, new_relay=%s",
+		sn->config_.tag.c_str(), sn->config_.streamUrl.c_str(),
+		sn->config_.relay_push_url.c_str(), relayUrl.c_str());
+	sn->config_.relay_push_url = relayUrl;
+	sn->start(sn->config_);
+
+	rpcResp.result = RPC_OK;
 	return true;
 }
