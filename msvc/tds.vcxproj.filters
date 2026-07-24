@@ -4,9 +4,6 @@
     <Filter Include="common">
       <UniqueIdentifier>{61f8ed5b-3995-4b52-98af-21ad15ab804f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="tdb">
-      <UniqueIdentifier>{81ba2ff7-a317-4111-888d-0c00a3926fb6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="script">
       <UniqueIdentifier>{b2626dd6-bf07-45c3-ac89-5f97cbdd8196}</UniqueIdentifier>
     </Filter>
@@ -42,6 +39,9 @@
     </Filter>
     <Filter Include="common\crypto\mbedtls">
       <UniqueIdentifier>{402d2c50-7241-4694-902a-ec4b6a3fbfd7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="database">
+      <UniqueIdentifier>{81ba2ff7-a317-4111-888d-0c00a3926fb6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -128,9 +128,6 @@
     </ClCompile>
     <ClCompile Include="..\src\func_module\statusServer.cpp">
       <Filter>func</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\tdb.cpp">
-      <Filter>tdb</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp">
       <Filter>device</Filter>
@@ -606,6 +603,9 @@
     <ClCompile Include="..\src\video\srtp_protect.cpp">
       <Filter>video</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\database\tDatebase.cpp">
+      <Filter>database</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\json.hpp">
@@ -697,9 +697,6 @@
     </ClInclude>
     <ClInclude Include="..\src\func_module\statusServer.h">
       <Filter>func</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\tdb.h">
-      <Filter>tdb</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_custom.h">
       <Filter>device</Filter>
@@ -907,6 +904,9 @@
     </ClInclude>
     <ClInclude Include="..\src\video\srtp_protect.h">
       <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\database\tDatabase.h">
+      <Filter>database</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
