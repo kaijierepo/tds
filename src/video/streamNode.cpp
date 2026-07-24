@@ -458,13 +458,13 @@ void StreamNode::stop() {
 
     teardown();
 
-    setState(State::IDLE, "Stopped");
+    setState(SESSION_STATE::SESSION_IDLE, "Stopped");
 }
 
 
-StreamNode::State StreamNode::getState() {
+SESSION_STATE StreamNode::getState() {
     std::lock_guard<std::mutex> lock(state_mutex_);
-    return state_;
+    return session_origin_pull_.state_;
 }
 
 bool StreamNode::isRunning() {
@@ -627,13 +627,13 @@ void StreamNode::setError(const std::string & error, int code) {
         error_callback_(error, code);
     }
 
-    setState(State::S_ERROR, error);
+    setState(SESSION_STATE::SESSION_ERROR, error);
 }
 
-void StreamNode::setState(State new_state, const std::string & msg) {
+void StreamNode::setState(SESSION_STATE new_state, const std::string & msg) {
     {
         std::lock_guard<std::mutex> lock(state_mutex_);
-        state_ = new_state;
+        session_origin_pull_.state_ = new_state;
     }
 
     if (status_callback_) {
@@ -666,10 +666,10 @@ void StreamNode::doReconnect() {
     }
 
     if (config_.max_retries <= 0) {
-        setState(State::RECONNECTING, "Reconnecting (attempt " + std::to_string(retry_count_) + "/unlimited)");
+        setState(SESSION_STATE::SESSION_RECONNECTING, "Reconnecting (attempt " + std::to_string(retry_count_) + "/unlimited)");
     }
     else {
-        setState(State::RECONNECTING,
+        setState(SESSION_STATE::SESSION_RECONNECTING,
             "Reconnecting (attempt " + std::to_string(retry_count_) +
             "/" + std::to_string(config_.max_retries) + ")");
     }

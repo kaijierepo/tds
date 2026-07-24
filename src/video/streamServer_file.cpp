@@ -495,7 +495,11 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	auto node = std::make_shared<StreamNode>();
 	StreamNode::Config cfg;
 	cfg.streamUrl = url;
-	cfg.origin_pull_url = "file://" + filePath;
+	std::string fileUrl = "file://" + filePath;
+	for (size_t i = 0; i < fileUrl.size(); i++) {
+		if (fileUrl[i] == '\\') fileUrl[i] = '/';
+	}
+	cfg.origin_pull_url = fileUrl;
 	cfg.relay_push_url = "";
 	cfg.retry_interval = 0;
 	cfg.max_retries = 0;
@@ -531,7 +535,7 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	node->session_origin_pull_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;
-	node->state_ = StreamNode::State::PLAYING;
+	node->session_origin_pull_.state_ = SESSION_STATE::SESSION_STREAMING;
 
 	// 继续持有 node 引用，供下方 ctx->node 使用
 	// （三个 shared_ptr 共同管理生命周期：map、局部变量 node、ctx->node）
@@ -666,7 +670,11 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	auto node = std::make_shared<StreamNode>();
 	StreamNode::Config cfg;
 	cfg.tag = tag;
-	cfg.origin_pull_url = "file://" + filePath;
+	std::string fileUrl = "file://" + filePath;
+	for (size_t i = 0; i < fileUrl.size(); i++) {
+		if (fileUrl[i] == '\\') fileUrl[i] = '/';
+	}
+	cfg.origin_pull_url = fileUrl;
 	cfg.relay_push_url = "";
 	cfg.retry_interval = 0;
 	cfg.max_retries = 0;
@@ -699,7 +707,7 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	node->session_origin_pull_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;
-	node->state_ = StreamNode::State::PLAYING;
+	node->session_origin_pull_.state_ = SESSION_STATE::SESSION_STREAMING;
 
 	// 继续持有 node 引用，供下方 ctx->node 使用
 	// （三个 shared_ptr 共同管理生命周期：map、局部变量 node、ctx->node）

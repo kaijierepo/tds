@@ -59,6 +59,16 @@ enum STREAM_SESSION_TYPE {
     CLIENT_WEBRTC_PUBLISH     //自身作为服务端，接收webrtc客户端推流
 };
 
+// Session 状态（替换旧的 StreamNode::State 和 WEBRTC_SESSION_STATE）
+enum SESSION_STATE {
+    SESSION_IDLE = 0,          // 空闲/未启动
+    SESSION_CONNECTING,        // 连接中 (TCP连接/ICE收集)
+    SESSION_HANDSHAKING,       // 握手中 (RTSP SETUP/DTLS握手)
+    SESSION_STREAMING,         // 推流中 (RTP数据传输)
+    SESSION_ERROR,             // 故障
+    SESSION_RECONNECTING       // 断线重连中
+};
+
 struct STREAM_OPEN_PARAM {
     std::string tag;
     std::string originPullUrl;
@@ -71,16 +81,6 @@ struct STREAM_OPEN_PARAM {
 
 class StreamNode {
 public:
-    enum State {
-        IDLE = 0,
-        CONNECTING,
-        CONNECTED,
-        PLAYING,
-        RECORDING,
-        S_ERROR,
-        RECONNECTING
-    };
-
     // 传输模式枚举
     enum class TransportMode {
         NONE,   // 
@@ -175,7 +175,7 @@ public:
     };
 
     // 回调函数
-    using StatusCallback = std::function<void(State state, const std::string& msg)>;
+    using StatusCallback = std::function<void(SESSION_STATE state, const std::string& msg)>;
     using FrameCallback = std::function<void(const uint8_t* data, size_t size, uint32_t timestamp)>;
     using ErrorCallback = std::function<void(const std::string& error, int code)>;
 
@@ -193,7 +193,7 @@ public:
 
 
     // 状态查询
-    State getState();
+    SESSION_STATE getState();
     bool isRunning();
     Statistics getStatistics();
 
@@ -236,12 +236,6 @@ public:
         std::vector<uint8_t> serialize() const;
     };
 
-    enum WEBRTC_SESSION_STATE {
-        ICE = 0,
-        DTLS_HANDSHAKE,
-        SRTP_ACTIVE
-	};
-
     // 媒体流信息
     // 注意：WebRTC 会话通过 shared_ptr 管理；含 std::thread 成员，禁止值拷贝
     struct STREAM_SESSION {
@@ -256,6 +250,7 @@ public:
         std::string sdp;
         STREAM_SESSION_TYPE session_type_;
         std::chrono::system_clock::time_point last_stun_bind_req_time;
+        std::chrono::system_clock::time_point open_time_;
 
         // 传输信息
         TransportMode transport_mode = TransportMode::UDP;
@@ -279,7 +274,7 @@ public:
         bool is_webrtc = false;
         std::string ice_ufrag;
         std::string ice_pwd;
-        WEBRTC_SESSION_STATE webrtc_state = WEBRTC_SESSION_STATE::ICE;
+        SESSION_STATE state_ = SESSION_STATE::SESSION_IDLE;
 
         // 从实际 RTP 流中捕获的视频 SSRC（用于 SDP 声明）
         uint32_t      video_ssrc = 0;
@@ -308,6 +303,7 @@ public:
             , payload_type(other.payload_type), clock_rate(other.clock_rate)
             , fmtp(other.fmtp), sps(other.sps), pps(other.pps), sdp(other.sdp)
             , session_type_(other.session_type_)
+            , last_stun_bind_req_time(other.last_stun_bind_req_time), open_time_(other.open_time_)
             , transport_mode(other.transport_mode), transport(other.transport)
             , remote_host(other.remote_host), client_port(other.client_port)
             , server_port(other.server_port)
@@ -315,12 +311,13 @@ public:
             , client_rtcp_port(other.client_rtcp_port)
             , server_rtp_port(other.server_rtp_port)
             , server_rtcp_port(other.server_rtcp_port)
+            , rtpBytesSended(other.rtpBytesSended)
             , rtp_socket(other.rtp_socket), rtcp_socket(other.rtcp_socket)
             , tcp_socket(other.tcp_socket)
             , interleaved_rtp(other.interleaved_rtp), interleaved_rtcp(other.interleaved_rtcp)
             , is_webrtc(other.is_webrtc)
             , ice_ufrag(other.ice_ufrag), ice_pwd(other.ice_pwd)
-            , webrtc_state(other.webrtc_state), video_ssrc(other.video_ssrc)
+            , state_(other.state_), video_ssrc(other.video_ssrc)
             , dtls_transport_(other.dtls_transport_)
             , srtp_context_(other.srtp_context_)
         {}
@@ -333,6 +330,7 @@ public:
                 payload_type = other.payload_type; clock_rate = other.clock_rate;
                 fmtp = other.fmtp; sps = other.sps; pps = other.pps; sdp = other.sdp;
                 session_type_ = other.session_type_;
+                last_stun_bind_req_time = other.last_stun_bind_req_time; open_time_ = other.open_time_;
                 transport_mode = other.transport_mode; transport = other.transport;
                 remote_host = other.remote_host; client_port = other.client_port;
                 server_port = other.server_port;
@@ -340,19 +338,20 @@ public:
                 client_rtcp_port = other.client_rtcp_port;
                 server_rtp_port = other.server_rtp_port;
                 server_rtcp_port = other.server_rtcp_port;
+                rtpBytesSended = other.rtpBytesSended;
                 rtp_socket = other.rtp_socket; rtcp_socket = other.rtcp_socket;
                 tcp_socket = other.tcp_socket;
                 interleaved_rtp = other.interleaved_rtp; interleaved_rtcp = other.interleaved_rtcp;
                 is_webrtc = other.is_webrtc;
                 ice_ufrag = other.ice_ufrag; ice_pwd = other.ice_pwd;
-                webrtc_state = other.webrtc_state; video_ssrc = other.video_ssrc;
+                state_ = other.state_; video_ssrc = other.video_ssrc;
                 dtls_transport_ = other.dtls_transport_;
                 srtp_context_ = other.srtp_context_;
             }
             return *this;
         }
 
-        std::string getWebRtcStateDesc();
+        std::string getSessionStateDesc();
     };
 
     // URL解析
@@ -393,7 +392,6 @@ public:
 public:
     // 配置和状态
     Config config_;
-    State state_ = State::IDLE;
     std::atomic<bool> running_{ false };
     std::atomic<bool> stopping_{ false };
     std::atomic<bool> isPulling_{ false };
@@ -526,7 +524,7 @@ public:
     // 工具函数
     std::string generateCSeq();
     void setError(const std::string& error, int code = 0);
-    void setState(State new_state, const std::string& msg = "");
+    void setState(SESSION_STATE new_state, const std::string& msg = "");
     bool shouldReconnect() const;
     void doReconnect();
 

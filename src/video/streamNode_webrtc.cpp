@@ -7,18 +7,27 @@
 #include <random>
 
 
-string StreamNode::STREAM_SESSION::getWebRtcStateDesc()
+string StreamNode::STREAM_SESSION::getSessionStateDesc()
 {
-    if (webrtc_state == WEBRTC_SESSION_STATE::ICE) {
-        return "ICE";
+    if (state_ == SESSION_STATE::SESSION_IDLE) {
+        return "idle";
     }
-    else if(webrtc_state == WEBRTC_SESSION_STATE::DTLS_HANDSHAKE) {
-        return "DTLS_HANDSHAKE";
+    else if(state_ == SESSION_STATE::SESSION_CONNECTING) {
+        return "connecting";
     }
-    else if(webrtc_state == WEBRTC_SESSION_STATE::SRTP_ACTIVE) {
-        return "SRTP_ACTIVE";
+    else if(state_ == SESSION_STATE::SESSION_HANDSHAKING) {
+        return "handshaking";
     }
-    return "UNKNOWN";
+    else if(state_ == SESSION_STATE::SESSION_STREAMING) {
+        return "streaming";
+    }
+    else if(state_ == SESSION_STATE::SESSION_ERROR) {
+        return "error";
+    }
+    else if(state_ == SESSION_STATE::SESSION_RECONNECTING) {
+        return "reconnecting";
+    }
+    return "unknown";
 }
 
 // ============================================================================
@@ -101,12 +110,12 @@ void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session)
                            (char*)buf, sizeof(buf), 0,
                            (struct sockaddr*)&peer, &peerLen);
 
-        // 检查 DTLS 握手是否超时（8秒内 state 未到 3）
-        if (session->webrtc_state >= DTLS_HANDSHAKE && session->webrtc_state < SRTP_ACTIVE) {
+        // 检查 DTLS 握手是否超时（8秒内 state 未到 streaming）
+        if (session->state_ >= SESSION_STATE::SESSION_HANDSHAKING && session->state_ < SESSION_STATE::SESSION_STREAMING) {
             auto now = std::chrono::steady_clock::now();
             if (now - dtls_start > std::chrono::seconds(8)) {
                 LOG("[ICE] DTLS handshake timeout (8s), state=%d",
-                    (int)session->webrtc_state);
+                    (int)session->state_);
                 session->rtc_handle_thread_running_ = false;
                 break;
             }
@@ -179,9 +188,9 @@ void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session)
                         std::shared_ptr<SessionDtlsState> st_shared =
                             std::atomic_load(&s->dtls_transport_);
                         SessionDtlsState* st = st_shared.get();
-                        LOG("[ICE]   session fd=%d srtp_ready=%d webrtc_state=%d",
+                        LOG("[ICE]   session fd=%d srtp_ready=%d state_=%d",
                             (int)s->rtp_socket, st ? (int)st->srtp_ready : -1,
-                            (int)s->webrtc_state);
+                            (int)s->state_);
                     }
                 }
             }
@@ -529,8 +538,8 @@ void StreamNode::webrtcSession_handle_STUN(std::shared_ptr<STREAM_SESSION> sessi
 
     // ICE 连通性确认：收到 Binding Request 并回复 Response
     // 只在初始状态(0)时升级为1，避免 keep-alive Binding Request 把 SRTP 激活(3)降级
-    if (session->webrtc_state == WEBRTC_SESSION_STATE::ICE) {
-        session->webrtc_state = WEBRTC_SESSION_STATE::DTLS_HANDSHAKE;
+    if (session->state_ == SESSION_STATE::SESSION_CONNECTING) {
+        session->state_ = SESSION_STATE::SESSION_HANDSHAKING;
         dtls_start = std::chrono::steady_clock::now();  // 开始 DTLS 握手计时
     }
 
@@ -570,7 +579,7 @@ void StreamNode::webrtcSession_handle_DTLS(std::shared_ptr<STREAM_SESSION> sessi
         // 握手成功：doHandshakeStep 内部已设置 handshake_done_ 并导出密钥
         if (dtls_state->dtls.isHandshakeDone()) {
             dtls_state->srtp_ready = true;
-            session->webrtc_state = WEBRTC_SESSION_STATE::SRTP_ACTIVE; 
+            session->state_ = SESSION_STATE::SESSION_STREAMING; 
 
             // 初始化 SRTP 上下文（服务端使用 server_write_key）
             const auto& keys = dtls_state->dtls.getKeyingMaterial();
@@ -583,7 +592,7 @@ void StreamNode::webrtcSession_handle_DTLS(std::shared_ptr<STREAM_SESSION> sessi
                     keys, false, /* is_server=false */
                     0);
 
-                session->webrtc_state = WEBRTC_SESSION_STATE::SRTP_ACTIVE; // SRTP 激活
+                session->state_ = SESSION_STATE::SESSION_STREAMING; // SRTP 激活
                 LOG("[ICE] DTLS handshake + SRTP keys ready for socket fd="
                     + std::to_string(session->rtp_socket));
             }

@@ -170,7 +170,7 @@ std::shared_ptr<StreamNode> StreamServer::createStream(const STREAM_OPEN_PARAM& 
 	sn->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
 
 		});
-	sn->setStatusCallback([](StreamNode::State state, const std::string& msg) {
+	sn->setStatusCallback([](SESSION_STATE state, const std::string& msg) {
 		LOG("[StreamNode] Status: %d - %s", static_cast<int>(state), msg.c_str());
 		});
 	sn->setErrorCallback([](const std::string& error, int code) {
@@ -186,7 +186,6 @@ std::shared_ptr<StreamNode> StreamServer::createStream(const STREAM_OPEN_PARAM& 
 	sn->config_.tag = op.tag;
 	sn->config_.streamUrl = streamUrl;
 	sn->config_.srcStreamFetch = op.srcStreamFetch != "" ? op.srcStreamFetch : "always";
-	sn->state_ = StreamNode::State::IDLE;
 
 	{
 		std::lock_guard<std::mutex> lock(nodeLock_);
@@ -211,7 +210,7 @@ std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op
 		sn = getStreamNodeBySrcUrl(op.originPullUrl);
 
 	if (sn) {
-		if (sn->state_ != StreamNode::State::IDLE && sn->state_ != StreamNode::State::S_ERROR) {
+		if (sn->session_origin_pull_.state_ != SESSION_STATE::SESSION_IDLE && sn->session_origin_pull_.state_ != SESSION_STATE::SESSION_ERROR) {
 			LOG("[流媒体] 媒体源已打开，收到重复打开请求，忽略, 位号:%s, 当前配置地址:%s",
 				op.tag.c_str(), sn->config_.origin_pull_url.c_str());
 			return sn;
@@ -362,9 +361,9 @@ void StreamServer::idleMonitorLoop() {
 			std::shared_ptr<StreamNode> sn = pair.second;
 			if (!sn) continue;
 
-			// 只监控 ondemand 模式且状态为 PLAYING 的流
+			// 只监控 ondemand 模式且状态为 streaming 的流
 			if (sn->config_.srcStreamFetch != "ondemand") continue;
-			if (sn->state_ != StreamNode::State::PLAYING) {
+			if (sn->session_origin_pull_.state_ != SESSION_STATE::SESSION_STREAMING) {
 				m_idleTrackMap_.erase(streamUrl);
 				continue;
 			}

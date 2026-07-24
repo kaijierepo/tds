@@ -126,7 +126,7 @@ bool StreamNode::checkIsIdrNalu(const RTPPacket& packet) {
 }
 
 void StreamNode::doRtpRecv() {
-    setState(State::PLAYING, "Streaming started");
+    setState(SESSION_STATE::SESSION_STREAMING, "Streaming started");
     bool pullUDP = (config_.pull_mode == TransportMode::UDP);
     LOG("[keyinfo][StreamNode]tag=%s,Pull Success,rtp handle thread start,mode:%s",config_.tag.c_str(),pullUDP ? "UDP" : "TCP");
 
@@ -369,8 +369,8 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
 
     for (auto& session : playClients) {
         if (!session || !session->is_webrtc) continue;
-        // state: 3=SRTP激活（is_webrtc 下 S3_SRTP_ACTIVE 即为激活态）
-        if (session->webrtc_state != WEBRTC_SESSION_STATE::SRTP_ACTIVE) continue;
+        // state: streaming=SRTP激活
+        if (session->state_ != SESSION_STATE::SESSION_STREAMING) continue;
 
         // 通过 SessionDtlsState 正确访问 DTLS 和 SRTP 上下文
         // dtls_transport_ 为 shared_ptr（由 ICE 线程管理），原子加载快照后持有引用，

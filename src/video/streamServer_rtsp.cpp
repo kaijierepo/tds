@@ -348,7 +348,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				node->session_origin_pull_.session_type_ = ORIGIN_PULL;
 				node->isPulling_ = true;  // 标记为"有流数据"，使 DESCRIBE 不会等待
 				node->running_ = true;
-				node->state_ = StreamNode::State::PLAYING;
+				node->session_origin_pull_.state_ = SESSION_STATE::SESSION_STREAMING;
 
 				std::lock_guard<std::mutex> lock(nodeLock_);
 				m_mapStreamNodes[streamUrl] = node;
@@ -420,9 +420,9 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				continue;
 			}
 
-			// 按需启动拉流：如果 streamNode 处于 IDLE 或 S_ERROR 状态，启动拉流
-			if (streamNode->state_ == StreamNode::State::IDLE || streamNode->state_ == StreamNode::State::S_ERROR) {
-				LOG("[RTSP] 按需启动拉流 tag=%s, state=%d", streamNode->config_.tag.c_str(), (int)streamNode->state_);
+		// 按需启动拉流：如果 streamNode origin pull session 处于 idle 或 error 状态，启动拉流
+		if (streamNode->session_origin_pull_.state_ == SESSION_STATE::SESSION_IDLE || streamNode->session_origin_pull_.state_ == SESSION_STATE::SESSION_ERROR) {
+			LOG("[RTSP] 按需启动拉流 tag=%s, state=%d", streamNode->config_.tag.c_str(), (int)streamNode->session_origin_pull_.state_);
 				streamNode->start(streamNode->config_);
 			}
 
@@ -804,6 +804,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 
 			// 将 RTSP 拉流会话加入 client_sessions_ 列表
 			auto sessionPtr = std::make_shared<StreamNode::STREAM_SESSION>(rtspSession);
+			sessionPtr->open_time_ = std::chrono::system_clock::now();
 			streamNode->session_list_client_pull_mutex_.lock();
 			streamNode->session_list_client_pull_.push_back(sessionPtr);
 			streamNode->session_list_client_pull_mutex_.unlock();

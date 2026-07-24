@@ -769,6 +769,7 @@ void StreamNode::controlThread() {
                 if (doStreamPull()) {
                     rtp_handle_thread_ = std::thread(&StreamNode::rtpHandleThread,this);
                     rtp_handle_thread_.detach();
+                    open_time_ = std::chrono::system_clock::now();
                     isPulling_ = true;
                 }
                 else {
@@ -802,6 +803,7 @@ void StreamNode::controlThread() {
                 if (target_conn_ && !target_session_.empty()) {
                     if (!rtspGetParameter(*target_conn_, config_.relay_push_url, target_session_)) {
                         setError("Target RTSP keepalive failed", 1002);
+                        session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
                         isPushing_ = false;
                         teardown();
                     }
@@ -813,9 +815,11 @@ void StreamNode::controlThread() {
 }
 
 bool StreamNode::doStreamPush() {
+	session_relay_push_.state_ = SESSION_STATE::SESSION_CONNECTING;
     // 连接到目标服务器
     URLComponents relay_push_url;
     if (!URLComponents::parse(config_.relay_push_url, relay_push_url)) {
+        session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("Invalid target URL format", 3005);
         return false;
     }
@@ -829,8 +833,12 @@ bool StreamNode::doStreamPush() {
         return false;
     }
 
-    // 生成目标SDP
-    session_relay_push_ = session_origin_pull_;
+    // 生成目标SDP（保留 relay push 自身状态）
+    {
+        SESSION_STATE saved_state = session_relay_push_.state_;
+        session_relay_push_ = session_origin_pull_;
+        session_relay_push_.state_ = saved_state;
+    }
     {
         std::string track_control = "trackID=0";
         if (!session_origin_pull_.control_url.empty()) {
@@ -850,6 +858,7 @@ bool StreamNode::doStreamPush() {
 
     // 发送ANNOUNCE到目标
     if (!rtspAnnounce(*target_conn_, config_.relay_push_url, target_sdp, target_session_)) {
+        session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("ANNOUNCE failed", 3007);
         return false;
     }
@@ -874,6 +883,7 @@ bool StreamNode::doStreamPush() {
 
     // 发送SETUP到目标
     if (!rtspSetup(*target_conn_, config_.relay_push_url, target_session_, session_relay_push_, true)) {
+        session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("SETUP failed for target", 3008);
         return false;
     }
@@ -914,17 +924,19 @@ bool StreamNode::doStreamPush() {
 
     // 发送RECORD到目标
     if (!rtspRecord(*target_conn_, config_.relay_push_url, target_session_)) {
+        session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("RECORD failed", 3009);
         return false;
     }
 
 	LOG("[keyinfo][StreamNode]tag=%s,stream forward success,pushToUrl:%s", config_.tag.c_str(), config_.relay_push_url.c_str());
+	session_relay_push_.state_ = SESSION_STATE::SESSION_STREAMING;
 
     return true;
 }
 
 bool StreamNode::doStreamPull() {
-    setState(State::CONNECTING, "Connecting to source");
+    setState(SESSION_STATE::SESSION_CONNECTING, "Connecting to source");
 
     // 解析源URL
     URLComponents src_url;
@@ -965,8 +977,8 @@ bool StreamNode::doStreamPull() {
         session_origin_pull_.control_url.c_str(),
         pull_audio_session_.control_url.c_str());
 
-    setState(State::CONNECTED, "Source connected");
-    setState(State::CONNECTING, "Setting up streams");
+    setState(SESSION_STATE::SESSION_HANDSHAKING, "Source connected");
+    setState(SESSION_STATE::SESSION_HANDSHAKING, "Setting up streams");
 
     // 清理之前的UDP sockets
     closeUDPSockets();
