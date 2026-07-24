@@ -101,15 +101,19 @@ httpsMediaPort=668     #https流媒体服务端口668
 httpMediaPort=669      #http流媒体服务端口669
 tcpPort=670            #tcp服务端口
 fileUploadPort=671	   #文件上传服务端口671
-mediaSrvIP=            #流媒体服务地址,留空为本机
+
+#流媒体服务
+rtspPort=554           #rtsp服务端口554
+alwaysOpenStream = 0   #视频监控点是否始终保持向源地址拉流，0=不保持，1=保持。默认0
+mediaSrvIP=            #流媒体服务与数据服务分离部署模式,留空为本机
 
 #IO服务
 ioSrvIP =                 #IO服务绑定的本地地址。在多网卡服务器上，需要指定与设备通信的那个IP地址。留空为默认0.0.0.0
 tdspPort = 665            #IO服务端口 默认665  TDSP协议   
-mbPort = 664              #IO服务端口 默认664  Modbus-RTU over TCP 使用串转网网关连接Modbus总线。支持逗号分隔配置多个端口( mbPort=664,20022)，用于udp设备回包不是回给请求的udp端口，而是回给固定的udp端口的场景。
-iq60Port = 663            #IO服务端口 默认663  IQ60物云协议  
+mbPort = 664              #IO服务端口 默认664  Modbus-RTU over TCP 使用串转网网关连接Modbus总线。支持逗号分隔配置多个端口( mbPort=664,20022)，用于udp设备回包不是回给请求的udp端口，而是回给固定的udp端口的场景。 
 mbTcpPort = 502           #IO服务端口 默认502  modbusTcp协议 
-leakDetectPort = 8085     #IO服务端口 默认8085 漏点监测设备
+mqttPort = 1883		      #IO服务端口 默认1883  mqtt协议
+iq60Port = 663            #IO服务端口 默认663  IQ60物云协议 
 iotimeoutTdsp=7000
 iotimeoutModbusRtu=5000
 iotimeoutIQ60=5000
@@ -442,13 +446,6 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 		else if (checkKey((key), "largeModelType"))
 		{
 			largeModelType = atoi(val.c_str());
-		}
-		else if (checkKey(key, "alwaysOpenStream"))
-		{
-			if (val == "true" || val == "1")
-				alwaysOpenStream = true;
-			else if (val == "false" || val == "0")
-				alwaysOpenStream = false;
 		}
 	}
 

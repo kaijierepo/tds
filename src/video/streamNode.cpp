@@ -402,6 +402,8 @@ bool StreamNode::start(const Config& config) {
     running_ = true;
     stopping_ = false;
     retry_count_ = 0;
+    isPulling_ = false;
+    isPushing_ = false;
 
     // 清除之前的认证信息
     source_auth_.clear();

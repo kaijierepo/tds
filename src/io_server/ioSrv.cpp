@@ -1406,7 +1406,7 @@ bool ioServer::run() {
 	m_mapPort2DevType[jepPort]   = DEV_TYPE_jep;
 
 	// 读取 MQTT Broker 配置
-	m_mqttBrokerPort = tds->conf->getInt("mqttBrokerPort", 1883);
+	m_mqttBrokerPort = tds->conf->getInt("mqttPort", 1883);
 	m_mqttBrokerIP   = tds->conf->getStr("mqttBrokerIP", "0.0.0.0");
 
 	//启动服务端口

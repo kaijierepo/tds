@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "streamServer.h"
 #include "logger.h"
 #include <sstream>
@@ -283,7 +282,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			sessionSetup = false;
 			streamTag.clear();
 
-			std::string path = extractPathFromUrl(url);
+			std::string path = url_decode(extractPathFromUrl(url));
 			std::string streamUrl = path;
 
 			// 提取 ANNOUNCE body（SDP）
@@ -397,7 +396,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			sessionId.clear();
 			pushSession.reset();
 
-			std::string path = extractPathFromUrl(url);
+			std::string path = url_decode(extractPathFromUrl(url));
 
 			// 尝试通过路径查找 stream（路径格式: /XXX）
 			// 注：serveDefaultFolder 启动时已创建所有本地文件对应的 StreamNode，
@@ -417,12 +416,19 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				resp << "CSeq: " << cseq << "\r\n";
 				resp << "\r\n";
 				sendResponse(cseq, resp.str());
+				LOG("[RTSP] 未找到请求的流,streamUrl=%s", path.c_str());
 				continue;
 			}
 
-			// 等待拉流准备好（最多 10 秒）
+			// 按需启动拉流：如果 streamNode 处于 IDLE 或 S_ERROR 状态，启动拉流
+			if (streamNode->state_ == StreamNode::State::IDLE || streamNode->state_ == StreamNode::State::S_ERROR) {
+				LOG("[RTSP] 按需启动拉流 tag=%s, state=%d", streamNode->config_.tag.c_str(), (int)streamNode->state_);
+				streamNode->start(streamNode->config_);
+			}
+
+			// 等待拉流准备好（最多 15 秒）
 			int waitCount = 0;
-			while (streamNode->isPulling_ == false && waitCount < 50 && m_rtspRunning_) {
+			while (streamNode->isPulling_ == false && waitCount < 75 && m_rtspRunning_) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(200));
 				waitCount++;
 			}

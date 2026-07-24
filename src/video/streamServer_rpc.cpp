@@ -156,7 +156,7 @@ bool StreamServer::rpc_openStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	if (yyv)
 		op.pushToIP = yyjson_get_str(yyv);
 
-	if (openStream(op)) {
+	if (openStream(op) != nullptr) {
 		rpcResp.result = RPC_OK;
 	}
 	else {
@@ -225,6 +225,24 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		sn = getStreamNodeByTag(tag);
 
 	if (sn) {
+		// 按需启动拉流：如果 streamNode 处于 IDLE 或 S_ERROR 状态，启动拉流
+		if (sn->state_ == StreamNode::State::IDLE || sn->state_ == StreamNode::State::S_ERROR) {
+			LOG("[WebRTC] 按需启动拉流 tag=%s, state=%d", sn->config_.tag.c_str(), (int)sn->state_);
+			sn->start(sn->config_);
+
+			// 等待拉流准备好（15秒超时，200ms轮询）
+			int waitCount = 0;
+			while (sn->isPulling_ == false && waitCount < 75) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+				waitCount++;
+			}
+			if (!sn->isPulling_) {
+				LOG("[WebRTC] 按需拉流超时 tag=%s", sn->config_.tag.c_str());
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "stream pull timeout");
+				return true;
+			}
+		}
+
 		StreamNode::STREAM_SESSION si = sn->session_origin_pull_;
 		si.session_type_ = CLIENT_WEBRTC_PULL;
 		si.client_rtp_port = clientRtpPort;

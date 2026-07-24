@@ -95,6 +95,8 @@ extern void createConsole();
 extern string g_ComputerStartupTime;
 extern string g_strStartupTime;
 
+void syncStreamNodesFromProject();
+
 typedef bool (*LoadModelFunc)(const char*, const bool&);                             // load_model
 typedef bool (*PredictFunc)(IN const char* funcType, IN const char* modelPath, IN void* inData, IN size_t inDataLen, OUT char* outData, OUT size_t& outDataLen, OUT char* errData, OUT size_t& errDataLen);   // predict
 extern PredictFunc dv_predict;

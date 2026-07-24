@@ -66,6 +66,7 @@ struct STREAM_OPEN_PARAM {
     std::string pushToTag;
     std::string streamUrl;
     std::string pushToIP;
+    std::string srcStreamFetch; // "always" 或 "ondemand"
 };
 
 class StreamNode {
@@ -117,6 +118,7 @@ public:
         bool verbose = false;        // 详细日志
         std::string tag;
         std::string streamUrl;
+        std::string srcStreamFetch = "always"; // 拉流模式: "always" 或 "ondemand"
         
         // 拉流（从源获取）传输模式
         TransportMode pull_mode = TransportMode::UDP;

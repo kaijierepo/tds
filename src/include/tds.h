@@ -545,9 +545,6 @@ struct iTDSConf {
 	//large Model
 	int largeModelType = -1;
 
-	//video
-	bool alwaysOpenStream = false;
-
 	LOG_ENABLE logEnable;
 
 	virtual int getInt(std::string key, int iDef) = 0;

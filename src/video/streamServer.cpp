@@ -10,17 +10,35 @@
 
 StreamServer streamSrv;
 
+void openAllStream() {
+	std::lock_guard<std::mutex> lock(streamSrv.nodeLock_);
+	for (auto& pair : streamSrv.m_mapStreamNodes) {
+		std::shared_ptr<StreamNode> sn = pair.second;
+		if (sn && sn->config_.origin_pull_url != "") {
+			sn->start(sn->config_);
+		}
+		LOG("[StreamSrv]持续拉流模式: streamUrl=%s, origin_pull_url=%s", pair.first.c_str(), sn->config_.origin_pull_url.c_str());
+	}
+}
+
 bool StreamServer::run() {
 	initDtlsCertificate();
 
 	// 启动 RTSP 服务端（配置项: rtspServerPort，默认 0=不启动）
-	int rtspPort = tds->conf->getInt("rtspServerPort", 554);
+	int rtspPort = tds->conf->getInt("rtspPort", 554);
 	if (rtspPort > 0 && rtspPort <= 65535) {
 		startRtspServer(rtspPort);
 	}
 
-	// 默认加载 tds.exe 同级目录下 rtsp 文件夹的 h264 文件作为流媒体源
+	// 默认加载 tds 同级目录下 rtsp 文件夹的 h264 文件作为流媒体源
 	serveDefaultFolder("rtsp");
+
+	if (m_alwaysOpenStream) {
+		thread t_os(openAllStream);
+		t_os.detach();
+	}
+
+	startIdleMonitor();
 
 	return true;
 }
@@ -134,8 +152,58 @@ std::shared_ptr<StreamNode> StreamServer::getStreamNodeBySrcUrl(const std::strin
 
 
 
-bool StreamServer::openStream(const STREAM_OPEN_PARAM& op)
+std::shared_ptr<StreamNode> StreamServer::createStream(const STREAM_OPEN_PARAM& op)
 {
+	std::string streamUrl = op.streamUrl;
+	if (streamUrl == "" && op.tag != "")
+		streamUrl = "/" + op.tag;
+
+	{
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		if (m_mapStreamNodes.find(streamUrl) != m_mapStreamNodes.end()) {
+			LOG("[StreamServer] createStream: streamUrl=%s 已存在，忽略", streamUrl.c_str());
+			return nullptr;
+		}
+	}
+
+	std::shared_ptr<StreamNode> sn = std::make_shared<StreamNode>();
+	sn->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
+
+		});
+	sn->setStatusCallback([](StreamNode::State state, const std::string& msg) {
+		LOG("[StreamNode] Status: %d - %s", static_cast<int>(state), msg.c_str());
+		});
+	sn->setErrorCallback([](const std::string& error, int code) {
+		LOG("[StreamNode] Error (%d): %s", code, error.c_str());
+		});
+
+	sn->config_.origin_pull_url = op.originPullUrl;
+	sn->extractRtspAuthInfo(sn->config_);
+	sn->config_.relay_push_url = op.relayPushUrl;
+	sn->config_.retry_interval = 3000;
+	sn->config_.max_retries = 0;
+	sn->config_.rtp_timeout = 10000;
+	sn->config_.tag = op.tag;
+	sn->config_.streamUrl = streamUrl;
+	sn->config_.srcStreamFetch = op.srcStreamFetch != "" ? op.srcStreamFetch : "always";
+	sn->state_ = StreamNode::State::IDLE;
+
+	{
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		m_mapStreamNodes[streamUrl] = sn;
+	}
+
+	LOG("[StreamServer] createStream: tag=%s, streamUrl=%s, originUrl=%s",
+		op.tag.c_str(), streamUrl.c_str(), op.originPullUrl.c_str());
+	return sn;
+}
+
+std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op)
+{
+	std::string streamUrl = op.streamUrl;
+	if (streamUrl == "" && op.tag != "")
+		streamUrl = "/" + op.tag;
+
 	std::shared_ptr<StreamNode> sn;
 	if (op.tag != "")
 		sn = getStreamNodeByTag(op.tag);
@@ -143,65 +211,51 @@ bool StreamServer::openStream(const STREAM_OPEN_PARAM& op)
 		sn = getStreamNodeBySrcUrl(op.originPullUrl);
 
 	if (sn) {
-		if (sn->config_.origin_pull_url == op.originPullUrl && sn->config_.relay_push_url == op.relayPushUrl) {
+		if (sn->state_ != StreamNode::State::IDLE && sn->state_ != StreamNode::State::S_ERROR) {
 			LOG("[流媒体] 媒体源已打开，收到重复打开请求，忽略, 位号:%s, 当前配置地址:%s",
 				op.tag.c_str(), sn->config_.origin_pull_url.c_str());
-			return false;
+			return sn;
 		}
 		if (sn->config_.origin_pull_url != op.originPullUrl) {
-			LOG("[流媒体] 媒体源变更，重启streamNode，当前拉流地址:%s, 新地址:%s",
+			LOG("[流媒体] 媒体源变更，restart streamNode，当前拉流地址:%s, 新地址:%s",
 				sn->config_.origin_pull_url.c_str(), op.originPullUrl.c_str());
-			closeStream(op.tag);
+			sn->config_.origin_pull_url = op.originPullUrl;
+			sn->extractRtspAuthInfo(sn->config_);
 		}
 		if (sn->config_.relay_push_url != op.relayPushUrl) {
-			LOG("[流媒体] 推流地址变更，重启streamNode, 当前推流地址:%s, 新地址:%s",
+			LOG("[流媒体] 推流地址变更， 当前推流地址:%s, 新地址:%s",
 				sn->config_.relay_push_url.c_str(), op.relayPushUrl.c_str());
-			closeStream(op.tag);
+			sn->config_.relay_push_url = op.relayPushUrl;
 		}
-	}
-	else {
-		sn = std::make_shared<StreamNode>();
-		sn->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
+		if (op.srcStreamFetch != "") {
+			sn->config_.srcStreamFetch = op.srcStreamFetch;
+		}
 
-			});
-		sn->setStatusCallback([](StreamNode::State state, const std::string& msg) {
-			LOG("[StreamNode] Status: %d - %s", static_cast<int>(state), msg.c_str());
-			});
-		sn->setErrorCallback([](const std::string& error, int code) {
-			LOG("[StreamNode] Error (%d): %s", code, error.c_str());
-			});
-	}
-
-
-	StreamNode::Config config;
-	config.origin_pull_url = op.originPullUrl;
-	// 提取用户名和密码
-	bool isSuccess = sn->extractRtspAuthInfo(config);
-	config.relay_push_url = op.relayPushUrl; // 目标地址
-	config.retry_interval = 3000;
-	config.max_retries = 0; // 无限重试
-	config.rtp_timeout = 10000;
-	config.tag = op.tag;
-	if (op.streamUrl != "")
-		config.streamUrl = op.streamUrl;
-	else if (op.tag != "")
-		config.streamUrl = "/" + op.tag;
-
-	bool ret;
-	if (sn->start(config)) {
-		std::lock_guard<std::mutex> lock(nodeLock_);
-		m_mapStreamNodes[config.streamUrl] = sn;
-		LOG("[StreamServer] openStream success,tag:%s,streamUrl:%s,originUrl:%s,relayUrl:%s,pushToTag:%s,pushToIP:%s",
-			op.tag.c_str(),op.streamUrl.c_str(),op.originPullUrl.c_str(),op.relayPushUrl.c_str(),op.pushToTag.c_str(),op.pushToIP.c_str());
-		ret = true;
-	}
-	else {
-		LOG("[StreamServer] openStream fail,tag:%s,streamUrl:%s,originUrl:%s,relayUrl:%s,pushToTag:%s,pushToIP:%s",
-			op.tag.c_str(), op.streamUrl.c_str(), op.originPullUrl.c_str(), op.relayPushUrl.c_str(), op.pushToTag.c_str(), op.pushToIP.c_str());
-		ret = false;
+		if (!sn->start(sn->config_)) {
+			LOG("[StreamServer] openStream start fail, tag:%s, streamUrl:%s",
+				op.tag.c_str(), streamUrl.c_str());
+			return nullptr;
+		}
+		LOG("[StreamServer] openStream success (reuse), tag:%s, streamUrl:%s, originUrl:%s",
+			op.tag.c_str(), streamUrl.c_str(), op.originPullUrl.c_str());
+		return sn;
 	}
 
-	return ret;
+	// 不存在，先 create 再 start
+	sn = createStream(op);
+	if (!sn) {
+		LOG("[StreamServer] openStream create fail, tag:%s", op.tag.c_str());
+		return nullptr;
+	}
+
+	if (!sn->start(sn->config_)) {
+		LOG("[StreamServer] openStream start fail after create, tag:%s", op.tag.c_str());
+		return nullptr;
+	}
+
+	LOG("[StreamServer] openStream success (new), tag:%s, streamUrl:%s, originUrl:%s",
+		op.tag.c_str(), streamUrl.c_str(), op.originPullUrl.c_str());
+	return sn;
 }
 
 bool StreamServer::closeStream(string tag)
@@ -273,6 +327,74 @@ void StreamServer::cleanOldRecords() {
 	if (deleted > 0) {
 		LOG("[录像清理] 完成, 保留上限: %d, 当前: %zu, 删除: %d",
 			maxFiles, files.size(), deleted);
+	}
+}
+
+// ============================================================================
+// 按需拉流 idle 监控
+// ============================================================================
+void StreamServer::setIdleTimeout(int secs) {
+	m_streamIdleTimeoutSec = secs > 0 ? secs : 300;
+	LOG("[StreamServer] 按需拉流 idle 超时: %d 秒", m_streamIdleTimeoutSec);
+}
+
+void StreamServer::startIdleMonitor() {
+	if (m_idleMonitorRunning_) return;
+	m_idleMonitorRunning_ = true;
+	m_idleMonitorThread_ = std::thread(&StreamServer::idleMonitorLoop, this);
+	m_idleMonitorThread_.detach();
+	LOG("[StreamServer] 按需拉流 idle 监控已启动，超时=%d秒，检测间隔=5秒", m_streamIdleTimeoutSec);
+}
+
+void StreamServer::stopIdleMonitor() {
+	m_idleMonitorRunning_ = false;
+}
+
+void StreamServer::idleMonitorLoop() {
+	while (m_idleMonitorRunning_) {
+		std::this_thread::sleep_for(std::chrono::seconds(5));
+
+		std::lock_guard<std::mutex> lock(nodeLock_);
+		auto now = std::chrono::steady_clock::now();
+
+		for (auto& pair : m_mapStreamNodes) {
+			const std::string& streamUrl = pair.first;
+			std::shared_ptr<StreamNode> sn = pair.second;
+			if (!sn) continue;
+
+			// 只监控 ondemand 模式且状态为 PLAYING 的流
+			if (sn->config_.srcStreamFetch != "ondemand") continue;
+			if (sn->state_ != StreamNode::State::PLAYING) {
+				m_idleTrackMap_.erase(streamUrl);
+				continue;
+			}
+
+			bool hasClients = false;
+			{
+				std::lock_guard<std::mutex> clLock(sn->session_list_client_pull_mutex_);
+				hasClients = !sn->session_list_client_pull_.empty();
+			}
+
+			if (hasClients) {
+				m_idleTrackMap_.erase(streamUrl);
+			}
+			else {
+				auto it = m_idleTrackMap_.find(streamUrl);
+				if (it == m_idleTrackMap_.end()) {
+					m_idleTrackMap_[streamUrl] = now;
+				}
+				else {
+					int64_t elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+						now - it->second).count();
+					if (elapsed >= m_streamIdleTimeoutSec) {
+						LOG("[StreamServer] ondemand流 %s 已空闲 %lld 秒（超时=%d秒），自动关闭源连接",
+							streamUrl.c_str(), elapsed, m_streamIdleTimeoutSec);
+						sn->stop();
+						m_idleTrackMap_.erase(streamUrl);
+					}
+				}
+			}
+		}
 	}
 }
 

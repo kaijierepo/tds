@@ -44,7 +44,6 @@ MP::MP()
 	//m_bDownSample = 0;
 	//m_downSampleInterval = 2000;
 	m_srcStreamFetch = "ondemand";
-	m_bServeStream = false;
 	m_isOpenningStream = false;
 }
 
@@ -86,195 +85,6 @@ json MP::strVal2Val(string sdv)
 
 	return jVal;
 }
-
-/*
-bool MP::loadConf(json& conf, bool bCreate) {
-	OBJ::loadConf(conf, bCreate);
-
-	if(conf["valType"]!=nullptr)
-		m_valType = conf["valType"].get<string>();
-
-	if (conf["alarmMp"] != nullptr)
-		m_alarmMp = conf["alarmMp"].get<bool>();
-	else
-		m_alarmMp = false;
-
-	//不仅仅float类型可以使用单位. 整形也可以使用单位。例如： 3次   5个 等等 
-	if (conf["unit"] != nullptr)
-		m_strUnit = conf["unit"].get<string>();
-
-	if (conf["decimalDigits"] != nullptr)
-		m_decimalDigits = conf["decimalDigits"].get<int>();
-	else
-		m_decimalDigits = -1;
-
-	if (conf["ioType"] != nullptr) {
-		m_ioType = conf["ioType"].get<string>();
-	}
-
-	if (conf["alarmLimit"] != nullptr) {
-		json jAL = conf["alarmLimit"];
-		if (jAL["enableHigh"].is_boolean()){
-			m_alarmLimit.enableHigh = jAL["enableHigh"].get<bool>();
-		}
-
-		if (jAL["high"].is_number()) {
-			m_alarmLimit.high = jAL["high"].get<float>();
-		}
-
-		if (jAL["enableLow"].is_boolean()) {
-			m_alarmLimit.enableLow = jAL["enableLow"].get<bool>();
-		}
-
-		if (jAL["low"].is_number()) {
-			m_alarmLimit.low = jAL["low"].get<float>();
-		}
-	}
-
-	if (conf["validRange"] != nullptr) {
-		json j = conf["validRange"];
-		if (j["enable"].is_boolean()) {
-			m_validRange.enable = j["enable"].get<bool>();
-		}
-
-		if (j["min"].is_number()) {
-			m_validRange.min = j["min"].get<double>();
-		}
-
-		if (j["max"].is_number()) {
-			m_validRange.max = j["max"].get<double>();
-		}
-	}
-
-	if (m_valType == VAL_TYPE::json) {
-		if(conf["mpType"]!=nullptr)
-		m_mpType = conf["mpType"].get<string>();
-	}
-
-	if (conf["saveMode"] != nullptr) {
-		m_saveMode = conf["saveMode"].get<string>();
-	}
-	else {
-		m_saveMode = DATA_SAVE_MODE::always;
-	}
-
-	if (conf["saveInterval"] != nullptr) {
-		json jsi = conf["saveInterval"];
-		m_saveInterval.hour = jsi["hour"].get<int>();
-		m_saveInterval.minute = jsi["minute"].get<int>();
-		m_saveInterval.second = jsi["second"].get<int>();
-
-		//周期模式但是周期设为0，相当于全部保存。此配置无效，默认修改为5分钟
-		if (m_saveMode == DATA_SAVE_MODE::cyclic || m_saveMode == DATA_SAVE_MODE::cyclic_onchange) {
-			if (getSaveInterval() == 0) {
-				m_saveInterval.minute = 5;
-			}
-		}
-	}
-
-	if (conf["k"] != nullptr) {
-		m_K = conf["k"].get<double>();
-	}
-
-	if (conf["b"] != nullptr) {
-		m_B = conf["b"].get<double>();
-	}
-
-	if (conf["deadZone"].is_number()) {
-		m_deadZone = conf["deadZone"].get<double>();
-	}
-
-	if (conf["defaultVal"] != nullptr) {
-		//兼容一些错误书写,支持强转
-		if (conf["defaultVal"].is_string()) {
-			m_defaultVal = strVal2Val(conf["defaultVal"].get<string>());
-		}
-		else
-		{
-			m_defaultVal = strVal2Val(conf["defaultVal"].dump());
-		}
-
-		if (m_defaultVal != nullptr && JSON_STR::is_null(m_curVal)) {
-			m_curVal = m_defaultVal.dump();
-		}
-	}
-
-	if (m_valType == VAL_TYPE::integer) {
-		if (conf["isEnum"].is_boolean()) {
-			m_isEnum = conf["isEnum"].get<bool>();
-		}
-
-		if (conf["enum"].is_array()) {
-			mapEnumVal.clear();
-			json& jEnum = conf["enum"];
-			for (int i = 0; i < jEnum.size(); i++) {
-				json& jItem = jEnum[i];
-				mapEnumVal[jItem[0].get<int>()] = jItem[1].get<string>();
-			}
-		}
-	}
-
-	if (conf["expression"].is_string()) {
-		m_expression = conf["expression"];
-	}
-
-	if (conf["mediaSrcType"] != nullptr) {
-		m_mediaSrcType = conf["mediaSrcType"].get<string>();
-	}
-
-	if (conf["mediaUrl"] != nullptr) {
-		m_mediaUrl = conf["mediaUrl"].get<string>();
-	}
-
-	if (m_mediaSrcType == "ezviz") {
-		prj.m_enableEzviz = true;
-	}
-
-	auto kv = conf.find("serialNo");
-	if (kv != conf.end()) {
-		json& item = kv.value();
-		if (item.is_string()) {
-			m_serialNo = item.get<string>();
-		}
-	}
-
-	kv = conf.find("appKey");
-	if (kv != conf.end()) {
-		json& item = kv.value();
-		if (item.is_string()) {
-			m_appKey = item.get<string>();
-		}
-	}
-
-	 kv = conf.find("secret");
-	if (kv != conf.end()) {
-		json& item = kv.value();
-		if (item.is_string()) {
-			m_secret = item.get<string>();
-		}
-	}
-
-	kv = conf.find("serveStream");
-	if (kv != conf.end()) {
-		json& item = kv.value();
-		if (item.is_boolean()) {
-			m_bServeStream = item.get<bool>();
-		}
-	}
-
-	if (conf.contains("time")) {
-		string s = conf["time"].get<string>();
-		if(s != "" && s != "-")
-			m_stDataLastUpdate = timeopt::str2st(s);
-	}
-
-	if (conf["srcStreamFetch"].is_string()) {
-		m_srcStreamFetch = conf["srcStreamFetch"];
-	}
-
-	return false;
-}
-*/
 
 bool MP::loadConf(yyjson_val* conf, bool bCreate)
 {
@@ -464,11 +274,6 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 		v = yyjson_obj_get(conf, "secret");
 		if (v) {
 			m_secret = yyjson_get_str(v);
-		}
-
-		v = yyjson_obj_get(conf, "serveStream");
-		if (v) {
-			m_bServeStream = yyjson_get_bool(v);
 		}
 
 		v = yyjson_obj_get(conf, "srcStreamFetch");
@@ -720,12 +525,6 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_PROP_SEL q, bool*
 			key = yyjson_mut_strcpy(doc, "srcStreamFetch");
 			val = yyjson_mut_strcpy(doc, m_srcStreamFetch.c_str());
 			yyjson_mut_obj_put(conf, key, val);
-
-			if (m_bServeStream) {
-				key = yyjson_mut_strcpy(doc, "serveStream");
-				val = yyjson_mut_bool(doc, m_bServeStream);
-				yyjson_mut_obj_put(conf, key, val);
-			}
 		}
 
 		//枚举值

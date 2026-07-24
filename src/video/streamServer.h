@@ -23,9 +23,12 @@ public:
 	bool rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
-	bool openStream(const STREAM_OPEN_PARAM& openParam);
+	std::shared_ptr<StreamNode> openStream(const STREAM_OPEN_PARAM& openParam);
+	std::shared_ptr<StreamNode> createStream(const STREAM_OPEN_PARAM& openParam);
 
 	bool closeStream(string tag);
+
+	void setIdleTimeout(int secs);
 
 	std::shared_ptr<StreamNode> getStreamNodeByStreamUrl(std::string tag);			   // 通过url查找 StreamNode，包含 /符号
 	std::shared_ptr<StreamNode> getStreamNodeByTag(std::string tag);
@@ -35,7 +38,8 @@ public:
 	map<std::string, std::shared_ptr<StreamNode>> m_mapStreamNodes;
 	mutable std::mutex nodeLock_; // 保护 m_mapStreamNodes 的互斥锁
 
-	bool m_enableZLM;
+	bool m_enableZLM = false;
+	bool m_alwaysOpenStream = false;
 
 	// DTLS 证书（所有 WebRTC 会话共用）
 	std::string m_dtlsCertPem;
@@ -107,6 +111,15 @@ private:
 	void rtpTcpRecvLoop(SocketHandle tcpSock,
 		std::shared_ptr<RtspRecvSession> session, std::shared_ptr<StreamNode> streamNode);
 	void cleanupPushSession(const std::string& sessionId);
+
+	// 按需拉流 idle 监控
+	int m_streamIdleTimeoutSec = 300;
+	std::thread m_idleMonitorThread_;
+	std::atomic<bool> m_idleMonitorRunning_{false};
+	std::map<std::string, std::chrono::steady_clock::time_point> m_idleTrackMap_;
+	void startIdleMonitor();
+	void stopIdleMonitor();
+	void idleMonitorLoop();
 
 	std::thread m_rtspThread_;
 	std::atomic<bool> m_rtspRunning_{false};

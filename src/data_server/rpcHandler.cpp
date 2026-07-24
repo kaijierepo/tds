@@ -2126,6 +2126,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		prj.loadConf(params, false);
 		prj.saveConfFile();
 		rpcResp.result = RPC_OK;
+		std::thread(syncStreamNodesFromProject).detach();
 	}
 	else if (method == "updateTagBinding") {
 		for (auto& binding : params) {
@@ -5880,8 +5881,8 @@ string rpcHandler::rpc_setconf(json params, string& error)
 json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string localIP,int LocalPort)
 {
 	json j;
-	//视频外部播放地址模式。没有进行码流中转，直接返回播放即可
-	if (pmp->m_valType == VAL_TYPE::video && !pmp->m_bServeStream) {
+	//萤石云前端直连萤石云服务
+	if (pmp->m_valType == VAL_TYPE::video && pmp->m_mediaSrcType == "ezviz") {
 		if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) != prj.m_mapEzvizAccess.end()) {
 			EZVIZ_ACCESS_INFO& info = prj.m_mapEzvizAccess[pmp->m_serialNo];
 			j["flv"] = info.flvUrl;

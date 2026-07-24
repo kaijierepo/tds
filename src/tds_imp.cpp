@@ -560,18 +560,59 @@ void runDataSimu() {
 	g_pDataSimu->startDataSimu();
 }
 
-void openAllStream() {
+void syncStreamNodesFromProject() {
 	map<string, MP*> mapAllMP;
 	prj.getMpList(mapAllMP);
+
+	// 收集项目中已配置 mediaUrl 的 tag 集合
+	set<string> projectTags;
 	for (auto& pair : mapAllMP) {
 		MP* pmp = pair.second;
 		if (pmp && pmp->m_mediaUrl != "") {
 			string tag = pmp->getTag();
-			STREAM_OPEN_PARAM op;
-			op.tag = tag;
-			op.streamUrl = "/" + tag;
-			op.originPullUrl = pmp->m_mediaUrl;
-			streamSrv.openStream(op);
+			string streamUrl = "/" + tag;
+			projectTags.insert(streamUrl);
+
+			std::shared_ptr<StreamNode> sn = streamSrv.getStreamNodeByStreamUrl(streamUrl);
+			if (!sn) {
+				STREAM_OPEN_PARAM op;
+				op.tag = tag;
+				op.streamUrl = streamUrl;
+				op.originPullUrl = pmp->m_mediaUrl;
+				op.srcStreamFetch = pmp->m_srcStreamFetch;
+				streamSrv.createStream(op);
+			}
+			else {
+				// 如果 mediaUrl 变更，更新 config
+				if (sn->config_.origin_pull_url != pmp->m_mediaUrl) {
+					LOG("[syncStreamNodes] tag=%s mediaUrl变更: %s -> %s",
+						tag.c_str(), sn->config_.origin_pull_url.c_str(), pmp->m_mediaUrl.c_str());
+					sn->config_.origin_pull_url = pmp->m_mediaUrl;
+					sn->extractRtspAuthInfo(sn->config_);
+				}
+				if (sn->config_.srcStreamFetch != pmp->m_srcStreamFetch) {
+					sn->config_.srcStreamFetch = pmp->m_srcStreamFetch;
+				}
+			}
+		}
+	}
+
+	// 删除项目中已不存在的 streamNode
+	{
+		std::lock_guard<std::mutex> lock(streamSrv.nodeLock_);
+		std::vector<std::string> toRemove;
+		for (auto& nodePair : streamSrv.m_mapStreamNodes) {
+			if (projectTags.find(nodePair.first) == projectTags.end()) {
+				toRemove.push_back(nodePair.first);
+			}
+		}
+		for (const std::string& streamUrl : toRemove) {
+			auto it = streamSrv.m_mapStreamNodes.find(streamUrl);
+			if (it != streamSrv.m_mapStreamNodes.end() && it->second) {
+				it->second->stop();
+			}
+			streamSrv.m_mapStreamNodes.erase(streamUrl);
+			LOG("[syncStreamNodes] 移除已不存在的 streamNode: %s", streamUrl.c_str());
 		}
 	}
 }
@@ -821,6 +862,23 @@ bool TDS_imp::run(string cmdline) {
 	prj.loadRtDB();
 	prj.runRtDB();
 
+	//stream server 
+	streamSrv.setIdleTimeout(tds->conf->getInt("streamIdleTimeout", 300));
+	streamSrv.m_alwaysOpenStream = tds->conf->getInt("alwaysOpenStream", 0) == 1 ? true : false;
+	map<string, MP*> mapAllMP;
+	prj.getMpList(mapAllMP);
+	for (auto& pair : mapAllMP) {
+		MP* pmp = pair.second;
+		if (pmp && pmp->m_mediaUrl != "") {
+			string tag = pmp->getTag();
+			STREAM_OPEN_PARAM op;
+			op.tag = tag;
+			op.streamUrl = "/" + tag;
+			op.originPullUrl = pmp->m_mediaUrl;
+			op.srcStreamFetch = pmp->m_srcStreamFetch;
+			streamSrv.createStream(op);
+		}
+	}
 	streamSrv.run();
 
 	//create browser window
@@ -842,12 +900,6 @@ bool TDS_imp::run(string cmdline) {
 	//开启一个线程,进行数据仿真
 	thread t(runDataSimu);
 	t.detach();
-
-	if(conf->alwaysOpenStream)
-	{
-		thread t_os(openAllStream);
-		t_os.detach();
-	}
 
 	return true;
 }
