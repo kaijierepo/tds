@@ -383,6 +383,10 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 		std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);
 		if (rc->rec_ctrl_.recording == false)
 		{
+			// 确保 record 目录存在
+			std::string recordDir = tds->conf->dbPath + "/record";
+			fs::createFolderOfPath(recordDir);
+
 			rc->rec_ctrl_.fu_a_buffer_.clear();
 			rc->rec_ctrl_.firstWrite = true;
 			rc->rec_ctrl_.preRecordingDone = false;
@@ -398,6 +402,7 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 			// 启动独立 I/O 线程，将磁盘写入与实时收包线程解耦
 			rc->record_io_running_ = true;
 			rc->record_io_thread_ = std::thread(&StreamNode::recordIoThread, rc.get());
+			LOG("[录像] 开始录像 tag=%s, path=%s", rc->config_.tag.c_str(), rc->rec_ctrl_.path.c_str());
 			rpcResp.result = RPC_OK;
 		}
 		else
