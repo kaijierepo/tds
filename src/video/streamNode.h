@@ -75,12 +75,6 @@ public:
 
     // 配置结构
     struct Config {
-        std::string origin_pull_url;      // 源RTSP地址
-        std::string relay_push_url;       // 目标RTSP地址
-        std::string source_username; // 源用户名（可选）
-        std::string source_password;  // 源密码（可选）
-        std::string target_username;  // 目标用户名（可选）
-        std::string target_password;  // 目标密码（可选）
         int retry_interval = 3000;   // 重试间隔(ms)
         int max_retries = 10;        // 最大重试次数
         int rtp_timeout = 5000;      // RTP超时(ms)
@@ -172,7 +166,7 @@ public:
     void setFrameCallback(FrameCallback cb);
     void setErrorCallback(ErrorCallback cb);
 
-    bool extractRtspAuthInfo(StreamNode::Config& config);
+    bool extractRtspAuthInfo(STREAM_SESSION& session);
     std::string getSessionTypeDesc(STREAM_SESSION_TYPE sessionType);
 
 

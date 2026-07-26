@@ -149,7 +149,7 @@ bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
 
     // 确定认证信息
     AuthInfo* auth_info = nullptr;
-    if (url == config_.origin_pull_url || url.find(config_.origin_pull_url) == 0) {
+    if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
         auth_info = &source_auth_;
     }
     else {
@@ -301,7 +301,7 @@ bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
 
     // 确定认证信息
     AuthInfo* auth_info = nullptr;
-    if (url == config_.origin_pull_url || url.find(config_.origin_pull_url) == 0) {
+    if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
         auth_info = &source_auth_;
     }
     else {
@@ -471,7 +471,7 @@ bool StreamNode::rtspPlay(Connection& conn, const std::string& url,
 
     // 确定认证信息
     AuthInfo* auth_info = nullptr;
-    if (url == config_.origin_pull_url || url.find(config_.origin_pull_url) == 0) {
+    if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
         auth_info = &source_auth_;
     }
     else {
@@ -534,7 +534,7 @@ bool StreamNode::rtspTeardown(Connection& conn, const std::string& url,
 
     // 确定认证信息
     AuthInfo* auth_info = nullptr;
-    if (url == config_.origin_pull_url || url.find(config_.origin_pull_url) == 0) {
+    if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
         auth_info = &source_auth_;
     }
     else {
@@ -586,7 +586,7 @@ bool StreamNode::rtspAnnounce(Connection& conn, const std::string& url,
 
     // 确定认证信息
     AuthInfo* auth_info = nullptr;
-    if (url == config_.relay_push_url || url.find(config_.relay_push_url) == 0) {
+    if (url == session_relay_push_.server_url_ || url.find(session_relay_push_.server_url_) == 0) {
         auth_info = &target_auth_;
     }
 
@@ -649,7 +649,7 @@ bool StreamNode::rtspRecord(Connection& conn, const std::string& url,
 
     // 确定认证信息
     AuthInfo* auth_info = nullptr;
-    if (url == config_.relay_push_url || url.find(config_.relay_push_url) == 0) {
+    if (url == session_relay_push_.server_url_ || url.find(session_relay_push_.server_url_) == 0) {
         auth_info = &target_auth_;
     }
 
@@ -709,7 +709,7 @@ bool StreamNode::rtspGetParameter(Connection& conn, const std::string& url,
 
     // 确定认证信息
     AuthInfo* auth_info = nullptr;
-    if (url == config_.origin_pull_url || url.find(config_.origin_pull_url) == 0) {
+    if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
         auth_info = &source_auth_;
     }
     else {
@@ -778,7 +778,7 @@ void StreamNode::controlThread() {
                 }
             }
  
-            if (isPulling_ == true && isPushing_ == false && config_.relay_push_url != "") {
+            if (isPulling_ == true && isPushing_ == false && session_relay_push_.server_url_ != "") {
                 if (openRelayPushSession()) {
                     isPushing_ = true;
 				}
@@ -791,7 +791,7 @@ void StreamNode::controlThread() {
             // 心跳保活
             if (isPulling_) {
                 if (session_origin_pull_.conn_ && !session_origin_pull_.rtsp_session_id_.empty()) {
-                    if (!rtspGetParameter(*session_origin_pull_.conn_, config_.origin_pull_url, session_origin_pull_.rtsp_session_id_)) {
+                    if (!rtspGetParameter(*session_origin_pull_.conn_, session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_)) {
                         setError("Source RTSP keepalive failed", 1002);
                         isPulling_ = false;
                         teardown();
@@ -801,7 +801,7 @@ void StreamNode::controlThread() {
 
             if (isPushing_) {
             if (session_relay_push_.conn_ && !session_relay_push_.rtsp_session_id_.empty()) {
-                if (!rtspGetParameter(*session_relay_push_.conn_, config_.relay_push_url, session_relay_push_.rtsp_session_id_)) {
+                if (!rtspGetParameter(*session_relay_push_.conn_, session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_)) {
                         setError("Target RTSP keepalive failed", 1002);
                         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
                         isPushing_ = false;
@@ -818,7 +818,7 @@ bool StreamNode::openRelayPushSession() {
 	session_relay_push_.state_ = SESSION_STATE::SESSION_CONNECTING;
     // 连接到目标服务器
     URLComponents relay_push_url;
-    if (!URLComponents::parse(config_.relay_push_url, relay_push_url)) {
+    if (!URLComponents::parse(session_relay_push_.server_url_, relay_push_url)) {
         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("Invalid target URL format", 3005);
         return false;
@@ -857,7 +857,7 @@ bool StreamNode::openRelayPushSession() {
     std::string target_sdp = generateSDP(session_relay_push_, STREAM_SESSION());
 
     // 发送ANNOUNCE到目标
-    if (!rtspAnnounce(*session_relay_push_.conn_, config_.relay_push_url, target_sdp, session_relay_push_.rtsp_session_id_)) {
+    if (!rtspAnnounce(*session_relay_push_.conn_, session_relay_push_.server_url_, target_sdp, session_relay_push_.rtsp_session_id_)) {
         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("ANNOUNCE failed", 3007);
         return false;
@@ -882,7 +882,7 @@ bool StreamNode::openRelayPushSession() {
     }
 
     // 发送SETUP到目标
-    if (!rtspSetup(*session_relay_push_.conn_, config_.relay_push_url, session_relay_push_.rtsp_session_id_, session_relay_push_, true)) {
+    if (!rtspSetup(*session_relay_push_.conn_, session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_, session_relay_push_, true)) {
         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("SETUP failed for target", 3008);
         return false;
@@ -923,13 +923,13 @@ bool StreamNode::openRelayPushSession() {
 
 
     // 发送RECORD到目标
-    if (!rtspRecord(*session_relay_push_.conn_, config_.relay_push_url, session_relay_push_.rtsp_session_id_)) {
+    if (!rtspRecord(*session_relay_push_.conn_, session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_)) {
         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("RECORD failed", 3009);
         return false;
     }
 
-	LOG("[keyinfo][StreamNode]tag=%s,stream forward success,pushToUrl:%s", config_.tag.c_str(), config_.relay_push_url.c_str());
+	LOG("[keyinfo][StreamNode]tag=%s,stream forward success,pushToUrl:%s", config_.tag.c_str(), session_relay_push_.server_url_.c_str());
 	session_relay_push_.state_ = SESSION_STATE::SESSION_STREAMING;
 	session_relay_push_.open_time_ = std::chrono::system_clock::now();
 
@@ -941,7 +941,7 @@ bool StreamNode::openOriginPullSession() {
 
     // 解析源URL
     URLComponents src_url;
-    if (!URLComponents::parse(config_.origin_pull_url, src_url)) {
+    if (!URLComponents::parse(session_origin_pull_.server_url_, src_url)) {
         setError("Invalid source URL format", 2001);
         return false;
     }
@@ -957,7 +957,7 @@ bool StreamNode::openOriginPullSession() {
 
     // 发送DESCRIBE
     std::string sdp;
-    if (!rtspDescribe(*session_origin_pull_.conn_, config_.origin_pull_url, sdp, session_origin_pull_.rtsp_session_id_)) {
+    if (!rtspDescribe(*session_origin_pull_.conn_, session_origin_pull_.server_url_, sdp, session_origin_pull_.rtsp_session_id_)) {
         setError("DESCRIBE failed", 2003);
         return false;
     }
@@ -1009,7 +1009,7 @@ bool StreamNode::openOriginPullSession() {
     );
 
     // 发送SETUP到源
-    if (!rtspSetup(*session_origin_pull_.conn_, config_.origin_pull_url, session_origin_pull_.rtsp_session_id_, session_origin_pull_)) {
+    if (!rtspSetup(*session_origin_pull_.conn_, session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_, session_origin_pull_)) {
         setError("SETUP failed for source", 3003);
         return false;
     }
@@ -1042,7 +1042,7 @@ bool StreamNode::openOriginPullSession() {
     );
 
     // 发送PLAY
-    if (!rtspPlay(*session_origin_pull_.conn_, config_.origin_pull_url, session_origin_pull_.rtsp_session_id_)) {
+    if (!rtspPlay(*session_origin_pull_.conn_, session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_)) {
         setError("PLAY failed", 3004);
         return false;
     }
@@ -1052,11 +1052,11 @@ bool StreamNode::openOriginPullSession() {
 
 void StreamNode::teardown() {
     if (session_origin_pull_.conn_ && !session_origin_pull_.rtsp_session_id_.empty()) {
-        rtspTeardown(*session_origin_pull_.conn_, config_.origin_pull_url, session_origin_pull_.rtsp_session_id_);
+        rtspTeardown(*session_origin_pull_.conn_, session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_);
     }
 
     if (session_relay_push_.conn_ && !session_relay_push_.rtsp_session_id_.empty()) {
-        rtspTeardown(*session_relay_push_.conn_, config_.relay_push_url, session_relay_push_.rtsp_session_id_);
+        rtspTeardown(*session_relay_push_.conn_, session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_);
     }
 
     if (session_origin_pull_.conn_) {

@@ -14,10 +14,10 @@ void openAllStream() {
 	std::lock_guard<std::mutex> lock(streamSrv.nodeLock_);
 	for (auto& pair : streamSrv.m_mapStreamNodes) {
 		std::shared_ptr<StreamNode> sn = pair.second;
-		if (sn && sn->config_.origin_pull_url != "") {
+		if (sn && sn->session_origin_pull_.server_url_ != "") {
 			sn->start(sn->config_);
 		}
-		LOG("[StreamSrv]持续拉流模式: streamUrl=%s, origin_pull_url=%s", pair.first.c_str(), sn->config_.origin_pull_url.c_str());
+		LOG("[StreamSrv]持续拉流模式: streamUrl=%s, origin_pull_url=%s", pair.first.c_str(), sn->session_origin_pull_.server_url_.c_str());
 	}
 }
 
@@ -128,7 +128,7 @@ std::shared_ptr<StreamNode> StreamServer::getStreamNodeByIp(const std::string& i
 	for (const auto& pair : m_mapStreamNodes) 
 	{
 		if (pair.second &&
-			pair.second->config_.origin_pull_url.find(ip) != std::string::npos) 
+			pair.second->session_origin_pull_.server_url_.find(ip) != std::string::npos) 
 		{
 			return pair.second;
 		}
@@ -142,7 +142,7 @@ std::shared_ptr<StreamNode> StreamServer::getStreamNodeBySrcUrl(const std::strin
 	for (const auto& pair : m_mapStreamNodes)
 	{
 		if (pair.second &&
-			pair.second->config_.origin_pull_url == srcUrl)
+			pair.second->session_origin_pull_.server_url_ == srcUrl)
 		{
 			return pair.second;
 		}
@@ -177,9 +177,9 @@ std::shared_ptr<StreamNode> StreamServer::createStream(const STREAM_OPEN_PARAM& 
 		LOG("[StreamNode] Error (%d): %s", code, error.c_str());
 		});
 
-	sn->config_.origin_pull_url = op.originPullUrl;
-	sn->extractRtspAuthInfo(sn->config_);
-	sn->config_.relay_push_url = op.relayPushUrl;
+	sn->session_origin_pull_.server_url_ = op.originPullUrl;
+	sn->extractRtspAuthInfo(sn->session_origin_pull_);
+	sn->session_relay_push_.server_url_ = op.relayPushUrl;
 	sn->config_.retry_interval = 3000;
 	sn->config_.max_retries = 0;
 	sn->config_.rtp_timeout = 10000;
@@ -212,19 +212,19 @@ std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op
 	if (sn) {
 		if (sn->session_origin_pull_.state_ != SESSION_STATE::SESSION_IDLE && sn->session_origin_pull_.state_ != SESSION_STATE::SESSION_ERROR) {
 			LOG("[流媒体] 媒体源已打开，收到重复打开请求，忽略, 位号:%s, 当前配置地址:%s",
-				op.tag.c_str(), sn->config_.origin_pull_url.c_str());
+				op.tag.c_str(), sn->session_origin_pull_.server_url_.c_str());
 			return sn;
 		}
-		if (sn->config_.origin_pull_url != op.originPullUrl) {
+		if (sn->session_origin_pull_.server_url_ != op.originPullUrl) {
 			LOG("[流媒体] 媒体源变更，restart streamNode，当前拉流地址:%s, 新地址:%s",
-				sn->config_.origin_pull_url.c_str(), op.originPullUrl.c_str());
-			sn->config_.origin_pull_url = op.originPullUrl;
-			sn->extractRtspAuthInfo(sn->config_);
+				sn->session_origin_pull_.server_url_.c_str(), op.originPullUrl.c_str());
+			sn->session_origin_pull_.server_url_ = op.originPullUrl;
+			sn->extractRtspAuthInfo(sn->session_origin_pull_);
 		}
-		if (sn->config_.relay_push_url != op.relayPushUrl) {
+		if (sn->session_relay_push_.server_url_ != op.relayPushUrl) {
 			LOG("[流媒体] 推流地址变更， 当前推流地址:%s, 新地址:%s",
-				sn->config_.relay_push_url.c_str(), op.relayPushUrl.c_str());
-			sn->config_.relay_push_url = op.relayPushUrl;
+				sn->session_relay_push_.server_url_.c_str(), op.relayPushUrl.c_str());
+			sn->session_relay_push_.server_url_ = op.relayPushUrl;
 		}
 		if (op.srcStreamFetch != "") {
 			sn->config_.srcStreamFetch = op.srcStreamFetch;

@@ -124,6 +124,9 @@ struct STREAM_SESSION {
     // TCP 控制连接（RTSP 信令连接），ORIGIN_PULL/RELAY_PUSH 使用
     std::unique_ptr<Connection> conn_;
     std::string rtsp_session_id_;  // RTSP Session ID（SETUP 响应返回）
+    std::string server_url_;       // 远端 RTSP 服务地址
+    std::string server_username_;  // 远端认证用户名
+    std::string server_password_;  // 远端认证密码
 
     // 新会话首次发送数据标记：首次先发 SPS/PPS + 缓存的关键帧，再开始转发实时流
     bool is_first_send_ = true;
@@ -161,6 +164,9 @@ struct STREAM_SESSION {
         , dtls_transport_(other.dtls_transport_)
         , srtp_context_(other.srtp_context_)
         , rtsp_session_id_(other.rtsp_session_id_)
+        , server_url_(other.server_url_)
+        , server_username_(other.server_username_)
+        , server_password_(other.server_password_)
         // conn_ (unique_ptr) cannot be copied; left as nullptr
     {}
 
@@ -188,6 +194,9 @@ struct STREAM_SESSION {
             dtls_transport_ = other.dtls_transport_;
             srtp_context_ = other.srtp_context_;
             rtsp_session_id_ = other.rtsp_session_id_;
+            server_url_ = other.server_url_;
+            server_username_ = other.server_username_;
+            server_password_ = other.server_password_;
             // conn_ (unique_ptr) not copied — ownership stays with source
         }
         return *this;

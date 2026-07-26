@@ -50,14 +50,14 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 
 	// 源拉流信息
 	json jOrigin;
-	jOrigin["url"] = sn->config_.origin_pull_url;
+	jOrigin["url"] = sn->session_origin_pull_.server_url_;
 	jOrigin["state"] = sessionStateStr(sn->session_origin_pull_.state_);
 	jOrigin["codec"] = sn->session_origin_pull_.codec;
 	jSi["originPull"] = jOrigin;
 
 	// 转推流信息
 	json jRelay;
-	jRelay["url"] = sn->config_.relay_push_url;
+	jRelay["url"] = sn->session_relay_push_.server_url_;
 	jRelay["state"] = sessionStateStr(sn->session_relay_push_.state_);
 	jRelay["transport"] = (sn->config_.relay_push_transport_mode == TransportMode::UDP) ? "udp" : "tcp";
 	jRelay["openTime"] = toTimeStr(sn->session_relay_push_.open_time_);
@@ -721,10 +721,10 @@ bool StreamServer::rpc_setStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESS
 	}
 
 	bool changed = false;
-	if (relayUrl != sn->config_.relay_push_url) {
+	if (relayUrl != sn->session_relay_push_.server_url_) {
 		LOG("[流媒体] setStream tag=%s relayUrl: %s -> %s",
-			sn->config_.tag.c_str(), sn->config_.relay_push_url.c_str(), relayUrl.c_str());
-		sn->config_.relay_push_url = relayUrl;
+			sn->config_.tag.c_str(), sn->session_relay_push_.server_url_.c_str(), relayUrl.c_str());
+		sn->session_relay_push_.server_url_ = relayUrl;
 		changed = true;
 	}
 

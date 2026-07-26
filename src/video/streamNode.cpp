@@ -409,21 +409,21 @@ bool StreamNode::start(const Config& config) {
     source_auth_.clear();
     target_auth_.clear();
 
-    // 初始化认证信息
-    if (!config_.source_username.empty()) {
-        source_auth_.username = config_.source_username;
-        source_auth_.password = config_.source_password;
+    // 初始化认证信息（从 STREAM_SESSION 读取）
+    if (!session_origin_pull_.server_username_.empty()) {
+        source_auth_.username = session_origin_pull_.server_username_;
+        source_auth_.password = session_origin_pull_.server_password_;
     }
 
-    if (!config_.target_username.empty()) {
-        target_auth_.username = config_.target_username;
-        target_auth_.password = config_.target_password;
+    if (!session_relay_push_.server_username_.empty()) {
+        target_auth_.username = session_relay_push_.server_username_;
+        target_auth_.password = session_relay_push_.server_password_;
     }
 
     control_thread_ = std::thread(&StreamNode::controlThread, this);
 	control_thread_.detach();
 
-    LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), config_.origin_pull_url.c_str(), config_.relay_push_url.c_str());
+    LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), session_origin_pull_.server_url_.c_str(), session_relay_push_.server_url_.c_str());
 
     return true;
 }
@@ -707,27 +707,27 @@ void StreamNode::logVerbose(const std::string & msg) const {
 
 /**
  * @brief 从RTSP URL中提取用户名和密码
- * @param config 配置结构体（包含source_url，输出source_username/source_password）
+ * @param session 会话结构体（读取 server_url_，写入 server_username_/server_password_）
  * @return 解析成功返回true，失败返回false
  */
 
-bool StreamNode::extractRtspAuthInfo(StreamNode::Config& config) {
+bool StreamNode::extractRtspAuthInfo(STREAM_SESSION& session) {
     // 正则表达式匹配RTSP URL格式：rtsp://[user:pass@]host[:port]/path
     const std::regex rtspRegex(R"(^rtsp://([^:]+):([^@]+)@.*$)");
     std::smatch matchResult;
 
     // 匹配URL并提取用户名和密码
-    if (std::regex_match(config.origin_pull_url, matchResult, rtspRegex)) {
+    if (std::regex_match(session.server_url_, matchResult, rtspRegex)) {
         if (matchResult.size() >= 3) {
-            config.source_username = matchResult[1].str();
-            config.source_password = matchResult[2].str();
+            session.server_username_ = matchResult[1].str();
+            session.server_password_ = matchResult[2].str();
             return true;
         }
     }
 
     // 若未匹配到（URL无账号密码），清空用户名密码
-    config.source_username = "";
-    config.source_password = "";
+    session.server_username_ = "";
+    session.server_password_ = "";
     return false;
 }
 

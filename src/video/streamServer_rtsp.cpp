@@ -335,8 +335,6 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				// 创建一个只用于接收的 StreamNode（不发起拉流）
 				StreamNode::Config cfg;
 				cfg.streamUrl = streamUrl;
-				cfg.origin_pull_url = "";  // 没有源，纯接收端
-				cfg.relay_push_url = "";
 				cfg.retry_interval = 3000;
 				cfg.max_retries = 0;
 				cfg.rtp_timeout = 10000;
