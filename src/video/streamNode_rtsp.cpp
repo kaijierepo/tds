@@ -1,8 +1,8 @@
 // ============================================================================
 // streamNode_rtsp.cpp - RTSP 信令控制层
 // 包含：RTSP 认证、信令方法（DESCRIBE/SETUP/PLAY/TEARDOWN/ANNOUNCE/RECORD/
-//       GET_PARAMETER）、SDP 解析/生成、控制流（controlThread/doStreamPull/
-//       doStreamPush/teardown）
+//       GET_PARAMETER）、SDP 解析/生成、控制流（controlThread/openOriginPullSession/
+//       openRelayPushSession/teardown）
 // ============================================================================
 
 #include "streamNode.h"
@@ -766,7 +766,7 @@ void StreamNode::controlThread() {
     while (running_ && !stopping_) {
             // 启动拉流与推流
             if (isPulling_ == false) {
-                if (doStreamPull()) {
+                if (openOriginPullSession()) {
                     rtp_handle_thread_ = std::thread(&StreamNode::rtpHandleThread,this);
                     rtp_handle_thread_.detach();
                     open_time_ = std::chrono::system_clock::now();
@@ -779,7 +779,7 @@ void StreamNode::controlThread() {
             }
  
             if (isPulling_ == true && isPushing_ == false && config_.relay_push_url != "") {
-                if (doStreamPush()) {
+                if (openRelayPushSession()) {
                     isPushing_ = true;
 				}
                 else {
@@ -814,7 +814,7 @@ void StreamNode::controlThread() {
     }
 }
 
-bool StreamNode::doStreamPush() {
+bool StreamNode::openRelayPushSession() {
 	session_relay_push_.state_ = SESSION_STATE::SESSION_CONNECTING;
     // 连接到目标服务器
     URLComponents relay_push_url;
@@ -936,7 +936,7 @@ bool StreamNode::doStreamPush() {
     return true;
 }
 
-bool StreamNode::doStreamPull() {
+bool StreamNode::openOriginPullSession() {
     setState(SESSION_STATE::SESSION_CONNECTING, "Connecting to source");
 
     // 解析源URL

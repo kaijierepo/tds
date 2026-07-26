@@ -342,7 +342,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				cfg.rtp_timeout = 10000;
 
 				auto node = std::make_shared<StreamNode>();
-				// 直接设置 pull_session_ 信息（跳过 doStreamPull）
+				// 直接设置 pull_session_ 信息（跳过 openOriginPullSession）
 				node->config_ = cfg;
 				node->session_origin_pull_ = videoInfo;
 				node->session_origin_pull_.session_type_ = ORIGIN_PULL;

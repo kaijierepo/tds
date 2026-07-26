@@ -476,8 +476,8 @@ public:
     void controlThread();
     void rtpHandleThread();
     bool checkIsIdrNalu(const RTPPacket& packet);
-    bool doStreamPull();
-    bool doStreamPush();
+    bool openOriginPullSession();
+    bool openRelayPushSession();
     void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, StreamNode::STREAM_SESSION& session);
     void doRtpRecv();
 
