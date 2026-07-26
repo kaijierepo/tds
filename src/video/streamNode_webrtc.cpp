@@ -6,30 +6,6 @@
 #include <sstream>
 #include <random>
 
-
-string StreamNode::STREAM_SESSION::getSessionStateDesc()
-{
-    if (state_ == SESSION_STATE::SESSION_IDLE) {
-        return "idle";
-    }
-    else if(state_ == SESSION_STATE::SESSION_CONNECTING) {
-        return "connecting";
-    }
-    else if(state_ == SESSION_STATE::SESSION_HANDSHAKING) {
-        return "handshaking";
-    }
-    else if(state_ == SESSION_STATE::SESSION_STREAMING) {
-        return "streaming";
-    }
-    else if(state_ == SESSION_STATE::SESSION_ERROR) {
-        return "error";
-    }
-    else if(state_ == SESSION_STATE::SESSION_RECONNECTING) {
-        return "reconnecting";
-    }
-    return "unknown";
-}
-
 // ============================================================================
 // ICE-Lite + DTLS + SRTP (WebRTC) 实现 — 每客户端一线程
 // ============================================================================

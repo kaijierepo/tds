@@ -279,6 +279,9 @@
     <ClCompile Include="..\src\video\streamNode.cpp">
       <Filter>video</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\video\streamSession.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\video\streamNode_webrtc.cpp">
       <Filter>video</Filter>
     </ClCompile>

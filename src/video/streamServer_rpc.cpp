@@ -59,7 +59,7 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	json jRelay;
 	jRelay["url"] = sn->config_.relay_push_url;
 	jRelay["state"] = sessionStateStr(sn->session_relay_push_.state_);
-	jRelay["transport"] = (sn->config_.relay_push_transport_mode == StreamNode::TransportMode::UDP) ? "udp" : "tcp";
+	jRelay["transport"] = (sn->config_.relay_push_transport_mode == TransportMode::UDP) ? "udp" : "tcp";
 	jRelay["openTime"] = toTimeStr(sn->session_relay_push_.open_time_);
 	jRelay["bytesSended"] = sn->session_relay_push_.rtpBytesSended;
 	jSi["relayPush"] = jRelay;
@@ -282,7 +282,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			}
 		}
 
-		StreamNode::STREAM_SESSION si = sn->session_origin_pull_;
+		STREAM_SESSION si = sn->session_origin_pull_;
 		si.session_type_ = CLIENT_WEBRTC_PULL;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
@@ -333,7 +333,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		sn->buildWebRTCSdpAnswer(si, serverIp, fingerprint);
 		LOG("[WebRTC] SDP Answer:\n%s", si.sdp.c_str());
 
-		auto sessionPtr = std::make_shared<StreamNode::STREAM_SESSION>(si);
+		auto sessionPtr = std::make_shared<STREAM_SESSION>(si);
 		sessionPtr->open_time_ = std::chrono::system_clock::now();
 		sn->session_list_client_pull_mutex_.lock();
 		sn->session_list_client_pull_.push_back(sessionPtr);
@@ -729,7 +729,7 @@ bool StreamServer::rpc_setStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESS
 	}
 
 	if (!relayTransport.empty()) {
-		StreamNode::TransportMode newMode = (relayTransport == "udp") ? StreamNode::TransportMode::UDP : StreamNode::TransportMode::TCP;
+		TransportMode newMode = (relayTransport == "udp") ? TransportMode::UDP : TransportMode::TCP;
 		if (sn->config_.relay_push_transport_mode != newMode) {
 			LOG("[流媒体] setStream tag=%s relayTransport: %d -> %d",
 				sn->config_.tag.c_str(), (int)sn->config_.relay_push_transport_mode, (int)newMode);

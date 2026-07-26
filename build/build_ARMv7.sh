@@ -611,6 +611,7 @@ obj_files="\
 ./video/streamServer_rtsp.o \
 ./video/streamServer_rpc.o \
 ./video/streamNode.o \
+./video/streamSession.o \
 ./video/streamNode_rtsp.o \
 ./video/streamNode_rtp.o \
 ./video/streamNode_socket.o \

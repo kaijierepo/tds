@@ -598,7 +598,7 @@ void updateStreamNodeConfig() {
 				// 同步 relayTransport
 				string mpTransport = pmp->m_relayTransport;
 				if (mpTransport.empty()) mpTransport = "tcp";
-				StreamNode::TransportMode newMode = (mpTransport == "udp") ? StreamNode::TransportMode::UDP : StreamNode::TransportMode::TCP;
+				TransportMode newMode = (mpTransport == "udp") ? TransportMode::UDP : TransportMode::TCP;
 				if (sn->config_.relay_push_transport_mode != newMode) {
 					LOG("[syncStreamNodes] tag=%s relayTransport变更: %d -> %d",
 						tag.c_str(), (int)sn->config_.relay_push_transport_mode, (int)newMode);

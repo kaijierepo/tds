@@ -239,7 +239,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 	std::string sessionId;
 	std::string streamTag;
 	std::shared_ptr<StreamNode> streamNode = nullptr;
-	StreamNode::STREAM_SESSION rtspSession;
+	STREAM_SESSION rtspSession;
 	bool sessionSetup = false;
 
 	// ---- RTSP 推流（接收端）状态 ----
@@ -317,7 +317,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			LOG("[RTSP-Server] ANNOUNCE path=%s, SDP size=%zu", path.c_str(), sdpBody.size());
 
 			// 解析 SDP 获取编码信息
-			StreamNode::STREAM_SESSION videoInfo, audioInfo;
+			STREAM_SESSION videoInfo, audioInfo;
 			StreamNode tempNode;
 			if (sdpBody.empty() || !tempNode.parseSDP(sdpBody, videoInfo, audioInfo)) {
 				std::ostringstream resp;
@@ -714,7 +714,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 
 				if (isTcpTransport && interleavedRtp >= 0) {
 					// ---- TCP interleaved 模式：RTP 数据通过当前 RTSP TCP 连接发送 ----
-					rtspSession.transport_mode = StreamNode::TransportMode::TCP;
+					rtspSession.transport_mode = TransportMode::TCP;
 					rtspSession.tcp_socket = clientSock;
 					rtspSession.interleaved_rtp = interleavedRtp;
 					rtspSession.interleaved_rtcp = interleavedRtcp;
@@ -736,7 +736,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				}
 				else {
 					// ---- UDP 模式 ----
-					rtspSession.transport_mode = StreamNode::TransportMode::UDP;
+					rtspSession.transport_mode = TransportMode::UDP;
 
 					// 创建服务端 UDP socket（用于发送 RTP）
 					streamNode->createUDPServerSocket(rtspSession);
@@ -803,7 +803,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			sendResponse(cseq, resp.str());
 
 			// 将 RTSP 拉流会话加入 client_sessions_ 列表
-			auto sessionPtr = std::make_shared<StreamNode::STREAM_SESSION>(rtspSession);
+			auto sessionPtr = std::make_shared<STREAM_SESSION>(rtspSession);
 			sessionPtr->open_time_ = std::chrono::system_clock::now();
 			streamNode->session_list_client_pull_mutex_.lock();
 			streamNode->session_list_client_pull_.push_back(sessionPtr);
@@ -813,7 +813,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				streamTag.c_str(), clientIp.c_str(), rtspSession.client_rtp_port, rtspSession.server_rtp_port);
 
 			// TCP interleaved 拉流：设 recv 超时 1s（非阻塞 recv 避免与 feed 线程 send 并发）
-			if (rtspSession.transport_mode == StreamNode::TransportMode::TCP) {
+			if (rtspSession.transport_mode == TransportMode::TCP) {
 #ifdef _WIN32
 				int timeout_tcp_ms = 1000;  // 1s 超时，readRequest 超时重入
 				setsockopt(static_cast<SOCKET>(clientSock), SOL_SOCKET, SO_RCVTIMEO,
@@ -933,12 +933,12 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				cleanupPushSession(sessionId);
 			}
 			// 清理 TCP interleaved 拉流会话
-			if (!isPushMode && streamNode && rtspSession.transport_mode == StreamNode::TransportMode::TCP) {
+			if (!isPushMode && streamNode && rtspSession.transport_mode == TransportMode::TCP) {
 				streamNode->session_list_client_pull_mutex_.lock();
 				auto& sessions = streamNode->session_list_client_pull_;
 				sessions.erase(
 					std::remove_if(sessions.begin(), sessions.end(),
-						[&](const std::shared_ptr<StreamNode::STREAM_SESSION>& s) {
+						[&](const std::shared_ptr<STREAM_SESSION>& s) {
 							return s->tcp_socket == clientSock;
 						}),
 					sessions.end());
@@ -964,12 +964,12 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 	}
 
 	// 清理 TCP interleaved 拉流会话
-	if (!isPushMode && streamNode && rtspSession.transport_mode == StreamNode::TransportMode::TCP) {
+	if (!isPushMode && streamNode && rtspSession.transport_mode == TransportMode::TCP) {
 		streamNode->session_list_client_pull_mutex_.lock();
 		auto& sessions = streamNode->session_list_client_pull_;
 		sessions.erase(
 			std::remove_if(sessions.begin(), sessions.end(),
-				[&](const std::shared_ptr<StreamNode::STREAM_SESSION>& s) {
+				[&](const std::shared_ptr<STREAM_SESSION>& s) {
 					return s->tcp_socket == clientSock;
 				}),
 			sessions.end());
@@ -978,12 +978,12 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 		cleanupIdleLocalStream(streamTag);
 	}
 	// 清理 UDP 拉流会话（非 TCP interleaved 的普通拉流）
-	if (!isPushMode && streamNode && rtspSession.transport_mode != StreamNode::TransportMode::TCP) {
+	if (!isPushMode && streamNode && rtspSession.transport_mode != TransportMode::TCP) {
 		streamNode->session_list_client_pull_mutex_.lock();
 		auto& sessions = streamNode->session_list_client_pull_;
 		sessions.erase(
 			std::remove_if(sessions.begin(), sessions.end(),
-				[&](const std::shared_ptr<StreamNode::STREAM_SESSION>& s) {
+				[&](const std::shared_ptr<STREAM_SESSION>& s) {
 					return s->remote_host == clientIp;
 				}),
 			sessions.end());

@@ -688,6 +688,7 @@
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\video\streamNode.cpp" />
+    <ClCompile Include="..\src\video\streamSession.cpp" />
     <ClCompile Include="..\src\video\streamNode_rtsp.cpp" />
     <ClCompile Include="..\src\video\streamNode_rtp.cpp" />
     <ClCompile Include="..\src\video\streamNode_socket.cpp" />
@@ -902,6 +903,7 @@
     <ClInclude Include="..\src\video\dtls_transport.h" />
     <ClInclude Include="..\src\video\srtp_protect.h" />
     <ClInclude Include="..\src\video\streamCommon.h" />
+    <ClInclude Include="..\src\video\streamSession.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />

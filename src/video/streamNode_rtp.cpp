@@ -298,7 +298,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     if (packet.payload.empty())
         return;
 
-    std::vector<std::shared_ptr<StreamNode::STREAM_SESSION>> playClients;
+    std::vector<std::shared_ptr<STREAM_SESSION>> playClients;
     session_list_client_pull_mutex_.lock();
     playClients = session_list_client_pull_;
     session_list_client_pull_mutex_.unlock();
@@ -322,7 +322,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
     for (size_t i = 0; i < playClients.size(); i++) {
         auto& sp = playClients[i];
         if (!sp) continue;
-        StreamNode::STREAM_SESSION& client = *sp;
+        STREAM_SESSION& client = *sp;
         // WebRTC 客户端走 SRTP 路径，此处跳过明文发送
         if (client.is_webrtc) continue;
         if (client.transport_mode == TransportMode::UDP) {

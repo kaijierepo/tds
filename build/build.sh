@@ -477,6 +477,7 @@ obj_files="\
 ./io_server/proto_ws.o \
 ./video/streamServer.o \
 ./video/streamNode.o \
+./video/streamSession.o \
 ./video/streamNode_rtsp.o \
 ./video/streamNode_rtp.o \
 ./video/streamNode_socket.o \

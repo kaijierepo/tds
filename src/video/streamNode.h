@@ -14,14 +14,8 @@
 #include <cstdint>
 
 #include "streamCommon.h"
+#include "streamSession.h"
 
-#include "streamNode_webrtc.h"
-
-// 前向声明 DTLS/SRTP 类型（避免头文件循环依赖）
-class DtlsTransport;
-class SrptProtect;
-struct SrptContext;
-struct SessionDtlsState;
 // RTP包结�?
 // NAL header (1 byte) format: F(1) | NRI(2) | Type(5)
 // - F: forbidden_zero_bit
@@ -50,24 +44,7 @@ struct SessionDtlsState;
 #define NAL_TYPE_STAP_A           24
 #define NAL_TYPE_FU_A             28
 
-enum STREAM_SESSION_TYPE {
-    ORIGIN_PULL,    //自身作为客户端，向服务端拉流； 主动从流媒体源获取流
-    RELAY_PUSH,    //自身作为客户端，向服务端推流;  转发到另外一个流媒体服务器
-    CLIENT_RTSP_PULL,    //自身作为服务端，接收rtsp客户端拉流
-    CLIENT_RTSP_PUBLISH,     //自身作为服务端，接收rtsp客户端推流
-    CLIENT_WEBRTC_PULL,    //自身作为服务端，接收webrtc客户端拉流
-    CLIENT_WEBRTC_PUBLISH     //自身作为服务端，接收webrtc客户端推流
-};
 
-// Session 状态（替换旧的 StreamNode::State 和 WEBRTC_SESSION_STATE）
-enum SESSION_STATE {
-    SESSION_IDLE = 0,          // 空闲/未启动
-    SESSION_CONNECTING,        // 连接中 (TCP连接/ICE收集)
-    SESSION_HANDSHAKING,       // 握手中 (RTSP SETUP/DTLS握手)
-    SESSION_STREAMING,         // 推流中 (RTP数据传输)
-    SESSION_ERROR,             // 故障
-    SESSION_RECONNECTING       // 断线重连中
-};
 
 struct STREAM_OPEN_PARAM {
     std::string tag;
@@ -81,13 +58,6 @@ struct STREAM_OPEN_PARAM {
 
 class StreamNode {
 public:
-    // 传输模式枚举
-    enum class TransportMode {
-        NONE,   // 
-        UDP,    // UDP传输
-        TCP     // RTP over RTSP (TCP)
-    };
-
     // 录像控制
     struct RecordControl {
         bool recording = false;          // 是否启用录像
@@ -236,124 +206,6 @@ public:
         std::vector<uint8_t> serialize() const;
     };
 
-    // 媒体流信息
-    // 注意：WebRTC 会话通过 shared_ptr 管理；含 std::thread 成员，禁止值拷贝
-    struct STREAM_SESSION {
-        std::string control_url;
-        std::string codec = "H264";
-        int payload_type = 96;
-        int clock_rate = 90000;
-        std::string fmtp;
-        // 如果 SDP 中包含 sprop-parameter-sets，会把解码后的 SPS/PPS 保存到这里
-        std::vector<uint8_t> sps;
-        std::vector<uint8_t> pps;
-        std::string sdp;
-        STREAM_SESSION_TYPE session_type_;
-        std::chrono::system_clock::time_point last_stun_bind_req_time;
-        std::chrono::system_clock::time_point open_time_;
-
-        // 传输信息
-        TransportMode transport_mode = TransportMode::UDP;
-        std::string transport;
-        std::string remote_host;
-        std::string client_port;
-        std::string server_port;
-        int client_rtp_port = 0;
-        int client_rtcp_port = 0;
-		int server_rtp_port = 0;
-		int server_rtcp_port = 0;
-		SocketHandle rtp_socket = kInvalidSocket;
-		SocketHandle rtcp_socket = kInvalidSocket;
-		SocketHandle tcp_socket = kInvalidSocket;  // TCP interleaved 模式使用的 RTSP 连接
-		int interleaved_rtp = -1;      // TCP interleaved RTP 通道号
-		int interleaved_rtcp = -1;     // TCP interleaved RTCP 通道号
-
-        long long rtpBytesSended = 0;
-
-        // ICE-Lite (WebRTC) 字段
-        bool is_webrtc = false;
-        std::string ice_ufrag;
-        std::string ice_pwd;
-        SESSION_STATE state_ = SESSION_STATE::SESSION_IDLE;
-
-        // 从实际 RTP 流中捕获的视频 SSRC（用于 SDP 声明）
-        uint32_t      video_ssrc = 0;
-
-        // DTLS/SRTP 状态（per-session，由 ice 线程管理）
-        // 用 shared_ptr 管理：RTP 发送线程与 ICE 线程并发持有同一实例，
-        // 引用计数保证最后使用者释放前对象不被析构，杜绝 Use-After-Free
-        std::shared_ptr<SessionDtlsState> dtls_transport_ = nullptr;
-        SrptProtect::Context* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
-
-        // 新会话首次发送数据标记：首次先发 SPS/PPS + 缓存的关键帧，再开始转发实时流
-        bool is_first_send_ = true;
-
-        // ---- 以下成员仅 WebRTC (is_webrtc=true) 使用 ----
-        // ICE 处理线程（由 startRtcSessionHandleThread 创建，stopAllIceThreads 回收）
-        std::thread rtc_handle_thread_;
-        std::atomic<bool> rtc_handle_thread_running_{true};
-
-        STREAM_SESSION() = default;
-        STREAM_SESSION(STREAM_SESSION&&) = default;
-        STREAM_SESSION& operator=(STREAM_SESSION&&) = default;
-
-        // 拷贝构造：逐字段拷贝（跳过不可拷贝的 ice_thread_，新对象 ice_thread_ 为默认空线程）
-        STREAM_SESSION(const STREAM_SESSION& other)
-            : control_url(other.control_url), codec(other.codec)
-            , payload_type(other.payload_type), clock_rate(other.clock_rate)
-            , fmtp(other.fmtp), sps(other.sps), pps(other.pps), sdp(other.sdp)
-            , session_type_(other.session_type_)
-            , last_stun_bind_req_time(other.last_stun_bind_req_time), open_time_(other.open_time_)
-            , transport_mode(other.transport_mode), transport(other.transport)
-            , remote_host(other.remote_host), client_port(other.client_port)
-            , server_port(other.server_port)
-            , client_rtp_port(other.client_rtp_port)
-            , client_rtcp_port(other.client_rtcp_port)
-            , server_rtp_port(other.server_rtp_port)
-            , server_rtcp_port(other.server_rtcp_port)
-            , rtpBytesSended(other.rtpBytesSended)
-            , rtp_socket(other.rtp_socket), rtcp_socket(other.rtcp_socket)
-            , tcp_socket(other.tcp_socket)
-            , interleaved_rtp(other.interleaved_rtp), interleaved_rtcp(other.interleaved_rtcp)
-            , is_webrtc(other.is_webrtc)
-            , ice_ufrag(other.ice_ufrag), ice_pwd(other.ice_pwd)
-            , state_(other.state_), video_ssrc(other.video_ssrc)
-            , dtls_transport_(other.dtls_transport_)
-            , srtp_context_(other.srtp_context_)
-        {}
-
-        STREAM_SESSION& operator=(const STREAM_SESSION& other) {
-            if (this != &other) {
-                // 不允许在运行中的 ICE 线程上赋值
-                // （WebRTC session 应通过 shared_ptr 管理，不走拷贝赋值路径）
-                control_url = other.control_url; codec = other.codec;
-                payload_type = other.payload_type; clock_rate = other.clock_rate;
-                fmtp = other.fmtp; sps = other.sps; pps = other.pps; sdp = other.sdp;
-                session_type_ = other.session_type_;
-                last_stun_bind_req_time = other.last_stun_bind_req_time; open_time_ = other.open_time_;
-                transport_mode = other.transport_mode; transport = other.transport;
-                remote_host = other.remote_host; client_port = other.client_port;
-                server_port = other.server_port;
-                client_rtp_port = other.client_rtp_port;
-                client_rtcp_port = other.client_rtcp_port;
-                server_rtp_port = other.server_rtp_port;
-                server_rtcp_port = other.server_rtcp_port;
-                rtpBytesSended = other.rtpBytesSended;
-                rtp_socket = other.rtp_socket; rtcp_socket = other.rtcp_socket;
-                tcp_socket = other.tcp_socket;
-                interleaved_rtp = other.interleaved_rtp; interleaved_rtcp = other.interleaved_rtcp;
-                is_webrtc = other.is_webrtc;
-                ice_ufrag = other.ice_ufrag; ice_pwd = other.ice_pwd;
-                state_ = other.state_; video_ssrc = other.video_ssrc;
-                dtls_transport_ = other.dtls_transport_;
-                srtp_context_ = other.srtp_context_;
-            }
-            return *this;
-        }
-
-        std::string getSessionStateDesc();
-    };
-
     // URL解析
     struct URLComponents {
         std::string protocol;
@@ -478,7 +330,7 @@ public:
     bool checkIsIdrNalu(const RTPPacket& packet);
     bool openOriginPullSession();
     bool openRelayPushSession();
-    void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, StreamNode::STREAM_SESSION& session);
+    void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, STREAM_SESSION& session);
     void doRtpRecv();
 
 
