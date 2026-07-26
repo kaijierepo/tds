@@ -147,6 +147,7 @@ public:
 	//视频
 	std::string m_mediaSrcType;
 	std::string m_mediaUrl;
+	std::string m_relayTransport; //推流转发传输协议: "tcp" | "udp"，默认 "tcp"
 	bool m_bIsStreaming;
 	bool m_bServeStream;  //从视频源拉流，向外提供流媒体服务
 	std::string m_serialNo; //设备序列号

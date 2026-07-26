@@ -744,14 +744,14 @@ void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& ses
 				string sp = "{}";
 				rpcSrv.notify("objTreeUpdated", sp);
 				result = "\"ok\"";
-				std::thread(syncStreamNodesFromProject).detach();
+				std::thread(updateStreamNodeConfig).detach();
 			}
 				//热重载
 				else {
 					pmo->loadConf(params);
 					prj.saveConfFile();
 					result = "\"ok\"";
-					std::thread(syncStreamNodesFromProject).detach();
+					std::thread(updateStreamNodeConfig).detach();
 				}
 			}
 			else {
@@ -795,7 +795,7 @@ void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& ses
 		if (ok) {
 			prj.saveConfFile();
 			result = "\"ok\"";
-			std::thread(syncStreamNodesFromProject).detach();
+			std::thread(updateStreamNodeConfig).detach();
 		}
 	}
 }

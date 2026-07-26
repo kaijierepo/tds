@@ -560,7 +560,7 @@ void runDataSimu() {
 	g_pDataSimu->startDataSimu();
 }
 
-void syncStreamNodesFromProject() {
+void updateStreamNodeConfig() {
 	map<string, MP*> mapAllMP;
 	prj.getMpList(mapAllMP);
 
@@ -584,6 +584,7 @@ void syncStreamNodesFromProject() {
 			}
 			else {
 				// 如果 mediaUrl 变更，更新 config
+				bool needRestart = false;
 				if (sn->config_.origin_pull_url != pmp->m_mediaUrl) {
 					LOG("[syncStreamNodes] tag=%s mediaUrl变更: %s -> %s",
 						tag.c_str(), sn->config_.origin_pull_url.c_str(), pmp->m_mediaUrl.c_str());
@@ -592,6 +593,24 @@ void syncStreamNodesFromProject() {
 				}
 				if (sn->config_.srcStreamFetch != pmp->m_srcStreamFetch) {
 					sn->config_.srcStreamFetch = pmp->m_srcStreamFetch;
+				}
+
+				// 同步 relayTransport
+				string mpTransport = pmp->m_relayTransport;
+				if (mpTransport.empty()) mpTransport = "tcp";
+				StreamNode::TransportMode newMode = (mpTransport == "udp") ? StreamNode::TransportMode::UDP : StreamNode::TransportMode::TCP;
+				if (sn->config_.relay_push_transport_mode != newMode) {
+					LOG("[syncStreamNodes] tag=%s relayTransport变更: %d -> %d",
+						tag.c_str(), (int)sn->config_.relay_push_transport_mode, (int)newMode);
+					sn->config_.relay_push_transport_mode = newMode;
+					needRestart = true;
+				}
+
+				// 转发协议变更且正在推流，断开重连以生效
+				if (needRestart && sn->isPushing_) {
+					LOG("[syncStreamNodes] tag=%s 转发协议变更，断开重连", tag.c_str());
+					sn->stop();
+					sn->start(sn->config_);
 				}
 			}
 		}

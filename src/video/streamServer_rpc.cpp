@@ -59,6 +59,9 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	json jRelay;
 	jRelay["url"] = sn->config_.relay_push_url;
 	jRelay["state"] = sessionStateStr(sn->session_relay_push_.state_);
+	jRelay["transport"] = (sn->config_.relay_push_transport_mode == StreamNode::TransportMode::UDP) ? "udp" : "tcp";
+	jRelay["openTime"] = toTimeStr(sn->session_relay_push_.open_time_);
+	jRelay["bytesSended"] = sn->session_relay_push_.rtpBytesSended;
 	jSi["relayPush"] = jRelay;
 
 	json jRtpBuffer;
@@ -708,16 +711,36 @@ bool StreamServer::rpc_setStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESS
 	if (yyv)
 		relayUrl = yyjson_get_str(yyv);
 
-	if (sn->config_.relay_push_url == relayUrl) {
-		rpcResp.result = RPC_OK;
-		return true;
+	string relayTransport;
+	yyv = yyjson_obj_get(params, "relayTransport");
+	if (yyv) {
+		string transport = yyjson_get_str(yyv);
+		if (transport == "tcp" || transport == "udp") {
+			relayTransport = transport;
+		}
 	}
 
-	LOG("[流媒体] setStream tag=%s, streamUrl=%s, old_relay=%s, new_relay=%s",
-		sn->config_.tag.c_str(), sn->config_.streamUrl.c_str(),
-		sn->config_.relay_push_url.c_str(), relayUrl.c_str());
-	sn->config_.relay_push_url = relayUrl;
-	sn->start(sn->config_);
+	bool changed = false;
+	if (relayUrl != sn->config_.relay_push_url) {
+		LOG("[流媒体] setStream tag=%s relayUrl: %s -> %s",
+			sn->config_.tag.c_str(), sn->config_.relay_push_url.c_str(), relayUrl.c_str());
+		sn->config_.relay_push_url = relayUrl;
+		changed = true;
+	}
+
+	if (!relayTransport.empty()) {
+		StreamNode::TransportMode newMode = (relayTransport == "udp") ? StreamNode::TransportMode::UDP : StreamNode::TransportMode::TCP;
+		if (sn->config_.relay_push_transport_mode != newMode) {
+			LOG("[流媒体] setStream tag=%s relayTransport: %d -> %d",
+				sn->config_.tag.c_str(), (int)sn->config_.relay_push_transport_mode, (int)newMode);
+			sn->config_.relay_push_transport_mode = newMode;
+			changed = true;
+		}
+	}
+
+	if (changed) {
+		sn->start(sn->config_);
+	}
 
 	rpcResp.result = RPC_OK;
 	return true;

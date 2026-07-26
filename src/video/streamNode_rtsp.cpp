@@ -367,7 +367,7 @@ bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
     // UDP传输模式：使用RTP/AVP/UDP
     if (record_mode) {
         // 推流（发送）：服务端接收
-        if (config_.push_mode == TransportMode::UDP) {
+        if (config_.relay_push_transport_mode == TransportMode::UDP) {
             request << "Transport: RTP/AVP/UDP;unicast;mode=record;"
                 << "client_port=" << stream.client_port;
             if (config_.udp_ttl != 64) {
@@ -382,7 +382,7 @@ bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
     }
     else {
         // 拉流（接收）：客户端接收
-        if (config_.pull_mode == TransportMode::UDP) {
+        if (config_.origin_pull_transport_mode == TransportMode::UDP) {
             request << "Transport: RTP/AVP/UDP;unicast;"
                 << "client_port=" << stream.client_port;
             if (config_.udp_ttl != 64) {
@@ -865,10 +865,10 @@ bool StreamNode::doStreamPush() {
 
     // 如果使用 UDP 推流，应先创建并绑定本地 RTP/RTCP sockets，
     // 并将 client_port 写入 target_video_info_，再发送 SETUP。
-    if (config_.push_mode == TransportMode::UDP) {
+    if (config_.relay_push_transport_mode == TransportMode::UDP) {
         if (!createUDPPushSocket()) {
             logError("Failed to create UDP push socket, falling back to TCP");
-            config_.push_mode = TransportMode::TCP;
+            config_.relay_push_transport_mode = TransportMode::TCP;
         }
         else {
             // 填写 client_port，格式 "RTP-RTCP"
@@ -877,7 +877,7 @@ bool StreamNode::doStreamPush() {
         }
     }
 
-    if (config_.push_mode == TransportMode::TCP) {
+    if (config_.relay_push_transport_mode == TransportMode::TCP) {
         logInfo("Push stream: Using TCP mode (RTP over RTSP)");
     }
 
@@ -931,6 +931,7 @@ bool StreamNode::doStreamPush() {
 
 	LOG("[keyinfo][StreamNode]tag=%s,stream forward success,pushToUrl:%s", config_.tag.c_str(), config_.relay_push_url.c_str());
 	session_relay_push_.state_ = SESSION_STATE::SESSION_STREAMING;
+	session_relay_push_.open_time_ = std::chrono::system_clock::now();
 
     return true;
 }
@@ -984,7 +985,7 @@ bool StreamNode::doStreamPull() {
     closeUDPSockets();
 
     // 根据拉流模式决定是否创建UDP socket
-    bool pullUseUDP = (config_.pull_mode == TransportMode::UDP);
+    bool pullUseUDP = (config_.origin_pull_transport_mode == TransportMode::UDP);
 
     if (pullUseUDP) {
         // 创建专用的UDP socket用于拉流（接收RTP）
