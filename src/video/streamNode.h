@@ -216,31 +216,6 @@ public:
         static bool parse(const std::string& url, URLComponents& components);
     };
 
-    // 网络连接
-    class Connection {
-    public:
-        Connection();
-        ~Connection();
-
-        bool connect(const std::string& host, int port, int timeout_ms = 5000);
-        void disconnect();
-        bool isConnected() const;
-        int lastError() const { return last_error_; }
-
-        int send(const void* data, size_t size, int timeout_ms = 5000);
-        int receive(void* buffer, size_t size, int timeout_ms = 5000);
-        int receiveHttpResp(std::string& response, int timeout_ms = 5000);
-
-        SocketHandle getSocket() const { return sockfd_; }
-
-    private:
-        SocketHandle sockfd_ = kInvalidSocket;
-        std::string host_;
-        int port_ = 0;
-        int last_error_ = 0;
-        bool setSocketTimeout(int timeout_ms);
-    };
-
 public:
     // 配置和状态
     Config config_;
@@ -255,11 +230,7 @@ public:
     AuthInfo source_auth_;
     AuthInfo target_auth_;
 
-    // 连接和会话
-    std::unique_ptr<Connection> source_conn_;
-    std::unique_ptr<Connection> target_conn_;
-    std::string source_session_;
-    std::string target_session_;
+    // 连接和会话已移到 STREAM_SESSION::conn_ / rtsp_session_id_
 
     // 流信息
     STREAM_SESSION session_origin_pull_;

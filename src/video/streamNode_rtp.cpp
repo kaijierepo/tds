@@ -154,14 +154,14 @@ void StreamNode::doRtpRecv() {
         }
         else {
             // TCP拉流：通过RTSP连接接收RTP数据
-            if (!source_conn_ || !source_conn_->isConnected()) {
+            if (!session_origin_pull_.conn_ || !session_origin_pull_.conn_->isConnected()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 continue;
             }
             
             // 接收数据
             char tmpBuf[2048] = {0};
-            int n = source_conn_->receive(tmpBuf, sizeof(tmpBuf), 100);
+            int n = session_origin_pull_.conn_->receive(tmpBuf, sizeof(tmpBuf), 100);
             
             if (n > 0) {
                 // 添加到缓冲区
@@ -645,7 +645,7 @@ void StreamNode::forwardRTPPacket(const RTPPacket & packet) {
     }
     else {
         // TCP推流：发送到目标RTSP服务器（通过RTSP控制的连接）
-        if (target_conn_ && target_conn_->isConnected()) {
+        if (session_relay_push_.conn_ && session_relay_push_.conn_->isConnected()) {
             // RTP over RTSP: 插入 $ (0x24) + channel + length
             uint8_t rtpOverTcp[4] = { 0x24, 0x00, 0x00, 0x00 };  // channel 0, length待定
             rtpOverTcp[2] = (data.size() >> 8) & 0xFF;
@@ -655,7 +655,7 @@ void StreamNode::forwardRTPPacket(const RTPPacket & packet) {
             tcpPacket.insert(tcpPacket.end(), rtpOverTcp, rtpOverTcp + 4);
             tcpPacket.insert(tcpPacket.end(), data.begin(), data.end());
             
-            int sent = target_conn_->send(tcpPacket.data(), tcpPacket.size());
+            int sent = session_relay_push_.conn_->send(tcpPacket.data(), tcpPacket.size());
             if (sent > 0) {
                 session_relay_push_.rtpBytesSended += data.size();
                 std::lock_guard<std::mutex> lock(stats_mutex_);

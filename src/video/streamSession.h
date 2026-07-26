@@ -12,6 +12,34 @@
 #include "streamCommon.h"
 #include "streamNode_webrtc.h"
 
+// ============================================================================
+// Connection — TCP 连接（通用，无 StreamNode 依赖）
+// ============================================================================
+
+class Connection {
+public:
+    Connection();
+    ~Connection();
+
+    bool connect(const std::string& host, int port, int timeout_ms = 5000);
+    void disconnect();
+    bool isConnected() const;
+    int lastError() const { return last_error_; }
+
+    int send(const void* data, size_t size, int timeout_ms = 5000);
+    int receive(void* buffer, size_t size, int timeout_ms = 5000);
+    int receiveHttpResp(std::string& response, int timeout_ms = 5000);
+
+    SocketHandle getSocket() const { return sockfd_; }
+
+private:
+    SocketHandle sockfd_ = kInvalidSocket;
+    std::string host_;
+    int port_ = 0;
+    int last_error_ = 0;
+    bool setSocketTimeout(int timeout_ms);
+};
+
 // Forward declaration（仅指针使用，无需完整定义）
 class SrptProtect;
 
@@ -93,6 +121,10 @@ struct STREAM_SESSION {
     std::shared_ptr<SessionDtlsState> dtls_transport_ = nullptr;
     SrptProtect::Context* srtp_context_   = nullptr;  // 指向 SrptProtect::Context 实例
 
+    // TCP 控制连接（RTSP 信令连接），ORIGIN_PULL/RELAY_PUSH 使用
+    std::unique_ptr<Connection> conn_;
+    std::string rtsp_session_id_;  // RTSP Session ID（SETUP 响应返回）
+
     // 新会话首次发送数据标记：首次先发 SPS/PPS + 缓存的关键帧，再开始转发实时流
     bool is_first_send_ = true;
 
@@ -128,6 +160,8 @@ struct STREAM_SESSION {
         , state_(other.state_), video_ssrc(other.video_ssrc)
         , dtls_transport_(other.dtls_transport_)
         , srtp_context_(other.srtp_context_)
+        , rtsp_session_id_(other.rtsp_session_id_)
+        // conn_ (unique_ptr) cannot be copied; left as nullptr
     {}
 
     STREAM_SESSION& operator=(const STREAM_SESSION& other) {
@@ -153,6 +187,8 @@ struct STREAM_SESSION {
             state_ = other.state_; video_ssrc = other.video_ssrc;
             dtls_transport_ = other.dtls_transport_;
             srtp_context_ = other.srtp_context_;
+            rtsp_session_id_ = other.rtsp_session_id_;
+            // conn_ (unique_ptr) not copied — ownership stays with source
         }
         return *this;
     }

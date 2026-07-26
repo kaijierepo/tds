@@ -790,8 +790,8 @@ void StreamNode::controlThread() {
 
             // 心跳保活
             if (isPulling_) {
-                if (source_conn_ && !source_session_.empty()) {
-                    if (!rtspGetParameter(*source_conn_, config_.origin_pull_url, source_session_)) {
+                if (session_origin_pull_.conn_ && !session_origin_pull_.rtsp_session_id_.empty()) {
+                    if (!rtspGetParameter(*session_origin_pull_.conn_, config_.origin_pull_url, session_origin_pull_.rtsp_session_id_)) {
                         setError("Source RTSP keepalive failed", 1002);
                         isPulling_ = false;
                         teardown();
@@ -800,8 +800,8 @@ void StreamNode::controlThread() {
             }
 
             if (isPushing_) {
-                if (target_conn_ && !target_session_.empty()) {
-                    if (!rtspGetParameter(*target_conn_, config_.relay_push_url, target_session_)) {
+            if (session_relay_push_.conn_ && !session_relay_push_.rtsp_session_id_.empty()) {
+                if (!rtspGetParameter(*session_relay_push_.conn_, config_.relay_push_url, session_relay_push_.rtsp_session_id_)) {
                         setError("Target RTSP keepalive failed", 1002);
                         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
                         isPushing_ = false;
@@ -824,10 +824,10 @@ bool StreamNode::openRelayPushSession() {
         return false;
     }
 
-    target_conn_ = std::make_unique<Connection>();
-    if (!target_conn_->connect(relay_push_url.host, relay_push_url.port)) {
+    session_relay_push_.conn_ = std::make_unique<Connection>();
+    if (!session_relay_push_.conn_->connect(relay_push_url.host, relay_push_url.port)) {
         setError("Failed to connect to target server: " + relay_push_url.host + ":" + std::to_string(relay_push_url.port) +
-            " (err=" + std::to_string(target_conn_->lastError()) +
+            " (err=" + std::to_string(session_relay_push_.conn_->lastError()) +
             "). Is an RTSP server listening on that port?",
             3006);
         return false;
@@ -857,7 +857,7 @@ bool StreamNode::openRelayPushSession() {
     std::string target_sdp = generateSDP(session_relay_push_, STREAM_SESSION());
 
     // 发送ANNOUNCE到目标
-    if (!rtspAnnounce(*target_conn_, config_.relay_push_url, target_sdp, target_session_)) {
+    if (!rtspAnnounce(*session_relay_push_.conn_, config_.relay_push_url, target_sdp, session_relay_push_.rtsp_session_id_)) {
         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("ANNOUNCE failed", 3007);
         return false;
@@ -882,7 +882,7 @@ bool StreamNode::openRelayPushSession() {
     }
 
     // 发送SETUP到目标
-    if (!rtspSetup(*target_conn_, config_.relay_push_url, target_session_, session_relay_push_, true)) {
+    if (!rtspSetup(*session_relay_push_.conn_, config_.relay_push_url, session_relay_push_.rtsp_session_id_, session_relay_push_, true)) {
         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("SETUP failed for target", 3008);
         return false;
@@ -923,7 +923,7 @@ bool StreamNode::openRelayPushSession() {
 
 
     // 发送RECORD到目标
-    if (!rtspRecord(*target_conn_, config_.relay_push_url, target_session_)) {
+    if (!rtspRecord(*session_relay_push_.conn_, config_.relay_push_url, session_relay_push_.rtsp_session_id_)) {
         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
         setError("RECORD failed", 3009);
         return false;
@@ -947,8 +947,8 @@ bool StreamNode::openOriginPullSession() {
     }
 
     // 连接到源服务器
-    source_conn_ = std::make_unique<Connection>();
-    if (!source_conn_->connect(src_url.host, src_url.port)) {
+    session_origin_pull_.conn_ = std::make_unique<Connection>();
+    if (!session_origin_pull_.conn_->connect(src_url.host, src_url.port)) {
         setError("Failed to connect to source server: " + src_url.host + ":" + std::to_string(src_url.port), 2002);
         return false;
     }
@@ -957,7 +957,7 @@ bool StreamNode::openOriginPullSession() {
 
     // 发送DESCRIBE
     std::string sdp;
-    if (!rtspDescribe(*source_conn_, config_.origin_pull_url, sdp, source_session_)) {
+    if (!rtspDescribe(*session_origin_pull_.conn_, config_.origin_pull_url, sdp, session_origin_pull_.rtsp_session_id_)) {
         setError("DESCRIBE failed", 2003);
         return false;
     }
@@ -1009,7 +1009,7 @@ bool StreamNode::openOriginPullSession() {
     );
 
     // 发送SETUP到源
-    if (!rtspSetup(*source_conn_, config_.origin_pull_url, source_session_, session_origin_pull_)) {
+    if (!rtspSetup(*session_origin_pull_.conn_, config_.origin_pull_url, session_origin_pull_.rtsp_session_id_, session_origin_pull_)) {
         setError("SETUP failed for source", 3003);
         return false;
     }
@@ -1042,7 +1042,7 @@ bool StreamNode::openOriginPullSession() {
     );
 
     // 发送PLAY
-    if (!rtspPlay(*source_conn_, config_.origin_pull_url, source_session_)) {
+    if (!rtspPlay(*session_origin_pull_.conn_, config_.origin_pull_url, session_origin_pull_.rtsp_session_id_)) {
         setError("PLAY failed", 3004);
         return false;
     }
@@ -1051,24 +1051,24 @@ bool StreamNode::openOriginPullSession() {
 }
 
 void StreamNode::teardown() {
-    if (source_conn_ && !source_session_.empty()) {
-        rtspTeardown(*source_conn_, config_.origin_pull_url, source_session_);
+    if (session_origin_pull_.conn_ && !session_origin_pull_.rtsp_session_id_.empty()) {
+        rtspTeardown(*session_origin_pull_.conn_, config_.origin_pull_url, session_origin_pull_.rtsp_session_id_);
     }
 
-    if (target_conn_ && !target_session_.empty()) {
-        rtspTeardown(*target_conn_, config_.relay_push_url, target_session_);
+    if (session_relay_push_.conn_ && !session_relay_push_.rtsp_session_id_.empty()) {
+        rtspTeardown(*session_relay_push_.conn_, config_.relay_push_url, session_relay_push_.rtsp_session_id_);
     }
 
-    if (source_conn_) {
-        source_conn_->disconnect();
+    if (session_origin_pull_.conn_) {
+        session_origin_pull_.conn_->disconnect();
     }
 
-    if (target_conn_) {
-        target_conn_->disconnect();
+    if (session_relay_push_.conn_) {
+        session_relay_push_.conn_->disconnect();
     }
 
-    source_session_.clear();
-    target_session_.clear();
+    session_origin_pull_.rtsp_session_id_.clear();
+    session_relay_push_.rtsp_session_id_.clear();
     target_rtp_host_.clear();
 
     session_origin_pull_.client_rtp_port = 0;

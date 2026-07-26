@@ -166,14 +166,14 @@ size_t IsValidPkt_HTTP(std::string& strData, size_t iLen) {
 // Connection 实现
 // ============================================================================
 
-StreamNode::Connection::Connection() : sockfd_(kInvalidSocket) {
+Connection::Connection() : sockfd_(kInvalidSocket) {
 }
 
-StreamNode::Connection::~Connection() {
+Connection::~Connection() {
     disconnect();
 }
 
-bool StreamNode::Connection::connect(const std::string& host, int port, int timeout_ms) {
+bool Connection::connect(const std::string& host, int port, int timeout_ms) {
     disconnect();
     last_error_ = 0;
 
@@ -229,7 +229,7 @@ bool StreamNode::Connection::connect(const std::string& host, int port, int time
     return true;
 }
 
-void StreamNode::Connection::disconnect() {
+void Connection::disconnect() {
     if (sockfd_ != kInvalidSocket) {
         CLOSE_SOCKET(static_cast<SOCKET_TYPE>(sockfd_));
         sockfd_ = kInvalidSocket;
@@ -239,11 +239,11 @@ void StreamNode::Connection::disconnect() {
     last_error_ = 0;
 }
 
-bool StreamNode::Connection::isConnected() const {
+bool Connection::isConnected() const {
     return sockfd_ != kInvalidSocket;
 }
 
-int StreamNode::Connection::send(const void* data, size_t size, int timeout_ms) {
+int Connection::send(const void* data, size_t size, int timeout_ms) {
     if (sockfd_ == kInvalidSocket) return -1;
 
     if (timeout_ms > 0) {
@@ -279,7 +279,7 @@ int StreamNode::Connection::send(const void* data, size_t size, int timeout_ms) 
     return static_cast<int>(total_sent);
 }
 
-int StreamNode::Connection::receive(void* buffer, size_t size, int timeout_ms) {
+int Connection::receive(void* buffer, size_t size, int timeout_ms) {
     if (sockfd_ == kInvalidSocket) return -1;
 
     if (timeout_ms > 0) {
@@ -302,7 +302,7 @@ int StreamNode::Connection::receive(void* buffer, size_t size, int timeout_ms) {
     return received;
 }
 
-int StreamNode::Connection::receiveHttpResp(std::string& response, int timeout_ms) {
+int Connection::receiveHttpResp(std::string& response, int timeout_ms) {
     if (sockfd_ == kInvalidSocket) return -1;
 
     int total = 0;
@@ -355,7 +355,7 @@ int StreamNode::Connection::receiveHttpResp(std::string& response, int timeout_m
     return total;
 }
 
-bool StreamNode::Connection::setSocketTimeout(int timeout_ms) {
+bool Connection::setSocketTimeout(int timeout_ms) {
     if (sockfd_ == kInvalidSocket) return false;
 
 #ifdef _WIN32
