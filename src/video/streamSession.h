@@ -136,6 +136,13 @@ struct STREAM_SESSION {
     int retry_count_ = 0;         // 当前重试次数
     std::chrono::steady_clock::time_point last_reconnect_time_;  // 上次重连时间
 
+    // UDP 传输配置（per-session）
+    int udp_recv_buffer_size = 4194304;  // UDP接收缓冲区(4MB)，避免4K高码流内核丢包
+    int udp_send_buffer_size = 0;        // UDP发送缓冲区大小(0=系统默认)
+    int udp_ttl = 64;                    // TTL生存时间
+    int udp_tos = 0xC0;                  // Type of Service (Default: AF41 低延迟)
+    bool udp_multicast_loop = false;     // 组播回环
+
     // 新会话首次发送数据标记：首次先发 SPS/PPS + 缓存的关键帧，再开始转发实时流
     bool is_first_send_ = true;
 
@@ -181,6 +188,11 @@ struct STREAM_SESSION {
         , buffer_size_(other.buffer_size_)
         , retry_count_(other.retry_count_)
         , last_reconnect_time_(other.last_reconnect_time_)
+        , udp_recv_buffer_size(other.udp_recv_buffer_size)
+        , udp_send_buffer_size(other.udp_send_buffer_size)
+        , udp_ttl(other.udp_ttl)
+        , udp_tos(other.udp_tos)
+        , udp_multicast_loop(other.udp_multicast_loop)
         // conn_ (unique_ptr) cannot be copied; left as nullptr
     {}
 
@@ -217,6 +229,11 @@ struct STREAM_SESSION {
             buffer_size_ = other.buffer_size_;
             retry_count_ = other.retry_count_;
             last_reconnect_time_ = other.last_reconnect_time_;
+            udp_recv_buffer_size = other.udp_recv_buffer_size;
+            udp_send_buffer_size = other.udp_send_buffer_size;
+            udp_ttl = other.udp_ttl;
+            udp_tos = other.udp_tos;
+            udp_multicast_loop = other.udp_multicast_loop;
             // conn_ (unique_ptr) not copied — ownership stays with source
         }
         return *this;

@@ -79,13 +79,6 @@ public:
         std::string tag;
         std::string streamUrl;
         std::string srcStreamFetch = "always"; // 拉流模式: "always" 或 "ondemand"
-        
-        // UDP特定配置
-        int udp_recv_buffer_size = 4194304;  // UDP接收缓冲区(4MB)，避免4K高码流内核丢包
-        int udp_send_buffer_size = 0;    // UDP发送缓冲区大小(0=系统默认)
-        int udp_ttl = 64;                // TTL生存时间
-        int udp_tos = 0xC0;              // Type of Service (Default: AF41 低延迟)
-        bool udp_multicast_loop = false; // 组播回环
     };
 
     // 统计结构
@@ -338,7 +331,7 @@ public:
     bool createUDPPushSocket();    // 创建UDP推流socket
 	bool createUDPServerSocket(STREAM_SESSION& streamInfo);  // 创建UDP服务器socket,客户端拉流时
     void closeUDPSockets();
-    bool configureUDPSocket(SocketHandle sock, bool is_multicast);
+    bool configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& session);
     bool sendUDPDataToSession(const uint8_t* data, size_t size,STREAM_SESSION& rtspSession);
     bool sendUDPData(const uint8_t* data, size_t size);
     int receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port);

@@ -25,7 +25,7 @@ bool StreamNode::createUDPPullSocket() {
             return false;
         }
 
-        if (!configureUDPSocket(rtp_sock, false)) {
+        if (!configureUDPSocket(rtp_sock, false, session_origin_pull_)) {
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             continue;
         }
@@ -58,7 +58,7 @@ bool StreamNode::createUDPPullSocket() {
             continue;
         }
 
-        if (!configureUDPSocket(rtcp_sock, false)) {
+        if (!configureUDPSocket(rtcp_sock, false, session_origin_pull_)) {
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
             continue;
@@ -109,7 +109,7 @@ bool StreamNode::createUDPPushSocket() {
             return false;
         }
 
-        if (!configureUDPSocket(rtp_sock, false)) {
+        if (!configureUDPSocket(rtp_sock, false, session_relay_push_)) {
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             continue;
         }
@@ -142,7 +142,7 @@ bool StreamNode::createUDPPushSocket() {
             continue;
         }
 
-        if (!configureUDPSocket(rtcp_sock, false)) {
+        if (!configureUDPSocket(rtcp_sock, false, session_relay_push_)) {
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
             continue;
@@ -192,7 +192,7 @@ bool StreamNode::createUDPServerSocket(STREAM_SESSION& streamInfo)
             return false;
         }
 
-        if (!configureUDPSocket(rtp_sock, false)) {
+        if (!configureUDPSocket(rtp_sock, false, streamInfo)) {
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             continue;
         }
@@ -225,7 +225,7 @@ bool StreamNode::createUDPServerSocket(STREAM_SESSION& streamInfo)
             continue;
         }
 
-        if (!configureUDPSocket(rtcp_sock, false)) {
+        if (!configureUDPSocket(rtcp_sock, false, streamInfo)) {
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
             continue;
@@ -291,7 +291,7 @@ void StreamNode::closeUDPSockets() {
     session_relay_push_.client_rtcp_port = 0;
 }
 
-bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast) {
+bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& session) {
     if (sock == kInvalidSocket) return false;
 
 #ifdef _WIN32
@@ -313,8 +313,8 @@ bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast) {
 #endif
 
     // 设置TTL
-    if (config_.udp_ttl > 0) {
-        int ttl = config_.udp_ttl;
+    if (session.udp_ttl > 0) {
+        int ttl = session.udp_ttl;
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), IPPROTO_IP, IP_TTL,
                        (const char*)&ttl, sizeof(ttl)) != 0) {
             logError("Failed to set UDP TTL");
@@ -322,8 +322,8 @@ bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast) {
     }
 
     // 设置ToS
-    if (config_.udp_tos > 0) {
-        int tos = config_.udp_tos;
+    if (session.udp_tos > 0) {
+        int tos = session.udp_tos;
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), IPPROTO_IP, IP_TOS,
                        (const char*)&tos, sizeof(tos)) != 0) {
             logError("Failed to set UDP ToS");
@@ -332,7 +332,7 @@ bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast) {
 
     // 设置组播回环
     if (is_multicast) {
-        char loop = config_.udp_multicast_loop ? 1 : 0;
+        char loop = session.udp_multicast_loop ? 1 : 0;
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), IPPROTO_IP, IP_MULTICAST_LOOP,
                        &loop, sizeof(loop)) != 0) {
             logError("Failed to set UDP multicast loop");
@@ -340,17 +340,17 @@ bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast) {
     }
 
     // 设置接收缓冲区大小
-    if (config_.udp_recv_buffer_size > 0) {
+    if (session.udp_recv_buffer_size > 0) {
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), SOL_SOCKET, SO_RCVBUF,
-                       (const char*)&config_.udp_recv_buffer_size, sizeof(config_.udp_recv_buffer_size)) != 0) {
+                       (const char*)&session.udp_recv_buffer_size, sizeof(session.udp_recv_buffer_size)) != 0) {
             logError("Failed to set UDP recv buffer size");
         }
     }
 
     // 设置发送缓冲区大小
-    if (config_.udp_send_buffer_size > 0) {
+    if (session.udp_send_buffer_size > 0) {
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), SOL_SOCKET, SO_SNDBUF,
-                       (const char*)&config_.udp_send_buffer_size, sizeof(config_.udp_send_buffer_size)) != 0) {
+                       (const char*)&session.udp_send_buffer_size, sizeof(session.udp_send_buffer_size)) != 0) {
             logError("Failed to set UDP send buffer size");
         }
     }

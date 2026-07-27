@@ -370,8 +370,8 @@ bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
         if (session_relay_push_.transport_mode == TransportMode::UDP) {
             request << "Transport: RTP/AVP/UDP;unicast;mode=record;"
                 << "client_port=" << stream.client_port;
-            if (config_.udp_ttl != 64) {
-                request << ";ttl=" << config_.udp_ttl;
+            if (session_relay_push_.udp_ttl != 64) {
+                request << ";ttl=" << session_relay_push_.udp_ttl;
             }
             request << "\r\n";
         }
@@ -385,8 +385,8 @@ bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
         if (session_origin_pull_.transport_mode == TransportMode::UDP) {
             request << "Transport: RTP/AVP/UDP;unicast;"
                 << "client_port=" << stream.client_port;
-            if (config_.udp_ttl != 64) {
-                request << ";ttl=" << config_.udp_ttl;
+            if (session_origin_pull_.udp_ttl != 64) {
+                request << ";ttl=" << session_origin_pull_.udp_ttl;
             }
             request << "\r\n";
         }
