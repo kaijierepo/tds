@@ -239,5 +239,18 @@ struct STREAM_SESSION {
         return *this;
     }
 
+    // ---- UDP socket 操作（实现见 streamSession_socket.cpp）----
+    // 配置 UDP socket（超时/TTL/ToS/缓冲区/地址重用）
+    bool configureUDPSocket(SocketHandle sock, bool is_multicast);
+    // 创建连续的 RTP+RTCP socket 对
+    // isServer: true=设置 server_rtp_port/server_rtcp_port, false=设置 client_rtp_port/client_rtcp_port
+    bool createUDPConsecutiveSockets(bool isServer);
+    // 关闭本 session 的 RTP/RTCP socket
+    void closeSockets();
+    // 发送 UDP 数据到本 session 的远端
+    bool sendUDPData(const uint8_t* data, size_t size);
+    // 从本 session 的 RTP socket 接收 UDP 数据
+    int receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port);
+
     std::string getSessionStateDesc();
 };

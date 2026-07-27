@@ -949,32 +949,28 @@ void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session)
 }
 
 // ============================================================================
-// Socket 操作 — 薄包装器，委托到 streamSession_socket.cpp 自由函数
+// Socket 操作 — 薄包装器，委托到 STREAM_SESSION 成员函数
 // ============================================================================
 
 bool StreamNode::createUDPPullSocket() {
-    return createUDPConsecutiveSockets(session_origin_pull_, false);
+    return session_origin_pull_.createUDPConsecutiveSockets(false);
 }
 
 bool StreamNode::createUDPPushSocket() {
-    return createUDPConsecutiveSockets(session_relay_push_, false);
+    return session_relay_push_.createUDPConsecutiveSockets(false);
 }
 
 bool StreamNode::createUDPServerSocket(STREAM_SESSION& streamInfo) {
-    return createUDPConsecutiveSockets(streamInfo, true);
+    return streamInfo.createUDPConsecutiveSockets(true);
 }
 
 void StreamNode::closeUDPSockets() {
-    closeSessionSockets(session_origin_pull_);
-    closeSessionSockets(session_relay_push_);
-}
-
-bool StreamNode::configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& session) {
-    return ::configureUDPSocket(sock, is_multicast, session);
+    session_origin_pull_.closeSockets();
+    session_relay_push_.closeSockets();
 }
 
 bool StreamNode::sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_SESSION& rtspSession) {
-    bool ok = ::sendUDPDataToSession(data, size, rtspSession);
+    bool ok = rtspSession.sendUDPData(data, size);
     if (!ok) {
         std::lock_guard<std::mutex> lock(stats_mutex_);
         stats_.errors++;
@@ -983,7 +979,7 @@ bool StreamNode::sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_S
 }
 
 int StreamNode::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
-    return receiveUDPDataFromSession(buffer, size, src_ip, src_port, session_origin_pull_);
+    return session_origin_pull_.receiveUDPData(buffer, size, src_ip, src_port);
 }
 
 

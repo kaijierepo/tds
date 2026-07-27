@@ -15,7 +15,6 @@
 
 #include "streamCommon.h"
 #include "streamSession.h"
-#include "streamSession_socket.h"
 
 // RTP包结�?
 // NAL header (1 byte) format: F(1) | NRI(2) | Type(5)
@@ -332,7 +331,6 @@ public:
     bool createUDPPushSocket();    // 创建UDP推流socket
 	bool createUDPServerSocket(STREAM_SESSION& streamInfo);  // 创建UDP服务器socket,客户端拉流时
     void closeUDPSockets();
-    bool configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& session);
     bool sendUDPDataToSession(const uint8_t* data, size_t size,STREAM_SESSION& rtspSession);
     bool sendUDPData(const uint8_t* data, size_t size);
     int receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port);

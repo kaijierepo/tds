@@ -1,8 +1,8 @@
 // ============================================================================
-// streamSession_socket.cpp - Socket 操作自由函数实现
+// streamSession_socket.cpp - STREAM_SESSION 的 UDP socket 操作成员函数实现
 // ============================================================================
 
-#include "streamSession_socket.h"
+#include "streamSession.h"
 #include <cstring>
 #include <logger.h>
 
@@ -14,7 +14,7 @@
 // configureUDPSocket — 配置 UDP socket 选项
 // ============================================================================
 
-bool configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& session) {
+bool STREAM_SESSION::configureUDPSocket(SocketHandle sock, bool is_multicast) {
     if (sock == kInvalidSocket) return false;
 
 #ifdef _WIN32
@@ -36,8 +36,8 @@ bool configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& se
 #endif
 
     // 设置TTL
-    if (session.udp_ttl > 0) {
-        int ttl = session.udp_ttl;
+    if (udp_ttl > 0) {
+        int ttl = udp_ttl;
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), IPPROTO_IP, IP_TTL,
                        (const char*)&ttl, sizeof(ttl)) != 0) {
             LOG("Failed to set UDP TTL");
@@ -45,8 +45,8 @@ bool configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& se
     }
 
     // 设置ToS
-    if (session.udp_tos > 0) {
-        int tos = session.udp_tos;
+    if (udp_tos > 0) {
+        int tos = udp_tos;
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), IPPROTO_IP, IP_TOS,
                        (const char*)&tos, sizeof(tos)) != 0) {
             LOG("Failed to set UDP ToS");
@@ -55,7 +55,7 @@ bool configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& se
 
     // 设置组播回环
     if (is_multicast) {
-        char loop = session.udp_multicast_loop ? 1 : 0;
+        char loop = udp_multicast_loop ? 1 : 0;
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), IPPROTO_IP, IP_MULTICAST_LOOP,
                        &loop, sizeof(loop)) != 0) {
             LOG("Failed to set UDP multicast loop");
@@ -63,17 +63,17 @@ bool configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& se
     }
 
     // 设置接收缓冲区大小
-    if (session.udp_recv_buffer_size > 0) {
+    if (udp_recv_buffer_size > 0) {
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), SOL_SOCKET, SO_RCVBUF,
-                       (const char*)&session.udp_recv_buffer_size, sizeof(session.udp_recv_buffer_size)) != 0) {
+                       (const char*)&udp_recv_buffer_size, sizeof(udp_recv_buffer_size)) != 0) {
             LOG("Failed to set UDP recv buffer size");
         }
     }
 
     // 设置发送缓冲区大小
-    if (session.udp_send_buffer_size > 0) {
+    if (udp_send_buffer_size > 0) {
         if (setsockopt(static_cast<SOCKET_TYPE>(sock), SOL_SOCKET, SO_SNDBUF,
-                       (const char*)&session.udp_send_buffer_size, sizeof(session.udp_send_buffer_size)) != 0) {
+                       (const char*)&udp_send_buffer_size, sizeof(udp_send_buffer_size)) != 0) {
             LOG("Failed to set UDP send buffer size");
         }
     }
@@ -93,7 +93,7 @@ bool configureUDPSocket(SocketHandle sock, bool is_multicast, STREAM_SESSION& se
 // isServer: true=设置 server_rtp_port/server_rtcp_port, false=设置 client_rtp_port/client_rtcp_port
 // ============================================================================
 
-bool createUDPConsecutiveSockets(STREAM_SESSION& session, bool isServer) {
+bool STREAM_SESSION::createUDPConsecutiveSockets(bool isServer) {
     const int max_attempts = 10;
 
     for (int attempt = 0; attempt < max_attempts; ++attempt) {
@@ -104,7 +104,7 @@ bool createUDPConsecutiveSockets(STREAM_SESSION& session, bool isServer) {
             return false;
         }
 
-        if (!configureUDPSocket(rtp_sock, false, session)) {
+        if (!configureUDPSocket(rtp_sock, false)) {
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             continue;
         }
@@ -137,7 +137,7 @@ bool createUDPConsecutiveSockets(STREAM_SESSION& session, bool isServer) {
             continue;
         }
 
-        if (!configureUDPSocket(rtcp_sock, false, session)) {
+        if (!configureUDPSocket(rtcp_sock, false)) {
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
             continue;
@@ -151,28 +151,28 @@ bool createUDPConsecutiveSockets(STREAM_SESSION& session, bool isServer) {
 
         if (::bind(static_cast<SOCKET_TYPE>(rtcp_sock), (struct sockaddr*)&rtcp_addr, sizeof(rtcp_addr)) == 0) {
             // 成功获取到一对连续端口
-            session.rtp_socket = rtp_sock;
-            session.rtcp_socket = rtcp_sock;
+            rtp_socket = rtp_sock;
+            rtcp_socket = rtcp_sock;
 
             if (isServer) {
-                session.server_rtp_port = rtp_port;
-                session.server_rtcp_port = rtcp_port;
+                server_rtp_port = rtp_port;
+                server_rtcp_port = rtcp_port;
 
                 char buf[256];
                 snprintf(buf, sizeof(buf),
                     "UDP server sockets created: rtp_fd=%d rtp_port=%d rtcp_fd=%d rtcp_port=%d",
-                    (int)session.rtp_socket, session.server_rtp_port,
-                    (int)session.rtcp_socket, session.server_rtcp_port);
+                    (int)rtp_socket, server_rtp_port,
+                    (int)rtcp_socket, server_rtcp_port);
                 LOG(buf);
             } else {
-                session.client_rtp_port = rtp_port;
-                session.client_rtcp_port = rtcp_port;
+                client_rtp_port = rtp_port;
+                client_rtcp_port = rtcp_port;
 
                 char buf[256];
                 snprintf(buf, sizeof(buf),
                     "UDP client sockets created: rtp_fd=%d rtp_port=%d rtcp_fd=%d rtcp_port=%d",
-                    (int)session.rtp_socket, session.client_rtp_port,
-                    (int)session.rtcp_socket, session.client_rtcp_port);
+                    (int)rtp_socket, client_rtp_port,
+                    (int)rtcp_socket, client_rtcp_port);
                 LOG(buf);
             }
 
@@ -185,52 +185,52 @@ bool createUDPConsecutiveSockets(STREAM_SESSION& session, bool isServer) {
     }
 
     LOG("Failed to create consecutive UDP sockets for RTP/RTCP");
-    session.rtp_socket = kInvalidSocket;
-    session.rtcp_socket = kInvalidSocket;
+    rtp_socket = kInvalidSocket;
+    rtcp_socket = kInvalidSocket;
     if (isServer) {
-        session.server_rtp_port = 0;
-        session.server_rtcp_port = 0;
+        server_rtp_port = 0;
+        server_rtcp_port = 0;
     } else {
-        session.client_rtp_port = 0;
-        session.client_rtcp_port = 0;
+        client_rtp_port = 0;
+        client_rtcp_port = 0;
     }
     return false;
 }
 
 // ============================================================================
-// closeSessionSockets — 关闭一个 session 的 RTP/RTCP socket
+// closeSockets — 关闭本 session 的 RTP/RTCP socket
 // ============================================================================
 
-void closeSessionSockets(STREAM_SESSION& session) {
-    if (session.rtp_socket != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(session.rtp_socket));
-        session.rtp_socket = kInvalidSocket;
+void STREAM_SESSION::closeSockets() {
+    if (rtp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_socket));
+        rtp_socket = kInvalidSocket;
     }
-    if (session.rtcp_socket != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(session.rtcp_socket));
-        session.rtcp_socket = kInvalidSocket;
+    if (rtcp_socket != kInvalidSocket) {
+        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_socket));
+        rtcp_socket = kInvalidSocket;
     }
-    session.client_rtp_port = 0;
-    session.client_rtcp_port = 0;
+    client_rtp_port = 0;
+    client_rtcp_port = 0;
 }
 
 // ============================================================================
-// sendUDPDataToSession — 发送 UDP 数据到 session 远端
+// sendUDPData — 发送 UDP 数据到本 session 远端
 // ============================================================================
 
-bool sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_SESSION& rtspSession) {
+bool STREAM_SESSION::sendUDPData(const uint8_t* data, size_t size) {
     int remoteRtpPort = 0;
     int remoteRtcpPort = 0;
-    if (rtspSession.session_type_ == ORIGIN_PULL || rtspSession.session_type_ == RELAY_PUSH) {
-        remoteRtpPort = rtspSession.server_rtp_port;
-        remoteRtcpPort = rtspSession.server_rtcp_port;
+    if (session_type_ == ORIGIN_PULL || session_type_ == RELAY_PUSH) {
+        remoteRtpPort = server_rtp_port;
+        remoteRtcpPort = server_rtcp_port;
     }
     else {
-        remoteRtpPort = rtspSession.client_rtp_port;
-        remoteRtcpPort = rtspSession.client_rtcp_port;
+        remoteRtpPort = client_rtp_port;
+        remoteRtcpPort = client_rtcp_port;
     }
 
-    if (rtspSession.rtp_socket == kInvalidSocket || remoteRtpPort == 0) {
+    if (rtp_socket == kInvalidSocket || remoteRtpPort == 0) {
         return false;
     }
 
@@ -240,12 +240,12 @@ bool sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_SESSION& rtsp
     target_addr.sin_family = AF_INET;
     target_addr.sin_port = htons(remoteRtpPort);
 
-    if (inet_pton(AF_INET, rtspSession.remote_host.c_str(), &target_addr.sin_addr) <= 0) {
-        struct hostent* server = gethostbyname(rtspSession.remote_host.c_str());
+    if (inet_pton(AF_INET, remote_host.c_str(), &target_addr.sin_addr) <= 0) {
+        struct hostent* server = gethostbyname(remote_host.c_str());
         if (!server) {
             char buf[256];
             snprintf(buf, sizeof(buf), "Failed to resolve target host: %s",
-                rtspSession.remote_host.c_str());
+                remote_host.c_str());
             LOG(buf);
             return false;
         }
@@ -253,7 +253,7 @@ bool sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_SESSION& rtsp
     }
 
     // 发送UDP数据
-    int sent = sendto(static_cast<SOCKET_TYPE>(rtspSession.rtp_socket),
+    int sent = sendto(static_cast<SOCKET_TYPE>(rtp_socket),
         (const char*)data, (int)size, 0,
         (struct sockaddr*)&target_addr, sizeof(target_addr));
 
@@ -270,23 +270,23 @@ bool sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_SESSION& rtsp
         LOG(buf);
         return false;
     }
-    rtspSession.rtpBytesSended += sent;
+    rtpBytesSended += sent;
     return true;
 }
 
 // ============================================================================
-// receiveUDPDataFromSession — 从 session 的 RTP socket 接收数据
+// receiveUDPData — 从本 session 的 RTP socket 接收数据
 // ============================================================================
 
-int receiveUDPDataFromSession(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port, STREAM_SESSION& session) {
-    if (session.rtp_socket == kInvalidSocket) {
+int STREAM_SESSION::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
+    if (rtp_socket == kInvalidSocket) {
         return -1;
     }
 
     struct sockaddr_in from_addr;
     socklen_t from_len = sizeof(from_addr);
 
-    int received = recvfrom(static_cast<SOCKET_TYPE>(session.rtp_socket),
+    int received = recvfrom(static_cast<SOCKET_TYPE>(rtp_socket),
                              (char*)buffer, (int)size, 0,
                              (struct sockaddr*)&from_addr, &from_len);
 
