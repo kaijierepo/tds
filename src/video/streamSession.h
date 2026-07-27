@@ -10,7 +10,7 @@
 #include <cstdint>
 
 #include "streamCommon.h"
-#include "streamNode_webrtc.h"
+#include "streamSession_webrtc.h"
 
 // ============================================================================
 // Connection — TCP 连接（通用，无 StreamNode 依赖）

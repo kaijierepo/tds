@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "streamServer.h"
-#include "streamNode_webrtc.h"
+#include "streamSession_webrtc.h"
 #include "logger.h"
 
 string toTimeStr(std::chrono::system_clock::time_point tp) {
@@ -287,7 +287,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
 		// 从浏览器 Offer 中解析 H264 payload type（避免 PT 冲突）
-		int h264PT = sn->parseH264PTFromOffer(sdpOffer);
+		int h264PT = parseH264PTFromOffer(sdpOffer);
 		if (h264PT > 0) {
 			si.payload_type = h264PT;
 			LOG("[WebRTC] using H264 PT=%d from Offer", h264PT);
@@ -330,7 +330,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			  "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
 			: m_dtlsFingerprint;
 
-		sn->buildWebRTCSdpAnswer(si, serverIp, fingerprint);
+		buildWebRTCSdpAnswer(si, serverIp, fingerprint);
 		LOG("[WebRTC] SDP Answer:\n%s", si.sdp.c_str());
 
 		auto sessionPtr = std::make_shared<STREAM_SESSION>(si);

@@ -6,7 +6,7 @@
 
 #include "streamNode.h"
 #include "streamServer.h"
-#include "streamNode_webrtc.h"
+#include "streamSession_webrtc.h"
 #include "dtls_transport.h"
 #include "srtp_protect.h"
 #include <fstream>

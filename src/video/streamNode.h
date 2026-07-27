@@ -15,6 +15,7 @@
 
 #include "streamCommon.h"
 #include "streamSession.h"
+#include "streamSession_socket.h"
 
 // RTP包结�?
 // NAL header (1 byte) format: F(1) | NRI(2) | Type(5)
@@ -340,12 +341,6 @@ public:
     void startRtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);
     void stopAllRtcHandleThreads();
 
-    // WebRTC SDP Answer 构建（设置 si.is_webrtc/ice_ufrag/ice_pwd/sdp）
-    static void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
-                                      const std::string& dtlsFingerprint);
-    // 从浏览器 SDP Offer 中提取 H264 payload type
-    static int parseH264PTFromOffer(const std::string& sdpOffer);
-
     // 日志
     void logInfo(const std::string& msg) const;
     void logError(const std::string& msg) const;
@@ -360,22 +355,4 @@ private:
 
     // ICE-Lite 工作循环（由每个 WebRTC session 的 ice_thread_ 执行）
     void rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);
-
-    // ICE-Lite STUN 处理：解析 Binding Request 并回复 Binding Success Response
-    void webrtcSession_handle_STUN(std::shared_ptr<STREAM_SESSION> session,
-                                    uint8_t* buf, int len,
-                                    struct sockaddr_in& peer,
-                                    std::chrono::steady_clock::time_point& dtls_start);
-    // DTLS 握手处理：喂入数据并推进握手状态机
-    void webrtcSession_handle_DTLS(std::shared_ptr<STREAM_SESSION> session,
-                                    SessionDtlsState* dtls_state,
-                                    uint8_t* buf, int len,
-                                    struct sockaddr_in& peer,
-                                    std::chrono::steady_clock::time_point& dtls_start);
-    // SRTCP 反馈处理：解密浏览器的 RTCP compound，识别 PLI/FIR（请求关键帧）
-    // 与 NACK（按序号从重传缓存重发已加密的 SRTP 包）
-    void webrtcSession_handle_SRTCP(std::shared_ptr<STREAM_SESSION> session,
-                                     SessionDtlsState* dtls_state,
-                                     uint8_t* buf, int len,
-                                     struct sockaddr_in& peer);
 };
