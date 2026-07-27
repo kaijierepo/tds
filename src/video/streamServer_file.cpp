@@ -499,12 +499,12 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	for (size_t i = 0; i < fileUrl.size(); i++) {
 		if (fileUrl[i] == '\\') fileUrl[i] = '/';
 	}
-	cfg.retry_interval = 0;
-	cfg.max_retries = 0;
-	cfg.rtp_timeout = 0;
 
 	node->config_ = cfg;
 	node->session_origin_pull_.server_url_ = fileUrl;
+	node->session_origin_pull_.retry_interval_ = 0;
+	node->session_origin_pull_.max_retries_ = 0;
+	node->session_origin_pull_.rtp_timeout_ = 0;
 
 	// 设置 pull_session_ 的编码信息
 	node->session_origin_pull_.codec = "H264";
@@ -673,10 +673,10 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	for (size_t i = 0; i < fileUrl.size(); i++) {
 		if (fileUrl[i] == '\\') fileUrl[i] = '/';
 	}
-	cfg.retry_interval = 0;
-	cfg.max_retries = 0;
-	cfg.rtp_timeout = 0;
 	node->config_ = cfg;
+	node->session_origin_pull_.retry_interval_ = 0;
+	node->session_origin_pull_.max_retries_ = 0;
+	node->session_origin_pull_.rtp_timeout_ = 0;
 
 	node->session_origin_pull_.codec = "H264";
 	node->session_origin_pull_.payload_type = 96;

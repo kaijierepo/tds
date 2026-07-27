@@ -180,9 +180,9 @@ std::shared_ptr<StreamNode> StreamServer::createStream(const STREAM_OPEN_PARAM& 
 	sn->session_origin_pull_.server_url_ = op.originPullUrl;
 	sn->extractRtspAuthInfo(sn->session_origin_pull_);
 	sn->session_relay_push_.server_url_ = op.relayPushUrl;
-	sn->config_.retry_interval = 3000;
-	sn->config_.max_retries = 0;
-	sn->config_.rtp_timeout = 10000;
+	sn->session_origin_pull_.retry_interval_ = 3000;
+	sn->session_origin_pull_.max_retries_ = 0;
+	sn->session_origin_pull_.rtp_timeout_ = 10000;
 	sn->config_.tag = op.tag;
 	sn->config_.streamUrl = streamUrl;
 	sn->config_.srcStreamFetch = op.srcStreamFetch != "" ? op.srcStreamFetch : "always";

@@ -773,7 +773,7 @@ void StreamNode::controlThread() {
                     isPulling_ = true;
                 }
                 else {
-                    doReconnect();
+                    doReconnect(session_origin_pull_);
                     teardown();
                 }
             }
@@ -783,7 +783,7 @@ void StreamNode::controlThread() {
                     isPushing_ = true;
 				}
                 else {
-                    doReconnect();
+                    doReconnect(session_relay_push_);
                     teardown();
                 }
             }

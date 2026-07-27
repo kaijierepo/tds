@@ -335,14 +335,14 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				// 创建一个只用于接收的 StreamNode（不发起拉流）
 				StreamNode::Config cfg;
 				cfg.streamUrl = streamUrl;
-				cfg.retry_interval = 3000;
-				cfg.max_retries = 0;
-				cfg.rtp_timeout = 10000;
 
 				auto node = std::make_shared<StreamNode>();
 				// 直接设置 pull_session_ 信息（跳过 openOriginPullSession）
 				node->config_ = cfg;
 				node->session_origin_pull_ = videoInfo;
+				node->session_origin_pull_.retry_interval_ = 3000;
+				node->session_origin_pull_.max_retries_ = 0;
+				node->session_origin_pull_.rtp_timeout_ = 10000;
 				node->session_origin_pull_.session_type_ = ORIGIN_PULL;
 				node->isPulling_ = true;  // 标记为"有流数据"，使 DESCRIBE 不会等待
 				node->running_ = true;

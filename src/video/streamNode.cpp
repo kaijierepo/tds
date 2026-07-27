@@ -401,7 +401,6 @@ bool StreamNode::start(const Config& config) {
     config_ = config;
     running_ = true;
     stopping_ = false;
-    retry_count_ = 0;
     isPulling_ = false;
     isPushing_ = false;
 
@@ -643,38 +642,38 @@ void StreamNode::setState(SESSION_STATE new_state, const std::string & msg) {
     cv_.notify_all();
 }
 
-bool StreamNode::shouldReconnect() const {
-    if (config_.max_retries > 0 && retry_count_ >= config_.max_retries) {
+bool StreamNode::shouldReconnect(STREAM_SESSION& session) const {
+    if (session.max_retries_ > 0 && session.retry_count_ >= session.max_retries_) {
         return false;
     }
 
     auto now = std::chrono::steady_clock::now();
-    if (now - last_reconnect_time_ < std::chrono::milliseconds(config_.retry_interval)) {
+    if (now - session.last_reconnect_time_ < std::chrono::milliseconds(session.retry_interval_)) {
         return false;
     }
 
     return true;
 }
 
-void StreamNode::doReconnect() {
-    retry_count_++;
-    last_reconnect_time_ = std::chrono::steady_clock::now();
+void StreamNode::doReconnect(STREAM_SESSION& session) {
+    session.retry_count_++;
+    session.last_reconnect_time_ = std::chrono::steady_clock::now();
 
     {
         std::lock_guard<std::mutex> lock(stats_mutex_);
         stats_.reconnect_count++;
     }
 
-    if (config_.max_retries <= 0) {
-        setState(SESSION_STATE::SESSION_RECONNECTING, "Reconnecting (attempt " + std::to_string(retry_count_) + "/unlimited)");
+    if (session.max_retries_ <= 0) {
+        setState(SESSION_STATE::SESSION_RECONNECTING, "Reconnecting (attempt " + std::to_string(session.retry_count_) + "/unlimited)");
     }
     else {
         setState(SESSION_STATE::SESSION_RECONNECTING,
-            "Reconnecting (attempt " + std::to_string(retry_count_) +
-            "/" + std::to_string(config_.max_retries) + ")");
+            "Reconnecting (attempt " + std::to_string(session.retry_count_) +
+            "/" + std::to_string(session.max_retries_) + ")");
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(config_.retry_interval));
+    std::this_thread::sleep_for(std::chrono::milliseconds(session.retry_interval_));
 }
 
 // ============================================================================

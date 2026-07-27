@@ -128,6 +128,14 @@ struct STREAM_SESSION {
     std::string server_username_;  // 远端认证用户名
     std::string server_password_;  // 远端认证密码
 
+    // 重连与超时配置（per-session）
+    int retry_interval_ = 3000;   // 重试间隔(ms)
+    int max_retries_ = 10;        // 最大重试次数，0=无限重试
+    int rtp_timeout_ = 5000;      // RTP超时(ms)
+    int buffer_size_ = 65536;     // 接收缓冲区大小
+    int retry_count_ = 0;         // 当前重试次数
+    std::chrono::steady_clock::time_point last_reconnect_time_;  // 上次重连时间
+
     // 新会话首次发送数据标记：首次先发 SPS/PPS + 缓存的关键帧，再开始转发实时流
     bool is_first_send_ = true;
 
@@ -167,6 +175,12 @@ struct STREAM_SESSION {
         , server_url_(other.server_url_)
         , server_username_(other.server_username_)
         , server_password_(other.server_password_)
+        , retry_interval_(other.retry_interval_)
+        , max_retries_(other.max_retries_)
+        , rtp_timeout_(other.rtp_timeout_)
+        , buffer_size_(other.buffer_size_)
+        , retry_count_(other.retry_count_)
+        , last_reconnect_time_(other.last_reconnect_time_)
         // conn_ (unique_ptr) cannot be copied; left as nullptr
     {}
 
@@ -197,6 +211,12 @@ struct STREAM_SESSION {
             server_url_ = other.server_url_;
             server_username_ = other.server_username_;
             server_password_ = other.server_password_;
+            retry_interval_ = other.retry_interval_;
+            max_retries_ = other.max_retries_;
+            rtp_timeout_ = other.rtp_timeout_;
+            buffer_size_ = other.buffer_size_;
+            retry_count_ = other.retry_count_;
+            last_reconnect_time_ = other.last_reconnect_time_;
             // conn_ (unique_ptr) not copied — ownership stays with source
         }
         return *this;

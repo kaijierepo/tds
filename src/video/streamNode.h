@@ -75,10 +75,6 @@ public:
 
     // 配置结构
     struct Config {
-        int retry_interval = 3000;   // 重试间隔(ms)
-        int max_retries = 10;        // 最大重试次数
-        int rtp_timeout = 5000;      // RTP超时(ms)
-        int buffer_size = 65536;     // 缓冲区大小
         bool verbose = false;        // 详细日志
         std::string tag;
         std::string streamUrl;
@@ -275,7 +271,6 @@ public:
 
     // 统计
     Statistics stats_;
-    int retry_count_ = 0;
 
     // 回调函数
     StatusCallback status_callback_;
@@ -285,8 +280,6 @@ public:
     uint32_t base_timestamp_ = 0;
     uint16_t base_sequence_ = 0;
 
-    // 重连控制
-    std::chrono::steady_clock::time_point last_reconnect_time_;
     std::chrono::system_clock::time_point open_time_;
 
     // 工作线程
@@ -342,8 +335,8 @@ public:
     std::string generateCSeq();
     void setError(const std::string& error, int code = 0);
     void setState(SESSION_STATE new_state, const std::string& msg = "");
-    bool shouldReconnect() const;
-    void doReconnect();
+    bool shouldReconnect(STREAM_SESSION& session) const;
+    void doReconnect(STREAM_SESSION& session);
 
     // UDP传输相关
     bool createUDPPullSocket();   // 创建UDP拉流socket

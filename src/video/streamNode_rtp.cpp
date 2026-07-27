@@ -130,7 +130,7 @@ void StreamNode::doRtpRecv() {
     bool pullUDP = (config_.origin_pull_transport_mode == TransportMode::UDP);
     LOG("[keyinfo][StreamNode]tag=%s,Pull Success,rtp handle thread start,mode:%s",config_.tag.c_str(),pullUDP ? "UDP" : "TCP");
 
-    std::vector<uint8_t> buffer(config_.buffer_size);
+    std::vector<uint8_t> buffer(session_origin_pull_.buffer_size_);
     std::string src_ip;
     int src_port = 0;
 
@@ -278,7 +278,7 @@ void StreamNode::doRtpRecv() {
                 last_frame_time = stats_.last_frame_time;
             }
 
-            if (now - last_frame_time > std::chrono::milliseconds(config_.rtp_timeout)) {
+            if (now - last_frame_time > std::chrono::milliseconds(session_origin_pull_.rtp_timeout_)) {
                 logError("RTP timeout detected");
                 setError("RTP timeout", 1001);
                 break;
