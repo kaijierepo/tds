@@ -59,7 +59,7 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	json jRelay;
 	jRelay["url"] = sn->session_relay_push_.server_url_;
 	jRelay["state"] = sessionStateStr(sn->session_relay_push_.state_);
-	jRelay["transport"] = (sn->config_.relay_push_transport_mode == TransportMode::UDP) ? "udp" : "tcp";
+	jRelay["transport"] = (sn->session_relay_push_.transport_mode == TransportMode::UDP) ? "udp" : "tcp";
 	jRelay["openTime"] = toTimeStr(sn->session_relay_push_.open_time_);
 	jRelay["bytesSended"] = sn->session_relay_push_.rtpBytesSended;
 	jSi["relayPush"] = jRelay;
@@ -730,10 +730,10 @@ bool StreamServer::rpc_setStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESS
 
 	if (!relayTransport.empty()) {
 		TransportMode newMode = (relayTransport == "udp") ? TransportMode::UDP : TransportMode::TCP;
-		if (sn->config_.relay_push_transport_mode != newMode) {
+		if (sn->session_relay_push_.transport_mode != newMode) {
 			LOG("[流媒体] setStream tag=%s relayTransport: %d -> %d",
-				sn->config_.tag.c_str(), (int)sn->config_.relay_push_transport_mode, (int)newMode);
-			sn->config_.relay_push_transport_mode = newMode;
+				sn->config_.tag.c_str(), (int)sn->session_relay_push_.transport_mode, (int)newMode);
+			sn->session_relay_push_.transport_mode = newMode;
 			changed = true;
 		}
 	}

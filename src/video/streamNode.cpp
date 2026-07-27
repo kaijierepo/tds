@@ -387,6 +387,7 @@ StreamNode::StreamNode() {
     open_time_ = std::chrono::system_clock::now();
     stats_.start_time = std::chrono::steady_clock::now();
     stats_.last_frame_time = std::chrono::steady_clock::now();
+    session_relay_push_.transport_mode = TransportMode::TCP;
 }
 
 StreamNode::~StreamNode() {

@@ -599,10 +599,10 @@ void updateStreamNodeConfig() {
 				string mpTransport = pmp->m_relayTransport;
 				if (mpTransport.empty()) mpTransport = "tcp";
 				TransportMode newMode = (mpTransport == "udp") ? TransportMode::UDP : TransportMode::TCP;
-				if (sn->config_.relay_push_transport_mode != newMode) {
-					LOG("[syncStreamNodes] tag=%s relayTransport变更: %d -> %d",
-						tag.c_str(), (int)sn->config_.relay_push_transport_mode, (int)newMode);
-					sn->config_.relay_push_transport_mode = newMode;
+			if (sn->session_relay_push_.transport_mode != newMode) {
+				LOG("[syncStreamNodes] tag=%s relayTransport变更: %d -> %d",
+					tag.c_str(), (int)sn->session_relay_push_.transport_mode, (int)newMode);
+				sn->session_relay_push_.transport_mode = newMode;
 					needRestart = true;
 				}
 

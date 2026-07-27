@@ -80,11 +80,6 @@ public:
         std::string streamUrl;
         std::string srcStreamFetch = "always"; // 拉流模式: "always" 或 "ondemand"
         
-        // 拉流（从源获取）传输模式
-        TransportMode origin_pull_transport_mode = TransportMode::UDP;
-        // 推流（发送到目标）传输模式
-        TransportMode relay_push_transport_mode = TransportMode::TCP;
-        
         // UDP特定配置
         int udp_recv_buffer_size = 4194304;  // UDP接收缓冲区(4MB)，避免4K高码流内核丢包
         int udp_send_buffer_size = 0;    // UDP发送缓冲区大小(0=系统默认)

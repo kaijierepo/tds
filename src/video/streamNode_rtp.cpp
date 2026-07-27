@@ -127,7 +127,7 @@ bool StreamNode::checkIsIdrNalu(const RTPPacket& packet) {
 
 void StreamNode::doRtpRecv() {
     setState(SESSION_STATE::SESSION_STREAMING, "Streaming started");
-    bool pullUDP = (config_.origin_pull_transport_mode == TransportMode::UDP);
+    bool pullUDP = (session_origin_pull_.transport_mode == TransportMode::UDP);
     LOG("[keyinfo][StreamNode]tag=%s,Pull Success,rtp handle thread start,mode:%s",config_.tag.c_str(),pullUDP ? "UDP" : "TCP");
 
     std::vector<uint8_t> buffer(session_origin_pull_.buffer_size_);
@@ -635,7 +635,7 @@ void StreamNode::forwardRTPPacket(const RTPPacket & packet) {
     // 序列化RTP包
     auto data = packet.serialize();
     
-    if (config_.relay_push_transport_mode == TransportMode::UDP) {
+    if (session_relay_push_.transport_mode == TransportMode::UDP) {
         // UDP推流
         if (sendUDPDataToSession(data.data(), data.size(),session_relay_push_)) {
             std::lock_guard<std::mutex> lock(stats_mutex_);
