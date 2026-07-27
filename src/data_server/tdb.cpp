@@ -5960,6 +5960,7 @@ bool TDB::InsertDeJsonStr(std::string strTag, DB_TIME stTime, std::string& sDe, 
 				}
 			}
 
+			fseek(fp, 0L, SEEK_END); 
 			len = ftell(fp);
 			if (len > 0)
 			{
