@@ -421,7 +421,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 		// 按需启动拉流：如果 streamNode origin pull session 处于 idle 或 error 状态，启动拉流
 		if (streamNode->session_origin_pull_.state_ == SESSION_STATE::SESSION_IDLE || streamNode->session_origin_pull_.state_ == SESSION_STATE::SESSION_ERROR) {
 			LOG("[RTSP] 按需启动拉流 tag=%s, state=%d", streamNode->config_.tag.c_str(), (int)streamNode->session_origin_pull_.state_);
-				streamNode->start(streamNode->config_);
+				streamNode->run(streamNode->config_);
 			}
 
 			// 等待拉流准备好（最多 15 秒）

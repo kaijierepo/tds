@@ -112,7 +112,7 @@ public:
     StreamNode& operator=(const StreamNode&) = delete;
 
     // 公共接口
-    bool start(const Config& config);
+    bool run(const Config& config);
     void stop();
 
 
@@ -199,8 +199,6 @@ public:
     bool keyframe_caching_ = false;  // 当前是否正在缓存关键帧（遇到IDR开始，marker=1结束）
 
     STREAM_SESSION pull_audio_session_;
-
-    std::string target_rtp_host_;   // 目标RTP主机地址
 
     // 线程
     std::thread rtp_handle_thread_;

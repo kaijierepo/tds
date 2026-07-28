@@ -610,7 +610,7 @@ void updateStreamNodeConfig() {
 				if (needRestart && sn->isPushing_) {
 					LOG("[syncStreamNodes] tag=%s 转发协议变更，断开重连", tag.c_str());
 					sn->stop();
-					sn->start(sn->config_);
+					sn->run(sn->config_);
 				}
 			}
 		}

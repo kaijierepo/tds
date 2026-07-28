@@ -338,7 +338,7 @@ StreamNode::~StreamNode() {
     stop();
 }
 
-bool StreamNode::start(const Config& config) {
+bool StreamNode::run(const Config& config) {
     if (running_) {
         return false;
     }
@@ -388,7 +388,6 @@ void StreamNode::stop() {
 
     session_origin_pull_.close();
     session_relay_push_.close();
-    target_rtp_host_.clear();
 
     session_origin_pull_.setState(SESSION_STATE::SESSION_IDLE);
 }

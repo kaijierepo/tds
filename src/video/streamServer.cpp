@@ -15,7 +15,7 @@ void openAllStream() {
 	for (auto& pair : streamSrv.m_mapStreamNodes) {
 		std::shared_ptr<StreamNode> sn = pair.second;
 		if (sn && sn->session_origin_pull_.server_url_ != "") {
-			sn->start(sn->config_);
+			sn->run(sn->config_);
 		}
 		LOG("[StreamSrv]持续拉流模式: streamUrl=%s, origin_pull_url=%s", pair.first.c_str(), sn->session_origin_pull_.server_url_.c_str());
 	}
@@ -228,7 +228,7 @@ std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op
 			sn->config_.srcStreamFetch = op.srcStreamFetch;
 		}
 
-		if (!sn->start(sn->config_)) {
+		if (!sn->run(sn->config_)) {
 			LOG("[StreamServer] openStream start fail, tag:%s, streamUrl:%s",
 				op.tag.c_str(), streamUrl.c_str());
 			return nullptr;
@@ -245,7 +245,7 @@ std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op
 		return nullptr;
 	}
 
-	if (!sn->start(sn->config_)) {
+	if (!sn->run(sn->config_)) {
 		LOG("[StreamServer] openStream start fail after create, tag:%s", op.tag.c_str());
 		return nullptr;
 	}

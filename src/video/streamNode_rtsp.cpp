@@ -730,8 +730,6 @@ void StreamNode::controlThread() {
                     session_origin_pull_.setState(SESSION_STATE::SESSION_RECONNECTING);
                     session_origin_pull_.doReconnect();
                     session_origin_pull_.close();
-                    session_relay_push_.close();
-                    target_rtp_host_.clear();
                 }
             }
  
@@ -744,11 +742,9 @@ void StreamNode::controlThread() {
                         std::lock_guard<std::mutex> lock(stats_mutex_);
                         stats_.reconnect_count++;
                     }
-                    session_origin_pull_.setState(SESSION_STATE::SESSION_RECONNECTING);
+                    session_relay_push_.setState(SESSION_STATE::SESSION_RECONNECTING);
                     session_relay_push_.doReconnect();
-                    session_origin_pull_.close();
                     session_relay_push_.close();
-                    target_rtp_host_.clear();
                 }
             }
 
@@ -760,7 +756,6 @@ void StreamNode::controlThread() {
                         isPulling_ = false;
                         session_origin_pull_.close();
                         session_relay_push_.close();
-                        target_rtp_host_.clear();
                     }
                 }
             }
@@ -773,7 +768,6 @@ void StreamNode::controlThread() {
                         isPushing_ = false;
                         session_origin_pull_.close();
                         session_relay_push_.close();
-                        target_rtp_host_.clear();
                     }
                 }
             }
@@ -884,10 +878,6 @@ bool StreamNode::openRelayPushSession() {
         setError("Missing/invalid server_port in target Transport: " + session_relay_push_.transport, 3010);
         return false;
     }
-
-    // 保存目标RTP地址信息（用于UDP推流）
-    target_rtp_host_ = relay_push_url.host;
-    logInfo("Target RTP host: " + target_rtp_host_);
 
 
     // 发送RECORD到目标

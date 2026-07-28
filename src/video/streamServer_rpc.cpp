@@ -267,7 +267,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		// 按需启动拉流：如果 origin pull session 处于 idle 或 error 状态，启动拉流
 		if (sn->session_origin_pull_.state_ == SESSION_STATE::SESSION_IDLE || sn->session_origin_pull_.state_ == SESSION_STATE::SESSION_ERROR) {
 			LOG("[WebRTC] 按需启动拉流 tag=%s, state=%d", sn->config_.tag.c_str(), (int)sn->session_origin_pull_.state_);
-			sn->start(sn->config_);
+			sn->run(sn->config_);
 
 			// 等待拉流准备好（15秒超时，200ms轮询）
 			int waitCount = 0;
@@ -739,7 +739,7 @@ bool StreamServer::rpc_setStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESS
 	}
 
 	if (changed) {
-		sn->start(sn->config_);
+		sn->run(sn->config_);
 	}
 
 	rpcResp.result = RPC_OK;
