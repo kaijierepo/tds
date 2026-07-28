@@ -530,7 +530,6 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 			+ spsB64 + "," + ppsB64;
 	}
 
-	node->session_origin_pull_.session_type_ = ORIGIN_PULL;
 	node->session_origin_pull_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;
@@ -700,7 +699,6 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 			+ spsB64 + "," + ppsB64;
 	}
 
-	node->session_origin_pull_.session_type_ = ORIGIN_PULL;
 	node->session_origin_pull_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;

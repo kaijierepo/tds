@@ -331,6 +331,8 @@ StreamNode::StreamNode() {
     open_time_ = std::chrono::system_clock::now();
     stats_.start_time = std::chrono::steady_clock::now();
     stats_.last_frame_time = std::chrono::steady_clock::now();
+    session_origin_pull_.session_type_ = STREAM_SESSION_TYPE::ORIGIN_PULL;
+    session_relay_push_.session_type_ = STREAM_SESSION_TYPE::RELAY_PUSH;
     session_relay_push_.transport_mode = TransportMode::TCP;
 }
 
@@ -506,57 +508,6 @@ bool StreamNode::URLComponents::parse(const std::string & url, URLComponents & c
     components = out;
     return true;
 }
-
-// ============================================================================
-// 工具函数 - 字符串解析
-// ============================================================================
-
-std::string StreamNode::extractSessionID(const std::string & response) {
-    size_t pos = response.find("Session: ");
-    if (pos == std::string::npos) return "";
-
-    size_t end = response.find("\r\n", pos);
-    std::string session_line = response.substr(pos, end - pos);
-
-    std::string session = session_line.substr(9);
-
-    size_t timeout_pos = session.find(';');
-    if (timeout_pos != std::string::npos) {
-        session = session.substr(0, timeout_pos);
-    }
-
-    return session;
-}
-
-std::string StreamNode::extractTransport(const std::string & response) {
-    size_t pos = response.find("Transport: ");
-    if (pos == std::string::npos) return "";
-
-    size_t end = response.find("\r\n", pos);
-    return response.substr(pos + 11, end - pos - 11);
-}
-
-// ============================================================================
-// 状态机与错误处理
-// ============================================================================
-
-void StreamNode::setError(const std::string & error, int code) {
-
-    {
-        std::lock_guard<std::mutex> lock(stats_mutex_);
-        stats_.errors++;
-    }
-
-    if (error_callback_) {
-        error_callback_(error, code);
-    }
-
-    session_origin_pull_.setState(SESSION_STATE::SESSION_ERROR);
-}
-
-// ============================================================================
-// RTSP URL 认证信息提取
-// ============================================================================
 
 /**
  * @brief 从RTSP URL中提取用户名和密码

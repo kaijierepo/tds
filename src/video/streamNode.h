@@ -240,27 +240,9 @@ public:
     void controlThread();
     void OriginRtpHandleThread();
     bool checkIsIdrNalu(const RTPPacket& packet);
-    bool openOriginPullSession();
-    bool openRelayPushSession();
     void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, STREAM_SESSION& session);
     void doOriginRtpRecv();
 
-
-    // RTSP控制方法
-    bool rtspDescribe(Connection& conn, const std::string& url,
-        std::string& sdp, std::string& session);
-    bool rtspSetup(Connection& conn, const std::string& url,
-        std::string& session, STREAM_SESSION& stream, bool record_mode = false);
-    bool rtspPlay(Connection& conn, const std::string& url,
-        const std::string& session);
-    bool rtspTeardown(Connection& conn, const std::string& url,
-        const std::string& session);
-    bool rtspAnnounce(Connection& conn, const std::string& url,
-        const std::string& sdp, std::string& session);
-    bool rtspRecord(Connection& conn, const std::string& url,
-        const std::string& session);
-    bool rtspGetParameter(Connection& conn, const std::string& url,
-        const std::string& session);
 
 
 
@@ -274,14 +256,6 @@ public:
     void recordIoThread();
     void writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs);
     void writeRTPPacketToFile(std::shared_ptr<RTPPacket> pPkt, std::ofstream& ofs);
-    std::string extractSessionID(const std::string& response);
-    std::string extractTransport(const std::string& response);
-
-    // 认证相关
-	bool parseWWWAuthenticate(const std::string& response, STREAM_SESSION& session);
-
-    // 工具函数
-    void setError(const std::string& error, int code = 0);
 
     // ICE-Lite (WebRTC) — 每客户端一线程处理 STUN 请求
     void startRtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);

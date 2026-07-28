@@ -343,7 +343,6 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				node->session_origin_pull_.retry_interval_ = 3000;
 				node->session_origin_pull_.max_retries_ = 0;
 				node->session_origin_pull_.rtp_timeout_ = 10000;
-				node->session_origin_pull_.session_type_ = ORIGIN_PULL;
 				node->isPulling_ = true;  // 标记为"有流数据"，使 DESCRIBE 不会等待
 				node->running_ = true;
 				node->session_origin_pull_.state_ = SESSION_STATE::SESSION_STREAMING;
@@ -357,7 +356,6 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			else {
 				// 已存在的节点，更新编码信息
 				streamNode->session_origin_pull_ = videoInfo;
-				streamNode->session_origin_pull_.session_type_ = ORIGIN_PULL;
 				streamNode->isPulling_ = true;
 			}
 

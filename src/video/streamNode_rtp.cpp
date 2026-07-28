@@ -280,7 +280,7 @@ void StreamNode::doOriginRtpRecv() {
 
             if (now - last_frame_time > std::chrono::milliseconds(session_origin_pull_.rtp_timeout_)) {
                 logError("RTP timeout detected");
-                setError("RTP timeout", 1001);
+                session_origin_pull_.setState(SESSION_STATE::SESSION_ERROR);
                 break;
             }
         }

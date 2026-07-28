@@ -44,8 +44,9 @@ private:
     bool setSocketTimeout(int timeout_ms);
 };
 
-// Forward declaration（仅指针使用，无需完整定义）
+// Forward declaration（仅指针/引用使用，无需完整定义）
 class SrptProtect;
+class StreamNode;
 
 // ============================================================================
 // Session 类型与状态枚举
@@ -295,12 +296,38 @@ struct STREAM_SESSION {
     std::string getSessionStateDesc();
     std::string getTypeDesc() const;
 
-    // 关闭会话：发送 RTSP TEARDOWN + 断开连接 + 清除状态 + 关闭 socket
+	// 关闭会话：发送 RTSP TEARDOWN + 断开连接 + 清除状态 + 关闭 socket
     void close();
+
+    // 打开会话：根据 session_type_ 执行 ORIGIN_PULL（DESCRIBE→SETUP→PLAY）
+    // 或 RELAY_PUSH（ANNOUNCE→SETUP→RECORD）
+    bool open(StreamNode& sn);
 
 public:
     // 认证辅助函数（RTSP Digest/Basic）
     std::string calcBasicAuth() const;
     std::string calcDigestAuth(const std::string& method, const std::string& uri) const;
     void buildAuthHeader(const std::string& method, const std::string& uri);
+
+    // RTSP 控制方法
+    bool rtspDescribe(StreamNode& sn, const std::string& url,
+        std::string& sdp, std::string& session);
+    bool rtspSetup(StreamNode& sn, const std::string& url,
+        std::string& session, STREAM_SESSION& stream, bool record_mode = false);
+    bool rtspPlay(StreamNode& sn, const std::string& url,
+        const std::string& session);
+    bool rtspTeardown(StreamNode& sn, const std::string& url,
+        const std::string& session);
+    bool rtspAnnounce(StreamNode& sn, const std::string& url,
+        const std::string& sdp, std::string& session);
+    bool rtspRecord(StreamNode& sn, const std::string& url,
+        const std::string& session);
+    bool rtspGetParameter(StreamNode& sn, const std::string& url,
+        const std::string& session);
+
+private:
+    // RTSP 辅助函数
+    std::string extractSessionID(const std::string& response);
+    std::string extractTransport(const std::string& response);
+    bool parseWWWAuthenticate(const std::string& response, STREAM_SESSION& session);
 };
