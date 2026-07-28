@@ -92,6 +92,8 @@ struct STREAM_SESSION {
     std::vector<uint8_t> pps;
     std::string sdp;
     STREAM_SESSION_TYPE session_type_;
+    std::string tag_;
+    std::string stream_url_;
     std::chrono::system_clock::time_point last_stun_bind_req_time;
     std::chrono::system_clock::time_point open_time_;
 
@@ -185,6 +187,7 @@ struct STREAM_SESSION {
         , payload_type(other.payload_type), clock_rate(other.clock_rate)
         , fmtp(other.fmtp), sps(other.sps), pps(other.pps), sdp(other.sdp)
         , session_type_(other.session_type_)
+        , tag_(other.tag_), stream_url_(other.stream_url_)
         , last_stun_bind_req_time(other.last_stun_bind_req_time), open_time_(other.open_time_)
         , transport_mode(other.transport_mode), transport(other.transport)
         , remote_host(other.remote_host), client_port(other.client_port)

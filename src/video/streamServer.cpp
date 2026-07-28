@@ -183,6 +183,10 @@ std::shared_ptr<StreamNode> StreamServer::createStream(const STREAM_OPEN_PARAM& 
 	sn->session_origin_pull_.rtp_timeout_ = 10000;
 	sn->config_.tag = op.tag;
 	sn->config_.streamUrl = streamUrl;
+	sn->session_origin_pull_.tag_ = op.tag;
+	sn->session_origin_pull_.stream_url_ = streamUrl;
+	sn->session_relay_push_.tag_ = op.tag;
+	sn->session_relay_push_.stream_url_ = streamUrl;
 	sn->config_.srcStreamFetch = op.srcStreamFetch != "" ? op.srcStreamFetch : "always";
 
 	{

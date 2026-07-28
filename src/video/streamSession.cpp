@@ -186,7 +186,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
             return false;
         }
 
-        LOG("[StreamNode]tag=%s,Connect to source success,%s", sn.config_.tag.c_str(), (src_url.host + ":" + std::to_string(src_url.port)).c_str());
+        LOG("[StreamNode]tag=%s,Connect to source success,%s", tag_.c_str(), (src_url.host + ":" + std::to_string(src_url.port)).c_str());
 
         // 发送DESCRIBE
         std::string sdp;
@@ -206,7 +206,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
         std::replace(sdp_for_log.begin(), sdp_for_log.end(), '\r', '~');
         std::replace(sdp_for_log.begin(), sdp_for_log.end(), '\n', '~');
         LOG("[StreamNode]tag=%s, sdp received: %s,streamInfo:%s,audioControl:%s",
-            sn.config_.tag.c_str(),
+            tag_.c_str(),
             sdp_for_log.c_str(),
             control_url.c_str(),
             sn.pull_audio_session_.control_url.c_str());
@@ -235,7 +235,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
         }
 
         LOG("[StreamNode]tag=%s,SETUP,mode=%s,local rtp/rtcp port=%s",
-            sn.config_.tag.c_str(),
+            tag_.c_str(),
             pullUseUDP ? "udp" : "tcp",
             client_port.c_str()
         );
@@ -268,7 +268,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
 
 
         LOG("[StreamNode]tag=%s,SETUP success,mode=%s,server port=%s",
-            sn.config_.tag.c_str(),
+            tag_.c_str(),
             pullUseUDP ? "udp" : "tcp",
             server_port.c_str()
         );
@@ -391,7 +391,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
             return false;
         }
 
-        LOG("[keyinfo][StreamNode]tag=%s,stream forward success,pushToUrl:%s", sn.config_.tag.c_str(), server_url_.c_str());
+        LOG("[keyinfo][StreamNode]tag=%s,stream forward success,pushToUrl:%s", tag_.c_str(), server_url_.c_str());
         state_ = SESSION_STATE::SESSION_STREAMING;
         open_time_ = std::chrono::system_clock::now();
 
@@ -599,7 +599,7 @@ bool STREAM_SESSION::rtspDescribe(StreamNode& sn, const std::string& url,
 			return false;
 		}
 		else {
-			LOG("[StreamNode]tag=%s,DESCRIBE failed:%s", sn.config_.tag.c_str(), response.substr(0, 200).c_str());
+			LOG("[StreamNode]tag=%s,DESCRIBE failed:%s", tag_.c_str(), response.substr(0, 200).c_str());
 			return false;
 		}
 	};

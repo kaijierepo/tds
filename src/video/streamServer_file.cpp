@@ -501,6 +501,8 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	}
 
 	node->config_ = cfg;
+	node->session_origin_pull_.tag_ = cfg.tag;
+	node->session_origin_pull_.stream_url_ = cfg.streamUrl;
 	node->session_origin_pull_.server_url_ = fileUrl;
 	node->session_origin_pull_.retry_interval_ = 0;
 	node->session_origin_pull_.max_retries_ = 0;
@@ -673,6 +675,8 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 		if (fileUrl[i] == '\\') fileUrl[i] = '/';
 	}
 	node->config_ = cfg;
+	node->session_origin_pull_.tag_ = cfg.tag;
+	node->session_origin_pull_.stream_url_ = cfg.streamUrl;
 	node->session_origin_pull_.retry_interval_ = 0;
 	node->session_origin_pull_.max_retries_ = 0;
 	node->session_origin_pull_.rtp_timeout_ = 0;
