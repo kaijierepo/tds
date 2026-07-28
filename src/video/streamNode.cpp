@@ -19,9 +19,8 @@
 #include <regex>
 #include <logger.h>
 
-// 引入 MD5 辅助类（用于 md5Hex）
-#include "../common/md5.h"
-
+// streamCommon.h 日志全局开关定义
+bool g_stream_verbose = false;
 
 
 // 静态初始化
@@ -62,61 +61,6 @@ std::vector<uint8_t> base64Decode(const std::string& input) {
         }
     }
     return out;
-}
-
-// MD5辅助函数 (使用项目自带的 MD5 类)
-std::string StreamNode::md5Hex(const std::string& input) {
-    MD5 md5;
-    return md5(input);
-}
-
-// Base64编码辅助函数
-std::string StreamNode::base64Encode(const std::string& input) {
-    static const std::string base64_chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
-
-    std::string encoded;
-    int i = 0;
-    int j = 0;
-    unsigned char char_array_3[3];
-    unsigned char char_array_4[4];
-
-    size_t in_len = input.size();
-    const char* bytes_to_encode = input.c_str();
-
-    while (in_len--) {
-        char_array_3[i++] = *(bytes_to_encode++);
-        if (i == 3) {
-            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-            char_array_4[3] = char_array_3[2] & 0x3f;
-
-            for (i = 0; i < 4; i++)
-                encoded += base64_chars[char_array_4[i]];
-            i = 0;
-        }
-    }
-
-    if (i) {
-        for (j = i; j < 3; j++)
-            char_array_3[j] = '\0';
-
-        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-        char_array_4[3] = char_array_3[2] & 0x3f;
-
-        for (j = 0; j < i + 1; j++)
-            encoded += base64_chars[char_array_4[j]];
-
-        while (i++ < 3)
-            encoded += '=';
-    }
-
-    return encoded;
 }
 
 // HTTP包验证函数
@@ -405,20 +349,8 @@ bool StreamNode::start(const Config& config) {
     isPulling_ = false;
     isPushing_ = false;
 
-    // 清除之前的认证信息
-    source_auth_.clear();
-    target_auth_.clear();
-
-    // 初始化认证信息（从 STREAM_SESSION 读取）
-    if (!session_origin_pull_.server_username_.empty()) {
-        source_auth_.username = session_origin_pull_.server_username_;
-        source_auth_.password = session_origin_pull_.server_password_;
-    }
-
-    if (!session_relay_push_.server_username_.empty()) {
-        target_auth_.username = session_relay_push_.server_username_;
-        target_auth_.password = session_relay_push_.server_password_;
-    }
+    // 同步全局 verbose 标志供 streamCommon.h 中的 logDebug/logVerbose 使用
+    g_stream_verbose = config_.verbose;
 
     control_thread_ = std::thread(&StreamNode::controlThread, this);
 	control_thread_.detach();
@@ -454,7 +386,9 @@ void StreamNode::stop() {
         }
     }
 
-    teardown();
+    session_origin_pull_.close();
+    session_relay_push_.close();
+    target_rtp_host_.clear();
 
     session_origin_pull_.setState(SESSION_STATE::SESSION_IDLE);
 }
@@ -622,30 +556,6 @@ void StreamNode::setError(const std::string & error, int code) {
 }
 
 // ============================================================================
-// 日志函数
-// ============================================================================
-
-void StreamNode::logInfo(const std::string & msg) const {
-    std::cout << "[INFO] " << msg << std::endl;
-}
-
-void StreamNode::logError(const std::string & msg) const {
-    std::cerr << "[ERROR] " << msg << std::endl;
-}
-
-void StreamNode::logDebug(const std::string & msg) const {
-    if (config_.verbose) {
-        std::cout << "[DEBUG] " << msg << std::endl;
-    }
-}
-
-void StreamNode::logVerbose(const std::string & msg) const {
-    if (config_.verbose) {
-        std::cout << "[VERBOSE] " << msg << std::endl;
-    }
-}
-
-// ============================================================================
 // RTSP URL 认证信息提取
 // ============================================================================
 
@@ -675,29 +585,7 @@ bool StreamNode::extractRtspAuthInfo(STREAM_SESSION& session) {
     return false;
 }
 
-std::string StreamNode::getSessionTypeDesc(STREAM_SESSION_TYPE sessionType)
-{
-    if (sessionType == STREAM_SESSION_TYPE::ORIGIN_PULL) {
-        return "origin_pull";
-    }
-    else if (sessionType == STREAM_SESSION_TYPE::RELAY_PUSH) {
-        return "relay_push";
-    }
-    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_RTSP_PULL) {
-        return "client_rtsp_pull";
-    }
-    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_RTSP_PUBLISH) {
-        return "client_rtsp_publish";
-    }
-    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PULL) {
-        return "client_webrtc_pull";
-    }
-    else if (sessionType == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PUBLISH) {
-        return "client_webrtc_publish";
-    }
 
-    return "unknown";
-}
 
 // ============================================================================
 // ICE-Lite + DTLS + SRTP (WebRTC) — 每客户端一线程

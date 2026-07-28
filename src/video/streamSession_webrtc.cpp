@@ -471,8 +471,8 @@ void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
     if (!si.sps.empty() && !si.pps.empty()) {
         std::string sps_raw(reinterpret_cast<const char*>(si.sps.data()), si.sps.size());
         std::string pps_raw(reinterpret_cast<const char*>(si.pps.data()), si.pps.size());
-        std::string sps_b64 = StreamNode::base64Encode(sps_raw);
-        std::string pps_b64 = StreamNode::base64Encode(pps_raw);
+        std::string sps_b64 = base64Encode(sps_raw);
+        std::string pps_b64 = base64Encode(pps_raw);
         spropParamSets = sps_b64 + "," + pps_b64;
     }
 

@@ -92,8 +92,8 @@ void StreamNode::addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt)
 // RTP 工作线程
 // ============================================================================
 
-void StreamNode::rtpHandleThread() {
-    StreamNode::doRtpRecv();
+void StreamNode::OriginRtpHandleThread() {
+    StreamNode::doOriginRtpRecv();
 }
 
 bool StreamNode::checkIsIdrNalu(const RTPPacket& packet) {
@@ -125,7 +125,7 @@ bool StreamNode::checkIsIdrNalu(const RTPPacket& packet) {
     return isIdrNalu;
 }
 
-void StreamNode::doRtpRecv() {
+void StreamNode::doOriginRtpRecv() {
     session_origin_pull_.setState(SESSION_STATE::SESSION_STREAMING);
     bool pullUDP = (session_origin_pull_.transport_mode == TransportMode::UDP);
     LOG("[keyinfo][StreamNode]tag=%s,Pull Success,rtp handle thread start,mode:%s",config_.tag.c_str(),pullUDP ? "UDP" : "TCP");

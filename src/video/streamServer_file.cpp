@@ -516,8 +516,8 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 
 	// 构建 fmtp（包含 sprop-parameter-sets）
 	if (!sps.empty() && !pps.empty()) {
-		std::string spsB64 = StreamNode::base64Encode(std::string((char*)sps.data(), sps.size()));
-		std::string ppsB64 = StreamNode::base64Encode(std::string((char*)pps.data(), pps.size()));
+		std::string spsB64 = base64Encode(std::string((char*)sps.data(), sps.size()));
+		std::string ppsB64 = base64Encode(std::string((char*)pps.data(), pps.size()));
 		// sps 存储完整 NAL 单元（含 NAL header），profile-level-id 对应 SPS RBSP 第 1-3 字节
 		char profileId[8];
 		if (sps.size() >= 4) {
@@ -686,8 +686,8 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	node->session_origin_pull_.video_ssrc = 0x4C4F4341;
 
 	if (!sps.empty() && !pps.empty()) {
-		std::string spsB64 = StreamNode::base64Encode(std::string((char*)sps.data(), sps.size()));
-		std::string ppsB64 = StreamNode::base64Encode(std::string((char*)pps.data(), pps.size()));
+		std::string spsB64 = base64Encode(std::string((char*)sps.data(), sps.size()));
+		std::string ppsB64 = base64Encode(std::string((char*)pps.data(), pps.size()));
 		// sps 存储完整 NAL 单元（含 NAL header），profile-level-id 对应 SPS RBSP 第 1-3 字节
 		char profileId[8];
 		if (sps.size() >= 4) {

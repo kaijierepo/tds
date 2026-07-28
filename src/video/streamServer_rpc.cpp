@@ -92,7 +92,7 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	for (const auto& session : sn->session_list_client_pull_)
 	{
 		json j;
-		j["sessionType"] = sn->getSessionTypeDesc(session->session_type_);
+		j["sessionType"] = session->getTypeDesc();
 		j["state"] = sessionStateStr(session->state_);
 		j["stateDesc"] = session->getSessionStateDesc();
 		j["clientRtpPort"] = session->client_rtp_port;

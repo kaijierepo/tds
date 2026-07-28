@@ -16,29 +16,7 @@
 // 认证相关函数
 // ============================================================================
 
-std::string StreamNode::calculateBasicAuth(const AuthInfo& auth) {
-    std::string credentials = auth.username + ":" + auth.password;
-    return "Basic " + base64Encode(credentials);
-}
-
-std::string StreamNode::calculateDigest(const std::string& method, const std::string& uri,
-    const AuthInfo& auth) {
-    // 计算HA1 = MD5(username:realm:password)
-    std::string ha1_input = auth.username + ":" + auth.realm + ":" + auth.password;
-    std::string ha1 = md5Hex(ha1_input);
-
-    // 计算HA2 = MD5(method:uri)
-    std::string ha2_input = method + ":" + uri;
-    std::string ha2 = md5Hex(ha2_input);
-
-    // 计算response = MD5(HA1:nonce:HA2)
-    std::string response_input = ha1 + ":" + auth.nonce + ":" + ha2;
-    std::string response = md5Hex(response_input);
-
-    return response;
-}
-
-bool StreamNode::parseWWWAuthenticate(const std::string& response, AuthInfo& auth) {
+bool StreamNode::parseWWWAuthenticate(const std::string& response, STREAM_SESSION& session) {
     // 查找WWW-Authenticate头
     size_t www_auth_pos = response.find("WWW-Authenticate: ");
     if (www_auth_pos == std::string::npos) {
@@ -52,14 +30,14 @@ bool StreamNode::parseWWWAuthenticate(const std::string& response, AuthInfo& aut
 
     // 检查认证类型
     if (auth_line.find("Digest") == 0) {
-        auth.use_digest = true;
+        session.server_auth_use_digest_ = true;
 
         // 解析Digest参数
         size_t realm_pos = auth_line.find("realm=\"");
         if (realm_pos != std::string::npos) {
             size_t realm_end = auth_line.find("\"", realm_pos + 7);
             if (realm_end != std::string::npos) {
-                auth.realm = auth_line.substr(realm_pos + 7, realm_end - realm_pos - 7);
+                session.server_auth_realm_ = auth_line.substr(realm_pos + 7, realm_end - realm_pos - 7);
             }
         }
 
@@ -67,7 +45,7 @@ bool StreamNode::parseWWWAuthenticate(const std::string& response, AuthInfo& aut
         if (nonce_pos != std::string::npos) {
             size_t nonce_end = auth_line.find("\"", nonce_pos + 7);
             if (nonce_end != std::string::npos) {
-                auth.nonce = auth_line.substr(nonce_pos + 7, nonce_end - nonce_pos - 7);
+                session.server_auth_nonce_ = auth_line.substr(nonce_pos + 7, nonce_end - nonce_pos - 7);
             }
         }
 
@@ -75,23 +53,23 @@ bool StreamNode::parseWWWAuthenticate(const std::string& response, AuthInfo& aut
         if (algorithm_pos != std::string::npos) {
             size_t algorithm_end = auth_line.find("\"", algorithm_pos + 11);
             if (algorithm_end != std::string::npos) {
-                auth.algorithm = auth_line.substr(algorithm_pos + 11, algorithm_end - algorithm_pos - 11);
+                session.server_auth_algorithm_ = auth_line.substr(algorithm_pos + 11, algorithm_end - algorithm_pos - 11);
             }
         }
         else {
-            auth.algorithm = "MD5";
+            session.server_auth_algorithm_ = "MD5";
         }
 
         return true;
     }
     else if (auth_line.find("Basic") == 0) {
-        auth.use_digest = false;
+        session.server_auth_use_digest_ = false;
 
         size_t realm_pos = auth_line.find("realm=\"");
         if (realm_pos != std::string::npos) {
             size_t realm_end = auth_line.find("\"", realm_pos + 7);
             if (realm_end != std::string::npos) {
-                auth.realm = auth_line.substr(realm_pos + 7, realm_end - realm_pos - 7);
+                session.server_auth_realm_ = auth_line.substr(realm_pos + 7, realm_end - realm_pos - 7);
             }
         }
 
@@ -99,34 +77,6 @@ bool StreamNode::parseWWWAuthenticate(const std::string& response, AuthInfo& aut
     }
 
     return false;
-}
-
-void StreamNode::updateAuthHeader(AuthInfo& auth, const std::string& method, const std::string& uri) {
-    if (!auth.hasCredentials()) {
-        auth.authorization_header.clear();
-        return;
-    }
-
-    if (auth.use_digest) {
-        std::string response = calculateDigest(method, uri, auth);
-
-        std::stringstream auth_header;
-        auth_header << "Authorization: Digest "
-            << "username=\"" << auth.username << "\", "
-            << "realm=\"" << auth.realm << "\", "
-            << "nonce=\"" << auth.nonce << "\", "
-            << "uri=\"" << uri << "\", "
-            << "response=\"" << response << "\"";
-
-        if (!auth.algorithm.empty()) {
-            auth_header << ", algorithm=\"" << auth.algorithm << "\"";
-        }
-
-        auth.authorization_header = auth_header.str();
-    }
-    else {
-        auth.authorization_header = "Authorization: " + calculateBasicAuth(auth);
-    }
 }
 
 // ============================================================================
@@ -148,12 +98,12 @@ bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
     host_header += ":" + std::to_string(url_components.port);
 
     // 确定认证信息
-    AuthInfo* auth_info = nullptr;
+    STREAM_SESSION* auth_session = nullptr;
     if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
-        auth_info = &source_auth_;
+        auth_session = &session_origin_pull_;
     }
     else {
-        auth_info = &target_auth_;
+        auth_session = &session_relay_push_;
     }
 
     auto do_describe = [&](const std::string& request_uri, bool include_host,
@@ -168,10 +118,10 @@ bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
             }
 
             // 添加认证头
-            if (use_auth && auth_info && auth_info->hasCredentials()) {
-                updateAuthHeader(*auth_info, "DESCRIBE", request_uri);
-                if (!auth_info->authorization_header.empty()) {
-                    request << auth_info->authorization_header << "\r\n";
+            if (use_auth && auth_session && auth_session->hasAuthCredentials()) {
+                auth_session->buildAuthHeader( "DESCRIBE", request_uri);
+                if (!auth_session->server_auth_header_.empty()) {
+                    request << auth_session->server_auth_header_ << "\r\n";
                 }
             }
 
@@ -222,9 +172,9 @@ bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
             }
             else if (response.find("401 Unauthorized") != std::string::npos) {
                 // 需要认证
-                if (auth_info && auth_info->hasCredentials()) {
+                if (auth_session && auth_session->hasAuthCredentials()) {
                     // 解析WWW-Authenticate头
-                    if (parseWWWAuthenticate(response, *auth_info)) {
+                    if (parseWWWAuthenticate(response, *auth_session)) {
                         logInfo("Authentication required, retrying with credentials");
                     }
                     else {
@@ -251,7 +201,7 @@ bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
     }
 
     // 第二次尝试：带认证（如果提供了凭据）
-    if (auth_info && auth_info->hasCredentials()) {
+    if (auth_session && auth_session->hasAuthCredentials()) {
         if (do_describe(url, true, true, response)) {
             return true;
         }
@@ -263,7 +213,7 @@ bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
     }
 
     // 如果提供了凭据，尝试不带Host头但带认证
-    if (auth_info && auth_info->hasCredentials()) {
+    if (auth_session && auth_session->hasAuthCredentials()) {
         if (do_describe(url, false, true, response)) {
             return true;
         }
@@ -277,7 +227,7 @@ bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
             return true;
         }
 
-        if (auth_info && auth_info->hasCredentials()) {
+        if (auth_session && auth_session->hasAuthCredentials()) {
             if (do_describe(url_components.path, true, true, response)) {
                 return true;
             }
@@ -300,12 +250,12 @@ bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
     }
 
     // 确定认证信息
-    AuthInfo* auth_info = nullptr;
+    STREAM_SESSION* auth_session = nullptr;
     if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
-        auth_info = &source_auth_;
+        auth_session = &session_origin_pull_;
     }
     else {
-        auth_info = &target_auth_;
+        auth_session = &session_relay_push_;
     }
 
     // 根据 ZLM 的 SDP 格式，正确拼接 SETUP URL
@@ -359,9 +309,9 @@ bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
     }
 
     // 添加认证头
-    if (auth_info && auth_info->hasCredentials() && !auth_info->authorization_header.empty()) {
-        updateAuthHeader(*auth_info, "SETUP", setup_url);
-        request << auth_info->authorization_header << "\r\n";
+    if (auth_session && auth_session->hasAuthCredentials() && !auth_session->server_auth_header_.empty()) {
+        auth_session->buildAuthHeader( "SETUP", setup_url);
+        request << auth_session->server_auth_header_ << "\r\n";
     }
 
     // UDP传输模式：使用RTP/AVP/UDP
@@ -470,12 +420,12 @@ bool StreamNode::rtspPlay(Connection& conn, const std::string& url,
     }
 
     // 确定认证信息
-    AuthInfo* auth_info = nullptr;
+    STREAM_SESSION* auth_session = nullptr;
     if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
-        auth_info = &source_auth_;
+        auth_session = &session_origin_pull_;
     }
     else {
-        auth_info = &target_auth_;
+        auth_session = &session_relay_push_;
     }
 
     std::stringstream request;
@@ -485,9 +435,9 @@ bool StreamNode::rtspPlay(Connection& conn, const std::string& url,
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
-    if (auth_info && auth_info->hasCredentials() && !auth_info->authorization_header.empty()) {
-        updateAuthHeader(*auth_info, "PLAY", url);
-        request << auth_info->authorization_header << "\r\n";
+    if (auth_session && auth_session->hasAuthCredentials() && !auth_session->server_auth_header_.empty()) {
+        auth_session->buildAuthHeader( "PLAY", url);
+        request << auth_session->server_auth_header_ << "\r\n";
     }
 
     request << "Session: " << session << "\r\n"
@@ -533,12 +483,12 @@ bool StreamNode::rtspTeardown(Connection& conn, const std::string& url,
     }
 
     // 确定认证信息
-    AuthInfo* auth_info = nullptr;
+    STREAM_SESSION* auth_session = nullptr;
     if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
-        auth_info = &source_auth_;
+        auth_session = &session_origin_pull_;
     }
     else {
-        auth_info = &target_auth_;
+        auth_session = &session_relay_push_;
     }
 
     std::stringstream request;
@@ -548,9 +498,9 @@ bool StreamNode::rtspTeardown(Connection& conn, const std::string& url,
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
-    if (auth_info && auth_info->hasCredentials() && !auth_info->authorization_header.empty()) {
-        updateAuthHeader(*auth_info, "TEARDOWN", url);
-        request << auth_info->authorization_header << "\r\n";
+    if (auth_session && auth_session->hasAuthCredentials() && !auth_session->server_auth_header_.empty()) {
+        auth_session->buildAuthHeader( "TEARDOWN", url);
+        request << auth_session->server_auth_header_ << "\r\n";
     }
 
     request << "Session: " << session << "\r\n"
@@ -585,9 +535,9 @@ bool StreamNode::rtspAnnounce(Connection& conn, const std::string& url,
     }
 
     // 确定认证信息
-    AuthInfo* auth_info = nullptr;
+    STREAM_SESSION* auth_session = nullptr;
     if (url == session_relay_push_.server_url_ || url.find(session_relay_push_.server_url_) == 0) {
-        auth_info = &target_auth_;
+        auth_session = &session_relay_push_;
     }
 
     std::stringstream request;
@@ -597,9 +547,9 @@ bool StreamNode::rtspAnnounce(Connection& conn, const std::string& url,
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
-    if (auth_info && auth_info->hasCredentials() && !auth_info->authorization_header.empty()) {
-        updateAuthHeader(*auth_info, "ANNOUNCE", url);
-        request << auth_info->authorization_header << "\r\n";
+    if (auth_session && auth_session->hasAuthCredentials() && !auth_session->server_auth_header_.empty()) {
+        auth_session->buildAuthHeader( "ANNOUNCE", url);
+        request << auth_session->server_auth_header_ << "\r\n";
     }
 
     request << "Content-Type: application/sdp\r\n"
@@ -648,9 +598,9 @@ bool StreamNode::rtspRecord(Connection& conn, const std::string& url,
     }
 
     // 确定认证信息
-    AuthInfo* auth_info = nullptr;
+    STREAM_SESSION* auth_session = nullptr;
     if (url == session_relay_push_.server_url_ || url.find(session_relay_push_.server_url_) == 0) {
-        auth_info = &target_auth_;
+        auth_session = &session_relay_push_;
     }
 
     std::stringstream request;
@@ -660,9 +610,9 @@ bool StreamNode::rtspRecord(Connection& conn, const std::string& url,
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
-    if (auth_info && auth_info->hasCredentials() && !auth_info->authorization_header.empty()) {
-        updateAuthHeader(*auth_info, "RECORD", url);
-        request << auth_info->authorization_header << "\r\n";
+    if (auth_session && auth_session->hasAuthCredentials() && !auth_session->server_auth_header_.empty()) {
+        auth_session->buildAuthHeader( "RECORD", url);
+        request << auth_session->server_auth_header_ << "\r\n";
     }
 
     request << "Session: " << session << "\r\n"
@@ -708,12 +658,12 @@ bool StreamNode::rtspGetParameter(Connection& conn, const std::string& url,
     }
 
     // 确定认证信息
-    AuthInfo* auth_info = nullptr;
+    STREAM_SESSION* auth_session = nullptr;
     if (url == session_origin_pull_.server_url_ || url.find(session_origin_pull_.server_url_) == 0) {
-        auth_info = &source_auth_;
+        auth_session = &session_origin_pull_;
     }
     else {
-        auth_info = &target_auth_;
+        auth_session = &session_relay_push_;
     }
 
     std::stringstream request;
@@ -723,9 +673,9 @@ bool StreamNode::rtspGetParameter(Connection& conn, const std::string& url,
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
     // 添加认证头
-    if (auth_info && auth_info->hasCredentials() && !auth_info->authorization_header.empty()) {
-        updateAuthHeader(*auth_info, "GET_PARAMETER", url);
-        request << auth_info->authorization_header << "\r\n";
+    if (auth_session && auth_session->hasAuthCredentials() && !auth_session->server_auth_header_.empty()) {
+        auth_session->buildAuthHeader( "GET_PARAMETER", url);
+        request << auth_session->server_auth_header_ << "\r\n";
     }
 
     request << "Session: " << session << "\r\n"
@@ -767,7 +717,7 @@ void StreamNode::controlThread() {
             // 启动拉流与推流
             if (isPulling_ == false) {
                 if (openOriginPullSession()) {
-                    rtp_handle_thread_ = std::thread(&StreamNode::rtpHandleThread,this);
+                    rtp_handle_thread_ = std::thread(&StreamNode::OriginRtpHandleThread,this);
                     rtp_handle_thread_.detach();
                     open_time_ = std::chrono::system_clock::now();
                     isPulling_ = true;
@@ -779,7 +729,9 @@ void StreamNode::controlThread() {
                     }
                     session_origin_pull_.setState(SESSION_STATE::SESSION_RECONNECTING);
                     session_origin_pull_.doReconnect();
-                    teardown();
+                    session_origin_pull_.close();
+                    session_relay_push_.close();
+                    target_rtp_host_.clear();
                 }
             }
  
@@ -794,7 +746,9 @@ void StreamNode::controlThread() {
                     }
                     session_origin_pull_.setState(SESSION_STATE::SESSION_RECONNECTING);
                     session_relay_push_.doReconnect();
-                    teardown();
+                    session_origin_pull_.close();
+                    session_relay_push_.close();
+                    target_rtp_host_.clear();
                 }
             }
 
@@ -804,7 +758,9 @@ void StreamNode::controlThread() {
                     if (!rtspGetParameter(*session_origin_pull_.conn_, session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_)) {
                         setError("Source RTSP keepalive failed", 1002);
                         isPulling_ = false;
-                        teardown();
+                        session_origin_pull_.close();
+                        session_relay_push_.close();
+                        target_rtp_host_.clear();
                     }
                 }
             }
@@ -815,7 +771,9 @@ void StreamNode::controlThread() {
                         setError("Target RTSP keepalive failed", 1002);
                         session_relay_push_.state_ = SESSION_STATE::SESSION_ERROR;
                         isPushing_ = false;
-                        teardown();
+                        session_origin_pull_.close();
+                        session_relay_push_.close();
+                        target_rtp_host_.clear();
                     }
                 }
             }
@@ -1058,46 +1016,6 @@ bool StreamNode::openOriginPullSession() {
     }
 
     return true;
-}
-
-void StreamNode::teardown() {
-    if (session_origin_pull_.conn_ && !session_origin_pull_.rtsp_session_id_.empty()) {
-        rtspTeardown(*session_origin_pull_.conn_, session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_);
-    }
-
-    if (session_relay_push_.conn_ && !session_relay_push_.rtsp_session_id_.empty()) {
-        rtspTeardown(*session_relay_push_.conn_, session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_);
-    }
-
-    if (session_origin_pull_.conn_) {
-        session_origin_pull_.conn_->disconnect();
-    }
-
-    if (session_relay_push_.conn_) {
-        session_relay_push_.conn_->disconnect();
-    }
-
-    session_origin_pull_.rtsp_session_id_.clear();
-    session_relay_push_.rtsp_session_id_.clear();
-    target_rtp_host_.clear();
-
-    session_origin_pull_.client_rtp_port = 0;
-    session_origin_pull_.client_rtcp_port = 0;
-    session_relay_push_.client_rtp_port = 0;
-    session_relay_push_.client_rtcp_port = 0;
-
-    // 清除认证信息（保留用户名密码）
-    source_auth_.realm.clear();
-    source_auth_.nonce.clear();
-    source_auth_.authorization_header.clear();
-
-    target_auth_.realm.clear();
-    target_auth_.nonce.clear();
-    target_auth_.authorization_header.clear();
-
-    // 关闭UDP sockets
-    session_origin_pull_.closeSockets();
-    session_relay_push_.closeSockets();
 }
 
 // ============================================================================

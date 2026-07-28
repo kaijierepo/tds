@@ -132,6 +132,25 @@ struct STREAM_SESSION {
     std::string server_username_;  // 远端认证用户名
     std::string server_password_;  // 远端认证密码
 
+    // 远端认证运行时状态（Digest/Basic，RTSP 信令过程中动态填充）
+    std::string server_auth_realm_;
+    std::string server_auth_nonce_;
+    std::string server_auth_algorithm_;
+    std::string server_auth_header_;   // 缓存的 Authorization header
+    bool server_auth_use_digest_ = false;
+
+    bool hasAuthCredentials() const {
+        return !server_username_.empty() && !server_password_.empty();
+    }
+
+    void clearAuthRuntime() {
+        server_auth_realm_.clear();
+        server_auth_nonce_.clear();
+        server_auth_algorithm_.clear();
+        server_auth_header_.clear();
+        server_auth_use_digest_ = false;
+    }
+
     // 重连与超时配置（per-session）
     int retry_interval_ = 3000;   // 重试间隔(ms)
     int max_retries_ = 10;        // 最大重试次数，0=无限重试
@@ -186,6 +205,11 @@ struct STREAM_SESSION {
         , server_url_(other.server_url_)
         , server_username_(other.server_username_)
         , server_password_(other.server_password_)
+        , server_auth_realm_(other.server_auth_realm_)
+        , server_auth_nonce_(other.server_auth_nonce_)
+        , server_auth_algorithm_(other.server_auth_algorithm_)
+        , server_auth_header_(other.server_auth_header_)
+        , server_auth_use_digest_(other.server_auth_use_digest_)
         , retry_interval_(other.retry_interval_)
         , max_retries_(other.max_retries_)
         , rtp_timeout_(other.rtp_timeout_)
@@ -227,6 +251,11 @@ struct STREAM_SESSION {
             server_url_ = other.server_url_;
             server_username_ = other.server_username_;
             server_password_ = other.server_password_;
+            server_auth_realm_ = other.server_auth_realm_;
+            server_auth_nonce_ = other.server_auth_nonce_;
+            server_auth_algorithm_ = other.server_auth_algorithm_;
+            server_auth_header_ = other.server_auth_header_;
+            server_auth_use_digest_ = other.server_auth_use_digest_;
             retry_interval_ = other.retry_interval_;
             max_retries_ = other.max_retries_;
             rtp_timeout_ = other.rtp_timeout_;
@@ -264,4 +293,14 @@ struct STREAM_SESSION {
     void doReconnect();
 
     std::string getSessionStateDesc();
+    std::string getTypeDesc() const;
+
+    // 关闭会话：发送 RTSP TEARDOWN + 断开连接 + 清除状态 + 关闭 socket
+    void close();
+
+public:
+    // 认证辅助函数（RTSP Digest/Basic）
+    std::string calcBasicAuth() const;
+    std::string calcDigestAuth(const std::string& method, const std::string& uri) const;
+    void buildAuthHeader(const std::string& method, const std::string& uri);
 };

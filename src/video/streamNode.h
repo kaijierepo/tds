@@ -97,30 +97,7 @@ public:
         double bitrate = 0.0;  // kbps
     };
 
-    // 认证信息结构
-    struct AuthInfo {
-        std::string username;
-        std::string password;
-        std::string realm;
-        std::string nonce;
-        std::string algorithm;
-        bool use_digest = false;
-        std::string authorization_header;  // 缓存认证头
 
-        void clear() {
-            username.clear();
-            password.clear();
-            realm.clear();
-            nonce.clear();
-            algorithm.clear();
-            authorization_header.clear();
-            use_digest = false;
-        }
-
-        bool hasCredentials() const {
-            return !username.empty() && !password.empty();
-        }
-    };
 
     // 回调函数
     using FrameCallback = std::function<void(const uint8_t* data, size_t size, uint32_t timestamp)>;
@@ -149,7 +126,6 @@ public:
     void setErrorCallback(ErrorCallback cb);
 
     bool extractRtspAuthInfo(STREAM_SESSION& session);
-    std::string getSessionTypeDesc(STREAM_SESSION_TYPE sessionType);
 
 
 public:
@@ -201,10 +177,6 @@ public:
     std::atomic<bool> isPushing_{ false };
 
     RecordControl rec_ctrl_;
-
-    // 认证信息
-    AuthInfo source_auth_;
-    AuthInfo target_auth_;
 
     // 连接和会话已移到 STREAM_SESSION::conn_ / rtsp_session_id_
 
@@ -268,12 +240,12 @@ public:
 
     // 工作线程
     void controlThread();
-    void rtpHandleThread();
+    void OriginRtpHandleThread();
     bool checkIsIdrNalu(const RTPPacket& packet);
     bool openOriginPullSession();
     bool openRelayPushSession();
     void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, STREAM_SESSION& session);
-    void doRtpRecv();
+    void doOriginRtpRecv();
 
 
     // RTSP控制方法
@@ -291,7 +263,6 @@ public:
         const std::string& session);
     bool rtspGetParameter(Connection& conn, const std::string& url,
         const std::string& session);
-    void teardown();
 
 
 
@@ -309,11 +280,7 @@ public:
     std::string extractTransport(const std::string& response);
 
     // 认证相关
-    std::string calculateDigest(const std::string& method, const std::string& uri,
-        const AuthInfo& auth);
-    std::string calculateBasicAuth(const AuthInfo& auth);
-    bool parseWWWAuthenticate(const std::string& response, AuthInfo& auth);
-    void updateAuthHeader(AuthInfo& auth, const std::string& method, const std::string& uri);
+	bool parseWWWAuthenticate(const std::string& response, STREAM_SESSION& session);
 
     // 工具函数
     void setError(const std::string& error, int code = 0);
@@ -322,18 +289,7 @@ public:
     void startRtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);
     void stopAllRtcHandleThreads();
 
-    // 日志
-    void logInfo(const std::string& msg) const;
-    void logError(const std::string& msg) const;
-    void logDebug(const std::string& msg) const;
-    void logVerbose(const std::string& msg) const;
-
-    // Base64 编码（用于 SDP sprop-parameter-sets 等）
-    static std::string base64Encode(const std::string& input);
-
 private:
-    static std::string md5Hex(const std::string& input);
-
     // ICE-Lite 工作循环（由每个 WebRTC session 的 ice_thread_ 执行）
     void rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);
 };
