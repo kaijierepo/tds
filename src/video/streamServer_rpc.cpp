@@ -52,6 +52,7 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	json jOrigin;
 	jOrigin["url"] = sn->session_origin_pull_.server_url_;
 	jOrigin["state"] = sessionStateStr(sn->session_origin_pull_.state_);
+	jOrigin["transport"] = (sn->session_origin_pull_.transport_mode == TransportMode::UDP) ? "udp" : "tcp";
 	jOrigin["codec"] = sn->session_origin_pull_.codec;
 	jSi["originPull"] = jOrigin;
 
@@ -720,6 +721,15 @@ bool StreamServer::rpc_setStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESS
 		}
 	}
 
+	string originTransport;
+	yyv = yyjson_obj_get(params, "originTransport");
+	if (yyv) {
+		string transport = yyjson_get_str(yyv);
+		if (transport == "tcp" || transport == "udp") {
+			originTransport = transport;
+		}
+	}
+
 	bool changed = false;
 	if (relayUrl != sn->session_relay_push_.server_url_) {
 		LOG("[流媒体] setStream tag=%s relayUrl: %s -> %s",
@@ -734,6 +744,16 @@ bool StreamServer::rpc_setStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESS
 			LOG("[流媒体] setStream tag=%s relayTransport: %d -> %d",
 				sn->config_.tag.c_str(), (int)sn->session_relay_push_.transport_mode, (int)newMode);
 			sn->session_relay_push_.transport_mode = newMode;
+			changed = true;
+		}
+	}
+
+	if (!originTransport.empty()) {
+		TransportMode newMode = (originTransport == "udp") ? TransportMode::UDP : TransportMode::TCP;
+		if (sn->session_origin_pull_.transport_mode != newMode) {
+			LOG("[流媒体] setStream tag=%s originTransport: %d -> %d",
+				sn->config_.tag.c_str(), (int)sn->session_origin_pull_.transport_mode, (int)newMode);
+			sn->session_origin_pull_.transport_mode = newMode;
 			changed = true;
 		}
 	}
