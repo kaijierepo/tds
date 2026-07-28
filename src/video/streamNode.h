@@ -123,7 +123,6 @@ public:
     };
 
     // 回调函数
-    using StatusCallback = std::function<void(SESSION_STATE state, const std::string& msg)>;
     using FrameCallback = std::function<void(const uint8_t* data, size_t size, uint32_t timestamp)>;
     using ErrorCallback = std::function<void(const std::string& error, int code)>;
 
@@ -146,7 +145,6 @@ public:
     Statistics getStatistics();
 
     // 设置回调
-    void setStatusCallback(StatusCallback cb);
     void setFrameCallback(FrameCallback cb);
     void setErrorCallback(ErrorCallback cb);
 
@@ -241,7 +239,6 @@ public:
     mutable std::mutex stats_mutex_;
     mutable std::mutex queue_mutex_;
     mutable std::recursive_mutex rec_mutex_;   // 保护 rec_ctrl_ 控制字段
-    std::condition_variable cv_;
 
     // 数据队列
     int getBufferedSeconds();
@@ -261,7 +258,6 @@ public:
     Statistics stats_;
 
     // 回调函数
-    StatusCallback status_callback_;
     ErrorCallback error_callback_;
 
     // 时间戳
@@ -320,20 +316,7 @@ public:
     void updateAuthHeader(AuthInfo& auth, const std::string& method, const std::string& uri);
 
     // 工具函数
-    std::string generateCSeq();
     void setError(const std::string& error, int code = 0);
-    void setState(SESSION_STATE new_state, const std::string& msg = "");
-    bool shouldReconnect(STREAM_SESSION& session) const;
-    void doReconnect(STREAM_SESSION& session);
-
-    // UDP传输相关
-    bool createUDPPullSocket();   // 创建UDP拉流socket
-    bool createUDPPushSocket();    // 创建UDP推流socket
-	bool createUDPServerSocket(STREAM_SESSION& streamInfo);  // 创建UDP服务器socket,客户端拉流时
-    void closeUDPSockets();
-    bool sendUDPDataToSession(const uint8_t* data, size_t size,STREAM_SESSION& rtspSession);
-    bool sendUDPData(const uint8_t* data, size_t size);
-    int receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port);
 
     // ICE-Lite (WebRTC) — 每客户端一线程处理 STUN 请求
     void startRtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);

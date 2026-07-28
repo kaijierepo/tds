@@ -160,7 +160,7 @@ bool StreamNode::rtspDescribe(Connection& conn, const std::string& url,
         bool use_auth, std::string& response) -> bool {
             std::stringstream request;
             request << "DESCRIBE " << request_uri << " RTSP/1.0\r\n"
-                << "CSeq: " << generateCSeq() << "\r\n"
+                << "CSeq: " << conn.nextCSeq() << "\r\n"
                 << "User-Agent: StreamNode/1.0\r\n";
 
             if (include_host) {
@@ -349,7 +349,7 @@ bool StreamNode::rtspSetup(Connection& conn, const std::string& url,
 
     std::stringstream request;
     request << "SETUP " << setup_url << " RTSP/1.0\r\n"
-        << "CSeq: " << generateCSeq() << "\r\n"
+        << "CSeq: " << conn.nextCSeq() << "\r\n"
         << "User-Agent: StreamNode/1.0\r\n";
 
     (void)host_header;  // 抑制未使用变量警告
@@ -480,7 +480,7 @@ bool StreamNode::rtspPlay(Connection& conn, const std::string& url,
 
     std::stringstream request;
     request << "PLAY " << url << " RTSP/1.0\r\n"
-        << "CSeq: " << generateCSeq() << "\r\n"
+        << "CSeq: " << conn.nextCSeq() << "\r\n"
         << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
@@ -543,7 +543,7 @@ bool StreamNode::rtspTeardown(Connection& conn, const std::string& url,
 
     std::stringstream request;
     request << "TEARDOWN " << url << " RTSP/1.0\r\n"
-        << "CSeq: " << generateCSeq() << "\r\n"
+        << "CSeq: " << conn.nextCSeq() << "\r\n"
         << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
@@ -592,7 +592,7 @@ bool StreamNode::rtspAnnounce(Connection& conn, const std::string& url,
 
     std::stringstream request;
     request << "ANNOUNCE " << url << " RTSP/1.0\r\n"
-        << "CSeq: " << generateCSeq() << "\r\n"
+        << "CSeq: " << conn.nextCSeq() << "\r\n"
         << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
@@ -655,7 +655,7 @@ bool StreamNode::rtspRecord(Connection& conn, const std::string& url,
 
     std::stringstream request;
     request << "RECORD " << url << " RTSP/1.0\r\n"
-        << "CSeq: " << generateCSeq() << "\r\n"
+        << "CSeq: " << conn.nextCSeq() << "\r\n"
         << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
@@ -718,7 +718,7 @@ bool StreamNode::rtspGetParameter(Connection& conn, const std::string& url,
 
     std::stringstream request;
     request << "GET_PARAMETER " << url << " RTSP/1.0\r\n"
-        << "CSeq: " << generateCSeq() << "\r\n"
+        << "CSeq: " << conn.nextCSeq() << "\r\n"
         << "User-Agent: StreamNode/1.0\r\n"
         << (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
@@ -773,7 +773,12 @@ void StreamNode::controlThread() {
                     isPulling_ = true;
                 }
                 else {
-                    doReconnect(session_origin_pull_);
+                    {
+                        std::lock_guard<std::mutex> lock(stats_mutex_);
+                        stats_.reconnect_count++;
+                    }
+                    session_origin_pull_.setState(SESSION_STATE::SESSION_RECONNECTING);
+                    session_origin_pull_.doReconnect();
                     teardown();
                 }
             }
@@ -783,7 +788,12 @@ void StreamNode::controlThread() {
                     isPushing_ = true;
 				}
                 else {
-                    doReconnect(session_relay_push_);
+                    {
+                        std::lock_guard<std::mutex> lock(stats_mutex_);
+                        stats_.reconnect_count++;
+                    }
+                    session_origin_pull_.setState(SESSION_STATE::SESSION_RECONNECTING);
+                    session_relay_push_.doReconnect();
                     teardown();
                 }
             }
@@ -866,7 +876,7 @@ bool StreamNode::openRelayPushSession() {
     // 如果使用 UDP 推流，应先创建并绑定本地 RTP/RTCP sockets，
     // 并将 client_port 写入 target_video_info_，再发送 SETUP。
     if (session_relay_push_.transport_mode == TransportMode::UDP) {
-        if (!createUDPPushSocket()) {
+        if (!session_relay_push_.createUDPConsecutiveSockets(false)) {
             logError("Failed to create UDP push socket, falling back to TCP");
             session_relay_push_.transport_mode = TransportMode::TCP;
         }
@@ -937,7 +947,7 @@ bool StreamNode::openRelayPushSession() {
 }
 
 bool StreamNode::openOriginPullSession() {
-    setState(SESSION_STATE::SESSION_CONNECTING, "Connecting to source");
+    session_origin_pull_.setState(SESSION_STATE::SESSION_CONNECTING);
 
     // 解析源URL
     URLComponents src_url;
@@ -978,18 +988,18 @@ bool StreamNode::openOriginPullSession() {
         session_origin_pull_.control_url.c_str(),
         pull_audio_session_.control_url.c_str());
 
-    setState(SESSION_STATE::SESSION_HANDSHAKING, "Source connected");
-    setState(SESSION_STATE::SESSION_HANDSHAKING, "Setting up streams");
+    session_origin_pull_.setState(SESSION_STATE::SESSION_HANDSHAKING);
 
     // 清理之前的UDP sockets
-    closeUDPSockets();
+    session_origin_pull_.closeSockets();
+    session_relay_push_.closeSockets();
 
     // 根据拉流模式决定是否创建UDP socket
     bool pullUseUDP = (session_origin_pull_.transport_mode == TransportMode::UDP);
 
     if (pullUseUDP) {
         // 创建专用的UDP socket用于拉流（接收RTP）
-        if (!createUDPPullSocket()) {
+        if (!session_origin_pull_.createUDPConsecutiveSockets(false)) {
             logError("Failed to create UDP pull socket");
             pullUseUDP = false;
         }
@@ -1086,7 +1096,8 @@ void StreamNode::teardown() {
     target_auth_.authorization_header.clear();
 
     // 关闭UDP sockets
-    closeUDPSockets();
+    session_origin_pull_.closeSockets();
+    session_relay_push_.closeSockets();
 }
 
 // ============================================================================

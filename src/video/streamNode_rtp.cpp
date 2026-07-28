@@ -126,7 +126,7 @@ bool StreamNode::checkIsIdrNalu(const RTPPacket& packet) {
 }
 
 void StreamNode::doRtpRecv() {
-    setState(SESSION_STATE::SESSION_STREAMING, "Streaming started");
+    session_origin_pull_.setState(SESSION_STATE::SESSION_STREAMING);
     bool pullUDP = (session_origin_pull_.transport_mode == TransportMode::UDP);
     LOG("[keyinfo][StreamNode]tag=%s,Pull Success,rtp handle thread start,mode:%s",config_.tag.c_str(),pullUDP ? "UDP" : "TCP");
 
@@ -150,7 +150,7 @@ void StreamNode::doRtpRecv() {
         
         if (pullUDP) {
             // UDP拉流 最多阻塞1秒 configureUDPSocket 中设置了1秒超时
-            received = receiveUDPData(buffer.data(), buffer.size(), src_ip, src_port);
+            received = session_origin_pull_.receiveUDPData(buffer.data(), buffer.size(), src_ip, src_port);
         }
         else {
             // TCP拉流：通过RTSP连接接收RTP数据
@@ -327,10 +327,14 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
         if (client.is_webrtc) continue;
         if (client.transport_mode == TransportMode::UDP) {
             // UDP推流（RTSP 明文）
-            if (sendUDPDataToSession(data.data(), data.size(), client)) {
+            if (client.sendUDPData(data.data(), data.size())) {
                 std::lock_guard<std::mutex> lock(stats_mutex_);
                 stats_.bytes_forwarded += data.size();
                 stats_.frames_forwarded++;
+            }
+            else {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                stats_.errors++;
             }
         }
         else if (client.transport_mode == TransportMode::TCP) {
@@ -637,10 +641,14 @@ void StreamNode::forwardRTPPacket(const RTPPacket & packet) {
     
     if (session_relay_push_.transport_mode == TransportMode::UDP) {
         // UDP推流
-        if (sendUDPDataToSession(data.data(), data.size(),session_relay_push_)) {
+        if (session_relay_push_.sendUDPData(data.data(), data.size())) {
             std::lock_guard<std::mutex> lock(stats_mutex_);
             stats_.bytes_forwarded += data.size();
             stats_.frames_forwarded++;
+        }
+        else {
+            std::lock_guard<std::mutex> lock(stats_mutex_);
+            stats_.errors++;
         }
     }
     else {

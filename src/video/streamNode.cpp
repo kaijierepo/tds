@@ -434,8 +434,6 @@ void StreamNode::stop() {
     stopping_ = true;
     running_ = false;
 
-    cv_.notify_all();
-
     // 停止所有 ICE 线程
     stopAllRtcHandleThreads();
 
@@ -458,7 +456,7 @@ void StreamNode::stop() {
 
     teardown();
 
-    setState(SESSION_STATE::SESSION_IDLE, "Stopped");
+    session_origin_pull_.setState(SESSION_STATE::SESSION_IDLE);
 }
 
 
@@ -491,9 +489,7 @@ StreamNode::Statistics StreamNode::getStatistics() {
     return stats_;
 }
 
-void StreamNode::setStatusCallback(StatusCallback cb) {
-    status_callback_ = cb;
-}
+
 
 void StreamNode::setFrameCallback(FrameCallback cb) {
 
@@ -607,11 +603,6 @@ std::string StreamNode::extractTransport(const std::string & response) {
     return response.substr(pos + 11, end - pos - 11);
 }
 
-std::string StreamNode::generateCSeq() {
-    static std::atomic<int> counter{ 1 };
-    return std::to_string(counter++);
-}
-
 // ============================================================================
 // 状态机与错误处理
 // ============================================================================
@@ -627,54 +618,7 @@ void StreamNode::setError(const std::string & error, int code) {
         error_callback_(error, code);
     }
 
-    setState(SESSION_STATE::SESSION_ERROR, error);
-}
-
-void StreamNode::setState(SESSION_STATE new_state, const std::string & msg) {
-    {
-        std::lock_guard<std::mutex> lock(state_mutex_);
-        session_origin_pull_.state_ = new_state;
-    }
-
-    if (status_callback_) {
-        status_callback_(new_state, msg);
-    }
-
-    cv_.notify_all();
-}
-
-bool StreamNode::shouldReconnect(STREAM_SESSION& session) const {
-    if (session.max_retries_ > 0 && session.retry_count_ >= session.max_retries_) {
-        return false;
-    }
-
-    auto now = std::chrono::steady_clock::now();
-    if (now - session.last_reconnect_time_ < std::chrono::milliseconds(session.retry_interval_)) {
-        return false;
-    }
-
-    return true;
-}
-
-void StreamNode::doReconnect(STREAM_SESSION& session) {
-    session.retry_count_++;
-    session.last_reconnect_time_ = std::chrono::steady_clock::now();
-
-    {
-        std::lock_guard<std::mutex> lock(stats_mutex_);
-        stats_.reconnect_count++;
-    }
-
-    if (session.max_retries_ <= 0) {
-        setState(SESSION_STATE::SESSION_RECONNECTING, "Reconnecting (attempt " + std::to_string(session.retry_count_) + "/unlimited)");
-    }
-    else {
-        setState(SESSION_STATE::SESSION_RECONNECTING,
-            "Reconnecting (attempt " + std::to_string(session.retry_count_) +
-            "/" + std::to_string(session.max_retries_) + ")");
-    }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(session.retry_interval_));
+    session_origin_pull_.setState(SESSION_STATE::SESSION_ERROR);
 }
 
 // ============================================================================
@@ -946,40 +890,6 @@ void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session)
     if (session->rtc_handle_thread_.joinable()) {
         session->rtc_handle_thread_.detach();
     }
-}
-
-// ============================================================================
-// Socket 操作 — 薄包装器，委托到 STREAM_SESSION 成员函数
-// ============================================================================
-
-bool StreamNode::createUDPPullSocket() {
-    return session_origin_pull_.createUDPConsecutiveSockets(false);
-}
-
-bool StreamNode::createUDPPushSocket() {
-    return session_relay_push_.createUDPConsecutiveSockets(false);
-}
-
-bool StreamNode::createUDPServerSocket(STREAM_SESSION& streamInfo) {
-    return streamInfo.createUDPConsecutiveSockets(true);
-}
-
-void StreamNode::closeUDPSockets() {
-    session_origin_pull_.closeSockets();
-    session_relay_push_.closeSockets();
-}
-
-bool StreamNode::sendUDPDataToSession(const uint8_t* data, size_t size, STREAM_SESSION& rtspSession) {
-    bool ok = rtspSession.sendUDPData(data, size);
-    if (!ok) {
-        std::lock_guard<std::mutex> lock(stats_mutex_);
-        stats_.errors++;
-    }
-    return ok;
-}
-
-int StreamNode::receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port) {
-    return session_origin_pull_.receiveUDPData(buffer, size, src_ip, src_port);
 }
 
 

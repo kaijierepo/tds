@@ -30,10 +30,14 @@ public:
     int receive(void* buffer, size_t size, int timeout_ms = 5000);
     int receiveHttpResp(std::string& response, int timeout_ms = 5000);
 
+    // RTSP CSeq 计数器（每条信令连接独立递增，从 1 开始）
+    std::string nextCSeq() { return std::to_string(++cseq_); }
+
     SocketHandle getSocket() const { return sockfd_; }
 
 private:
     SocketHandle sockfd_ = kInvalidSocket;
+    int cseq_ = 0;
     std::string host_;
     int port_ = 0;
     int last_error_ = 0;
@@ -251,6 +255,13 @@ struct STREAM_SESSION {
     bool sendUDPData(const uint8_t* data, size_t size);
     // 从本 session 的 RTP socket 接收 UDP 数据
     int receiveUDPData(uint8_t* buffer, size_t size, std::string& src_ip, int& src_port);
+
+    // 设置会话状态
+    void setState(SESSION_STATE new_state);
+    // 重连策略判断：未超 max_retries_ 且距上次重连超过 retry_interval_
+    bool shouldReconnect() const;
+    // 执行重连：计数+记录时间+按 retry_interval_ 退避
+    void doReconnect();
 
     std::string getSessionStateDesc();
 };

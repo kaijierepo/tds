@@ -292,7 +292,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			si.payload_type = h264PT;
 			LOG("[WebRTC] using H264 PT=%d from Offer", h264PT);
 		}
-		sn->createUDPServerSocket(si);
+		si.createUDPConsecutiveSockets(true);
 
 		std::string serverIp = session.localIP;
 		if (serverIp.empty()) serverIp = "0.0.0.0";

@@ -737,7 +737,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 					rtspSession.transport_mode = TransportMode::UDP;
 
 					// 创建服务端 UDP socket（用于发送 RTP）
-					streamNode->createUDPServerSocket(rtspSession);
+					rtspSession.createUDPConsecutiveSockets(true);
 
 					int serverRtpPort = rtspSession.server_rtp_port;
 					int serverRtcpPort = rtspSession.server_rtcp_port;

@@ -170,9 +170,7 @@ std::shared_ptr<StreamNode> StreamServer::createStream(const STREAM_OPEN_PARAM& 
 	sn->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
 
 		});
-	sn->setStatusCallback([](SESSION_STATE state, const std::string& msg) {
-		LOG("[StreamNode] Status: %d - %s", static_cast<int>(state), msg.c_str());
-		});
+
 	sn->setErrorCallback([](const std::string& error, int code) {
 		LOG("[StreamNode] Error (%d): %s", code, error.c_str());
 		});
