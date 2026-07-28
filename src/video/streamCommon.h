@@ -92,6 +92,30 @@ inline std::string base64Encode(const std::string& input) {
     return encoded;
 }
 
+// Base64 解码（用于解析 sprop-parameter-sets）
+inline std::vector<uint8_t> base64Decode(const std::string& input) {
+    static const std::string chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789+/";
+
+    std::vector<uint8_t> out;
+    std::vector<int> T(256, -1);
+    for (int i = 0; i < 64; i++) T[(unsigned char)chars[i]] = i;
+
+    int val = 0, valb = -8;
+    for (unsigned char c : input) {
+        if (T[c] == -1) break;
+        val = (val << 6) + T[c];
+        valb += 6;
+        if (valb >= 0) {
+            out.push_back((uint8_t)((val >> valb) & 0xFF));
+            valb -= 8;
+        }
+    }
+    return out;
+}
+
 // URL 百分号解码（例如 %E4%B8%AD → 中文）
 inline std::string url_decode(const std::string& str) {
 	std::string result;

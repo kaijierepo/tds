@@ -318,8 +318,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 
 			// 解析 SDP 获取编码信息
 			STREAM_SESSION videoInfo, audioInfo;
-			StreamNode tempNode;
-			if (sdpBody.empty() || !tempNode.parseSDP(sdpBody, videoInfo, audioInfo)) {
+			if (sdpBody.empty() || !videoInfo.parseSDP(sdpBody, audioInfo)) {
 				std::ostringstream resp;
 				resp << "RTSP/1.0 400 Bad Request\r\n";
 				resp << "CSeq: " << cseq << "\r\n";

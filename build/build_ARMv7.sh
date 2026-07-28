@@ -407,7 +407,8 @@ compile_cpp_if_needed ./video/streamServer_file.cpp ./video/streamServer_file.o
 compile_cpp_if_needed ./video/streamServer_rtsp.cpp ./video/streamServer_rtsp.o
 compile_cpp_if_needed ./video/streamServer_rpc.cpp ./video/streamServer_rpc.o
 compile_cpp_if_needed ./video/streamNode.cpp ./video/streamNode.o
-compile_cpp_if_needed ./video/streamNode_rtsp.cpp ./video/streamNode_rtsp.o
+compile_cpp_if_needed ./video/streamSession.cpp ./video/streamSession.o
+compile_cpp_if_needed ./video/streamSession_rtsp.cpp ./video/streamSession_rtsp.o
 compile_cpp_if_needed ./video/streamNode_rtp.cpp ./video/streamNode_rtp.o
 compile_cpp_if_needed ./video/streamSession_socket.cpp ./video/streamSession_socket.o
 compile_cpp_if_needed ./video/streamSession_webrtc.cpp ./video/streamSession_webrtc.o
@@ -612,7 +613,7 @@ obj_files="\
 ./video/streamServer_rpc.o \
 ./video/streamNode.o \
 ./video/streamSession.o \
-./video/streamNode_rtsp.o \
+./video/streamSession_rtsp.o \
 ./video/streamNode_rtp.o \
 ./video/streamSession_socket.o \
 ./video/streamSession_webrtc.o \

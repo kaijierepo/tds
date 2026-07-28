@@ -296,6 +296,11 @@ struct STREAM_SESSION {
     // 执行重连：计数+记录时间+按 retry_interval_ 退避
     void doReconnect();
 
+    // 解析 SDP：视频轨写入本 session，音频轨写入 audio_info
+    bool parseSDP(const std::string& sdp, STREAM_SESSION& audio_info);
+    // 由本 session（视频轨）生成 SDP
+    std::string generateSDP() const;
+
     std::string getSessionStateDesc();
     std::string getTypeDesc() const;
 

@@ -39,30 +39,6 @@ public:
 static WinsockInitializer winsock_init;
 #endif
 
-// Base64解码（用于解析 sprop-parameter-sets，也供 streamNode_rtsp.cpp 的 parseSDP 使用）
-std::vector<uint8_t> base64Decode(const std::string& input) {
-    static const std::string chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
-
-    std::vector<uint8_t> out;
-    std::vector<int> T(256, -1);
-    for (int i = 0; i < 64; i++) T[(unsigned char)chars[i]] = i;
-
-    int val = 0, valb = -8;
-    for (unsigned char c : input) {
-        if (T[c] == -1) break;
-        val = (val << 6) + T[c];
-        valb += 6;
-        if (valb >= 0) {
-            out.push_back((uint8_t)((val >> valb) & 0xFF));
-            valb -= 8;
-        }
-    }
-    return out;
-}
-
 // HTTP包验证函数
 size_t IsValidPkt_HTTP(std::string& strData, size_t iLen) {
     size_t iPos_contentLengthLineStart = strData.find("Content-Length:");
@@ -392,6 +368,73 @@ void StreamNode::stop() {
     session_relay_push_.close();
 
     session_origin_pull_.setState(SESSION_STATE::SESSION_IDLE);
+}
+
+// ============================================================================
+// 控制流
+// ============================================================================
+
+void StreamNode::controlThread() {
+    while (running_ && !stopping_) {
+        // 启动拉流与推流
+        if (isPulling_ == false) {
+            if (session_origin_pull_.open(*this)) {
+                rtp_handle_thread_ = std::thread(&StreamNode::OriginRtpHandleThread,this);
+                rtp_handle_thread_.detach();
+                open_time_ = std::chrono::system_clock::now();
+                isPulling_ = true;
+            }
+            else {
+                {
+                    std::lock_guard<std::mutex> lock(stats_mutex_);
+                    stats_.reconnect_count++;
+                }
+                session_origin_pull_.setState(SESSION_STATE::SESSION_RECONNECTING);
+                session_origin_pull_.doReconnect();
+                session_origin_pull_.close();
+            }
+        }
+
+        if (isPulling_ == true && isPushing_ == false && session_relay_push_.server_url_ != "") {
+            if (session_relay_push_.open(*this)) {
+                isPushing_ = true;
+            }
+            else {
+                {
+                    std::lock_guard<std::mutex> lock(stats_mutex_);
+                    stats_.reconnect_count++;
+                }
+                session_relay_push_.setState(SESSION_STATE::SESSION_RECONNECTING);
+                session_relay_push_.doReconnect();
+                session_relay_push_.close();
+            }
+        }
+
+        // 心跳保活
+        if (isPulling_) {
+            if (session_origin_pull_.conn_ && !session_origin_pull_.rtsp_session_id_.empty()) {
+                if (!session_origin_pull_.rtspGetParameter(*this, session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_)) {
+                    session_origin_pull_.setState(SESSION_STATE::SESSION_ERROR);
+                    isPulling_ = false;
+                    session_origin_pull_.close();
+                    session_relay_push_.close();
+                }
+            }
+        }
+
+        if (isPushing_) {
+            if (session_relay_push_.conn_ && !session_relay_push_.rtsp_session_id_.empty()) {
+                if (!session_relay_push_.rtspGetParameter(*this, session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_)) {
+                    session_relay_push_.setState(SESSION_STATE::SESSION_ERROR);
+                    isPushing_ = false;
+                    session_origin_pull_.close();
+                    session_relay_push_.close();
+                }
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    }
 }
 
 

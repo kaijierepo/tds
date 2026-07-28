@@ -246,9 +246,6 @@ public:
 
 
 
-    // SDP处理
-    bool parseSDP(const std::string& sdp, STREAM_SESSION& video_info, STREAM_SESSION& audio_info);
-    std::string generateSDP(const STREAM_SESSION& video_info, const STREAM_SESSION& audio_info);
     void sendRTPPacketToClients(const RTPPacket& packet);
     void forwardRTPPacket(const RTPPacket& packet);
     void recordRTPPacket(std::shared_ptr<RTPPacket> pPkt);

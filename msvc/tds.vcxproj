@@ -689,7 +689,8 @@
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\video\streamNode.cpp" />
     <ClCompile Include="..\src\video\streamSession.cpp" />
-    <ClCompile Include="..\src\video\streamNode_rtsp.cpp" />
+    <ClCompile Include="..\src\video\streamSession_rtsp.cpp" />
+
     <ClCompile Include="..\src\video\streamNode_rtp.cpp" />
     <ClCompile Include="..\src\video\streamSession_socket.cpp" />
     <ClCompile Include="..\src\video\streamSession_webrtc.cpp" />
