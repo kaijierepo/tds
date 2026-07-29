@@ -105,7 +105,7 @@ bool STREAM_SESSION::createUDPConsecutiveSockets(bool isServer) {
         }
 
         if (!configureUDPSocket(rtp_sock, false)) {
-            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             continue;
         }
 
@@ -116,14 +116,14 @@ bool STREAM_SESSION::createUDPConsecutiveSockets(bool isServer) {
         local_addr.sin_port = htons(0); // 系统分配端口
 
         if (::bind(static_cast<SOCKET_TYPE>(rtp_sock), (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
-            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             continue;
         }
 
         // 获取分配的端口
         socklen_t len = sizeof(local_addr);
         if (getsockname(static_cast<SOCKET_TYPE>(rtp_sock), (struct sockaddr*)&local_addr, &len) != 0) {
-            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             continue;
         }
 
@@ -133,13 +133,13 @@ bool STREAM_SESSION::createUDPConsecutiveSockets(bool isServer) {
         // 创建RTCP socket并绑定到 rtp_port + 1
         SocketHandle rtcp_sock = static_cast<SocketHandle>(socket(AF_INET, SOCK_DGRAM, 0));
         if (rtcp_sock == kInvalidSocket) {
-            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
             continue;
         }
 
         if (!configureUDPSocket(rtcp_sock, false)) {
-            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
-            CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
+            ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+            ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
             continue;
         }
 
@@ -180,8 +180,8 @@ bool STREAM_SESSION::createUDPConsecutiveSockets(bool isServer) {
         }
 
         // 绑定失败，释放并重试
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
+        ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_sock));
+        ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_sock));
     }
 
     LOG("Failed to create consecutive UDP sockets for RTP/RTCP");
@@ -203,11 +203,11 @@ bool STREAM_SESSION::createUDPConsecutiveSockets(bool isServer) {
 
 void STREAM_SESSION::closeSockets() {
     if (rtp_socket != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_socket));
+        ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtp_socket));
         rtp_socket = kInvalidSocket;
     }
     if (rtcp_socket != kInvalidSocket) {
-        CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_socket));
+        ::CLOSE_SOCKET(static_cast<SOCKET_TYPE>(rtcp_socket));
         rtcp_socket = kInvalidSocket;
     }
     client_rtp_port = 0;

@@ -6062,7 +6062,7 @@ void* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	return hFile;
 }
 #else
-void* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
+FILE* TDB::getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe) {
 	FILE* fp = nullptr;
 	std::string folderPath = getPath_dataFolder(tag, time);
 	std::string dlPath = folderPath + "/" + m_dbFmt.deListName;
@@ -8250,7 +8250,7 @@ bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 	bool bMatch = true;
 
 	size_t json_len = 0;
-	auto json_str = yyjson_mut_val_write(de, NULL, &json_len);
+	auto json_str = yyjson_mut_val_write(de, 0, &json_len);
 	if (json_str) {
 		bMatch = evaluate_condition(json_str, json_len);
 		free(json_str);
@@ -8268,7 +8268,7 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 		return true;
 
 	size_t json_len = 0;
-	char* json_str = yyjson_val_write(de, NULL, &json_len);
+	char* json_str = yyjson_val_write(de, 0, &json_len);
 	if (json_str) {
 		bMatch = evaluate_condition(json_str, json_len);
 
