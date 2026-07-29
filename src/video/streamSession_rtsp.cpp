@@ -232,21 +232,16 @@ bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
             return false;
         }
 
-        // 从源 SESSION 复制视频流信息（codec/sps/pps等），保留 relay push 自身配置
+        // 从源 SESSION 复制视频流元数据，不碰 socket/连接/认证等 relay push 自身配置
         {
-            SESSION_STATE saved_state = state_;
-            STREAM_SESSION_TYPE saved_type = session_type_;
-            std::string saved_server_url = server_url_;
-            TransportMode saved_transport_mode = transport_mode;
-            std::string saved_username = server_username_;
-            std::string saved_password = server_password_;
-            *this = *origin_session;
-            state_ = saved_state;
-            session_type_ = saved_type;
-            server_url_ = saved_server_url;
-            transport_mode = saved_transport_mode;
-            server_username_ = saved_username;
-            server_password_ = saved_password;
+            codec = origin_session->codec;
+            payload_type = origin_session->payload_type;
+            clock_rate = origin_session->clock_rate;
+            fmtp = origin_session->fmtp;
+            sps = origin_session->sps;
+            pps = origin_session->pps;
+            sdp = origin_session->sdp;
+            video_ssrc = origin_session->video_ssrc;
         }
         {
             std::string track_control = "trackID=0";
