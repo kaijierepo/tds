@@ -330,7 +330,7 @@ bool StreamNode::run(const Config& config) {
     // 同步全局 verbose 标志供 streamCommon.h 中的 logDebug/logVerbose 使用
     g_stream_verbose = config_.verbose;
 
-    control_thread_ = std::thread(&StreamNode::controlThread, this);
+    control_thread_ = std::thread(&StreamNode::ctrlThread_rtspClient, this);
 	control_thread_.detach();
 
     LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), session_origin_pull_.server_url_.c_str(), session_relay_push_.server_url_.c_str());
@@ -374,12 +374,12 @@ void StreamNode::stop() {
 // 控制流
 // ============================================================================
 
-void StreamNode::controlThread() {
+void StreamNode::ctrlThread_rtspClient() {
     while (running_ && !stopping_) {
         // 启动拉流与推流
         if (isPulling_ == false) {
             if (session_origin_pull_.open()) {
-                rtp_handle_thread_ = std::thread(&StreamNode::OriginRtpHandleThread,this);
+                rtp_handle_thread_ = std::thread(&StreamNode::recvThread_originRtp,this);
                 rtp_handle_thread_.detach();
                 open_time_ = std::chrono::system_clock::now();
                 isPulling_ = true;
@@ -414,7 +414,7 @@ void StreamNode::controlThread() {
         if (isPulling_) {
             if (session_origin_pull_.conn_ && !session_origin_pull_.rtsp_session_id_.empty()) {
                 if (!session_origin_pull_.rtspGetParameterReq(session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_)) {
-                    session_origin_pull_.setState(SESSION_STATE::SESSION_ERROR);
+                    session_origin_pull_.recordError("heartbeat timeout");
                     isPulling_ = false;
                     session_origin_pull_.close();
                     session_relay_push_.close();
@@ -425,7 +425,7 @@ void StreamNode::controlThread() {
         if (isPushing_) {
             if (session_relay_push_.conn_ && !session_relay_push_.rtsp_session_id_.empty()) {
                 if (!session_relay_push_.rtspGetParameterReq(session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_)) {
-                    session_relay_push_.setState(SESSION_STATE::SESSION_ERROR);
+                    session_relay_push_.recordError("heartbeat timeout");
                     isPushing_ = false;
                     session_origin_pull_.close();
                     session_relay_push_.close();
@@ -602,7 +602,7 @@ void StreamNode::startRtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> ses
 #endif
 
     session->rtc_handle_thread_running_ = true;
-    session->rtc_handle_thread_ = std::thread(&StreamNode::rtcSessionHandleThread, this, session);
+    session->rtc_handle_thread_ = std::thread(&StreamNode::ctrlThread_webrtcServer, this, session);
 
     logInfo("ICE thread started for socket fd=" + std::to_string(session->rtp_socket)
             + " ufrag=" + session->ice_ufrag);
@@ -629,7 +629,7 @@ void StreamNode::stopAllRtcHandleThreads() {
     }
 }
 
-void StreamNode::rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session) {
+void StreamNode::ctrlThread_webrtcServer(std::shared_ptr<STREAM_SESSION> session) {
     uint8_t buf[2048];
 
     // 初始化本会话的 DTLS 状态（shared_ptr 管理，RTP 发送线程可安全持有引用）

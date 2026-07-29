@@ -54,6 +54,7 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	jOrigin["state"] = sessionStateStr(sn->session_origin_pull_.state_);
 	jOrigin["transport"] = (sn->session_origin_pull_.transport_mode == TransportMode::UDP) ? "udp" : "tcp";
 	jOrigin["codec"] = sn->session_origin_pull_.codec;
+	jOrigin["lastError"] = sn->session_origin_pull_.last_error_;
 	jSi["originPull"] = jOrigin;
 
 	// 转推流信息
@@ -63,6 +64,7 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	jRelay["transport"] = (sn->session_relay_push_.transport_mode == TransportMode::UDP) ? "udp" : "tcp";
 	jRelay["openTime"] = toTimeStr(sn->session_relay_push_.open_time_);
 	jRelay["bytesSended"] = sn->session_relay_push_.rtpBytesSended;
+	jRelay["lastError"] = sn->session_relay_push_.last_error_;
 	jSi["relayPush"] = jRelay;
 
 	json jRtpBuffer;

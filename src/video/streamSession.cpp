@@ -55,6 +55,12 @@ void STREAM_SESSION::setState(SESSION_STATE new_state)
     state_ = new_state;
 }
 
+void STREAM_SESSION::recordError(const char* msg)
+{
+    last_error_ = msg ? msg : "";
+    state_ = SESSION_STATE::SESSION_ERROR;
+}
+
 bool STREAM_SESSION::shouldReconnect() const
 {
     if (max_retries_ > 0 && retry_count_ >= max_retries_) {

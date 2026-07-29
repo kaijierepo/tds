@@ -235,8 +235,8 @@ public:
     std::chrono::system_clock::time_point open_time_;
 
     // 工作线程
-    void controlThread();
-    void OriginRtpHandleThread();
+    void ctrlThread_rtspClient();
+    void recvThread_originRtp();
     bool checkIsIdrNalu(const RTPPacket& packet);
     void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, STREAM_SESSION& session);
     void doOriginRtpRecv();
@@ -258,5 +258,5 @@ public:
 
 private:
     // ICE-Lite 工作循环（由每个 WebRTC session 的 ice_thread_ 执行）
-    void rtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);
+    void ctrlThread_webrtcServer(std::shared_ptr<STREAM_SESSION> session);
 };

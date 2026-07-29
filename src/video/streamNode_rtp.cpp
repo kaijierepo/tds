@@ -92,7 +92,7 @@ void StreamNode::addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt)
 // RTP 工作线程
 // ============================================================================
 
-void StreamNode::OriginRtpHandleThread() {
+void StreamNode::recvThread_originRtp() {
     StreamNode::doOriginRtpRecv();
 }
 
@@ -280,7 +280,7 @@ void StreamNode::doOriginRtpRecv() {
 
             if (now - last_frame_time > std::chrono::milliseconds(session_origin_pull_.rtp_timeout_)) {
                 logError("RTP timeout detected");
-                session_origin_pull_.setState(SESSION_STATE::SESSION_ERROR);
+                session_origin_pull_.recordError("RTP timeout");
                 break;
             }
         }
@@ -655,7 +655,9 @@ void StreamNode::forwardRTPPacket(const RTPPacket & packet) {
         // TCP推流：发送到目标RTSP服务器（通过RTSP控制的连接）
         if (session_relay_push_.conn_ && session_relay_push_.conn_->isConnected()) {
             // RTP over RTSP: 插入 $ (0x24) + channel + length
-            uint8_t rtpOverTcp[4] = { 0x24, 0x00, 0x00, 0x00 };  // channel 0, length待定
+            int rtp_channel = (session_relay_push_.interleaved_rtp >= 0)
+                ? session_relay_push_.interleaved_rtp : 0;
+            uint8_t rtpOverTcp[4] = { 0x24, (uint8_t)(rtp_channel & 0xFF), 0x00, 0x00 };
             rtpOverTcp[2] = (data.size() >> 8) & 0xFF;
             rtpOverTcp[3] = data.size() & 0xFF;
             

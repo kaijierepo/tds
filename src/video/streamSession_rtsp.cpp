@@ -106,14 +106,14 @@ bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
         // 解析源URL
         StreamNode::URLComponents src_url;
         if (!StreamNode::URLComponents::parse(server_url_, src_url)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError("invalid source URL");
             return false;
         }
 
         // 连接到源服务器
         conn_ = std::make_unique<Connection>();
         if (!conn_->connect(src_url.host, src_url.port)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError(("connect failed: " + src_url.host + ":" + std::to_string(src_url.port)).c_str());
             return false;
         }
 
@@ -122,14 +122,14 @@ bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
         // 发送DESCRIBE
         std::string sdp;
         if (!rtspDescribeReq(server_url_, sdp, rtsp_session_id_)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError("DESCRIBE failed");
             return false;
         }
 
         // 解析SDP
         STREAM_SESSION audio_scratch;
         if (!parseSDP(sdp, audio_scratch)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError("SDP parse failed");
             return false;
         }
 
@@ -174,7 +174,7 @@ bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
 
         // 发送SETUP到源
         if (!rtspSetupReq(server_url_, rtsp_session_id_, *this)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError("SETUP failed");
             return false;
         }
 
@@ -207,7 +207,7 @@ bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
 
         // 发送PLAY
         if (!rtspPlayReq(server_url_, rtsp_session_id_)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError("PLAY failed");
             return false;
         }
 
@@ -222,13 +222,13 @@ bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
         // 连接到目标服务器
         StreamNode::URLComponents relay_push_url;
         if (!StreamNode::URLComponents::parse(server_url_, relay_push_url)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError("invalid relay URL");
             return false;
         }
 
         conn_ = std::make_unique<Connection>();
         if (!conn_->connect(relay_push_url.host, relay_push_url.port)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError(("connect failed: " + relay_push_url.host + ":" + std::to_string(relay_push_url.port)).c_str());
             return false;
         }
 
@@ -262,7 +262,7 @@ bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
 
         // 发送ANNOUNCE到目标
         if (!rtspAnnounceReq(server_url_, target_sdp, rtsp_session_id_)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError("ANNOUNCE failed");
             return false;
         }
 
@@ -286,43 +286,63 @@ bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
 
         // 发送SETUP到目标
         if (!rtspSetupReq(server_url_, rtsp_session_id_, *this)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError("SETUP failed");
             return false;
         }
 
-        // 解析目标服务器端口
+        // 解析目标服务器端口（UDP）或 TCP interleaved 通道
         {
             logInfo("Target SETUP Transport: " + transport);
-            const std::string key = "server_port=";
-            size_t pos = transport.find(key);
-            if (pos != std::string::npos) {
-                pos += key.size();
-                while (pos < transport.size() &&
-                    (transport[pos] == ' ' || transport[pos] == '\t')) {
-                    ++pos;
+            if (transport_mode == TransportMode::UDP) {
+                const std::string key = "server_port=";
+                size_t pos = transport.find(key);
+                if (pos != std::string::npos) {
+                    pos += key.size();
+                    while (pos < transport.size() &&
+                        (transport[pos] == ' ' || transport[pos] == '\t')) {
+                        ++pos;
+                    }
+                    int port = 0;
+                    while (pos < transport.size() &&
+                        transport[pos] >= '0' && transport[pos] <= '9') {
+                        port = port * 10 + (transport[pos] - '0');
+                        ++pos;
+                    }
+                    if (port > 0 && port <= 65535) {
+                        server_rtp_port = port;
+                    }
                 }
-                int port = 0;
-                while (pos < transport.size() &&
-                    transport[pos] >= '0' && transport[pos] <= '9') {
-                    port = port * 10 + (transport[pos] - '0');
-                    ++pos;
+            }
+            else {
+                // TCP 模式：解析服务端返回的 interleaved 通道号
+                const std::string key = "interleaved=";
+                size_t pos = transport.find(key);
+                if (pos != std::string::npos) {
+                    pos += key.size();
+                    int ch0 = -1;
+                    int ch1 = -1;
+                    if (sscanf(transport.c_str() + pos, "%d-%d", &ch0, &ch1) >= 1) {
+                        interleaved_rtp = ch0;
+                        interleaved_rtcp = ch1;
+                    }
                 }
-                if (port > 0 && port <= 65535) {
-                    server_rtp_port = port;
+                // RTP over RTSP 复用当前 RTSP 控制连接
+                if (conn_) {
+                    tcp_socket = conn_->getSocket();
                 }
             }
         }
 
         logInfo("Target RTP port: " + std::to_string(server_rtp_port));
-        if (server_rtp_port == 0) {
-            setState(SESSION_STATE::SESSION_ERROR);
+        if (transport_mode == TransportMode::UDP && server_rtp_port == 0) {
+            recordError("invalid server RTP port");
             return false;
         }
 
 
         // 发送RECORD到目标
         if (!rtspRecordReq(server_url_, rtsp_session_id_)) {
-            setState(SESSION_STATE::SESSION_ERROR);
+            recordError("RECORD failed");
             return false;
         }
 
@@ -478,7 +498,7 @@ bool STREAM_SESSION::rtspDescribeReq(const std::string& url,
 
 		int sent = conn_->send(req.c_str(), req.size());
 		if (sent != static_cast<int>(req.size())) {
-			setState(SESSION_STATE::SESSION_ERROR);
+			recordError("DESCRIBE send failed");
 			response.clear();
 			return false;
 		}
@@ -486,7 +506,7 @@ bool STREAM_SESSION::rtspDescribeReq(const std::string& url,
 		response.clear();
 		int rc = conn_->receiveHttpResp(response, 1000);
 		if (rc <= 0) {
-			setState(SESSION_STATE::SESSION_ERROR);
+			recordError("DESCRIBE recv timeout");
 			response.clear();
 			return false;
 		}

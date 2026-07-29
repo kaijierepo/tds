@@ -119,6 +119,8 @@ struct STREAM_SESSION {
     std::string ice_ufrag;
     std::string ice_pwd;
     SESSION_STATE state_ = SESSION_STATE::SESSION_IDLE;
+    // 最近一次错误描述（state_==SESSION_ERROR 时有效，成功/重连后清空）
+    std::string last_error_;
 
     // 从实际 RTP 流中捕获的视频 SSRC（用于 SDP 声明）
     uint32_t      video_ssrc = 0;
@@ -206,6 +208,8 @@ struct STREAM_SESSION {
 
     // 设置会话状态
     void setState(SESSION_STATE new_state);
+    // 记录错误信息并设置状态为 SESSION_ERROR
+    void recordError(const char* msg);
     // 重连策略判断：未超 max_retries_ 且距上次重连超过 retry_interval_
     bool shouldReconnect() const;
     // 执行重连：计数+记录时间+按 retry_interval_ 退避
