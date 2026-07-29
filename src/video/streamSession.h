@@ -184,6 +184,13 @@ struct STREAM_SESSION {
     STREAM_SESSION(const STREAM_SESSION&) = delete;
     STREAM_SESSION& operator=(const STREAM_SESSION&) = delete;
 
+    // 复制视频流元数据（codec/sps/pps/control_url 等），不复制 socket/连接/认证/状态
+    void copyStreamInfoFrom(const STREAM_SESSION& other);
+
+    // 复制 client pull 会话所需字段（流信息 + 传输 + socket 句柄）。
+    // 注意：socket 句柄会被共享，调用方需确保生命周期管理正确。
+    void copyClientSessionFrom(const STREAM_SESSION& other);
+
     // ---- UDP socket 操作（实现见 streamSession_socket.cpp）----
     // 配置 UDP socket（超时/TTL/ToS/缓冲区/地址重用）
     bool configureUDPSocket(SocketHandle sock, bool is_multicast);

@@ -283,7 +283,8 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			}
 		}
 
-		STREAM_SESSION si = sn->session_origin_pull_;
+		STREAM_SESSION si;
+		si.copyStreamInfoFrom(sn->session_origin_pull_);
 		si.session_type_ = CLIENT_WEBRTC_PULL;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
@@ -334,7 +335,8 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		buildWebRTCSdpAnswer(si, serverIp, fingerprint);
 		LOG("[WebRTC] SDP Answer:\n%s", si.sdp.c_str());
 
-		auto sessionPtr = std::make_shared<STREAM_SESSION>(si);
+		auto sessionPtr = std::make_shared<STREAM_SESSION>();
+		sessionPtr->copyClientSessionFrom(si);
 		sessionPtr->open_time_ = std::chrono::system_clock::now();
 		sn->session_list_client_pull_mutex_.lock();
 		sn->session_list_client_pull_.push_back(sessionPtr);

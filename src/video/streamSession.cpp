@@ -75,3 +75,40 @@ void STREAM_SESSION::doReconnect()
     last_reconnect_time_ = std::chrono::steady_clock::now();
     std::this_thread::sleep_for(std::chrono::milliseconds(retry_interval_));
 }
+
+void STREAM_SESSION::copyStreamInfoFrom(const STREAM_SESSION& other)
+{
+    control_url = other.control_url;
+    codec = other.codec;
+    payload_type = other.payload_type;
+    clock_rate = other.clock_rate;
+    fmtp = other.fmtp;
+    sps = other.sps;
+    pps = other.pps;
+    sdp = other.sdp;
+    video_ssrc = other.video_ssrc;
+}
+
+void STREAM_SESSION::copyClientSessionFrom(const STREAM_SESSION& other)
+{
+    copyStreamInfoFrom(other);
+
+    session_type_ = other.session_type_;
+    is_webrtc = other.is_webrtc;
+
+    transport_mode = other.transport_mode;
+    transport = other.transport;
+    remote_host = other.remote_host;
+    client_port = other.client_port;
+    server_port = other.server_port;
+    client_rtp_port = other.client_rtp_port;
+    client_rtcp_port = other.client_rtcp_port;
+    server_rtp_port = other.server_rtp_port;
+    server_rtcp_port = other.server_rtcp_port;
+
+    rtp_socket = other.rtp_socket;
+    rtcp_socket = other.rtcp_socket;
+    tcp_socket = other.tcp_socket;
+    interleaved_rtp = other.interleaved_rtp;
+    interleaved_rtcp = other.interleaved_rtcp;
+}

@@ -338,7 +338,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 				auto node = std::make_shared<StreamNode>();
 				// 直接设置 pull_session_ 信息（跳过 openOriginPullSession）
 				node->config_ = cfg;
-				node->session_origin_pull_ = videoInfo;
+				node->session_origin_pull_.copyStreamInfoFrom(videoInfo);
 				node->session_origin_pull_.retry_interval_ = 3000;
 				node->session_origin_pull_.max_retries_ = 0;
 				node->session_origin_pull_.rtp_timeout_ = 10000;
@@ -353,9 +353,9 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 					streamUrl.c_str(), videoInfo.codec.c_str(), videoInfo.payload_type);
 			}
 			else {
-				// 已存在的节点，更新编码信息
-				streamNode->session_origin_pull_ = videoInfo;
-				streamNode->isPulling_ = true;
+			// 已存在的节点，更新编码信息
+			streamNode->session_origin_pull_.copyStreamInfoFrom(videoInfo);
+			streamNode->isPulling_ = true;
 			}
 
 			// 清理上一个推流会话（ANNOUNCE 成功，旧会话不再有效）
@@ -692,9 +692,9 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 		}
 		else {
 				// ---- 拉流模式 SETUP ----
-				// 复制流信息，设置会话参数
-				rtspSession = streamNode->session_origin_pull_;
-				rtspSession.session_type_ = CLIENT_RTSP_PULL;
+			// 复制流信息，设置会话参数
+			rtspSession.copyStreamInfoFrom(streamNode->session_origin_pull_);
+			rtspSession.session_type_ = CLIENT_RTSP_PULL;
 				rtspSession.is_webrtc = false;
 				rtspSession.client_rtp_port = clientRtpPort;
 				rtspSession.client_rtcp_port = clientRtcpPort;
@@ -798,7 +798,8 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			sendResponse(cseq, resp.str());
 
 			// 将 RTSP 拉流会话加入 client_sessions_ 列表
-			auto sessionPtr = std::make_shared<STREAM_SESSION>(rtspSession);
+			auto sessionPtr = std::make_shared<STREAM_SESSION>();
+			sessionPtr->copyClientSessionFrom(rtspSession);
 			sessionPtr->open_time_ = std::chrono::system_clock::now();
 			streamNode->session_list_client_pull_mutex_.lock();
 			streamNode->session_list_client_pull_.push_back(sessionPtr);
