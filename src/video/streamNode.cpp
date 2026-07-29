@@ -378,7 +378,7 @@ void StreamNode::controlThread() {
     while (running_ && !stopping_) {
         // 启动拉流与推流
         if (isPulling_ == false) {
-            if (session_origin_pull_.open(*this)) {
+            if (session_origin_pull_.open()) {
                 rtp_handle_thread_ = std::thread(&StreamNode::OriginRtpHandleThread,this);
                 rtp_handle_thread_.detach();
                 open_time_ = std::chrono::system_clock::now();
@@ -396,7 +396,7 @@ void StreamNode::controlThread() {
         }
 
         if (isPulling_ == true && isPushing_ == false && session_relay_push_.server_url_ != "") {
-            if (session_relay_push_.open(*this)) {
+            if (session_relay_push_.open(&session_origin_pull_)) {
                 isPushing_ = true;
             }
             else {
@@ -413,7 +413,7 @@ void StreamNode::controlThread() {
         // 心跳保活
         if (isPulling_) {
             if (session_origin_pull_.conn_ && !session_origin_pull_.rtsp_session_id_.empty()) {
-                if (!session_origin_pull_.rtspGetParameter(*this, session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_)) {
+                if (!session_origin_pull_.rtspGetParameterReq(session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_)) {
                     session_origin_pull_.setState(SESSION_STATE::SESSION_ERROR);
                     isPulling_ = false;
                     session_origin_pull_.close();
@@ -424,7 +424,7 @@ void StreamNode::controlThread() {
 
         if (isPushing_) {
             if (session_relay_push_.conn_ && !session_relay_push_.rtsp_session_id_.empty()) {
-                if (!session_relay_push_.rtspGetParameter(*this, session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_)) {
+                if (!session_relay_push_.rtspGetParameterReq(session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_)) {
                     session_relay_push_.setState(SESSION_STATE::SESSION_ERROR);
                     isPushing_ = false;
                     session_origin_pull_.close();

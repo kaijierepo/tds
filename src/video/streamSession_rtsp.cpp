@@ -95,7 +95,7 @@ void STREAM_SESSION::close()
     closeSockets();
 }
 
-bool STREAM_SESSION::open(StreamNode& sn)
+bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
 {
     if (session_type_ == STREAM_SESSION_TYPE::ORIGIN_PULL) {
         // ================================================================
@@ -121,13 +121,14 @@ bool STREAM_SESSION::open(StreamNode& sn)
 
         // 发送DESCRIBE
         std::string sdp;
-        if (!rtspDescribe(sn, server_url_, sdp, rtsp_session_id_)) {
+        if (!rtspDescribeReq(server_url_, sdp, rtsp_session_id_)) {
             setState(SESSION_STATE::SESSION_ERROR);
             return false;
         }
 
         // 解析SDP
-        if (!parseSDP(sdp, sn.pull_audio_session_)) {
+        STREAM_SESSION audio_scratch;
+        if (!parseSDP(sdp, audio_scratch)) {
             setState(SESSION_STATE::SESSION_ERROR);
             return false;
         }
@@ -140,7 +141,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
             tag_.c_str(),
             sdp_for_log.c_str(),
             control_url.c_str(),
-            sn.pull_audio_session_.control_url.c_str());
+            audio_scratch.control_url.c_str());
 
         setState(SESSION_STATE::SESSION_HANDSHAKING);
 
@@ -172,7 +173,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
         );
 
         // 发送SETUP到源
-        if (!rtspSetup(sn, server_url_, rtsp_session_id_, *this)) {
+        if (!rtspSetupReq(server_url_, rtsp_session_id_, *this)) {
             setState(SESSION_STATE::SESSION_ERROR);
             return false;
         }
@@ -205,7 +206,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
         );
 
         // 发送PLAY
-        if (!rtspPlay(sn, server_url_, rtsp_session_id_)) {
+        if (!rtspPlayReq(server_url_, rtsp_session_id_)) {
             setState(SESSION_STATE::SESSION_ERROR);
             return false;
         }
@@ -231,18 +232,26 @@ bool STREAM_SESSION::open(StreamNode& sn)
             return false;
         }
 
-        // 从源 SESSION 复制视频流信息，保留 relay push 自身状态
+        // 从源 SESSION 复制视频流信息（codec/sps/pps等），保留 relay push 自身配置
         {
             SESSION_STATE saved_state = state_;
             STREAM_SESSION_TYPE saved_type = session_type_;
-            *this = sn.session_origin_pull_;
+            std::string saved_server_url = server_url_;
+            TransportMode saved_transport_mode = transport_mode;
+            std::string saved_username = server_username_;
+            std::string saved_password = server_password_;
+            *this = *origin_session;
             state_ = saved_state;
             session_type_ = saved_type;
+            server_url_ = saved_server_url;
+            transport_mode = saved_transport_mode;
+            server_username_ = saved_username;
+            server_password_ = saved_password;
         }
         {
             std::string track_control = "trackID=0";
-            if (!sn.session_origin_pull_.control_url.empty()) {
-                std::string src = sn.session_origin_pull_.control_url;
+            if (!origin_session->control_url.empty()) {
+                std::string src = origin_session->control_url;
                 size_t pos = src.find_last_of('/');
                 track_control = (pos == std::string::npos) ? src : src.substr(pos + 1);
                 if (track_control.empty() || track_control == "*" ||
@@ -257,7 +266,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
         std::string target_sdp = generateSDP();
 
         // 发送ANNOUNCE到目标
-        if (!rtspAnnounce(sn, server_url_, target_sdp, rtsp_session_id_)) {
+        if (!rtspAnnounceReq(server_url_, target_sdp, rtsp_session_id_)) {
             setState(SESSION_STATE::SESSION_ERROR);
             return false;
         }
@@ -281,7 +290,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
         }
 
         // 发送SETUP到目标
-        if (!rtspSetup(sn, server_url_, rtsp_session_id_, *this)) {
+        if (!rtspSetupReq(server_url_, rtsp_session_id_, *this)) {
             setState(SESSION_STATE::SESSION_ERROR);
             return false;
         }
@@ -317,7 +326,7 @@ bool STREAM_SESSION::open(StreamNode& sn)
 
 
         // 发送RECORD到目标
-        if (!rtspRecord(sn, server_url_, rtsp_session_id_)) {
+        if (!rtspRecordReq(server_url_, rtsp_session_id_)) {
             setState(SESSION_STATE::SESSION_ERROR);
             return false;
         }
@@ -428,7 +437,7 @@ bool STREAM_SESSION::parseWWWAuthenticate(const std::string& response, STREAM_SE
 // RTSP 控制方法
 // =============================================================================
 
-bool STREAM_SESSION::rtspDescribe(StreamNode& sn, const std::string& url,
+bool STREAM_SESSION::rtspDescribeReq(const std::string& url,
 	std::string& sdp, std::string& session) {
 	StreamNode::URLComponents url_components;
 	if (!StreamNode::URLComponents::parse(url, url_components)) {
@@ -442,14 +451,8 @@ bool STREAM_SESSION::rtspDescribe(StreamNode& sn, const std::string& url,
 	}
 	host_header += ":" + std::to_string(url_components.port);
 
-	// 确定认证信息
-	STREAM_SESSION* auth_session = nullptr;
-	if (url == sn.session_origin_pull_.server_url_ || url.find(sn.session_origin_pull_.server_url_) == 0) {
-		auth_session = &sn.session_origin_pull_;
-	}
-	else {
-		auth_session = &sn.session_relay_push_;
-	}
+	// 使用自身认证信息
+	STREAM_SESSION* auth_session = this;
 
 	auto do_describe = [&](const std::string& request_uri, bool include_host,
 		bool use_auth, std::string& response) -> bool {
@@ -580,7 +583,7 @@ bool STREAM_SESSION::rtspDescribe(StreamNode& sn, const std::string& url,
 	return false;
 }
 
-bool STREAM_SESSION::rtspSetup(StreamNode& sn, const std::string& url,
+bool STREAM_SESSION::rtspSetupReq(const std::string& url,
 	std::string& session, STREAM_SESSION& stream, bool record_mode) {
 	StreamNode::URLComponents url_components;
 	std::string host_header;
@@ -592,14 +595,8 @@ bool STREAM_SESSION::rtspSetup(StreamNode& sn, const std::string& url,
 		host_header += ":" + std::to_string(url_components.port);
 	}
 
-	// 确定认证信息
-	STREAM_SESSION* auth_session = nullptr;
-	if (url == sn.session_origin_pull_.server_url_ || url.find(sn.session_origin_pull_.server_url_) == 0) {
-		auth_session = &sn.session_origin_pull_;
-	}
-	else {
-		auth_session = &sn.session_relay_push_;
-	}
+	// 使用自身认证信息
+	STREAM_SESSION* auth_session = this;
 
 	// 根据 ZLM 的 SDP 格式，正确拼接 SETUP URL
 	// ZLM SDP: a=control:* 表示 base URL, a=control:streamid=0 表示相对路径
@@ -660,11 +657,11 @@ bool STREAM_SESSION::rtspSetup(StreamNode& sn, const std::string& url,
 	// 传输模式
 	if (record_mode) {
 		// 推流（发送）：服务端接收
-		if (sn.session_relay_push_.transport_mode == TransportMode::UDP) {
+		if (transport_mode == TransportMode::UDP) {
 			request << "Transport: RTP/AVP/UDP;unicast;mode=record;"
 				<< "client_port=" << stream.client_port;
-			if (sn.session_relay_push_.udp_ttl != 64) {
-				request << ";ttl=" << sn.session_relay_push_.udp_ttl;
+			if (udp_ttl != 64) {
+				request << ";ttl=" << udp_ttl;
 			}
 			request << "\r\n";
 		}
@@ -675,11 +672,11 @@ bool STREAM_SESSION::rtspSetup(StreamNode& sn, const std::string& url,
 	}
 	else {
 		// 拉流（接收）：客户端接收
-		if (sn.session_origin_pull_.transport_mode == TransportMode::UDP) {
+		if (transport_mode == TransportMode::UDP) {
 			request << "Transport: RTP/AVP/UDP;unicast;"
 				<< "client_port=" << stream.client_port;
-			if (sn.session_origin_pull_.udp_ttl != 64) {
-				request << ";ttl=" << sn.session_origin_pull_.udp_ttl;
+			if (udp_ttl != 64) {
+				request << ";ttl=" << udp_ttl;
 			}
 			request << "\r\n";
 		}
@@ -750,7 +747,7 @@ bool STREAM_SESSION::rtspSetup(StreamNode& sn, const std::string& url,
 	return true;
 }
 
-bool STREAM_SESSION::rtspPlay(StreamNode& sn, const std::string& url,
+bool STREAM_SESSION::rtspPlayReq(const std::string& url,
 	const std::string& session) {
 	StreamNode::URLComponents url_components;
 	std::string host_header;
@@ -762,14 +759,8 @@ bool STREAM_SESSION::rtspPlay(StreamNode& sn, const std::string& url,
 		host_header += ":" + std::to_string(url_components.port);
 	}
 
-	// 确定认证信息
-	STREAM_SESSION* auth_session = nullptr;
-	if (url == sn.session_origin_pull_.server_url_ || url.find(sn.session_origin_pull_.server_url_) == 0) {
-		auth_session = &sn.session_origin_pull_;
-	}
-	else {
-		auth_session = &sn.session_relay_push_;
-	}
+	// 使用自身认证信息
+	STREAM_SESSION* auth_session = this;
 
 	std::stringstream request;
 	request << "PLAY " << url << " RTSP/1.0\r\n"
@@ -813,7 +804,7 @@ bool STREAM_SESSION::rtspPlay(StreamNode& sn, const std::string& url,
 	return true;
 }
 
-bool STREAM_SESSION::rtspTeardown(StreamNode& sn, const std::string& url,
+bool STREAM_SESSION::rtspTeardownReq(const std::string& url,
 	const std::string& session) {
 	StreamNode::URLComponents url_components;
 	std::string host_header;
@@ -825,14 +816,8 @@ bool STREAM_SESSION::rtspTeardown(StreamNode& sn, const std::string& url,
 		host_header += ":" + std::to_string(url_components.port);
 	}
 
-	// 确定认证信息
-	STREAM_SESSION* auth_session = nullptr;
-	if (url == sn.session_origin_pull_.server_url_ || url.find(sn.session_origin_pull_.server_url_) == 0) {
-		auth_session = &sn.session_origin_pull_;
-	}
-	else {
-		auth_session = &sn.session_relay_push_;
-	}
+	// 使用自身认证信息
+	STREAM_SESSION* auth_session = this;
 
 	std::stringstream request;
 	request << "TEARDOWN " << url << " RTSP/1.0\r\n"
@@ -865,7 +850,7 @@ bool STREAM_SESSION::rtspTeardown(StreamNode& sn, const std::string& url,
 	return true;
 }
 
-bool STREAM_SESSION::rtspAnnounce(StreamNode& sn, const std::string& url,
+bool STREAM_SESSION::rtspAnnounceReq(const std::string& url,
 	const std::string& sdp, std::string& session) {
 	StreamNode::URLComponents url_components;
 	std::string host_header;
@@ -877,11 +862,8 @@ bool STREAM_SESSION::rtspAnnounce(StreamNode& sn, const std::string& url,
 		host_header += ":" + std::to_string(url_components.port);
 	}
 
-	// 确定认证信息
-	STREAM_SESSION* auth_session = nullptr;
-	if (url == sn.session_relay_push_.server_url_ || url.find(sn.session_relay_push_.server_url_) == 0) {
-		auth_session = &sn.session_relay_push_;
-	}
+	// 使用自身认证信息
+	STREAM_SESSION* auth_session = this;
 
 	std::stringstream request;
 	request << "ANNOUNCE " << url << " RTSP/1.0\r\n"
@@ -928,7 +910,7 @@ bool STREAM_SESSION::rtspAnnounce(StreamNode& sn, const std::string& url,
 	return true;
 }
 
-bool STREAM_SESSION::rtspRecord(StreamNode& sn, const std::string& url,
+bool STREAM_SESSION::rtspRecordReq(const std::string& url,
 	const std::string& session) {
 	StreamNode::URLComponents url_components;
 	std::string host_header;
@@ -940,11 +922,8 @@ bool STREAM_SESSION::rtspRecord(StreamNode& sn, const std::string& url,
 		host_header += ":" + std::to_string(url_components.port);
 	}
 
-	// 确定认证信息
-	STREAM_SESSION* auth_session = nullptr;
-	if (url == sn.session_relay_push_.server_url_ || url.find(sn.session_relay_push_.server_url_) == 0) {
-		auth_session = &sn.session_relay_push_;
-	}
+	// 使用自身认证信息
+	STREAM_SESSION* auth_session = this;
 
 	std::stringstream request;
 	request << "RECORD " << url << " RTSP/1.0\r\n"
@@ -988,7 +967,7 @@ bool STREAM_SESSION::rtspRecord(StreamNode& sn, const std::string& url,
 	return true;
 }
 
-bool STREAM_SESSION::rtspGetParameter(StreamNode& sn, const std::string& url,
+bool STREAM_SESSION::rtspGetParameterReq(const std::string& url,
 	const std::string& session) {
 	StreamNode::URLComponents url_components;
 	std::string host_header;
@@ -1000,14 +979,8 @@ bool STREAM_SESSION::rtspGetParameter(StreamNode& sn, const std::string& url,
 		host_header += ":" + std::to_string(url_components.port);
 	}
 
-	// 确定认证信息
-	STREAM_SESSION* auth_session = nullptr;
-	if (url == sn.session_origin_pull_.server_url_ || url.find(sn.session_origin_pull_.server_url_) == 0) {
-		auth_session = &sn.session_origin_pull_;
-	}
-	else {
-		auth_session = &sn.session_relay_push_;
-	}
+	// 使用自身认证信息
+	STREAM_SESSION* auth_session = this;
 
 	std::stringstream request;
 	request << "GET_PARAMETER " << url << " RTSP/1.0\r\n"

@@ -46,7 +46,6 @@ private:
 
 // Forward declaration（仅指针/引用使用，无需完整定义）
 class SrptProtect;
-class StreamNode;
 
 // ============================================================================
 // Session 类型与状态枚举
@@ -309,7 +308,8 @@ struct STREAM_SESSION {
 
     // 打开会话：根据 session_type_ 执行 ORIGIN_PULL（DESCRIBE→SETUP→PLAY）
     // 或 RELAY_PUSH（ANNOUNCE→SETUP→RECORD）
-    bool open(StreamNode& sn);
+    // RELAY_PUSH 分支需要 origin_session 复制视频流信息（codec/sps/pps）
+    bool open(const STREAM_SESSION* origin_session = nullptr);
 
 public:
     // 认证辅助函数（RTSP Digest/Basic）
@@ -318,19 +318,19 @@ public:
     void buildAuthHeader(const std::string& method, const std::string& uri);
 
     // RTSP 控制方法
-    bool rtspDescribe(StreamNode& sn, const std::string& url,
+    bool rtspDescribeReq(const std::string& url,
         std::string& sdp, std::string& session);
-    bool rtspSetup(StreamNode& sn, const std::string& url,
+    bool rtspSetupReq(const std::string& url,
         std::string& session, STREAM_SESSION& stream, bool record_mode = false);
-    bool rtspPlay(StreamNode& sn, const std::string& url,
+    bool rtspPlayReq(const std::string& url,
         const std::string& session);
-    bool rtspTeardown(StreamNode& sn, const std::string& url,
+    bool rtspTeardownReq(const std::string& url,
         const std::string& session);
-    bool rtspAnnounce(StreamNode& sn, const std::string& url,
+    bool rtspAnnounceReq(const std::string& url,
         const std::string& sdp, std::string& session);
-    bool rtspRecord(StreamNode& sn, const std::string& url,
+    bool rtspRecordReq(const std::string& url,
         const std::string& session);
-    bool rtspGetParameter(StreamNode& sn, const std::string& url,
+    bool rtspGetParameterReq(const std::string& url,
         const std::string& session);
 
 private:

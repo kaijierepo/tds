@@ -198,8 +198,6 @@ public:
     std::mutex keyframe_cache_mutex_;
     bool keyframe_caching_ = false;  // 当前是否正在缓存关键帧（遇到IDR开始，marker=1结束）
 
-    STREAM_SESSION pull_audio_session_;
-
     // 线程
     std::thread rtp_handle_thread_;
     std::thread control_thread_;
