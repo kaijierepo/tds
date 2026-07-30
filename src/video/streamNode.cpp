@@ -781,6 +781,288 @@ void StreamNode::threadCtrl_webrtcServer(std::shared_ptr<STREAM_SESSION> session
     }
 }
 
+// ============================================================================
+// RTSP 推流接收：从客户端 UDP socket 接收 RTP 并分发
+// ============================================================================
+
+void StreamNode::threadRecv_rtspPublish(std::shared_ptr<RtspRecvSession> session) {
+    if (!session || session->rtp_sock == kInvalidSocket) {
+        LOG("[RTSP-Recv] Invalid session, thread exit");
+        return;
+    }
+
+    LOG("[RTSP-Recv] Thread started for tag=%s, session=%s, port=%d",
+        session->tag.c_str(), session->session_id.c_str(), session->server_rtp_port);
+
+    // 设置 RTP 接收缓冲区
+    const int recvBufSize = 524288;  // 512KB
+#ifdef _WIN32
+    int bufSize = recvBufSize;
+    setsockopt(static_cast<SOCKET>(session->rtp_sock), SOL_SOCKET, SO_RCVBUF,
+        (const char*)&bufSize, sizeof(bufSize));
+#else
+    int bufSize = recvBufSize;
+    setsockopt(session->rtp_sock, SOL_SOCKET, SO_RCVBUF, &bufSize, sizeof(bufSize));
+#endif
+
+    std::vector<uint8_t> buffer(65536);
+    auto lastPacketTime = std::chrono::steady_clock::now();
+    const int RTP_IDLE_TIMEOUT_SEC = 30;  // 30秒收不到包认为推流断开
+
+    while (session->recv_running_ && running_) {
+        struct sockaddr_in fromAddr;
+        socklen_t fromLen = sizeof(fromAddr);
+        int received = recvfrom(static_cast<SOCKET_TYPE>(session->rtp_sock),
+#ifdef _WIN32
+            (char*)buffer.data(), (int)buffer.size(), 0,
+#else
+            buffer.data(), buffer.size(), 0,
+#endif
+            (struct sockaddr*)&fromAddr, &fromLen);
+
+        if (received > 12) {
+            lastPacketTime = std::chrono::steady_clock::now();
+            auto pPkt = std::make_shared<RTPPacket>();
+            RTPPacket& packet = *pPkt;
+
+            if (packet.parse(buffer.data(), received)) {
+                // 更新 SSRC
+                if (session_origin_pull_.video_ssrc == 0 && packet.ssrc != 0) {
+                    session_origin_pull_.video_ssrc = packet.ssrc;
+                    LOG("[RTSP-Recv] Captured video SSRC=%u from push", packet.ssrc);
+                }
+
+                // 放入缓存
+                addToRtpBuffer(pPkt);
+
+                // 发送给拉流客户端
+                sendRTPPacketToClients(packet);
+
+                // 更新统计
+                {
+                    std::lock_guard<std::mutex> lock(stats_mutex_);
+                    stats_.bytes_received += received;
+                    stats_.frames_received++;
+                    stats_.last_frame_time = std::chrono::steady_clock::now();
+                }
+
+                // 录像处理（如果启用）
+                {
+                    std::lock_guard<std::recursive_mutex> lock(rec_mutex_);
+                    if (rec_ctrl_.recording) {
+                        if (rec_ctrl_.firstWrite && !rec_ctrl_.preRecordingDone) {
+                            // 从 rtp_buffer_ 取出预录数据
+                            std::vector<std::shared_ptr<RTPPacket>> pre_packets;
+                            {
+                                std::lock_guard<std::mutex> qlock(queue_mutex_);
+                                uint32_t _clock = (session_origin_pull_.clock_rate > 0) ?
+                                    static_cast<uint32_t>(session_origin_pull_.clock_rate) : 90000u;
+                                for (auto it = rtp_buffer_.rbegin();
+                                    it != rtp_buffer_.rend(); ++it) {
+                                    if (packet.timestamp - (*it)->timestamp <=
+                                        static_cast<uint64_t>(rec_ctrl_.preSeconds) * _clock) {
+                                        pre_packets.push_back(*it);
+                                    }
+                                    else { break; }
+                                }
+                            }
+                            for (auto it = pre_packets.rbegin(); it != pre_packets.rend(); ++it) {
+                                recordRTPPacket(*it);
+                            }
+                            rec_ctrl_.preRecordingDone = true;
+                        }
+                        recordRTPPacket(pPkt);
+                    }
+                }
+            }
+        }
+        else if (received < 0) {
+            // 超时或错误，检查是否长时间没有收到数据
+            auto now = std::chrono::steady_clock::now();
+            auto idleSec = std::chrono::duration_cast<std::chrono::seconds>(now - lastPacketTime).count();
+            if (idleSec >= RTP_IDLE_TIMEOUT_SEC) {
+                LOG("[RTSP-Recv] No RTP data for %lld seconds, closing RTSP connection for tag=%s",
+                    (long long)idleSec, session->tag.c_str());
+                // 关闭 RTSP 控制连接，触发 handleRtspClient 信令线程退出
+                if (session->tcp_sock != kInvalidSocket) {
+#ifdef _WIN32
+                    shutdown(static_cast<SOCKET>(session->tcp_sock), SD_BOTH);
+#else
+                    shutdown(session->tcp_sock, SHUT_RDWR);
+#endif
+                    session->tcp_sock = kInvalidSocket;
+                }
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
+
+    // 清理
+    LOG("[RTSP-Recv] Thread stopped for tag=%s, session=%s",
+        session->tag.c_str(), session->session_id.c_str());
+}
+
+// ============================================================================
+// RTP 拉流接收线程（ORIGIN_PULL 模式）
+// ============================================================================
+
+void StreamNode::threadRecv_originPull() {
+    session_origin_pull_.setState(SESSION_STATE::SESSION_STREAMING);
+    bool pullUDP = (session_origin_pull_.transport_mode == TransportMode::UDP);
+    LOG("[keyinfo][StreamNode]tag=%s,Pull Success,rtp handle thread start,mode:%s", config_.tag.c_str(), pullUDP ? "UDP" : "TCP");
+
+    std::vector<uint8_t> buffer(session_origin_pull_.buffer_size_);
+    std::string src_ip;
+    int src_port = 0;
+
+    {
+        std::lock_guard<std::mutex> lock(stats_mutex_);
+        stats_.last_frame_time = std::chrono::steady_clock::now();
+    }
+
+    // TCP拉流模式下的状态
+    int tcpRtpChannel = 0;
+    int tcpRtcpChannel = 1;
+    std::vector<uint8_t> tcpBuffer;
+    bool waitingForRtpData = true;
+
+    while (running_ && !stopping_) {
+        int received = 0;
+
+        if (pullUDP) {
+            // UDP拉流 最多阻塞1秒 configureUDPSocket 中设置了1秒超时
+            received = session_origin_pull_.receiveUDPData(buffer.data(), buffer.size(), src_ip, src_port);
+        }
+        else {
+            // TCP拉流：通过RTSP连接接收RTP数据
+            if (!session_origin_pull_.conn_ || !session_origin_pull_.conn_->isConnected()) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            }
+
+            // 接收数据
+            char tmpBuf[2048] = { 0 };
+            int n = session_origin_pull_.conn_->receive(tmpBuf, sizeof(tmpBuf), 100);
+
+            if (n > 0) {
+                // 添加到缓冲区
+                tcpBuffer.insert(tcpBuffer.end(), (uint8_t*)tmpBuf, (uint8_t*)tmpBuf + n);
+
+                // 处理RTP包 ( interleaved = $ + channel + len + data )
+                while (tcpBuffer.size() >= 4) {
+                    if (tcpBuffer[0] != 0x24) {
+                        // 不是interleaved标记，跳过
+                        tcpBuffer.erase(tcpBuffer.begin());
+                        continue;
+                    }
+
+                    int channel = tcpBuffer[1];
+                    int len = (tcpBuffer[2] << 8) | tcpBuffer[3];
+
+                    if (tcpBuffer.size() < 4 + len) {
+                        // 数据不完整，等待更多数据
+                        break;
+                    }
+
+                    // 检查是否是RTP数据 (channel 0)
+                    if (channel == tcpRtpChannel) {
+                        // 复制RTP数据
+                        memcpy(buffer.data(), &tcpBuffer[4], len);
+                        received = len;
+                    }
+
+                    // 移除已处理的数据
+                    tcpBuffer.erase(tcpBuffer.begin(), tcpBuffer.begin() + 4 + len);
+                }
+            }
+            else if (n < 0) {
+                // 接收错误
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        }
+
+        if (received > 12) {  // RTP包最小12字节头
+            const auto now = std::chrono::steady_clock::now();
+
+            {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                stats_.bytes_received += received;
+                stats_.frames_received++;
+                stats_.last_frame_time = now;
+            }
+
+            // 解析RTP包
+            auto pPkt = std::make_shared<RTPPacket>();
+            RTPPacket& packet = *pPkt;
+            if (packet.parse(buffer.data(), received)) {
+                // 捕获实际 SSRC（用于 SDP 声明，只记录一次）
+                if (session_origin_pull_.video_ssrc == 0 && packet.ssrc != 0) {
+                    session_origin_pull_.video_ssrc = packet.ssrc;
+                    LOG("[StreamNode] Captured video SSRC=%u", packet.ssrc);
+                }
+
+                // 序列化RTP包
+                packet.data = packet.serialize();
+
+                // 检测当前包是否包含 IDR NAL（用于在 IDR 前插入 SPS/PPS）
+                packet.isIdrNalu = checkIsIdrNalu(packet);
+                packet.isLastIdrNalu = last_nalu_was_idr_;
+                last_nalu_was_idr_ = packet.isIdrNalu;
+
+                // 关键帧缓存：跟踪最新 IDR 帧的 RTP 数据，新会话首次发送时使用
+                if (packet.isLastIdrNalu == false && packet.isIdrNalu == true) {
+                    keyframe_cache_.clear();
+                }
+                if (packet.isIdrNalu) {
+                    keyframe_cache_.push_back(packet.data);
+                }
+
+                // 放入缓存
+                addToRtpBuffer(pPkt);
+
+                // 转发推流
+                if (isPushing_) {
+                    forwardRTPPacket(packet);
+                }
+
+                //发送给拉流客户端
+                sendRTPPacketToClients(packet);
+
+                //录像
+                recordRTPPacket(pPkt);
+
+
+                //logVerbose((pullUDP ? "UDP" : "TCP") + std::string("->RTP: seq=") + 
+                //    std::to_string(packet.sequence_number) +
+                //    " ts=" + std::to_string(packet.timestamp) +
+                //    " size=" + std::to_string(received));
+            }
+        }
+        else if (received > 0 && received <= 12) {
+            printf("[StreamNode]rtp handle thread,wrong recv len");
+        }
+        else {
+            // 检查RTP超时
+            auto now = std::chrono::steady_clock::now();
+            std::chrono::steady_clock::time_point last_frame_time;
+            {
+                std::lock_guard<std::mutex> lock(stats_mutex_);
+                last_frame_time = stats_.last_frame_time;
+            }
+
+            if (now - last_frame_time > std::chrono::milliseconds(session_origin_pull_.rtp_timeout_)) {
+                logError("RTP timeout detected");
+                session_origin_pull_.recordError("RTP timeout");
+                break;
+            }
+        }
+    }
+
+    isPulling_ = false;
+    LOG("[StreamNode]Pull thread stopped,tag= %s ", config_.tag.c_str());
+}
+
 
 
 

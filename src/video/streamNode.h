@@ -16,6 +16,8 @@
 #include "streamCommon.h"
 #include "streamSession.h"
 
+struct RtspRecvSession;
+
 // RTP包结�?
 // NAL header (1 byte) format: F(1) | NRI(2) | Type(5)
 // - F: forbidden_zero_bit
@@ -240,6 +242,7 @@ public:
     // 工作线程
     void threadCtrl_rtspClient();
     void threadRecv_originPull();
+    void threadRecv_rtspPublish(std::shared_ptr<RtspRecvSession> session);
     bool checkIsIdrNalu(const RTPPacket& packet);
     void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, STREAM_SESSION& session);
 

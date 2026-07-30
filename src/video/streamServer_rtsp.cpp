@@ -136,7 +136,7 @@ void StreamServer::rtspListenLoop(int port) {
 		// 每个客户端用一个独立线程处理
 		std::string ipStr(clientIp);
 		std::thread([this, clientSock, ipStr]() {
-			handleRtspClient(clientSock, ipStr);
+			threadCtrl_rtspServer(clientSock, ipStr);
 		}).detach();
 	}
 
@@ -151,7 +151,7 @@ void StreamServer::rtspListenLoop(int port) {
 	}
 }
 
-void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& clientIp) {
+void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::string& clientIp) {
 	// 设置 socket 读超时 10 秒
 #ifdef _WIN32
 	int timeout_ms = 10000;
@@ -892,7 +892,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			else {
 				// UDP 模式：启动 RTP 接收线程
 				pushSession->recv_thread_ = std::thread(
-					&StreamServer::threadRecv_rtspPublish, this, pushSession);
+					&StreamNode::threadRecv_rtspPublish, streamNode, pushSession);
 				pushSession->recv_thread_.detach();
 
 				// 去掉主循环的 recv 超时，防止 10 秒超时断开 UDP 推流连接
@@ -1138,145 +1138,6 @@ void StreamServer::rtpTcpRecvLoop(SocketHandle tcpSock,
 
 	LOG("[RTSP-TcpRecv] Loop exited: recv_running_=%d, stream_running_=%d, packetCount=%llu",
 		(int)session->recv_running_, (int)streamNode->running_, (unsigned long long)packetCount);
-}
-
-// ============================================================================
-// RTSP 推流接收：从客户端 UDP socket 接收 RTP 并分发
-// ============================================================================
-
-void StreamServer::threadRecv_rtspPublish(std::shared_ptr<RtspRecvSession> session) {
-	if (!session || session->rtp_sock == kInvalidSocket) {
-		LOG("[RTSP-Recv] Invalid session, thread exit");
-		return;
-	}
-
-	LOG("[RTSP-Recv] Thread started for tag=%s, session=%s, port=%d",
-		session->tag.c_str(), session->session_id.c_str(), session->server_rtp_port);
-
-	std::shared_ptr<StreamNode> streamNode = nullptr;
-	{
-		std::lock_guard<std::mutex> lock(nodeLock_);
-		auto it = m_mapStreamNodes.find(session->tag);
-		if (it != m_mapStreamNodes.end()) {
-			streamNode = it->second;
-		}
-	}
-
-	if (!streamNode) {
-		LOG("[RTSP-Recv] StreamNode not found for tag=%s", session->tag.c_str());
-		return;
-	}
-
-	// 设置 RTP 接收缓冲区
-	const int recvBufSize = 524288;  // 512KB
-#ifdef _WIN32
-	int bufSize = recvBufSize;
-	setsockopt(static_cast<SOCKET>(session->rtp_sock), SOL_SOCKET, SO_RCVBUF,
-		(const char*)&bufSize, sizeof(bufSize));
-#else
-	int bufSize = recvBufSize;
-	setsockopt(session->rtp_sock, SOL_SOCKET, SO_RCVBUF, &bufSize, sizeof(bufSize));
-#endif
-
-	std::vector<uint8_t> buffer(65536);
-	auto lastPacketTime = std::chrono::steady_clock::now();
-	const int RTP_IDLE_TIMEOUT_SEC = 30;  // 30秒收不到包认为推流断开
-
-	while (session->recv_running_ && streamNode->running_) {
-		struct sockaddr_in fromAddr;
-		socklen_t fromLen = sizeof(fromAddr);
-		int received = recvfrom(static_cast<SOCKET_TYPE>(session->rtp_sock),
-#ifdef _WIN32
-			(char*)buffer.data(), (int)buffer.size(), 0,
-#else
-			buffer.data(), buffer.size(), 0,
-#endif
-			(struct sockaddr*)&fromAddr, &fromLen);
-
-		if (received > 12) {
-			lastPacketTime = std::chrono::steady_clock::now();
-			// 诊断：每秒输出一次收包统计
-			auto pPkt = std::make_shared<StreamNode::RTPPacket>();
-			StreamNode::RTPPacket& packet = *pPkt;
-
-			if (packet.parse(buffer.data(), received)) {
-				// 更新 SSRC
-				if (streamNode->session_origin_pull_.video_ssrc == 0 && packet.ssrc != 0) {
-					streamNode->session_origin_pull_.video_ssrc = packet.ssrc;
-					LOG("[RTSP-Recv] Captured video SSRC=%u from push", packet.ssrc);
-				}
-
-				// 放入缓存
-				streamNode->addToRtpBuffer(pPkt);
-
-				// 发送给拉流客户端
-				streamNode->sendRTPPacketToClients(packet);
-
-				// 更新统计
-				{
-					std::lock_guard<std::mutex> lock(streamNode->stats_mutex_);
-					streamNode->stats_.bytes_received += received;
-					streamNode->stats_.frames_received++;
-					streamNode->stats_.last_frame_time = std::chrono::steady_clock::now();
-				}
-
-				// 录像处理（如果启用）
-				{
-					std::lock_guard<std::recursive_mutex> lock(streamNode->rec_mutex_);
-					if (streamNode->rec_ctrl_.recording) {
-						if (streamNode->rec_ctrl_.firstWrite && !streamNode->rec_ctrl_.preRecordingDone) {
-							// 从 rtp_buffer_ 取出预录数据
-							std::vector<std::shared_ptr<StreamNode::RTPPacket>> pre_packets;
-							{
-								std::lock_guard<std::mutex> qlock(streamNode->queue_mutex_);
-								uint32_t _clock = (streamNode->session_origin_pull_.clock_rate > 0) ?
-									static_cast<uint32_t>(streamNode->session_origin_pull_.clock_rate) : 90000u;
-								for (auto it = streamNode->rtp_buffer_.rbegin();
-									it != streamNode->rtp_buffer_.rend(); ++it) {
-									if (packet.timestamp - (*it)->timestamp <=
-										static_cast<uint64_t>(streamNode->rec_ctrl_.preSeconds) * _clock) {
-										pre_packets.push_back(*it);
-									}
-									else { break; }
-								}
-							}
-							for (auto it = pre_packets.rbegin(); it != pre_packets.rend(); ++it) {
-								streamNode->recordRTPPacket(*it);
-							}
-							streamNode->rec_ctrl_.preRecordingDone = true;
-						}
-						streamNode->recordRTPPacket(pPkt);
-					}
-				}
-			}
-		}
-		else if (received < 0) {
-			// 超时或错误，检查是否长时间没有收到数据
-			auto now = std::chrono::steady_clock::now();
-			auto idleSec = std::chrono::duration_cast<std::chrono::seconds>(now - lastPacketTime).count();
-			if (idleSec >= RTP_IDLE_TIMEOUT_SEC) {
-				LOG("[RTSP-Recv] No RTP data for %lld seconds, closing RTSP connection for tag=%s",
-					(long long)idleSec, session->tag.c_str());
-				// 关闭 RTSP 控制连接，触发 handleRtspClient 信令线程退出
-				if (session->tcp_sock != kInvalidSocket) {
-#ifdef _WIN32
-					shutdown(static_cast<SOCKET>(session->tcp_sock), SD_BOTH);
-					// closesocket not used here — tcp_sock owned by handleRtspClient
-#else
-					shutdown(session->tcp_sock, SHUT_RDWR);
-					// close not used here — tcp_sock owned by handleRtspClient
-#endif
-					session->tcp_sock = kInvalidSocket;
-				}
-				break;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		}
-	}
-
-	// 清理
-	LOG("[RTSP-Recv] Thread stopped for tag=%s, session=%s",
-		session->tag.c_str(), session->session_id.c_str());
 }
 
 void StreamServer::cleanupPushSession(const std::string& sessionId) {
