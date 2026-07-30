@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "streamServer.h"
 #include "streamSession_webrtc.h"
+#include "mp4Writer.h"
 #include "logger.h"
+#include <thread>
 
 string toTimeStr(std::chrono::system_clock::time_point tp) {
 	std::time_t tt = std::chrono::system_clock::to_time_t(tp);
@@ -471,6 +473,12 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			j["preSeconds"] = rc->rec_ctrl_.preSeconds;
 			rpcResp.result = j.dump();
 
+			// 异步将 .h264 转为 .mp4（不阻塞 RPC 响应）
+			std::string mp4Path = filePath.substr(0, filePath.size() - 5) + ".mp4";
+			std::thread([h264Path = filePath, mp4Path]() {
+				mp4::convertH264toMP4(h264Path, mp4Path);
+			}).detach();
+
 			cleanOldRecords();
 		}
 		else
@@ -498,12 +506,28 @@ bool StreamServer::rpc_removeRecordFile(yyjson_val* params, RPC_RESP& rpcResp, R
 		return true;
 	}
 	std::string filePath = tds->conf->dbPath + fileUrl.substr(std::string("/db").length());
+#ifdef _WIN32
+	// Windows 下 std::remove 走系统代码页，UTF-8 中文路径会失败，需转宽字符调用 _wremove
+	std::wstring wPath;
+	int wlen = MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, nullptr, 0);
+	if (wlen > 0) {
+		wPath.resize(wlen - 1);
+		MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, &wPath[0], wlen);
+	}
+	if (!wPath.empty() && _wremove(wPath.c_str()) == 0) {
+		rpcResp.result = RPC_OK;
+	}
+	else {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::OS_fileNotExist, "file not exist or failed to delete");
+	}
+#else
 	if (std::remove(filePath.c_str()) == 0) {
 		rpcResp.result = RPC_OK;
 	}
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::OS_fileNotExist, "file not exist or failed to delete");
 	}
+#endif
 	LOG("[HTTP API]removeRecordFile, fileUrl: %s", fileUrl.c_str());
 	return true;
 }
@@ -533,7 +557,9 @@ bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 		for (const auto& entry : fs::directory_iterator(recordDir)) {
 			if (!entry.is_regular_file() || entry.path().extension() != ".h264")
 				continue;
-			std::string fname = entry.path().filename().string();
+			// Windows 上 filesystem::path::string() 返回系统编码（中文 Windows 为 GBK），
+			// 而 tag 来自 JSON 是 UTF-8，二者需统一为 UTF-8 才能正确比对前缀
+			std::string fname = str::gb_to_utf8(entry.path().filename().string());
 			if (fname.find(prefix) != 0)
 				continue;
 

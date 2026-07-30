@@ -306,6 +306,16 @@ bool Connection::setSocketTimeout(int timeout_ms) {
 // StreamNode 实现 - 生命周期与回调
 // ============================================================================
 
+// 默认 SPS/PPS（Baseline 1280x720 level 3.1），用于相机未提供 sprop-parameter-sets 的兜底
+static const uint8_t _default_sps[] = {
+    0x67, 0x42, 0xC0, 0x1F, 0x8C, 0x8D, 0x40, 0x48,
+    0x00, 0x00, 0x03, 0x00, 0x80, 0x00, 0x00, 0x1E,
+    0x48, 0x13, 0xC8
+};
+static const uint8_t _default_pps[] = {
+    0x68, 0xCE, 0x3C, 0x80
+};
+
 StreamNode::StreamNode() {
     open_time_ = std::chrono::system_clock::now();
     stats_.start_time = std::chrono::steady_clock::now();
@@ -313,6 +323,10 @@ StreamNode::StreamNode() {
     session_origin_pull_.session_type_ = STREAM_SESSION_TYPE::ORIGIN_PULL;
     session_relay_push_.session_type_ = STREAM_SESSION_TYPE::RELAY_PUSH;
     session_relay_push_.transport_mode = TransportMode::TCP;
+
+    // 兜底默认值：相机未提供 sprop-parameter-sets 或 RTP 中无 SPS/PPS 时使用
+    last_sps_.assign((const char*)_default_sps, (const char*)_default_sps + sizeof(_default_sps));
+    last_pps_.assign((const char*)_default_pps, (const char*)_default_pps + sizeof(_default_pps));
 }
 
 StreamNode::~StreamNode() {
@@ -895,6 +909,24 @@ void StreamNode::onRecvOriginRtpPkt(std::shared_ptr<RTPPacket> pkt, STREAM_SESSI
     pkt->isIdrNalu = checkIsIdrNalu(*pkt);
     pkt->isLastIdrNalu = last_nalu_was_idr_;
     last_nalu_was_idr_ = pkt->isIdrNalu;
+
+    // 从 RTP 包中提取 SPS/PPS 并缓存（用于录像文件 IDR 前插入）
+    // 优先使用 session 中已缓存的 sps/pps（SDP sprop-parameter-sets 或动态解析）
+    if (!session.sps.empty()) {
+        last_sps_.assign((char*)session.sps.data(), (char*)session.sps.data() + session.sps.size());
+    }
+    if (!session.pps.empty()) {
+        last_pps_.assign((char*)session.pps.data(), (char*)session.pps.data() + session.pps.size());
+    }
+    // 兜底：从 Single NAL 的 RTP payload 提取（覆盖默认值或 session 缓存）
+    if (!pkt->payload.empty()) {
+        uint8_t nal_type = pkt->payload[0] & 0x1F;
+        if (nal_type == NAL_TYPE_SPS) {
+            last_sps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());
+        } else if (nal_type == NAL_TYPE_PPS) {
+            last_pps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());
+        }
+    }
 
     // 关键帧缓存：跟踪最新 IDR 帧的 RTP 数据，新会话首次发送时使用
     if (pkt->isLastIdrNalu == false && pkt->isIdrNalu == true) {

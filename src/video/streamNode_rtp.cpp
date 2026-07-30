@@ -607,6 +607,7 @@ std::string getNALTypeDesc(unsigned char nal_type) {
 
 // 将 RTP 包推入录像队列（由独立 I/O 线程异步写盘，与实时收包线程解耦）
 void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> packet) {
+    if (!packet) return;  // 防御：上游意外传入 null 时直接丢弃，避免空指针进入录像队列
     std::lock_guard<std::recursive_mutex> lock(rec_mutex_);
     if (!rec_ctrl_.recording) return;  // 双重检查：锁获取期间 recording 可能已被 stopRecord 置 false
     if (rec_ctrl_.firstWrite && !rec_ctrl_.preRecordingDone) {
@@ -625,6 +626,7 @@ void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> packet) {
             }
         }
         for (auto it = pre_packets.rbegin(); it != pre_packets.rend(); ++it) {
+            if (!(*it)) continue;  // 防御：rtp_buffer_ 异常情况下跳过空指针
             std::lock_guard<std::mutex> lock(record_queue_mutex_);
             record_queue_.push(*it);
         }
@@ -723,6 +725,7 @@ void StreamNode::threadRec_h264File() {
         }
 
         for (auto& p : batch) {
+            if (!p) continue;  // 防御：极端情况下队列中混入空指针，跳过避免崩溃
             writeRTPPacketToFile(p, ofs);
         }
         ofs.flush();
@@ -748,6 +751,7 @@ void StreamNode::threadRec_h264File() {
         }
         if (ofs.is_open()) {
             for (auto& p : batch) {
+                if (!p) continue;  // 防御：极端情况下队列中混入空指针，跳过避免崩溃
                 writeRTPPacketToFile(p, ofs);
             }
             ofs.flush();
@@ -763,12 +767,30 @@ void StreamNode::threadRec_h264File() {
 }
 
 void StreamNode::writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs) {
-    if (rec_ctrl_.firstWrite && nal_type == NAL_TYPE_NON_IDR) {
-        return;
+    //文件头写入关键帧
+    if (rec_ctrl_.firstWrite) {
+        if (nal_type != NAL_TYPE_IDR) {
+            return;
+        }
     }
     rec_ctrl_.firstWrite = false;
+    rec_ctrl_.isLastIdrNal = rec_ctrl_.isIdrNal;
+    rec_ctrl_.isIdrNal = nal_type == NAL_TYPE_IDR;
 
     const uint8_t start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
+
+    // 切换到关键帧前写入 sps/pps（由 onRecvOriginRtpPkt 实时更新缓存）
+    if (rec_ctrl_.isLastIdrNal == false && rec_ctrl_.isIdrNal == true) {
+        if (!last_sps_.empty()) {
+            ofs.write((const char*)start_code, sizeof(start_code));
+            ofs.write(last_sps_.data(), last_sps_.size());
+        }
+        if (!last_pps_.empty()) {
+            ofs.write((const char*)start_code, sizeof(start_code));
+            ofs.write(last_pps_.data(), last_pps_.size());
+        }
+    }
+
     ofs.write((const char*)start_code, sizeof(start_code));
     ofs.write((const char*)nal, size);
 }

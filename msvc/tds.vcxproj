@@ -692,6 +692,7 @@
     <ClCompile Include="..\src\video\streamSession_rtsp.cpp" />
 
     <ClCompile Include="..\src\video\streamNode_rtp.cpp" />
+    <ClCompile Include="..\src\video\mp4Writer.cpp" />
     <ClCompile Include="..\src\video\streamSession_socket.cpp" />
     <ClCompile Include="..\src\video\streamSession_webrtc.cpp" />
     <ClCompile Include="..\src\video\streamServer.cpp" />
@@ -899,6 +900,7 @@
     <ClInclude Include="..\src\script\unicode_gen_def.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\video\streamNode.h" />
+    <ClInclude Include="..\src\video\mp4Writer.h" />
 
     <ClInclude Include="..\src\video\streamSession_webrtc.h" />
     <ClInclude Include="..\src\video\streamServer.h" />

@@ -591,6 +591,9 @@
     <ClCompile Include="..\src\video\streamNode_rtp.cpp">
       <Filter>video</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\video\mp4Writer.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
 
     <ClCompile Include="..\src\video\streamSession_socket.cpp">
       <Filter>video</Filter>

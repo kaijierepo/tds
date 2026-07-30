@@ -68,6 +68,8 @@ public:
 		int preSeconds = 0;          // 录像预录时间(秒)，即在事件发生前也保存的录像时长
         bool firstWrite = true;
 	    bool preRecordingDone = false;  // 预录数据已一次性写出，避免重复写入
+        bool isIdrNal = false;
+        bool isLastIdrNal = false;
 
         std::vector<char> fu_a_buffer_; // FU-A分片缓存
         std::chrono::steady_clock::time_point startTime;  // 录像开始时间，用于计算 duration
@@ -196,6 +198,8 @@ public:
     //当录制.h264或者发送webrtc的rtp是，在连续的多个IDR nalu之前，需要加入sps/pps
     //last_nalu_was_idr_ 变量用于确认上一个不是idr,下一个是idr的nalu时，发送一次sps/pps
     bool last_nalu_was_idr_ = false; //判断上一个是否是IDR的RTP包，一般一个IDR帧会分成多个
+    std::vector<char> last_sps_;  // 最新SPS缓存，IDR前写入（在onRecvOriginRtpPkt中更新）
+    std::vector<char> last_pps_;  // 最新PPS缓存，IDR前写入（在onRecvOriginRtpPkt中更新）
 
     // 最近一个关键帧的 RTP 原始数据缓存（新会话首次发送时使用，加速出图）
     std::vector<std::vector<uint8_t>> keyframe_cache_;
