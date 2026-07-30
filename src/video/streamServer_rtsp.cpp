@@ -40,18 +40,18 @@ void StreamServer::stopRtspServer() {
 		for (auto& pair : m_pushSessions_) {
 			if (pair.second) {
 				pair.second->recv_running_ = false;
-				if (pair.second->rtp_sock != kInvalidSocket) {
+				if (pair.second->rtp_socket != kInvalidSocket) {
 #ifdef _WIN32
-					closesocket(static_cast<SOCKET>(pair.second->rtp_sock));
+					closesocket(static_cast<SOCKET>(pair.second->rtp_socket));
 #else
-					close(pair.second->rtp_sock);
+					close(pair.second->rtp_socket);
 #endif
 				}
-				if (pair.second->rtcp_sock != kInvalidSocket) {
+				if (pair.second->rtcp_socket != kInvalidSocket) {
 #ifdef _WIN32
-					closesocket(static_cast<SOCKET>(pair.second->rtcp_sock));
+					closesocket(static_cast<SOCKET>(pair.second->rtcp_socket));
 #else
-					close(pair.second->rtcp_sock);
+					close(pair.second->rtcp_socket);
 #endif
 				}
 			}
@@ -244,7 +244,7 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 
 	// ---- RTSP 推流（接收端）状态 ----
 	bool isPushMode = false;          // true=推流模式(ANNOUNCE→RECORD), false=拉流模式(DESCRIBE→PLAY)
-	std::shared_ptr<RtspRecvSession> pushSession;
+	std::shared_ptr<STREAM_SESSION> pushSession;
 	rtspSession.client_rtp_port = 0;
 	rtspSession.client_rtcp_port = 0;
 
@@ -342,6 +342,7 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 				node->session_origin_pull_.retry_interval_ = 3000;
 				node->session_origin_pull_.max_retries_ = 0;
 				node->session_origin_pull_.rtp_timeout_ = 10000;
+				node->clock_rate_ = videoInfo.clock_rate;
 				node->isPulling_ = true;  // 标记为"有流数据"，使 DESCRIBE 不会等待
 				node->running_ = true;
 				node->session_origin_pull_.state_ = SESSION_STATE::SESSION_STREAMING;
@@ -354,7 +355,7 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 			}
 			else {
 			// 已存在的节点，更新编码信息
-			streamNode->session_origin_pull_.copyStreamInfoFrom(videoInfo);
+			streamNode->clock_rate_ = videoInfo.clock_rate;
 			streamNode->isPulling_ = true;
 			}
 
@@ -371,6 +372,18 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 			static std::mt19937 rng(std::random_device{}());
 			std::uniform_int_distribution<> dist(100000, 999999);
 			sessionId = std::to_string(dist(rng));
+
+			// 创建推流会话（CLIENT_RTSP_PUBLISH），SETUP 时填充传输字段
+			{
+				auto sess = std::make_shared<STREAM_SESSION>();
+				sess->copyStreamInfoFrom(videoInfo);
+				sess->session_type_ = CLIENT_RTSP_PUBLISH;
+				sess->tag_ = streamTag;
+				sess->rtsp_session_id_ = sessionId;
+				sess->state_ = SESSION_IDLE;
+				std::lock_guard<std::mutex> lock(m_pushSessionsMutex_);
+				m_pushSessions_[sessionId] = sess;
+			}
 
 			std::ostringstream resp;
 			resp << "RTSP/1.0 200 OK\r\n";
@@ -549,23 +562,25 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 					LOG("[RTSP-Server] Push SETUP TCP interleaved: tag=%s, channels=%d-%d",
 						streamTag.c_str(), interleavedRtp, interleavedRtcp);
 
-					// 创建推流接收会话（使用 TCP 连接接收 RTP interleaved 数据）
+					// 从 m_pushSessions_ 取出 ANNOUNCE 时创建的会话，填充传输字段
 					if (!isExtraTrack) {
-					pushSession = std::make_shared<RtspRecvSession>();
-					pushSession->rtp_sock = kInvalidSocket;  // 不使用 UDP
-					pushSession->rtcp_sock = kInvalidSocket;
-					pushSession->tcp_sock = clientSock;  // 使用当前 RTSP TCP 连接
-					pushSession->is_tcp_interleaved = true;
-					pushSession->interleaved_rtp = interleavedRtp;
-					pushSession->interleaved_rtcp = interleavedRtcp;
-					pushSession->tag = streamTag;
-					pushSession->session_id = sessionId;
-					pushSession->client_ip = clientIp;
-					pushSession->state = RSS_WAITING_RTP;
-
 					{
-					 std::lock_guard<std::mutex> lock(m_pushSessionsMutex_);
-					 m_pushSessions_[sessionId] = pushSession;
+						std::lock_guard<std::mutex> lock(m_pushSessionsMutex_);
+						auto it = m_pushSessions_.find(sessionId);
+						if (it != m_pushSessions_.end()) {
+							pushSession = it->second;
+						}
+					}
+					if (pushSession) {
+						pushSession->rtp_socket = kInvalidSocket;  // 不使用 UDP
+						pushSession->rtcp_socket = kInvalidSocket;
+						pushSession->tcp_socket = clientSock;  // 使用当前 RTSP TCP 连接
+						pushSession->transport_mode = TransportMode::TCP;
+						pushSession->interleaved_rtp = interleavedRtp;
+						pushSession->interleaved_rtcp = interleavedRtcp;
+						pushSession->tag_ = streamTag;
+						pushSession->rtsp_session_id_ = sessionId;
+						pushSession->client_ip = clientIp;
 					}
 					LOG("[RTSP-Server] Push SETUP TCP: tag=%s, channels=%d-%d",
 					streamTag.c_str(), interleavedRtp, interleavedRtcp);
@@ -649,23 +664,25 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 #endif
 
 				if (!isExtraTrack) {
-					// 第一个 track（视频）：创建推流接收会话
-					pushSession = std::make_shared<RtspRecvSession>();
-					pushSession->rtp_sock = rtpSock;
-					pushSession->rtcp_sock = rtcpSock;
-					pushSession->tcp_sock = clientSock;
-					pushSession->server_rtp_port = serverRtpPort;
-					pushSession->server_rtcp_port = serverRtcpPort;
-					pushSession->tag = streamTag;
-					pushSession->session_id = sessionId;
-					pushSession->client_ip = clientIp;
-					pushSession->client_rtp_port = clientRtpPort;
-					pushSession->client_rtcp_port = clientRtcpPort;
-					pushSession->state = RSS_WAITING_RTP;
-
+					// 第一个 track（视频）：从 m_pushSessions_ 取出会话，填充传输字段
 					{
-					std::lock_guard<std::mutex> lock(m_pushSessionsMutex_);
-					m_pushSessions_[sessionId] = pushSession;
+						std::lock_guard<std::mutex> lock(m_pushSessionsMutex_);
+						auto it = m_pushSessions_.find(sessionId);
+						if (it != m_pushSessions_.end()) {
+							pushSession = it->second;
+						}
+					}
+					if (pushSession) {
+						pushSession->rtp_socket = rtpSock;
+						pushSession->rtcp_socket = rtcpSock;
+						pushSession->tcp_socket = clientSock;
+						pushSession->server_rtp_port = serverRtpPort;
+						pushSession->server_rtcp_port = serverRtcpPort;
+						pushSession->tag_ = streamTag;
+						pushSession->rtsp_session_id_ = sessionId;
+						pushSession->client_ip = clientIp;
+						pushSession->client_rtp_port = clientRtpPort;
+						pushSession->client_rtcp_port = clientRtcpPort;
 					}
 					 LOG("[RTSP-Server] Push SETUP: tag=%s, client=%s:%d-%d, server=%d-%d",
 							streamTag.c_str(), clientIp.c_str(), clientRtpPort, clientRtcpPort,
@@ -860,10 +877,10 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 			resp << "\r\n";
 			sendResponse(cseq, resp.str());
 
-			pushSession->state = RSS_RECEIVING;
+			pushSession->state_ = SESSION_STREAMING;
 			pushSession->recv_running_ = true;
 
-			if (pushSession->is_tcp_interleaved) {
+			if (pushSession->transport_mode == TransportMode::TCP) {
 				// ---- TCP interleaved 模式：在当前 RTSP 连接中接收 RTP 数据 ----
 				LOG("[RTSP-Server] Push RECORD TCP interleaved: tag=%s, session=%s, channels=%d-%d",
 					streamTag.c_str(), sessionId.c_str(),
@@ -1026,14 +1043,14 @@ std::string StreamServer::buildSdpForStream(const std::shared_ptr<StreamNode>& n
 // ============================================================================
 
 void StreamServer::rtpTcpRecvLoop(SocketHandle tcpSock,
-	std::shared_ptr<RtspRecvSession> session, std::shared_ptr<StreamNode> streamNode) {
+	std::shared_ptr<STREAM_SESSION> session, std::shared_ptr<StreamNode> streamNode) {
 	if (!session || !streamNode || tcpSock == kInvalidSocket) {
 		LOG("[RTSP-TcpRecv] Invalid parameters, exit");
 		return;
 	}
 
 	LOG("[RTSP-TcpRecv] TCP interleaved recv loop started: tag=%s, channels=%d-%d",
-		session->tag.c_str(), session->interleaved_rtp, session->interleaved_rtcp);
+		session->tag_.c_str(), session->interleaved_rtp, session->interleaved_rtcp);
 
 	std::vector<uint8_t> buffer(65536);
 	uint64_t packetCount = 0;
@@ -1113,13 +1130,13 @@ void StreamServer::rtpTcpRecvLoop(SocketHandle tcpSock,
 		packetCount++;
 
 		// 处理 RTP 包（仅处理 RTP 通道，跳过 RTCP 通道）
-		if (channel == (uint8_t)session->interleaved_rtp && length > 12) {
+			if (channel == (uint8_t)session->interleaved_rtp && length > 12) {
 			auto pPkt = std::make_shared<StreamNode::RTPPacket>();
 			StreamNode::RTPPacket& packet = *pPkt;
 
 			if (packet.parse(buffer.data(), length)) {
-				if (streamNode->session_origin_pull_.video_ssrc == 0 && packet.ssrc != 0) {
-					streamNode->session_origin_pull_.video_ssrc = packet.ssrc;
+				if (session->video_ssrc == 0 && packet.ssrc != 0) {
+					session->video_ssrc = packet.ssrc;
 					LOG("[RTSP-TcpRecv] Captured video SSRC=%u from push", packet.ssrc);
 				}
 
@@ -1141,7 +1158,7 @@ void StreamServer::rtpTcpRecvLoop(SocketHandle tcpSock,
 }
 
 void StreamServer::cleanupPushSession(const std::string& sessionId) {
-	std::shared_ptr<RtspRecvSession> session;
+	std::shared_ptr<STREAM_SESSION> session;
 	{
 		std::lock_guard<std::mutex> lock(m_pushSessionsMutex_);
 		auto it = m_pushSessions_.find(sessionId);
@@ -1159,37 +1176,37 @@ void StreamServer::cleanupPushSession(const std::string& sessionId) {
 	session->recv_running_ = false;
 
 	// 关闭 socket
-	if (session->is_tcp_interleaved) {
+	if (session->transport_mode == TransportMode::TCP) {
 		// TCP 连接由 handleRtspClient 管理，不在此关闭
-		session->tcp_sock = kInvalidSocket;
+		session->tcp_socket = kInvalidSocket;
 	}
 	else {
 		// 关闭 RTSP 控制连接，触发 handleRtspClient 信令线程退出
-		if (session->tcp_sock != kInvalidSocket) {
+		if (session->tcp_socket != kInvalidSocket) {
 #ifdef _WIN32
-			shutdown(static_cast<SOCKET>(session->tcp_sock), SD_BOTH);
+			shutdown(static_cast<SOCKET>(session->tcp_socket), SD_BOTH);
 			// closesocket not used here — tcp_sock owned by handleRtspClient
 #else
-			shutdown(session->tcp_sock, SHUT_RDWR);
+			shutdown(session->tcp_socket, SHUT_RDWR);
 			// close not used here — tcp_sock owned by handleRtspClient
 #endif
-			session->tcp_sock = kInvalidSocket;
+			session->tcp_socket = kInvalidSocket;
 		}
-		if (session->rtp_sock != kInvalidSocket) {
+		if (session->rtp_socket != kInvalidSocket) {
 #ifdef _WIN32
-			closesocket(static_cast<SOCKET>(session->rtp_sock));
+			closesocket(static_cast<SOCKET>(session->rtp_socket));
 #else
-			close(session->rtp_sock);
+			close(session->rtp_socket);
 #endif
-			session->rtp_sock = kInvalidSocket;
+			session->rtp_socket = kInvalidSocket;
 		}
-		if (session->rtcp_sock != kInvalidSocket) {
+		if (session->rtcp_socket != kInvalidSocket) {
 #ifdef _WIN32
-			closesocket(static_cast<SOCKET>(session->rtcp_sock));
+			closesocket(static_cast<SOCKET>(session->rtcp_socket));
 #else
-			close(session->rtcp_sock);
+			close(session->rtcp_socket);
 #endif
-			session->rtcp_sock = kInvalidSocket;
+			session->rtcp_socket = kInvalidSocket;
 		}
 	}
 }

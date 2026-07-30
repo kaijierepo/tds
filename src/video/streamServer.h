@@ -6,28 +6,6 @@
 #include <thread>
 #include <atomic>
 
-// 通过 RTSP 推流创建的接收会话管理
-enum RtspRecvSessionState { RSS_IDLE, RSS_WAITING_RTP, RSS_RECEIVING };
-struct RtspRecvSession {
-	SocketHandle rtp_sock = kInvalidSocket;
-	SocketHandle rtcp_sock = kInvalidSocket;
-	SocketHandle tcp_sock = kInvalidSocket;  // TCP interleaved 模式使用的 RTSP 连接
-	int server_rtp_port = 0;
-	int server_rtcp_port = 0;
-	std::string tag;               // 关联的 stream tag
-	std::string session_id;
-	std::string client_ip;
-	int client_rtp_port = 0;
-	int client_rtcp_port = 0;
-	int interleaved_rtp = -1;      // TCP interleaved RTP 通道号
-	int interleaved_rtcp = -1;     // TCP interleaved RTCP 通道号
-	bool is_tcp_interleaved = false;
-	RtspRecvSessionState state = RSS_IDLE;
-	// RTP 接收线程
-	std::thread recv_thread_;
-	std::atomic<bool> recv_running_{false};
-};
-
 class StreamServer {
 public:
 	StreamServer() {};
@@ -101,7 +79,7 @@ public:
 	bool isRtspServerRunning() const { return m_rtspRunning_; }
 
 
-	std::map<std::string, std::shared_ptr<RtspRecvSession>> m_pushSessions_;  // key=session_id
+	std::map<std::string, std::shared_ptr<STREAM_SESSION>> m_pushSessions_;  // key=session_id
 	std::mutex m_pushSessionsMutex_;
 
 private:
@@ -112,7 +90,7 @@ private:
 
 	// RTSP 推流接收
 	void rtpTcpRecvLoop(SocketHandle tcpSock,
-		std::shared_ptr<RtspRecvSession> session, std::shared_ptr<StreamNode> streamNode);
+		std::shared_ptr<STREAM_SESSION> session, std::shared_ptr<StreamNode> streamNode);
 	void cleanupPushSession(const std::string& sessionId);
 
 	// 按需拉流 idle 监控

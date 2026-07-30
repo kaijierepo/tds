@@ -512,6 +512,7 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	node->session_origin_pull_.codec = "H264";
 	node->session_origin_pull_.payload_type = 96;
 	node->session_origin_pull_.clock_rate = 90000;
+	node->clock_rate_ = 90000;
 	node->session_origin_pull_.sps = sps;
 	node->session_origin_pull_.pps = pps;
 	node->session_origin_pull_.video_ssrc = 0x4C4F4341;
@@ -684,6 +685,7 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 	node->session_origin_pull_.codec = "H264";
 	node->session_origin_pull_.payload_type = 96;
 	node->session_origin_pull_.clock_rate = 90000;
+	node->clock_rate_ = 90000;
 	node->session_origin_pull_.sps = sps;
 	node->session_origin_pull_.pps = pps;
 	node->session_origin_pull_.video_ssrc = 0x4C4F4341;

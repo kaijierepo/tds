@@ -42,7 +42,7 @@ int StreamNode::getBufferedSeconds()
     uint32_t diff = newest_ts - oldest_ts; // 无符号差值，处理 32 位回绕
 
     // 获取时钟频率（ticks per second），RTCP/SDP 中给出，视频常见为 90000
-    uint32_t clock = (session_origin_pull_.clock_rate > 0) ? static_cast<uint32_t>(session_origin_pull_.clock_rate) : 90000u;
+    uint32_t clock = (clock_rate_ > 0) ? static_cast<uint32_t>(clock_rate_) : 90000u;
     if (clock == 0) clock = 90000u;
 
     // 整数秒（截断子秒）。如果存在刻度差但小于1秒，返回1以提示非空缓冲
@@ -66,8 +66,8 @@ void StreamNode::addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt)
         uint32_t newest_ts = rtp_buffer_.back()->timestamp;
 
         // 获取时钟频率（每秒刻度数），若 SDP 未提供则默认使用常见的视频值 90000Hz。
-        uint32_t clock = (session_origin_pull_.clock_rate > 0) ?
-            static_cast<uint32_t>(session_origin_pull_.clock_rate) : 90000u;
+        uint32_t clock = (clock_rate_ > 0) ?
+            static_cast<uint32_t>(clock_rate_) : 90000u;
         if (clock == 0) clock = 90000u;
 
         // 当最旧包到最新包的时间差超过配置的秒数窗口时，逐个删除最旧包。
@@ -614,7 +614,7 @@ void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> packet) {
         std::vector<std::shared_ptr<RTPPacket>> pre_packets;
         {
             std::lock_guard<std::mutex> lock(queue_mutex_);
-            uint32_t _clock = (session_origin_pull_.clock_rate > 0) ? static_cast<uint32_t>(session_origin_pull_.clock_rate) : 90000u;
+            uint32_t _clock = (clock_rate_ > 0) ? static_cast<uint32_t>(clock_rate_) : 90000u;
             for (auto it = rtp_buffer_.rbegin(); it != rtp_buffer_.rend(); ++it) {
                 if (packet->timestamp - (*it)->timestamp <= static_cast<uint64_t>(rec_ctrl_.preSeconds) * _clock) {
                     pre_packets.push_back(*it);

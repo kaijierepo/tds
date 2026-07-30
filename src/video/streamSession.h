@@ -102,6 +102,7 @@ struct STREAM_SESSION {
     std::string remote_host;
     std::string client_port;
     std::string server_port;
+    std::string client_ip;          // 客户端 IP（recv 模式）
     int client_rtp_port = 0;
     int client_rtcp_port = 0;
     int server_rtp_port = 0;
@@ -177,6 +178,11 @@ struct STREAM_SESSION {
     // ICE 处理线程（由 startRtcSessionHandleThread 创建，stopAllIceThreads 回收）
     std::thread ctrl_thread_webrtc_server;
     std::atomic<bool> ctrl_thread_webrtc_server_running_{true};
+
+    // ---- 以下成员仅 CLIENT_RTSP_PUBLISH recv 模式使用 ----
+    // RTP 接收线程（UDP push 时由 RECORD 创建，detach 运行）
+    std::thread recv_thread_;
+    std::atomic<bool> recv_running_{false};
 
     STREAM_SESSION() = default;
     STREAM_SESSION(STREAM_SESSION&&) = default;
