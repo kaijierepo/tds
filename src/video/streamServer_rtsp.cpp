@@ -892,7 +892,7 @@ void StreamServer::handleRtspClient(SocketHandle clientSock, const std::string& 
 			else {
 				// UDP 模式：启动 RTP 接收线程
 				pushSession->recv_thread_ = std::thread(
-					&StreamServer::rtpRecvThread, this, pushSession);
+					&StreamServer::threadRecv_rtspPublish, this, pushSession);
 				pushSession->recv_thread_.detach();
 
 				// 去掉主循环的 recv 超时，防止 10 秒超时断开 UDP 推流连接
@@ -1144,7 +1144,7 @@ void StreamServer::rtpTcpRecvLoop(SocketHandle tcpSock,
 // RTSP 推流接收：从客户端 UDP socket 接收 RTP 并分发
 // ============================================================================
 
-void StreamServer::rtpRecvThread(std::shared_ptr<RtspRecvSession> session) {
+void StreamServer::threadRecv_rtspPublish(std::shared_ptr<RtspRecvSession> session) {
 	if (!session || session->rtp_sock == kInvalidSocket) {
 		LOG("[RTSP-Recv] Invalid session, thread exit");
 		return;

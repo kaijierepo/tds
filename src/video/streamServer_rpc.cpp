@@ -409,7 +409,7 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 			rc->rec_ctrl_.recording = true;
 			// 启动独立 I/O 线程，将磁盘写入与实时收包线程解耦
 			rc->record_io_running_ = true;
-			rc->record_io_thread_ = std::thread(&StreamNode::recordIoThread, rc.get());
+			rc->record_io_thread_ = std::thread(&StreamNode::threadRec_h264File, rc.get());
 			LOG("[录像] 开始录像 tag=%s, path=%s", rc->config_.tag.c_str(), rc->rec_ctrl_.path.c_str());
 			rpcResp.result = RPC_OK;
 		}

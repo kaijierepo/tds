@@ -3,7 +3,7 @@
 #include <tchar.h>
 #include <chrono>
 #include "statusServer.h"
-#include "tdb.h"
+#include "database/tDatabase.h"
 #include <thread>
 #include "common.h"
 #include "winternl.h"
@@ -201,7 +201,7 @@ void StatusServer::cycleAcq_srvStatus() {
 				}
 			}
 			catch (const std::exception& e) {
-				std::cerr << "´íÎó: " << e.what() << std::endl;
+				std::cerr << "ï¿½ï¿½ï¿½ï¿½: " << e.what() << std::endl;
 			}
 
 			//get handle count
@@ -297,7 +297,7 @@ CPU_USE_INFO StatusServer::getCpuUseInfo()
 {
 	CPU_USE_INFO cui;
 
-	//»ñÈ¡³ÌÐòÖ´ÐÐÊ±¼ä
+	//ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½Ê±ï¿½ï¿½
 	FILETIME ftCreation, ftExit, ftKernel, ftUser;
 	ULARGE_INTEGER ulKernel, ulUser;
 	GetProcessTimes(processHandle, &ftCreation, &ftExit, &ftKernel, &ftUser);
@@ -305,14 +305,14 @@ CPU_USE_INFO StatusServer::getCpuUseInfo()
 	ulKernel.HighPart = ftKernel.dwHighDateTime;
 	ulUser.LowPart = ftUser.dwLowDateTime;
 	ulUser.HighPart = ftUser.dwHighDateTime;
-	cui.processTime = ulKernel.QuadPart + ulUser.QuadPart; //µ¥Î»100ÄÉÃë
+	cui.processTime = ulKernel.QuadPart + ulUser.QuadPart; //ï¿½ï¿½Î»100ï¿½ï¿½ï¿½ï¿½
 
-	//»ñÈ¡cpu×ÜÖ´ÐÐÊ±¼ä
+	//ï¿½ï¿½È¡cpuï¿½ï¿½Ö´ï¿½ï¿½Ê±ï¿½ï¿½
 	HMODULE hNtDll = GetModuleHandle("ntdll.dll");
 	NtQuerySystemInformationPtr NtQuerySystemInformation = (NtQuerySystemInformationPtr)GetProcAddress(hNtDll, "NtQuerySystemInformation");
-	SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION cpuInfo[64]; // ×î¶àÖ§³Ö64¸öCPUºËÐÄ
+	SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION cpuInfo[64]; // ï¿½ï¿½ï¿½Ö§ï¿½ï¿½64ï¿½ï¿½CPUï¿½ï¿½ï¿½ï¿½
 	ULONG returnLength;
-	NTSTATUS status = NtQuerySystemInformation(SYSTEM_INFORMATION_CLASS::SystemProcessorPerformanceInformation, cpuInfo, sizeof(cpuInfo), &returnLength); // 8±íÊ¾SystemProcessorPerformanceInformation
+	NTSTATUS status = NtQuerySystemInformation(SYSTEM_INFORMATION_CLASS::SystemProcessorPerformanceInformation, cpuInfo, sizeof(cpuInfo), &returnLength); // 8ï¿½ï¿½Ê¾SystemProcessorPerformanceInformation
 	if (status == 0) {
 		ULONGLONG totalIdleTime = 0;
 		ULONGLONG totalKernelTime = 0;
@@ -326,7 +326,7 @@ CPU_USE_INFO StatusServer::getCpuUseInfo()
 			totalUserTime += cpuInfo[i].UserTime.QuadPart;
 		}
 
-		cui.totalTime = totalIdleTime + totalKernelTime + totalUserTime; //µ¥Î»100ÄÉÃë
+		cui.totalTime = totalIdleTime + totalKernelTime + totalUserTime; //ï¿½ï¿½Î»100ï¿½ï¿½ï¿½ï¿½
 		cui.totalTime = cui.totalTime / (numCores / m_physicalCoreCount);
 	}
 

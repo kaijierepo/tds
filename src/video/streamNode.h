@@ -153,9 +153,12 @@ public:
         uint32_t timestamp = 0;
         uint32_t ssrc = 0;
         std::vector<uint8_t> payload;
-
+        std::vector<uint8_t> data;
         bool parse(const uint8_t* data, size_t size);
         std::vector<uint8_t> serialize() const;
+
+        bool isIdrNalu;
+        bool isLastIdrNalu;
     };
 
     // URL解析
@@ -199,8 +202,8 @@ public:
     bool keyframe_caching_ = false;  // 当前是否正在缓存关键帧（遇到IDR开始，marker=1结束）
 
     // 线程
-    std::thread rtp_handle_thread_;
-    std::thread control_thread_;
+    std::thread recv_thread_origin_rtp_;
+    std::thread ctrl_thread_rtsp_client_;
 
     // 同步
     mutable std::mutex state_mutex_;
@@ -235,28 +238,24 @@ public:
     std::chrono::system_clock::time_point open_time_;
 
     // 工作线程
-    void ctrlThread_rtspClient();
-    void recvThread_originRtp();
+    void threadCtrl_rtspClient();
+    void threadRecv_originPull();
     bool checkIsIdrNalu(const RTPPacket& packet);
     void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, STREAM_SESSION& session);
-    void doOriginRtpRecv();
-
-
-
 
     void sendRTPPacketToClients(const RTPPacket& packet);
     void forwardRTPPacket(const RTPPacket& packet);
     void recordRTPPacket(std::shared_ptr<RTPPacket> pPkt);
     void flushRecordBuffer();
-    void recordIoThread();
+    void threadRec_h264File();
     void writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs);
     void writeRTPPacketToFile(std::shared_ptr<RTPPacket> pPkt, std::ofstream& ofs);
 
     // ICE-Lite (WebRTC) — 每客户端一线程处理 STUN 请求
     void startRtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> session);
-    void stopAllRtcHandleThreads();
+    void stopAll_threadCtrl_webrtcServer();
 
 private:
     // ICE-Lite 工作循环（由每个 WebRTC session 的 ice_thread_ 执行）
-    void ctrlThread_webrtcServer(std::shared_ptr<STREAM_SESSION> session);
+    void threadCtrl_webrtcServer(std::shared_ptr<STREAM_SESSION> session);
 };

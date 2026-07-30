@@ -33,7 +33,7 @@ namespace stdfs = std::experimental::filesystem;
 namespace stdfs = std::filesystem;
 #endif
 
-#include "tdb.h" //for db.insert,db.select script functions
+#include "database/tDatabase.h" //for db.insert,db.select script functions
 #include "tds.h"
 
 static std::wstring utf8_to_utf16(const std::string& u8str) {

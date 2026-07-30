@@ -109,7 +109,7 @@ private:
 	std::string buildSdpForStream(const std::shared_ptr<StreamNode>& node);
 
 	// RTSP 推流接收
-	void rtpRecvThread(std::shared_ptr<RtspRecvSession> session);
+	void threadRecv_rtspPublish(std::shared_ptr<RtspRecvSession> session);
 	void rtpTcpRecvLoop(SocketHandle tcpSock,
 		std::shared_ptr<RtspRecvSession> session, std::shared_ptr<StreamNode> streamNode);
 	void cleanupPushSession(const std::string& sessionId);

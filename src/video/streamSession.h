@@ -175,8 +175,8 @@ struct STREAM_SESSION {
 
     // ---- 以下成员仅 WebRTC (is_webrtc=true) 使用 ----
     // ICE 处理线程（由 startRtcSessionHandleThread 创建，stopAllIceThreads 回收）
-    std::thread rtc_handle_thread_;
-    std::atomic<bool> rtc_handle_thread_running_{true};
+    std::thread ctrl_thread_webrtc_server;
+    std::atomic<bool> ctrl_thread_webrtc_server_running_{true};
 
     STREAM_SESSION() = default;
     STREAM_SESSION(STREAM_SESSION&&) = default;

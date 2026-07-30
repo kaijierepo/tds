@@ -330,8 +330,8 @@ bool StreamNode::run(const Config& config) {
     // 同步全局 verbose 标志供 streamCommon.h 中的 logDebug/logVerbose 使用
     g_stream_verbose = config_.verbose;
 
-    control_thread_ = std::thread(&StreamNode::ctrlThread_rtspClient, this);
-	control_thread_.detach();
+    ctrl_thread_rtsp_client_ = std::thread(&StreamNode::threadCtrl_rtspClient, this);
+	ctrl_thread_rtsp_client_.detach();
 
     LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), session_origin_pull_.server_url_.c_str(), session_relay_push_.server_url_.c_str());
 
@@ -344,18 +344,31 @@ void StreamNode::stop() {
     stopping_ = true;
     running_ = false;
 
-    // 停止所有 ICE 线程
-    stopAllRtcHandleThreads();
+    //停止rtsp客户端工作
+    session_origin_pull_.close();
+    session_relay_push_.close();
 
-    if (rtp_handle_thread_.joinable()) {
-        rtp_handle_thread_.join();
+    session_origin_pull_.setState(SESSION_STATE::SESSION_IDLE);
+    session_relay_push_.setState(SESSION_STATE::SESSION_IDLE);
+
+    if (recv_thread_origin_rtp_.joinable()) {
+        recv_thread_origin_rtp_.join();
     }
 
-    if (control_thread_.joinable()) {
-        control_thread_.join();
+    if (ctrl_thread_rtsp_client_.joinable()) {
+        ctrl_thread_rtsp_client_.join();
     }
 
-    // 停止录像 I/O 线程（先置 false 唤醒，再 join 等待退出）
+	//停止webrtc服务端工作
+    //不含接收处理，由recv_thread_origin_rtp_发送到各个客户端
+    stopAll_threadCtrl_webrtcServer();
+    
+
+	//停止rtsp服务端工作
+
+
+
+    //录像工作线程
     if (record_io_running_) {
         record_io_running_ = false;
         record_queue_cv_.notify_one();
@@ -363,24 +376,19 @@ void StreamNode::stop() {
             record_io_thread_.join();
         }
     }
-
-    session_origin_pull_.close();
-    session_relay_push_.close();
-
-    session_origin_pull_.setState(SESSION_STATE::SESSION_IDLE);
 }
 
 // ============================================================================
 // 控制流
 // ============================================================================
 
-void StreamNode::ctrlThread_rtspClient() {
+void StreamNode::threadCtrl_rtspClient() {
     while (running_ && !stopping_) {
         // 启动拉流与推流
         if (isPulling_ == false) {
             if (session_origin_pull_.open()) {
-                rtp_handle_thread_ = std::thread(&StreamNode::recvThread_originRtp,this);
-                rtp_handle_thread_.detach();
+                recv_thread_origin_rtp_ = std::thread(&StreamNode::threadRecv_originPull,this);
+                recv_thread_origin_rtp_.detach();
                 open_time_ = std::chrono::system_clock::now();
                 isPulling_ = true;
             }
@@ -601,14 +609,14 @@ void StreamNode::startRtcSessionHandleThread(std::shared_ptr<STREAM_SESSION> ses
                (const char*)&tv, sizeof(tv));
 #endif
 
-    session->rtc_handle_thread_running_ = true;
-    session->rtc_handle_thread_ = std::thread(&StreamNode::ctrlThread_webrtcServer, this, session);
+    session->ctrl_thread_webrtc_server_running_ = true;
+    session->ctrl_thread_webrtc_server = std::thread(&StreamNode::threadCtrl_webrtcServer, this, session);
 
     logInfo("ICE thread started for socket fd=" + std::to_string(session->rtp_socket)
             + " ufrag=" + session->ice_ufrag);
 }
 
-void StreamNode::stopAllRtcHandleThreads() {
+void StreamNode::stopAll_threadCtrl_webrtcServer() {
     // 获取所有 client_sessions_ 快照，停止其中的 WebRTC ICE 线程
     std::vector<std::shared_ptr<STREAM_SESSION>> sessions;
     {
@@ -619,9 +627,9 @@ void StreamNode::stopAllRtcHandleThreads() {
     for (auto& s : sessions) {
         if (!s || !s->is_webrtc) continue;
 
-        s->rtc_handle_thread_running_ = false;
-        if (s->rtc_handle_thread_.joinable()) {
-            s->rtc_handle_thread_.join();
+        s->ctrl_thread_webrtc_server_running_ = false;
+        if (s->ctrl_thread_webrtc_server.joinable()) {
+            s->ctrl_thread_webrtc_server.join();
         }
         // 清理 DTLS 状态（ICE 线程退出时已释放局部 shared_ptr，这里丢弃会话持有的引用）
         std::atomic_store(&s->dtls_transport_, std::shared_ptr<SessionDtlsState>());
@@ -629,7 +637,7 @@ void StreamNode::stopAllRtcHandleThreads() {
     }
 }
 
-void StreamNode::ctrlThread_webrtcServer(std::shared_ptr<STREAM_SESSION> session) {
+void StreamNode::threadCtrl_webrtcServer(std::shared_ptr<STREAM_SESSION> session) {
     uint8_t buf[2048];
 
     // 初始化本会话的 DTLS 状态（shared_ptr 管理，RTP 发送线程可安全持有引用）
@@ -653,7 +661,7 @@ void StreamNode::ctrlThread_webrtcServer(std::shared_ptr<STREAM_SESSION> session
 
     auto dtls_start = std::chrono::steady_clock::now();
 
-    while (session->rtc_handle_thread_running_) {
+    while (session->ctrl_thread_webrtc_server_running_) {
         struct sockaddr_in peer;
         socklen_t peerLen = sizeof(peer);
         int len = recvfrom(static_cast<SOCKET_TYPE>(session->rtp_socket),
@@ -666,7 +674,7 @@ void StreamNode::ctrlThread_webrtcServer(std::shared_ptr<STREAM_SESSION> session
             if (now - dtls_start > std::chrono::seconds(8)) {
                 LOG("[ICE] DTLS handshake timeout (8s), state=%d",
                     (int)session->state_);
-                session->rtc_handle_thread_running_ = false;
+                session->ctrl_thread_webrtc_server_running_ = false;
                 break;
             }
         }
@@ -676,7 +684,7 @@ void StreamNode::ctrlThread_webrtcServer(std::shared_ptr<STREAM_SESSION> session
             auto now = std::chrono::system_clock::now();
             if (now - session->last_stun_bind_req_time > std::chrono::seconds(20)) {
                 LOG("[ICE] STUN keep-alive timeout (20s), client disconnected");
-                session->rtc_handle_thread_running_ = false;
+                session->ctrl_thread_webrtc_server_running_ = false;
                 break;
             }
         }
@@ -768,8 +776,8 @@ void StreamNode::ctrlThread_webrtcServer(std::shared_ptr<STREAM_SESSION> session
 
     // 线程自身退出时无法 join 自己；若 thread 对象仍 joinable，析构会 terminate。
     // 在线程返回前 detach，使其与 thread 对象分离，避免后续析构 session 时崩溃。
-    if (session->rtc_handle_thread_.joinable()) {
-        session->rtc_handle_thread_.detach();
+    if (session->ctrl_thread_webrtc_server.joinable()) {
+        session->ctrl_thread_webrtc_server.detach();
     }
 }
 
