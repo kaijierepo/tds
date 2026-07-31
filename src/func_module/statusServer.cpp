@@ -29,6 +29,7 @@ StatusServer::StatusServer(void)
 	memset(&m_stLastAcqTime, 0, sizeof(m_stLastAcqTime));
 	m_bLogStatus = false;
 	m_logInterval = 60;
+	m_ipmiMonitor = nullptr;
 }
 
 
@@ -90,6 +91,7 @@ bool StatusServer::run()
 	m_physicalCoreCount = GetPhysicalCoreCount();
 
 	m_diskIOMonitor = std::make_shared<ProcessDiskIOMonitor>();
+	m_ipmiMonitor = std::make_shared<IpmiMonitor>();
 
 	thread t(cycleAcq_thread_srvStatus, this);
 	t.detach();
@@ -210,6 +212,35 @@ void StatusServer::cycleAcq_srvStatus() {
 			//get thread count 
 			m_srvStatus.thread = get_thread_amount();
 
+			// IPMI sensor data
+			string sIpmi;
+			if (m_ipmiMonitor && m_ipmiMonitor->available()) {
+				std::vector<IPMI_SENSOR> sensors;
+				if (m_ipmiMonitor->query(sensors)) {
+					auto mut_doc = yyjson_mut_doc_new(NULL);
+					auto mut_root = yyjson_mut_obj(mut_doc);
+					yyjson_mut_doc_set_root(mut_doc, mut_root);
+
+					auto mut_arr = yyjson_mut_arr(mut_doc);
+					for (std::vector<IPMI_SENSOR>::iterator it = sensors.begin(); it != sensors.end(); ++it) {
+						auto mut_s = yyjson_mut_obj(mut_doc);
+						yyjson_mut_obj_add_str(mut_doc, mut_s, "name", it->name.c_str());
+						yyjson_mut_obj_add_real(mut_doc, mut_s, "value", it->value);
+						yyjson_mut_obj_add_str(mut_doc, mut_s, "unit", it->unit.c_str());
+						yyjson_mut_obj_add_str(mut_doc, mut_s, "status", it->status.c_str());
+						yyjson_mut_arr_append(mut_arr, mut_s);
+					}
+					yyjson_mut_obj_add_val(mut_doc, mut_root, "sensors", mut_arr);
+
+					char* temp = yyjson_mut_write(mut_doc, 0, 0);
+					yyjson_mut_doc_free(mut_doc);
+					if (temp) {
+						sIpmi = temp;
+						free(temp);
+					}
+				}
+			}
+
 			GetLocalTime(&m_stLastAcqTime);
 
 			
@@ -226,6 +257,10 @@ void StatusServer::cycleAcq_srvStatus() {
 				ssdb->Insert("handle", dbt, m_srvStatus.handle);
 
 				ssdb->Insert("diskio", sDiskIo, &dbt);
+
+				if (!sIpmi.empty()) {
+					ssdb->Insert("ipmi", sIpmi, &dbt);
+				}
 				
 				for (auto& iter : m_netStatus) {
 					string portId = str::format("port_%d_send", iter.first);
@@ -379,4 +414,84 @@ void statisSend(int port, size_t len){
 }
 
 #endif
+
+// ===== IpmiMonitor implementation (cross-platform) =====
+#include <sstream>
+#include <cstdlib>
+
+IpmiMonitor::IpmiMonitor() : m_available(false) {
+}
+
+bool IpmiMonitor::exec(const char* cmd, std::string& output) {
+#ifdef _WIN32
+	FILE* fp = _popen(cmd, "r");
+#else
+	FILE* fp = popen(cmd, "r");
+#endif
+	if (!fp) return false;
+	char buf[512];
+	while (fgets(buf, sizeof(buf), fp))
+		output += buf;
+#ifdef _WIN32
+	_pclose(fp);
+#else
+	pclose(fp);
+#endif
+	return !output.empty();
+}
+
+bool IpmiMonitor::available() {
+	if (m_available) return true;
+	std::string out;
+	if (!exec("ipmitool -I open sensor list", out))
+		return false;
+	m_available = !out.empty();
+	return m_available;
+}
+
+bool IpmiMonitor::query(std::vector<IPMI_SENSOR>& out) {
+	std::string output;
+	if (!exec("ipmitool -I open sensor list", output))
+		return false;
+
+	std::istringstream ss(output);
+	std::string line;
+	while (std::getline(ss, line)) {
+		if (line.empty()) continue;
+		IPMI_SENSOR s = parseLine(line);
+		if (!s.name.empty())
+			out.push_back(s);
+	}
+	return !out.empty();
+}
+
+IPMI_SENSOR IpmiMonitor::parseLine(const std::string& line) {
+	IPMI_SENSOR s;
+	std::vector<std::string> parts;
+	size_t pos = 0;
+	while (pos < line.size()) {
+		size_t end = line.find('|', pos);
+		if (end == std::string::npos) end = line.size();
+		std::string part = line.substr(pos, end - pos);
+		// trim whitespace
+		size_t first = part.find_first_not_of(" \t\r");
+		if (first != std::string::npos) {
+			size_t last = part.find_last_not_of(" \t\r");
+			part = part.substr(first, last - first + 1);
+		} else {
+			part = "";
+		}
+		parts.push_back(part);
+		if (end == line.size()) break;
+		pos = end + 1;
+	}
+
+	if (parts.size() >= 4) {
+		s.name = parts[0];
+		s.value = atof(parts[1].c_str());
+		s.unit = parts[2];
+		s.status = parts[3];
+	}
+	return s;
+}
 

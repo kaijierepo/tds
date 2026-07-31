@@ -13,6 +13,31 @@ struct SRV_STATUS {
 	int handle;
 	int thread;
 	std::atomic<long long> webReqCount;
+	std::string ipmi; // IPMI sensor data (JSON)
+};
+
+#include <vector>
+
+struct IPMI_SENSOR {
+	std::string name;
+	double value;
+	std::string unit;
+	std::string status; // ok, warning, critical, nr
+
+	IPMI_SENSOR() : value(0) {}
+};
+
+// IPMI monitor via ipmitool command line -- zero library dependency
+class IpmiMonitor {
+public:
+	IpmiMonitor();
+	bool available();
+	bool query(std::vector<IPMI_SENSOR>& out);
+
+private:
+	bool m_available;
+	bool exec(const char* cmd, std::string& output);
+	IPMI_SENSOR parseLine(const std::string& line);
 };
 
 #ifdef _WIN32
@@ -187,6 +212,7 @@ public:
 	int m_physicalCoreCount;
 
     std::shared_ptr<ProcessDiskIOMonitor> m_diskIOMonitor;
+    std::shared_ptr<IpmiMonitor> m_ipmiMonitor;
 
 	unsigned char sessionHandle[4];
 	HANDLE OpenProcessByName(const char* processName);
