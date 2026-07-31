@@ -8261,7 +8261,7 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 		return true;
 
 	size_t json_len = 0;
-	char* json_str = yyjson_val_write(de, NULL, &json_len);
+	char* json_str = yyjson_val_write(de, 0, &json_len);
 	if (json_str) {
 		bMatch = evaluate_condition(json_str, json_len);
 

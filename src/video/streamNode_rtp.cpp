@@ -178,7 +178,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
 #else
                 int sent = ::send(client.tcp_socket, header, 4, MSG_NOSIGNAL);
                 if (sent == 4) {
-                    sent = ::send(client.tcp_socket, data.data(), data.size(), MSG_NOSIGNAL);
+                    sent = ::send(client.tcp_socket, packet.data.data(), packet.data.size(), MSG_NOSIGNAL);
                 }
 #endif
                 if (sent == (int)packet.data.size()) {
