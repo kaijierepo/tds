@@ -207,7 +207,7 @@ void ioDev_onvif::doImgAcq() {
 	// 先移动 -> 等待镜头稳定延时 -> 拍照
 	//解析通道ptz配置并移动相机
 	//ioChannel* pC = m_channels[m_curPZTChan];
-	ioChannel* pC = new ioChannel();
+	std::unique_ptr<ioChannel> pC(new ioChannel());
 	pC->m_devAddr = m_channels[m_curPZTChan]->getAddr();
 	pC->m_bEnable = m_channels[m_curPZTChan]->m_bEnable;
 	pC->m_strTagBind = m_channels[m_curPZTChan]->m_strTagBind;
@@ -252,10 +252,7 @@ void ioDev_onvif::doImgAcq() {
 	onvif_getSnapshotUri();
 
 	//识别
-	doImgAnalyse(pC);
-
-	delete pC;
-	pC = nullptr;
+	doImgAnalyse(pC.get());
 }
 
 void ioDev_onvif::doImgAnalyse(ioChannel* pC) {
@@ -446,7 +443,7 @@ void ioDev_onvif::doImgAnalyse(ioChannel* pC) {
 void ioDev_onvif::DoCycleTask() {
 	if(m_bRunning == false)
 		return;
-
+	// 心跳线程
 	if (timeopt::CalcTimePassSecond(m_stLastAcqTime) > m_fAcqInterval) {
 		if (!m_bWorkingThreadRunning) {
 			timeopt::now(&m_stLastAcqTime);
@@ -461,10 +458,10 @@ void ioDev_onvif::DoCycleTask() {
 				m_bPaused = false;
 			}
 		}
-
+		// 非暂停
 		if (m_bPaused) 
 			return;
-
+		// 有通道
 		if (m_channels.size() == 0)
 			return;
 
