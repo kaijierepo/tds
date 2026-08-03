@@ -1020,7 +1020,7 @@ public:
 	TDB* getChildDB(std::string dbName);
 	std::map<std::string, TDB*> m_childDB;
 
-#if defined(_WIN32)
+#if defined(_WIN32) && _WIN32_WINNT>=0x0600
 	void* getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe);
 #else
 	FILE* getDBFileHandle(std::string tag, DB_TIME time, bool& firstDe);
