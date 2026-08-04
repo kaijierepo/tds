@@ -156,7 +156,7 @@ bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& r
 	else if (method == "stopRecord") {
 		rpc_stopRecord(params, rpcResp, session);
 	}
-	else if (method == "removeRecordFile") {
+	else if (method == "removeRecordFile" || method == "deleteRecord") {
 		rpc_removeRecordFile(params, rpcResp, session);
 	}
 	else if (method == "getRecordList") {
