@@ -200,6 +200,14 @@ bool StreamServer::rpc_openStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	if (yyv)
 		op.pushToIP = yyjson_get_str(yyv);
 
+	if (op.pushToIP == "") {
+		op.pushToIP = session.remoteIP;
+	}
+
+	if (op.pushToIP != "") {
+		op.relayPushUrl = "rtsp://" + op.pushToIP + "/stream/" + op.pushToTag;
+	}
+
 	if (openStream(op) != nullptr) {
 		rpcResp.result = RPC_OK;
 	}

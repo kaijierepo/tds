@@ -423,10 +423,13 @@ IpmiMonitor::IpmiMonitor() : m_available(false) {
 }
 
 bool IpmiMonitor::exec(const char* cmd, std::string& output) {
+	std::string redirectCmd = std::string(cmd);
 #ifdef _WIN32
-	FILE* fp = _popen(cmd, "r");
+	redirectCmd += " 2>nul";
+	FILE* fp = _popen(redirectCmd.c_str(), "r");
 #else
-	FILE* fp = popen(cmd, "r");
+	redirectCmd += " 2>/dev/null";
+	FILE* fp = popen(redirectCmd.c_str(), "r");
 #endif
 	if (!fp) return false;
 	char buf[512];

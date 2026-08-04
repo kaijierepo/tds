@@ -212,33 +212,43 @@ std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op
 		sn = getStreamNodeBySrcUrl(op.originPullUrl);
 
 	if (sn) {
-		if (sn->session_origin_pull_.state_ != SESSION_STATE::SESSION_IDLE && sn->session_origin_pull_.state_ != SESSION_STATE::SESSION_ERROR) {
-			LOG("[流媒体] 媒体源已打开，收到重复打开请求，忽略, 位号:%s, 当前配置地址:%s",
-				op.tag.c_str(), sn->session_origin_pull_.server_url_.c_str());
-			return sn;
-		}
-		if (sn->session_origin_pull_.server_url_ != op.originPullUrl) {
-			LOG("[流媒体] 媒体源变更，restart streamNode，当前拉流地址:%s, 新地址:%s",
+		bool confChanged = false;
+		if (op.originPullUrl != "" && sn->session_origin_pull_.server_url_ != op.originPullUrl) {
+			LOG("[流媒体] 媒体源变更，原地址:%s, 新地址:%s",
 				sn->session_origin_pull_.server_url_.c_str(), op.originPullUrl.c_str());
 			sn->session_origin_pull_.server_url_ = op.originPullUrl;
 			sn->extractRtspAuthInfo(sn->session_origin_pull_);
+			confChanged = true;
 		}
-		if (sn->session_relay_push_.server_url_ != op.relayPushUrl) {
-			LOG("[流媒体] 推流地址变更， 当前推流地址:%s, 新地址:%s",
+		if (op.relayPushUrl != "" && sn->session_relay_push_.server_url_ != op.relayPushUrl) {
+			LOG("[流媒体] 推流地址变更，原地址:%s, 新地址:%s",
 				sn->session_relay_push_.server_url_.c_str(), op.relayPushUrl.c_str());
 			sn->session_relay_push_.server_url_ = op.relayPushUrl;
+			confChanged = true;
 		}
+
+		if (!confChanged) {
+			LOG("[流媒体] 媒体源已打开，重复打开请求，参数未改变,忽略。 位号:%s, 源地址:%s，转发地址:%s",
+				op.tag.c_str(),
+				sn->session_origin_pull_.server_url_.c_str(),
+				sn->session_relay_push_.server_url_.c_str());
+			return sn;
+		}
+
+
 		if (op.srcStreamFetch != "") {
 			sn->config_.srcStreamFetch = op.srcStreamFetch;
 		}
 
-		if (!sn->run(sn->config_)) {
-			LOG("[StreamServer] openStream start fail, tag:%s, streamUrl:%s",
-				op.tag.c_str(), streamUrl.c_str());
-			return nullptr;
+		if (!sn->running_) {
+			if (!sn->run(sn->config_)) {
+				LOG("[StreamServer] openStream start fail, tag:%s, streamUrl:%s",
+					op.tag.c_str(), streamUrl.c_str());
+				return nullptr;
+			}
+			LOG("[StreamServer] openStream success (reuse), tag:%s, streamUrl:%s, originUrl:%s",
+				op.tag.c_str(), streamUrl.c_str(), op.originPullUrl.c_str());
 		}
-		LOG("[StreamServer] openStream success (reuse), tag:%s, streamUrl:%s, originUrl:%s",
-			op.tag.c_str(), streamUrl.c_str(), op.originPullUrl.c_str());
 		return sn;
 	}
 
