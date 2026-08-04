@@ -478,6 +478,9 @@ obj_files="\
 ./io_server/proto_tb3386.o \
 ./io_server/proto_ws.o \
 ./video/streamServer.o \
+./video/streamServer_file.o \
+./video/streamServer_rtsp.o \
+./video/streamServer_rpc.o \
 ./video/streamNode.o \
 ./video/streamSession.o \
 ./video/streamSession_rtsp.o \

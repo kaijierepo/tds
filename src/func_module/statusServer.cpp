@@ -1,11 +1,12 @@
-#ifdef _WIN32
 #include "StatusServer.h"
-#include <tchar.h>
-#include <chrono>
 #include "statusServer.h"
 #include "database/tDatabase.h"
 #include <thread>
 #include "common.h"
+#include <chrono>
+
+#ifdef _WIN32
+#include <tchar.h>
 #include "winternl.h"
 
 #pragma comment(lib, "Pdh.lib")
