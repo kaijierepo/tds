@@ -168,6 +168,9 @@ bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& r
 	else if (method == "setStream") {
 		rpc_setStream(params, rpcResp, session);
 	}
+	else if (method == "remux") {
+		rpc_remux(params, rpcResp, session);
+	}
 	else {
 		bHandled = false;
 	}
@@ -246,6 +249,30 @@ bool StreamServer::rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp,
 			"failed to serve local file, check file path and format");
 	}
 
+	return true;
+}
+
+bool StreamServer::rpc_remux(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string src, target;
+	yyjson_val* yyv = yyjson_obj_get(params, "srcFile");
+	if (yyv)
+		src = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "targetFile");
+	if (yyv)
+		target = yyjson_get_str(yyv);
+
+	src = m_recordPath + src;
+	target = m_recordPath + target;
+
+	bool ok = mp4::convertH264toMP4(src, target);
+
+	if (ok) {
+		rpcResp.result = RPC_OK;
+	}
+	else {
+		rpcResp.error = RPC_FAIL;
+	}
 	return true;
 }
 
@@ -398,13 +425,18 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 		rc = getStreamNodeByTag(tag);
 	}
 	if (rc) {
+		if (!rc->running_) {
+			bool ok = rc->run(rc->config_);
+			LOG("[StreamSrv]streamNode not running while startRecord,run streamNode %s, tag: %s, streamUrl: %s",ok?"success":"fail", tag.c_str(), rc->config_.streamUrl.c_str());
+			if (!ok) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "run streamNode fail");
+				return true;
+			}
+		}
+
 		std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);
 		if (rc->rec_ctrl_.recording == false)
 		{
-			// 确保 record 目录存在
-			std::string recordDir = tds->conf->dbPath + "/record";
-			fs::createFolderOfPath(recordDir);
-
 			rc->rec_ctrl_.fu_a_buffer_.clear();
 			rc->rec_ctrl_.firstWrite = true;
 			rc->rec_ctrl_.preRecordingDone = false;
@@ -426,7 +458,7 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 		else
 		{
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "record is already started");
-			return false;
+			return true;
 		}
 	}
 	else {
@@ -555,14 +587,21 @@ bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 	json records = json::array();
 
 	namespace fs = std::filesystem;
+#ifdef _WIN32
+	// 中文 Windows 上 filesystem 用系统编码（GBK）解释窄字符串，
+	// dbPath 是 UTF-8，需要转成 UTF-16 宽字符串路径
+	fs::path recordDirPath(str::utf8_to_utf16(recordDir));
+#else
+	fs::path recordDirPath(recordDir);
+#endif
 	try {
-		if (!fs::exists(recordDir) || !fs::is_directory(recordDir)) {
+		if (!fs::exists(recordDirPath) || !fs::is_directory(recordDirPath)) {
 			rpcResp.result = records.dump();
 			return true;
 		}
 
 		std::string prefix = tag + "_";
-		for (const auto& entry : fs::directory_iterator(recordDir)) {
+		for (const auto& entry : fs::directory_iterator(recordDirPath)) {
 			if (!entry.is_regular_file() || entry.path().extension() != ".h264")
 				continue;
 			// Windows 上 filesystem::path::string() 返回系统编码（中文 Windows 为 GBK），

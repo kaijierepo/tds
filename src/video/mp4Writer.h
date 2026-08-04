@@ -11,6 +11,9 @@
 
 // NAL 类型定义（与 streamNode.h 保持一致）
 #define MP4_NAL_TYPE_NON_IDR  1
+#define MP4_NAL_TYPE_PART_A   2
+#define MP4_NAL_TYPE_PART_B   3
+#define MP4_NAL_TYPE_PART_C   4
 #define MP4_NAL_TYPE_IDR      5
 #define MP4_NAL_TYPE_SEI      6
 #define MP4_NAL_TYPE_SPS      7

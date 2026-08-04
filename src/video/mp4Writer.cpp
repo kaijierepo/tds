@@ -184,51 +184,33 @@ static bool parseSPS(const uint8_t* data, size_t size, SpsInfo& info) {
 // Annex B 解析：从 .h264 文件提取 NAL 单元并分组为帧
 // ====================================================================
 
-static bool parseAnnexB(const std::string& path,
+static bool parseAnnexB(const std::vector<uint8_t>& data,
                         std::vector<NalUnit>& all_nals,
                         std::vector<VideoFrame>& frames,
                         SpsInfo& spsInfo)
 {
-#ifdef _WIN32
-    std::ifstream ifs(utf8ToWide(path), std::ios::binary);
-#else
-    std::ifstream ifs(path, std::ios::binary);
-#endif
-    if (!ifs) {
-        LOG("[MP4] Cannot open .h264 file: %s", path.c_str());
-        return false;
-    }
-
-    ifs.seekg(0, std::ios::end);
-    size_t fileSize = static_cast<size_t>(ifs.tellg());
-    ifs.seekg(0, std::ios::beg);
-
+    size_t fileSize = data.size();
     if (fileSize < 4) {
         LOG("[MP4] .h264 file too small: %zu bytes", fileSize);
         return false;
     }
-
-    std::vector<uint8_t> data(fileSize);
-    ifs.read(reinterpret_cast<char*>(data.data()), fileSize);
-    ifs.close();
 
     // 按 start code (00 00 00 01 或 00 00 01) 分割 NAL
     std::vector<uint8_t> sps_raw, pps_raw;
     size_t pos = 0;
 
     while (pos + 3 <= fileSize) {
-        // 跳过前导零
-        while (pos < fileSize && data[pos] == 0) pos++;
-        if (pos + 3 > fileSize) break;
-
-        size_t scLen;
+        size_t scLen = 0;
         if (data[pos] == 0x00 && data[pos + 1] == 0x00) {
             if (data[pos + 2] == 0x01)
                 scLen = 3;
             else if (pos + 4 <= fileSize && data[pos + 2] == 0x00 && data[pos + 3] == 0x01)
                 scLen = 4;
-            else { pos++; continue; }
-        } else { pos++; continue; }
+        }
+        if (scLen == 0) {
+            pos++;
+            continue;
+        }
 
         size_t nalStart = pos + scLen;
 
@@ -268,20 +250,33 @@ static bool parseAnnexB(const std::string& path,
     }
 
     // 将 NAL 分组为帧（access unit）
-    // 规则：VCL NAL (type 1 或 5) 开始新帧，前面的非 VCL NAL 归入下一帧
+    // 支持 H.264 数据分区（data partitioning）：
+    //   一个非 IDR slice 可拆分为 type 2 + 可选 type 3 + 可选 type 4
+    //   type 2 (PART_A) = slice header + motion vectors — 开始新帧
+    //   type 3 (PART_B) = intra residuals           — 同一帧的延续
+    //   type 4 (PART_C) = inter residuals           — 同一帧的延续
+    //   常规流 type 1 (NON_IDR) / type 5 (IDR) — 各自开始新帧
+    auto starts_new_frame = [](uint8_t t) {
+        return t == MP4_NAL_TYPE_IDR
+            || t == MP4_NAL_TYPE_NON_IDR
+            || t == MP4_NAL_TYPE_PART_A;
+    };
+    auto is_vcl = [](uint8_t t) {
+        return t == MP4_NAL_TYPE_IDR
+            || t == MP4_NAL_TYPE_NON_IDR
+            || t == MP4_NAL_TYPE_PART_A
+            || t == MP4_NAL_TYPE_PART_B
+            || t == MP4_NAL_TYPE_PART_C;
+    };
     VideoFrame curFrame;
 
     for (size_t i = 0; i < all_nals.size(); i++) {
         uint8_t t = all_nals[i].type;
 
-        if (t == MP4_NAL_TYPE_IDR || t == MP4_NAL_TYPE_NON_IDR) {
-            // VCL NAL 开始新帧
+        if (starts_new_frame(t)) {
             bool hasVcl = false;
             for (auto& n : curFrame.nals) {
-                if (n.type == MP4_NAL_TYPE_IDR || n.type == MP4_NAL_TYPE_NON_IDR) {
-                    hasVcl = true;
-                    break;
-                }
+                if (is_vcl(n.type)) { hasVcl = true; break; }
             }
             if (hasVcl) {
                 frames.push_back(curFrame);
@@ -289,6 +284,9 @@ static bool parseAnnexB(const std::string& path,
             }
             curFrame.nals.push_back(all_nals[i]);
             curFrame.is_keyframe = (t == MP4_NAL_TYPE_IDR);
+        } else if (is_vcl(t)) {
+            // 分区延续 NAL (type 3/4)，归入当前帧
+            curFrame.nals.push_back(all_nals[i]);
         } else {
             curFrame.nals.push_back(all_nals[i]);
         }
@@ -297,10 +295,7 @@ static bool parseAnnexB(const std::string& path,
     if (!curFrame.nals.empty()) {
         bool hasVcl = false;
         for (auto& n : curFrame.nals) {
-            if (n.type == MP4_NAL_TYPE_IDR || n.type == MP4_NAL_TYPE_NON_IDR) {
-                hasVcl = true;
-                break;
-            }
+            if (is_vcl(n.type)) { hasVcl = true; break; }
         }
         if (hasVcl) {
             frames.push_back(curFrame);
@@ -553,18 +548,42 @@ static std::vector<uint8_t> buildStco(const std::vector<uint64_t>& offsets) {
 // ====================================================================
 
 bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path) {
-    // ---------- 第 1 步：解析 Annex B .h264 文件 ----------
+    // ---------- 第 1 步：读取 .h264 文件 ----------
+#ifdef _WIN32
+    std::ifstream ifs(utf8ToWide(h264Path), std::ios::binary);
+#else
+    std::ifstream ifs(h264Path, std::ios::binary);
+#endif
+    if (!ifs) {
+        LOG("[MP4] Cannot open .h264 file: %s", h264Path.c_str());
+        return false;
+    }
+
+    ifs.seekg(0, std::ios::end);
+    size_t fileSize = static_cast<size_t>(ifs.tellg());
+    ifs.seekg(0, std::ios::beg);
+
+    if (fileSize < 4) {
+        LOG("[MP4] .h264 file too small: %zu bytes", fileSize);
+        return false;
+    }
+
+    std::vector<uint8_t> fileData(fileSize);
+    ifs.read(reinterpret_cast<char*>(fileData.data()), fileSize);
+    ifs.close();
+
+    // ---------- 第 2 步：解析 Annex B NALU ----------
     std::vector<NalUnit>    allNals;
     std::vector<VideoFrame> frames;
     SpsInfo                 spsInfo;
 
-    if (!parseAnnexB(h264Path, allNals, frames, spsInfo)) return false;
+    if (!parseAnnexB(fileData, allNals, frames, spsInfo)) return false;
     if (frames.empty()) {
         LOG("[MP4] No video frames in .h264 file");
         return false;
     }
 
-    // ---------- 第 2 步：收集帧元数据 ----------
+    // ---------- 第 3 步：收集帧元数据 ----------
     std::vector<size_t>   syncIdx;       // 关键帧索引（0-based）
     std::vector<uint32_t> sampleSizes;   // 每帧 AVC 字节数
 
@@ -584,11 +603,11 @@ bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path) {
     uint32_t duration   = static_cast<uint32_t>(frames.size()) * delta;
     if (duration == 0) duration = 1;
 
-    // ---------- 第 3 步：构建 avcC ----------
+    // ---------- 第 4 步：构建 avcC ----------
     std::vector<uint8_t> avcC;
     buildAvcC(allNals, avcC);
 
-    // ---------- 第 4 步：构建 mdat（记录 chunk offset） ----------
+    // ---------- 第 5 步：构建 mdat（记录 chunk offset） ----------
     std::vector<uint8_t> mdat;
     size_t mdatOff = boxBegin(mdat, "mdat");
     std::vector<uint64_t> chunkOffsets;
@@ -633,15 +652,15 @@ bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path) {
     }
     boxEnd(mdat, mdatOff);
 
-    // ---------- 第 5 步：构建 stco（含实际 mdat 偏移） ----------
+    // ---------- 第 6 步：构建 stco（含实际 mdat 偏移） ----------
     auto stcoBuf       = buildStco(chunkOffsets);
     auto sttsBuf       = buildStts(static_cast<uint32_t>(frames.size()), delta);
     auto stssBuf       = buildStss(syncIdx);
     auto stszBuf       = buildStsz(sampleSizes);
-    auto stscBuf       = buildStsc(static_cast<uint32_t>(frames.size()));  // 所有帧一帧一 chunk
+    auto stscBuf       = buildStsc(1);  // 每 chunk 一个 sample
     auto stsdBuf       = buildStsd(avcC);
 
-    // ---------- 第 6 步：组装 box 树 ----------
+    // ---------- 第 7 步：组装 box 树 ----------
     // stbl = stsd + stts + stss + stsz + stsc + stco
     std::vector<uint8_t> stbl;
     size_t stblOff = boxBegin(stbl, "stbl");
@@ -698,7 +717,7 @@ bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path) {
             (long long)(chunkOffsets[0] - ftyp.size() - moov.size() - 8));
     }
 
-    // ---------- 第 7 步：写入输出文件 ----------
+    // ---------- 第 8 步：写入输出文件 ----------
 #ifdef _WIN32
     std::ofstream ofs(utf8ToWide(mp4Path), std::ios::binary | std::ios::trunc);
 #else

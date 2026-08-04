@@ -884,6 +884,8 @@ bool TDS_imp::run(string cmdline) {
 	//stream server 
 	streamSrv.setIdleTimeout(tds->conf->getInt("streamIdleTimeout", 300));
 	streamSrv.m_alwaysOpenStream = tds->conf->getInt("alwaysOpenStream", 0) == 1 ? true : false;
+	streamSrv.m_recordPath = tds->conf->dbPath + "/record";
+	fs::createFolderOfPath(streamSrv.m_recordPath);
 	map<string, MP*> mapAllMP;
 	prj.getMpList(mapAllMP);
 	for (auto& pair : mapAllMP) {

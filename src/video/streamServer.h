@@ -24,6 +24,7 @@ public:
 	bool rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setStream(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_remux(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
 	std::shared_ptr<StreamNode> openStream(const STREAM_OPEN_PARAM& openParam);
 	std::shared_ptr<StreamNode> createStream(const STREAM_OPEN_PARAM& openParam);
@@ -42,6 +43,7 @@ public:
 
 	bool m_enableZLM = false;
 	bool m_alwaysOpenStream = false;
+	std::string m_recordPath;
 
 	// DTLS 证书（所有 WebRTC 会话共用）
 	std::string m_dtlsCertPem;
