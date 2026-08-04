@@ -272,10 +272,10 @@ compile_mbedtls() {
     echo "mbedtls 库编译完成"
 }
 
-compile_mbedtls
-
 # ===================== 4. 创建输出目录 =====================
 mkdir -p ../out/tds
+
+compile_mbedtls
 
 # ===================== 5. 增量编译所有文件 =====================
 echo ""
