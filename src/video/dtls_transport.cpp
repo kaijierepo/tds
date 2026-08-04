@@ -34,7 +34,11 @@ static void pSha256Prf(const unsigned char* secret, size_t secret_len,
 
     while (offset < output_len) {
         // output += HMAC_SHA256(secret, A || seed)
-        unsigned char hmac_input[32 + 83]; // A(32) + max seed
+        // 缓冲区大小 = A(32 字节) + 最大 seed 长度。
+        // DTLS-SRTP 导出的 seed 为 19(label) + 64(双 random) = 83 字节；
+        // 若将来引入 context 最长 85 字节（RFC 5705 布局），本缓冲区仍有余量。
+        // 注意：不得缩回 32+83，否则传入 85 字节 seed 时会栈越界 2 字节。
+        unsigned char hmac_input[32 + 96]; // A(32) + max seed(85)，防越界
         size_t input_len = 32 + seed_len;
         memcpy(hmac_input, A, 32);
         memcpy(hmac_input + 32, seed, seed_len);
@@ -342,7 +346,7 @@ void DtlsTransport::exportSrptKeys() {
     size_t label_len = strlen(label);
 
     if (tls_keys_.captured) {
-        // 构建种子：label || client_random || server_random
+        // 构建种子：label || client_random || server_random（RFC 5764 §4.2）
         unsigned char seed[19 + 32 + 32];
         memcpy(seed, label, label_len);
         memcpy(seed + label_len, tls_keys_.client_random, 32);

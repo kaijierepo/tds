@@ -117,4 +117,9 @@ void STREAM_SESSION::copyClientSessionFrom(const STREAM_SESSION& other)
     tcp_socket = other.tcp_socket;
     interleaved_rtp = other.interleaved_rtp;
     interleaved_rtcp = other.interleaved_rtcp;
+
+    // WebRTC：ICE 凭据 —— STUN MESSAGE-INTEGRITY 用 ice_pwd 作 HMAC 密钥，
+    // 缺失会导致浏览器丢弃 STUN 响应、永不发起 DTLS 握手
+    ice_ufrag = other.ice_ufrag;
+    ice_pwd   = other.ice_pwd;
 }
