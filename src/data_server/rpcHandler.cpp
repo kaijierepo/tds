@@ -3312,6 +3312,112 @@ float CalDTWDist(const vector<double>& vecRef, const vector<double>& vecCur)
 	return dVal;
 }
 
+bool rpcHandler::handleMethodCall_fileDownload(const std::string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session)
+{
+	if (method != "downloadFile") return false;
+
+	yyjson_val* yyv_url = yyjson_obj_get(params, "url");
+	yyjson_val* yyv_chunkSize = yyjson_obj_get(params, "chunkSize");
+	if (!yyv_url || !yyv_chunkSize) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "url and chunkSize required");
+		return true;
+	}
+
+	std::string url = yyjson_get_str(yyv_url);
+	int chunkSize = yyjson_get_int(yyv_chunkSize);
+	int chunkIndex = 0;
+	yyjson_val* yyv_chunkIndex = yyjson_obj_get(params, "chunkIndex");
+	if (yyv_chunkIndex) {
+		chunkIndex = yyjson_get_int(yyv_chunkIndex);
+	}
+
+	// url -> filesystem path
+	// /db/record/xxx.h264 -> {dbPath}/record/xxx.h264
+	// /record/xxx.mp4      -> {dbPath}/record/xxx.mp4
+	std::string filePath;
+	if (url.find("/db/record/") == 0) {
+		filePath = tds->conf->dbPath + "/record/" + url.substr(strlen("/db/record/"));
+	}
+	else if (url.find("/record/") == 0) {
+		filePath = tds->conf->dbPath + "/record/" + url.substr(strlen("/record/"));
+	}
+	else {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "invalid url format: " + url);
+		return true;
+	}
+
+	// open file
+	FILE* fp = fopen(filePath.c_str(), "rb");
+	if (!fp) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::OS_fileNotExist, "file not found: " + filePath);
+		return true;
+	}
+
+	// get file size
+	fseek(fp, 0, SEEK_END);
+	long fileSize = ftell(fp);
+	if (fileSize <= 0) {
+		fclose(fp);
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::OS_fileNotExist, "empty file: " + filePath);
+		return true;
+	}
+
+	int chunkCount = (int)(fileSize / chunkSize);
+	if (fileSize % chunkSize != 0) chunkCount++;
+
+	// seek to chunk offset
+	long offset = (long)chunkIndex * chunkSize;
+	if (offset >= fileSize) {
+		fclose(fp);
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "chunkIndex out of range");
+		return true;
+	}
+
+	int bytesToRead = chunkSize;
+	if (offset + bytesToRead > fileSize) {
+		bytesToRead = (int)(fileSize - offset);
+	}
+	fseek(fp, offset, SEEK_SET);
+
+	// read chunk data
+	unsigned char* chunkData = new unsigned char[bytesToRead];
+	size_t bytesRead = fread(chunkData, 1, bytesToRead, fp);
+	fclose(fp);
+
+	if (bytesRead <= 0) {
+		delete[] chunkData;
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "read file error");
+		return true;
+	}
+	int actualLen = (int)bytesRead;
+
+	// base64 encode
+	char* b64Out = new char[BASE64_ENCODE_OUT_SIZE(actualLen)];
+	base64_encode(chunkData, actualLen, b64Out);
+	delete[] chunkData;
+
+	std::string b64Data(b64Out);
+	delete[] b64Out;
+
+	// build response
+	yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_val* root = yyjson_mut_obj(doc);
+	yyjson_mut_obj_add_str(doc, root, "url", url.c_str());
+	yyjson_mut_obj_add_int(doc, root, "chunkSize", chunkSize);
+	yyjson_mut_obj_add_int(doc, root, "chunkIndex", chunkIndex);
+	yyjson_mut_obj_add_int(doc, root, "chunkCount", chunkCount);
+	yyjson_mut_obj_add_strcpy(doc, root, "data", b64Data.c_str());
+	yyjson_mut_doc_set_root(doc, root);
+
+	size_t jsonLen = 0;
+	char* jsonStr = yyjson_mut_write(doc, 0, &jsonLen);
+	rpcResp.result = std::string(jsonStr, jsonLen);
+	free(jsonStr);
+	yyjson_mut_doc_free(doc);
+
+	return true;
+}
+
 bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	bool bHandled = true;
 
@@ -3331,6 +3437,9 @@ bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& r
 		bHandled = true;
 	}
 	else if (handleMethodCall_utils(method, params, rpcResp, session)) {
+		bHandled = true;
+	}
+	else if (handleMethodCall_fileDownload(method, params, rpcResp, session)) {
 		bHandled = true;
 	}
 	else if (method == "reloadMasterDS") {

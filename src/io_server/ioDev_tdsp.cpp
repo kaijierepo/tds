@@ -1408,6 +1408,9 @@ void ioDev_tdsp::DoCycleTask()
 		m_stLastHeartbeatTime = timeopt::now();
 	}
 
+	// 从子服务拉取录像文件（每60秒检查一次）
+	pullRecordFiles();
+
 
 	if (!m_bEnableAcq)
 		return;
@@ -1447,6 +1450,95 @@ void ioDev_tdsp::DoCycleTask()
 	//用于仅进行心跳通信,但是不进行采集的场景
 	if (m_acqMode != "none") {
 		DoAcq();
+	}
+}
+
+void ioDev_tdsp::pullRecordFiles()
+{
+	// 仅对子服务类型执行
+	if (m_devSubType != TDSP_SUB_TYPE::childTds) return;
+	if (!m_bOnline) return;
+
+	// 每60秒轮询一次
+	if (m_stLastRecordPullTime.isValid() && timeopt::CalcTimePassSecond(m_stLastRecordPullTime) < 60) {
+		return;
+	}
+
+	m_stLastRecordPullTime = timeopt::now();
+
+	// 1. 获取录像文件列表
+	json result, error;
+	call("getRecordList", json::object(), nullptr, result, error);
+
+	if (error != nullptr || !result.is_array() || result.size() == 0) {
+		return;
+	}
+
+	int chunkSize = 5000;
+
+	for (size_t i = 0; i < result.size(); i++) {
+		json record = result[i];
+		std::string fileUrl = record.value("fileUrl", "");
+		if (fileUrl.empty()) continue;
+
+		// 2. 下载文件各分片
+		std::vector<unsigned char> fileData;
+		int chunkCount = 0;
+		bool downloadOk = true;
+
+		for (int ch = 0; ; ch++) {
+			json dlParams;
+			dlParams["url"] = fileUrl;
+			dlParams["chunkSize"] = chunkSize;
+			dlParams["chunkIndex"] = ch;
+
+			json dlResult, dlError;
+			call("downloadFile", dlParams, nullptr, dlResult, dlError);
+
+			if (dlError != nullptr) {
+				downloadOk = false;
+				break;
+			}
+
+			if (ch == 0) {
+				chunkCount = dlResult.value("chunkCount", 1);
+			}
+
+			std::string b64Data = dlResult.value("data", "");
+			if (b64Data.empty()) {
+				downloadOk = false;
+				break;
+			}
+
+			unsigned char* decodeBuff = new unsigned char[BASE64_DECODE_OUT_SIZE(b64Data.length())];
+			unsigned int decodeLen = base64_decode(b64Data.c_str(), (unsigned int)b64Data.length(), decodeBuff);
+			fileData.insert(fileData.end(), decodeBuff, decodeBuff + decodeLen);
+			delete[] decodeBuff;
+
+			if (ch + 1 >= chunkCount) break;
+		}
+
+		if (!downloadOk) continue;
+
+		// 3. 保存到本地录像目录
+		std::string fname = fileUrl;
+		size_t pos = fname.rfind('/');
+		if (pos != std::string::npos) fname = fname.substr(pos + 1);
+
+		std::string savePath = tds->conf->dbPath + "/record/" + fname;
+		fs::createFolderOfPath(savePath);
+
+		FILE* fp = fopen(savePath.c_str(), "wb");
+		if (fp) {
+			fwrite(fileData.data(), 1, fileData.size(), fp);
+			fclose(fp);
+
+			// 4. 删除子服务上的录像文件
+			json delParams;
+			delParams["fileUrl"] = fileUrl;
+			json delResult, delError;
+			call("deleteRecord", delParams, nullptr, delResult, delError);
+		}
 	}
 }
 

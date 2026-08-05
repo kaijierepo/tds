@@ -67,6 +67,7 @@ public:
 	bool handleMethodCall_edgeDev(std::string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_gamePad(std::string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_utils(const std::string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_fileDownload(const std::string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_MoMng(std::string method, json& params, RPC_RESP& rpcResp,RPC_SESSION& session);
 	bool handleMethodCall_alarmMng(std::string method, json& params, RPC_RESP& rpcResp,RPC_SESSION& session);
 	bool handleMethodCall_userMng(std::string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);

@@ -64,4 +64,7 @@ public:
 	int m_childTdsHttpsPort;
 	udpServer translatorClient;
 
+	// 录像文件拉取
+	TIME m_stLastRecordPullTime;
+	void pullRecordFiles();
 };
