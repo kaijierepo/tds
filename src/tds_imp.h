@@ -39,6 +39,7 @@ SOFTWARE.
 #include "tds.h"
 #include "tdsConf.h"
 #include "mp.h"
+#include "tSockSrv.h"
 
 namespace FUNC_TYPE {
 	const std::string ChaoShengNoSignalCurveClassify = "ChaoShengNoSignalCurveClassify";  //曲线分类
@@ -58,6 +59,8 @@ public:
 	TDS_imp();
 	bool setEncodeing(string encoding) override;//接口字符串传递使用的字符编码
 	string getUIMode();
+
+	void readMasterDSConf_tdsp(SOCK_SRV_CONF& conf);
 
 	bool run(string cmdline = "") override;
 	//tds关闭时，一定要快速关闭666端口，因为如果由于某些原因tds延迟关闭，但是依然占用666端口

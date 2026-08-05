@@ -629,7 +629,7 @@
     </ClCompile>
     <ClCompile Include="..\src\database\tDatebase.cpp" />
     <ClCompile Include="..\src\data_server\as_interface.cpp" />
-    <ClCompile Include="..\src\data_server\mqttSrv.cpp" />
+    <ClCompile Include="..\src\data_server\uplink_mqtt.cpp" />
     <ClCompile Include="..\src\data_server\rpcHandler_common.cpp" />
     <ClCompile Include="..\src\data_server\scriptEngine.cpp" />
     <ClCompile Include="..\src\data_server\scriptFunc.cpp" />
@@ -690,7 +690,6 @@
     <ClCompile Include="..\src\video\streamNode.cpp" />
     <ClCompile Include="..\src\video\streamSession.cpp" />
     <ClCompile Include="..\src\video\streamSession_rtsp.cpp" />
-
     <ClCompile Include="..\src\video\streamNode_rtp.cpp" />
     <ClCompile Include="..\src\video\mp4Writer.cpp" />
     <ClCompile Include="..\src\video\streamSession_socket.cpp" />
@@ -830,7 +829,7 @@
     <ClInclude Include="..\src\common\yyjson.h" />
     <ClInclude Include="..\src\database\tDatabase.h" />
     <ClInclude Include="..\src\data_server\as_interface.h" />
-    <ClInclude Include="..\src\data_server\mqttSrv.h" />
+    <ClInclude Include="..\src\data_server\uplink_mqtt.h" />
     <ClInclude Include="..\src\data_server\rpcHandler_common.h" />
     <ClInclude Include="..\src\data_server\scriptEngine.h" />
     <ClInclude Include="..\src\data_server\scriptFunc.h" />
@@ -901,7 +900,6 @@
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\video\streamNode.h" />
     <ClInclude Include="..\src\video\mp4Writer.h" />
-
     <ClInclude Include="..\src\video\streamSession_webrtc.h" />
     <ClInclude Include="..\src\video\streamServer.h" />
     <ClInclude Include="..\src\video\dtls_transport.h" />

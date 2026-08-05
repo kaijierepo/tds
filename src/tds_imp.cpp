@@ -46,7 +46,7 @@ SOFTWARE.
 #include "statusServer.h"
 #include "common.h"
 #include "rpcHandler_common.h"
-#include "mqttSrv.h"
+#include "uplink_mqtt.h"
 #include "video/streamServer.h"
 
 #include "as_interface.h"
@@ -636,6 +636,38 @@ void updateStreamNodeConfig() {
 	}
 }
 
+void TDS_imp::readMasterDSConf_tdsp(SOCK_SRV_CONF& conf) {
+	string s;
+	string p = tds->conf->confPath + "/masterDS.json";
+	if (fs::readFile(p, s)) {
+		yyjson_doc* doc = yyjson_read(s.c_str(), s.size(), 0);
+		if (doc) {
+			yyjson_val* root = yyjson_doc_get_root(doc);
+			size_t max, idx;
+			yyjson_val* item;
+			yyjson_arr_foreach(root, idx, max, item) {
+				yyjson_val* yy_proto = yyjson_obj_get(item, "proto");
+				if (!yy_proto)
+					continue;
+
+				string proto = yyjson_get_str(yy_proto);
+				if (proto == "tdsp") {
+					string ip; string port;string addr;
+					yyjson_val* yy_ip = yyjson_obj_get(item, "ip");
+					if(yy_ip)
+						ip = yyjson_get_str(yy_ip);
+					yyjson_val* yy_port = yyjson_obj_get(item, "port");
+					if (yy_port)
+						port = yyjson_get_str(yy_port);
+					addr = ip + ":" + port;
+					conf.masterTdsAddrs.push_back(addr);
+				}
+			}
+			yyjson_doc_free(doc);
+		}
+	}
+}
+
 bool TDS_imp::run(string cmdline) {
 	mg_log_set(MG_LL_NONE);
 
@@ -839,7 +871,7 @@ bool TDS_imp::run(string cmdline) {
 	runWebServers();
 
 	SOCK_SRV_CONF ssc;
-	ssc.masterTdsAddrs  = tds->conf->getStr("masterTds", "");
+	readMasterDSConf_tdsp(ssc);
 	ssc.childTdsIP      = tds->conf->getStr("childTdsIP", "");
 	ssc.tcpSrvPort      = tds->conf->getInt("tcpPort", 670);
 	ssc.udpSrvPort      = tds->conf->getInt("udpPort", 0);

@@ -18,6 +18,7 @@ namespace sockServer {
 }
 using namespace sockServer;
 #endif
+#include "yyjson.h"
 
 tSockSrv sockSrv;
 
@@ -134,17 +135,30 @@ bool getIpPort(string s, string& ip, int& port)
 	return true;
 }
 
+static wstring utf8_to_utf16(string instr) //utf-8-->ansi
+{
+	wstring str;
+#ifdef _WIN32
+	size_t MAX_STRSIZE = instr.length() * 2 + 2;
+	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+	memset(wcharstr, 0, MAX_STRSIZE);
+	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+	str = wcharstr;
+	delete[] wcharstr;
+
+#else
+
+#endif
+	return str;
+}
+
+
 bool tSockSrv::run(SOCK_SRV_CONF& conf)
 {
 	m_conf = conf;
-
-	if (m_conf.masterTdsAddrs != "") {
-		vector<string> vecAddrs = splitStr(m_conf.masterTdsAddrs, ',');
-
-		LOG("[SockSrv]Connect to master service %s,local addr:%s", m_conf.masterTdsAddrs.c_str(), m_conf.childTdsIP.c_str());
-
-		for (int i = 0; i < vecAddrs.size(); i++) {
-			string addr = vecAddrs[i];
+	if (m_conf.masterTdsAddrs.size()>0) {
+		for (int i = 0; i < m_conf.masterTdsAddrs.size(); i++) {
+			string addr = m_conf.masterTdsAddrs[i];
 			tcpClt* pTcpClt = new tcpClt();
 
 			string ip;
@@ -154,6 +168,8 @@ bool tSockSrv::run(SOCK_SRV_CONF& conf)
 			pTcpClt->m_keepAliveTimeout = m_conf.tcpKeepAliveSec;
 			pTcpClt->run(this, addr, m_conf.childTdsIP);
 			m_tcpClt_ParentTds.push_back(pTcpClt);
+
+			LOG("[SockSrv]Connect to master service %s,local addr:%s", addr.c_str(), m_conf.childTdsIP.c_str());
 		}
 	}
 

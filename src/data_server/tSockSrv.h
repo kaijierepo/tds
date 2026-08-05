@@ -44,7 +44,7 @@ typedef void (*sockSessionRecvCallback)(char* pData, size_t iLen, std::shared_pt
 
 
 struct SOCK_SRV_CONF {
-	std::string masterTdsAddrs;
+	vector<std::string> masterTdsAddrs;
 	std::string childTdsIP;
 	int tcpKeepAliveSec;
 	int tcpSrvPort;

@@ -26,7 +26,7 @@
 #include "scriptFunc.h"
 #include "ioDev_onvif.h"
 #include "rpcHandler_common.h"
-#include "mqttSrv.h"
+#include "uplink_mqtt.h"
 #include "rsa_verify.h"
 #include "video/streamServer.h"
 #include "video/dtls_transport.h"
