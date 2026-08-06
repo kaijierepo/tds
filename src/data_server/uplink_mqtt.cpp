@@ -2,7 +2,6 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
-#include <chrono>
 #include "common.h"
 #include "tdsConf.h"
 #include "scriptEngine.h"
@@ -17,124 +16,58 @@
 
 #endif
 
-MqttSrv mqttSrv;
+MqttUplink mqttUplink;
 
-MqttSrv::MqttSrv()
+MqttUplink::MqttUplink()
 {
 
 }
 
-MqttSrv::~MqttSrv()
+MqttUplink::~MqttUplink()
 {
 	stop();
 }
 
-bool MqttSrv::loadConfFromFile() {
+void MqttUplink::loadConf(const std::vector<UPLINK_CONF_MQTT>& confs) {
 	m_masterDSConf.clear();
 
-	string s;
-	string p = tds->conf->confPath + "/masterDS.json";
-	if (fs::readFile(p, s)) {
-		m_lastLoadedContent = s;
-		yyjson_doc *doc = yyjson_read(s.c_str(), s.size(), 0);
-		if (doc) {
-			yyjson_val* root = yyjson_doc_get_root(doc);
-			size_t max, idx;
-			yyjson_val* item;
-			yyjson_arr_foreach(root, idx, max, item) { 
-				yyjson_val* yy_proto = yyjson_obj_get(item, "proto");
-				if (!yy_proto)
-					continue;
-
-				string proto = yyjson_get_str(yy_proto);
-				if (proto == "mqtt") { 
-					MASTER_SRV_CONF conf;
-					yyjson_val* yy_ip = yyjson_obj_get(item, "ip");
-					conf.ip = yyjson_get_str(yy_ip);
-					yyjson_val* yy_port = yyjson_obj_get(item, "port");
-					if(yyjson_is_int(yy_port))
-						conf.port = yyjson_get_int(yy_port);
-					else if (yyjson_is_str(yy_port)) {
-						conf.port = str::toInt(yyjson_get_str(yy_port));
-					}
-					yyjson_val* yy_user = yyjson_obj_get(item, "user");
-					if(yy_user)
-						conf.user = yyjson_get_str(yy_user);
-					yyjson_val* yy_pwd = yyjson_obj_get(item, "pwd");
-					if(yy_pwd)
-						conf.pwd = yyjson_get_str(yy_pwd);
-					yyjson_val* yy_qos = yyjson_obj_get(item, "qos");
-					if(yy_qos)
-						conf.qos = yyjson_get_int(yy_qos);
-					yyjson_val* yy_subTopics = yyjson_obj_get(item, "subTopics");
-					if (yy_subTopics)
-						conf.subTopics = yyjson_get_str(yy_subTopics);
-					yyjson_val* yy_pubTopics = yyjson_obj_get(item, "pubTopics");
-					if (yy_pubTopics)
-						conf.pubTopics = yyjson_get_str(yy_pubTopics);
-					yyjson_val* yy_recvScript = yyjson_obj_get(item, "recvScript");
-					if(yy_recvScript)
-						conf.recvScript = yyjson_get_str(yy_recvScript);
-					yyjson_val* yy_sendScript = yyjson_obj_get(item, "sendScript");
-					if(yy_sendScript)
-						conf.sendScript = yyjson_get_str(yy_sendScript);
-					yyjson_val* yy_cycleScript = yyjson_obj_get(item, "cycleScript");
-					if(yy_cycleScript)
-						conf.cycleScript = yyjson_get_str(yy_cycleScript);
-					yyjson_val* yy_intervel = yyjson_obj_get(item, "intervel");
-					if (yyjson_is_int(yy_intervel))
-						conf.intervel = yyjson_get_int(yy_intervel);
-					else if (yyjson_is_str(yy_intervel)) {
-						conf.intervel = str::toInt(yyjson_get_str(yy_intervel));
-					}
-					yyjson_val* yy_clientID = yyjson_obj_get(item, "clientID");
-					if(yy_clientID)
-					conf.clientID = yyjson_get_str(yy_clientID);
-					yyjson_val* yy_connectScript = yyjson_obj_get(item, "connectScript");
-					if(yy_connectScript)
-						conf.connectScript = yyjson_get_str(yy_connectScript);
-					yyjson_val* yy_format = yyjson_obj_get(item, "format");
-					if (yy_format)
-						conf.format = yyjson_get_str(yy_format);
-					m_masterDSConf.push_back(conf);
-				}
-			}
-			yyjson_doc_free(doc);
-		}
-		else {
-			LOG("[MQTT-DS] failed to parse masterDS.json");
-			return false;
+	for (size_t i = 0; i < confs.size(); i++) {
+		if (confs[i].enabled) {
+			m_masterDSConf.push_back(confs[i]);
 		}
 	}
-	else {
-		LOG("[MQTT-DS] masterDS.json not found: %s", p.c_str());
+}
+
+bool MqttUplink::init(const std::vector<UPLINK_CONF_MQTT>& confs)
+{
+	loadConf(confs); return m_masterDSConf.size() > 0;
+}
+
+bool MqttUplink::run() {
+	std::lock_guard<std::mutex> lk(m_mqttMutex);
+
+	if (m_masterDSConf.size() == 0) {
+		LOG("[MQTT-DS] no uplink mqtt config, skip MQTT startup");
 		return false;
 	}
+
+	startClients();
 
 	return true;
 }
 
-bool MqttSrv::run() {
-	std::lock_guard<std::mutex> lk(m_mqttMutex);
-	if (!loadConfFromFile()) {
-		LOG("[MQTT-DS] no valid masterDS config, skip MQTT startup");
-		return false;
-	}
-
+void MqttUplink::startClients() {
 	for(int i = 0; i < m_masterDSConf.size(); i++){
 		LOG("[MQTT-DS]started,%s:%d,password:%s,qos:%d,subTopic:%s,pubTopic:%s,format:%s,sendScript:%s,recvScript:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].pubTopics.c_str(), m_masterDSConf[i].format.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
 		MqttClt* clt = new MqttClt();
 		clt->run(m_masterDSConf[i]);
 		m_mqttClts.push_back(clt);
 	}
-
-	startWatch();
-	return true;
 }
 
-bool MqttSrv::reload() {
+bool MqttUplink::reload(const std::vector<UPLINK_CONF_MQTT>& confs) {
 	std::lock_guard<std::mutex> lk(m_mqttMutex);
-	LOG("[MQTT-DS] reloading masterDS.json...");
+	LOG("[MQTT-DS] reloading config...");
 
 	// 1. 停止所有旧的 MQTT 客户端连接
 	for (int i = 0; i < m_mqttClts.size(); i++) {
@@ -145,9 +78,9 @@ bool MqttSrv::reload() {
 	}
 	m_mqttClts.clear();
 
-	// 2. 重新加载配置文件
-	if (!loadConfFromFile()) {
-		LOG("[MQTT-DS] reload failed: cannot parse masterDS.json");
+	// 2. 重新加载配置
+	loadConf(confs); if (m_masterDSConf.empty()) {
+		LOG("[MQTT-DS] reload: no enabled mqtt configs");
 		return false;
 	}
 
@@ -163,38 +96,7 @@ bool MqttSrv::reload() {
 	return true;
 }
 
-void MqttSrv::startWatch() {
-	if (m_bWatchRunning) return;
-	m_bWatchRunning = true;
-	m_watchThread = std::thread(&MqttSrv::watchLoop, this);
-}
-
-void MqttSrv::watchLoop() {
-	while (m_bWatchRunning) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-		if (!m_bWatchRunning) break;
-
-		string p = tds->conf->confPath + "/masterDS.json";
-		string s;
-		bool changed = false;
-		{
-			std::lock_guard<std::mutex> lk(m_mqttMutex);
-			if (fs::readFile(p, s) && s != m_lastLoadedContent) {
-				changed = true;
-			}
-		}
-		if (changed) {
-			LOG("[MQTT-DS] masterDS.json changed, auto reloading...");
-			reload();
-		}
-	}
-}
-
-void MqttSrv::stop() {
-	m_bWatchRunning = false;
-	if (m_watchThread.joinable()) {
-		m_watchThread.join();
-	}
+void MqttUplink::stop() {
 	std::lock_guard<std::mutex> lk(m_mqttMutex);
 	for (int i = 0; i < m_mqttClts.size(); i++) {
 		if (m_mqttClts[i]) {
@@ -205,6 +107,42 @@ void MqttSrv::stop() {
 	m_mqttClts.clear();
 }
 
+bool MqttUplink::enableConnection(UPLINK_CONF_MQTT conf) {
+	std::lock_guard<std::mutex> lk(m_mqttMutex);
+
+	for (int i = 0; i < m_mqttClts.size(); i++) {
+		if (m_mqttClts[i] && m_mqttClts[i]->m_conf.ip == conf.ip
+			&& m_mqttClts[i]->m_conf.port == conf.port) {
+			LOG("[MQTT-DS] connection %s:%d already running", conf.ip.c_str(), conf.port);
+			return true;
+		}
+	}
+
+	MqttClt* clt = new MqttClt();
+	clt->run(conf);
+	m_mqttClts.push_back(clt);
+	LOG("[MQTT-DS] enabled connection %s:%d", conf.ip.c_str(), conf.port);
+	return true;
+}
+
+bool MqttUplink::disableConnection(std::string ip, int port) {
+	std::lock_guard<std::mutex> lk(m_mqttMutex);
+
+	for (int i = 0; i < m_mqttClts.size(); i++) {
+		if (m_mqttClts[i] && m_mqttClts[i]->m_conf.ip == ip
+			&& m_mqttClts[i]->m_conf.port == port) {
+			m_mqttClts[i]->stop();
+			delete m_mqttClts[i];
+			m_mqttClts.erase(m_mqttClts.begin() + i);
+			LOG("[MQTT-DS] disabled connection %s:%d", ip.c_str(), port);
+			return true;
+		}
+	}
+
+	LOG("[MQTT-DS] disableConnection: %s:%d not found", ip.c_str(), port);
+	return false;
+}
+
 
 
 MqttClt::MqttClt()
@@ -213,11 +151,23 @@ MqttClt::MqttClt()
     m_bConnected = false;
     m_bStop = false;
     m_bConnectting = false;
+	m_sendBytes = 0;
+	m_recvBytes = 0;
 }
 
 MqttClt::~MqttClt()
 {
 
+}
+
+static string getNowStr() {
+	TIME t;
+	t.setNow();
+	char buff[50] = { 0 };
+	sprintf(buff, "%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
+		t.wYear, t.wMonth, t.wDay,
+		t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+	return buff;
 }
 
 static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
@@ -246,6 +196,8 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
         MqttClt* pDev = (MqttClt*)c->fn_data;
         string topic = str::fromBuff(mm->topic.ptr, mm->topic.len);
         string data = str::fromBuff(mm->data.ptr, mm->data.len);
+		pDev->m_recvBytes += mm->topic.len + mm->data.len;
+		pDev->m_lastActiveTime = getNowStr();
         pDev->onRecvMqttData(topic, data);
     }
     else if (ev == MG_EV_CLOSE) {
@@ -278,6 +230,8 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
             opts.retain = 0;  
 
             mg_mqtt_pub(c, &opts);
+			pClt->m_sendBytes += topic.size() + message.size();
+			pClt->m_lastActiveTime = getNowStr();
         }
     }
     else if (ev == MG_EV_POLL) {
@@ -377,7 +331,7 @@ void thread_mqtt_script(void* p) {
     }
 }
 
-bool MqttClt::run(MASTER_SRV_CONF conf)
+bool MqttClt::run(UPLINK_CONF_MQTT conf)
 {
     m_conf = conf;
     m_bStop = false;
@@ -409,14 +363,14 @@ void MqttClt::confUpdated()
     }
 }
 
-void MqttSrv::mqttPublish(string topic, string data)
+void MqttUplink::mqttPublish(string topic, string data)
 {
     for (int i = 0; i < m_mqttClts.size(); i++) {
         m_mqttClts[i]->mqttPublish(topic, data);
     }
 }
 
-void MqttSrv::onTdsNotify(string method, string params)
+void MqttUplink::onTdsNotify(string method, string params)
 {
     for (int i = 0; i < m_mqttClts.size(); i++) {
         m_mqttClts[i]->onTdsNotify(method, params);
@@ -438,6 +392,8 @@ void MqttClt::mqttPublish(string topic, string data)
         opts.retain = 0;
 
         mg_mqtt_pub(m_cltConn, &opts);
+		m_sendBytes += topic.size() + data.size();
+		m_lastActiveTime = getNowStr();
     }
 }
 

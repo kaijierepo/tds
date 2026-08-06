@@ -64,6 +64,8 @@ class tSockSrv : public ICallback_tcpSrv,public ICallback_tcpClt,public ICallbac
 {
 public:
 	bool run(SOCK_SRV_CONF& conf);
+	void addTdspUplinkClients(std::vector<std::string>& addrs,
+		std::string childTdsIP, int keepAliveSec);
 	void stop();
 	tSockSrv();
 	virtual ~tSockSrv();

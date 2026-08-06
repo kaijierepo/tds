@@ -27,6 +27,7 @@
 #include "ioDev_onvif.h"
 #include "rpcHandler_common.h"
 #include "uplink_mqtt.h"
+#include "uplinkManager.h"
 #include "rsa_verify.h"
 #include "video/streamServer.h"
 #include "video/dtls_transport.h"
@@ -3442,14 +3443,7 @@ bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& r
 	else if (handleMethodCall_fileDownload(method, params, rpcResp, session)) {
 		bHandled = true;
 	}
-	else if (method == "reloadMasterDS") {
-		LOG("[RPC] reloadMasterDS called");
-		if (mqttSrv.reload()) {
-			rpcResp.result = RPC_OK;
-		}
-		else {
-			rpcResp.error = "\"reloadMasterDS failed\"";
-		}
+	else if (uplinkMnger.handleRpc(method, params, rpcResp, session)) {
 		bHandled = true;
 	}
 	else {
@@ -6550,7 +6544,7 @@ void rpcHandler::notify(string method, string notifyParams, bool specialNotify, 
 	}
 	sockSrv.m_mutexSessions.unlock();
 
-	mqttSrv.onTdsNotify(method, notifyParams);
+	mqttUplink.onTdsNotify(method, notifyParams);
 }
 
 void rpcHandler::statisCall(string method) {

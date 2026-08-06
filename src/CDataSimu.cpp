@@ -8,7 +8,7 @@
 CDataSimu* g_pDataSimu = NULL;
 
 void CDataSimu::startDataSimu() {
-	// ´´½¨Ëæ»úÊıÒıÇæ
+	// åˆ›å»ºéšæœºæ•°å¼•æ“
 	std::random_device rd;
 	std::mt19937 gen(rd());
 
@@ -27,10 +27,10 @@ void CDataSimu::startDataSimu() {
 
 					double value = pmp->m_simuConf.lowLimit;
 					if (pmp->m_simuConf.lowLimit != pmp->m_simuConf.highLimit) {
-						// ´´½¨¾ùÔÈ·Ö²¼
+						// åˆ›å»ºå‡åŒ€åˆ†å¸ƒ
 						std::uniform_real_distribution<> dis(min(pmp->m_simuConf.lowLimit, pmp->m_simuConf.highLimit), max(pmp->m_simuConf.lowLimit, pmp->m_simuConf.highLimit));
 
-						// Éú³ÉËæ»úÊı²¢µ÷ÕûĞ¡ÊıÎ»
+						// ç”Ÿæˆéšæœºæ•°å¹¶è°ƒæ•´å°æ•°ä½
 						value = dis(gen);
 					}
 
@@ -47,7 +47,7 @@ void CDataSimu::startDataSimu() {
 			}
 		}
 		if (changedList.size() > 0) {
-			mqttSrv.onTdsNotify("onDataUpdate", changedList.dump());
+			mqttUplink.onTdsNotify("onDataUpdate", changedList.dump());
 		}
 	}
 }

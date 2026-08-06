@@ -60,8 +60,6 @@ public:
 	bool setEncodeing(string encoding) override;//接口字符串传递使用的字符编码
 	string getUIMode();
 
-	void readMasterDSConf_tdsp(SOCK_SRV_CONF& conf);
-
 	bool run(string cmdline = "") override;
 	//tds关闭时，一定要快速关闭666端口，因为如果由于某些原因tds延迟关闭，但是依然占用666端口
 	//此时用户以为程序已经退出，再次打开程序。新打开的程序由于666端口被占用而没有启动服务。

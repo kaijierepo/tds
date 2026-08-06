@@ -39,12 +39,12 @@ void tSockSrv::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	{
 		std::shared_ptr<SOCK_SESSION> p = std::make_shared<SOCK_SESSION>(pTcpSess);
 
-		//ÏÈ¸³ÖµappLayerSessionÖ¸Õë
+		//å…ˆèµ‹å€¼appLayerSessionæŒ‡é’ˆ
 		if (m_pStatusCallback) {
 			m_pStatusCallback(true, p);
 		}
 
-		//È»ºó¸øsessionÁÐ±í¸³Öµ£¬·ñÔòÍ¨ÖªÊ±¿ÉÄÜÊ¹ÓÃappLayerSession¿ÕÖ¸Õë
+		//ç„¶åŽç»™sessionåˆ—è¡¨èµ‹å€¼ï¼Œå¦åˆ™é€šçŸ¥æ—¶å¯èƒ½ä½¿ç”¨appLayerSessionç©ºæŒ‡é’ˆ
 		m_mutexSessions.lock();
 		m_sockSessions[pTcpSess->sock] = p;
 		m_mutexSessions.unlock();
@@ -71,12 +71,12 @@ void tSockSrv::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 	{
 		std::shared_ptr<SOCK_SESSION> p = std::make_shared<SOCK_SESSION>(pTcpSess);
 		
-		//ÏÈ¸³ÖµappLayerSessionÖ¸Õë
+		//å…ˆèµ‹å€¼appLayerSessionæŒ‡é’ˆ
 		if (m_pStatusCallback) {
 			m_pStatusCallback(true, p);
 		}
 
-		//È»ºó¸øsessionÁÐ±í¸³Öµ£¬·ñÔòÍ¨ÖªÊ±¿ÉÄÜÊ¹ÓÃappLayerSession¿ÕÖ¸Õë
+		//ç„¶åŽç»™sessionåˆ—è¡¨èµ‹å€¼ï¼Œå¦åˆ™é€šçŸ¥æ—¶å¯èƒ½ä½¿ç”¨appLayerSessionç©ºæŒ‡é’ˆ
 		m_mutexSessions.lock();
 		m_sockSessions[pTcpSess->sock] = p;
 		m_mutexSessions.unlock();
@@ -188,6 +188,21 @@ bool tSockSrv::run(SOCK_SRV_CONF& conf)
 	}
 
 	return false;
+}
+
+void tSockSrv::addTdspUplinkClients(std::vector<std::string>& addrs,
+	std::string childTdsIP, int keepAliveSec) {
+	for (int i = 0; i < addrs.size(); i++) {
+		std::string addr = addrs[i];
+		tcpClt* pTcpClt = new tcpClt();
+
+		pTcpClt->m_keepAliveTimeout = keepAliveSec;
+		pTcpClt->run(this, addr, childTdsIP);
+		m_tcpClt_ParentTds.push_back(pTcpClt);
+
+		LOG("[SockSrv]Connect to master service %s,local addr:%s",
+			addr.c_str(), childTdsIP.c_str());
+	}
 }
 
 void tSockSrv::stop()

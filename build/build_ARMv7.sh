@@ -354,6 +354,7 @@ compile_cpp_if_needed ./common/udpSrv.cpp ./common/udpSrv.o
 compile_cpp_if_needed ./data_server/as_interface.cpp ./data_server/as_interface.o
 compile_cpp_if_needed ./data_server/mp.cpp ./data_server/mp.o
 compile_cpp_if_needed ./data_server/mqttSrv.cpp ./data_server/mqttSrv.o
+compile_cpp_if_needed ./data_server/uplinkManager.cpp ./data_server/uplinkManager.o
 compile_cpp_if_needed ./data_server/obj.cpp ./data_server/obj.o
 compile_cpp_if_needed ./data_server/prj.cpp ./data_server/prj.o
 compile_cpp_if_needed ./data_server/rpcHandler.cpp ./data_server/rpcHandler.o

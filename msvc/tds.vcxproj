@@ -630,6 +630,7 @@
     <ClCompile Include="..\src\database\tDatebase.cpp" />
     <ClCompile Include="..\src\data_server\as_interface.cpp" />
     <ClCompile Include="..\src\data_server\uplink_mqtt.cpp" />
+    <ClCompile Include="..\src\data_server\uplinkManager.cpp" />
     <ClCompile Include="..\src\data_server\rpcHandler_common.cpp" />
     <ClCompile Include="..\src\data_server\scriptEngine.cpp" />
     <ClCompile Include="..\src\data_server\scriptFunc.cpp" />
@@ -829,7 +830,9 @@
     <ClInclude Include="..\src\common\yyjson.h" />
     <ClInclude Include="..\src\database\tDatabase.h" />
     <ClInclude Include="..\src\data_server\as_interface.h" />
+    <ClInclude Include="..\src\data_server\uplinkConf.h" />
     <ClInclude Include="..\src\data_server\uplink_mqtt.h" />
+    <ClInclude Include="..\src\data_server\uplinkManager.h" />
     <ClInclude Include="..\src\data_server\rpcHandler_common.h" />
     <ClInclude Include="..\src\data_server\scriptEngine.h" />
     <ClInclude Include="..\src\data_server\scriptFunc.h" />

@@ -43,6 +43,9 @@
     <Filter Include="database">
       <UniqueIdentifier>{81ba2ff7-a317-4111-888d-0c00a3926fb6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="uplink">
+      <UniqueIdentifier>{79864d6e-2657-4754-a202-23dbe17f4a55}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\common\logger.cpp">
@@ -203,9 +206,6 @@
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_mqtt.cpp">
       <Filter>device\io_dev</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\mqttSrv.cpp">
-      <Filter>server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\common\bignum.c">
       <Filter>common</Filter>
@@ -594,7 +594,6 @@
     <ClCompile Include="..\src\video\mp4Writer.cpp">
       <Filter>video</Filter>
     </ClCompile>
-
     <ClCompile Include="..\src\video\streamSession_socket.cpp">
       <Filter>video</Filter>
     </ClCompile>
@@ -612,6 +611,12 @@
     </ClCompile>
     <ClCompile Include="..\src\database\tDatebase.cpp">
       <Filter>database</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\uplink_mqtt.cpp">
+      <Filter>uplink</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\uplinkManager.cpp">
+      <Filter>uplink</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -807,9 +812,6 @@
     <ClInclude Include="..\src\io_server\ioDev_mqtt.h">
       <Filter>device\io_dev</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\data_server\mqttSrv.h">
-      <Filter>server</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\common\bignum.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -891,7 +893,6 @@
     <ClInclude Include="..\src\video\streamNode.h">
       <Filter>video</Filter>
     </ClInclude>
-
     <ClInclude Include="..\src\video\streamSession_webrtc.h">
       <Filter>video</Filter>
     </ClInclude>
@@ -916,10 +917,25 @@
     <ClInclude Include="..\src\database\tDatabase.h">
       <Filter>database</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\data_server\uplink_mqtt.h">
+      <Filter>uplink</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\uplinkManager.h">
+      <Filter>uplink</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\video\streamSession.h">
+      <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\video\mp4Writer.h">
+      <Filter>video</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico">
       <Filter>framework</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="tds-utf8.natvis" />
   </ItemGroup>
 </Project>
