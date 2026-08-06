@@ -176,58 +176,131 @@ static bool parseSPS(const uint8_t* data, size_t size, SpsInfo& info) {
 
     info.width  = pic_w_mbs * 16;
     info.height = pic_h_units * 16 * (2 - frame_mbs_only);
+
+    // ---- VUI timing info 解析 ----
+    br.readBits(1);  // direct_8x8_inference_flag
+    if (br.readBits(1)) {  // frame_cropping_flag
+        br.readUE();  // frame_crop_left_offset
+        br.readUE();  // frame_crop_right_offset
+        br.readUE();  // frame_crop_top_offset
+        br.readUE();  // frame_crop_bottom_offset
+    }
+    if (!br.readBits(1)) { info.valid = true; return true; }  // vui_parameters_present_flag=0
+    // aspect_ratio_info_present_flag
+    if (br.readBits(1)) {
+        uint32_t aspect_ratio_idc = br.readBits(8);
+        if (aspect_ratio_idc == 255) { br.readBits(16); br.readBits(16); }
+    }
+    if (br.readBits(1)) br.readBits(1);  // overscan_info
+    if (br.readBits(1)) {                // video_signal_type_present_flag
+        br.readBits(3); br.readBits(1);  // video_format + video_full_range_flag
+        if (br.readBits(1)) { br.readBits(8); br.readBits(8); br.readBits(8); }
+    }
+    if (br.readBits(1)) { br.readUE(); br.readUE(); }  // chroma_loc_info
+    // timing_info
+    if (!br.readBits(1)) { info.valid = true; return true; }  // timing_info_present_flag=0
+    uint32_t num_units_in_tick = br.readBits(32);
+    uint32_t time_scale        = br.readBits(32);
+    if (num_units_in_tick > 0 && time_scale > 0) {
+        info.fps = static_cast<double>(time_scale) / (2.0 * static_cast<double>(num_units_in_tick));
+        if (info.fps < 1.0 || info.fps > 120.0) info.fps = 0.0;
+    }
+
     info.valid  = true;
     return true;
+}
+
+// slice_header 的第一个字段 first_mb_in_slice 用于判断一个 VCL NAL
+// 是否是一帧（access unit）的第一个 slice。一个视频帧可能由多个 slice NAL 组成，
+// 不能简单地把每个 type 1/5 NAL 都当成独立帧。
+static bool isFirstSliceOfPicture(const NalUnit& nal) {
+    if (nal.size <= 1) return true;
+
+    std::vector<uint8_t> rbsp;
+    rbsp.reserve(nal.size - 1);
+    int zeroCount = 0;
+    for (size_t i = 1; i < nal.size; ++i) {
+        uint8_t byte = nal.data[i];
+        if (zeroCount >= 2 && byte == 0x03) {
+            zeroCount = 0;
+            continue;
+        }
+        rbsp.push_back(byte);
+        if (byte == 0x00) ++zeroCount;
+        else zeroCount = 0;
+    }
+    if (rbsp.empty()) return true;
+    BitReader br(rbsp.data(), rbsp.size());
+    return br.readUE() == 0;
 }
 
 // ====================================================================
 // Annex B 解析：从 .h264 文件提取 NAL 单元并分组为帧
 // ====================================================================
 
-static bool parseAnnexB(const std::vector<uint8_t>& data,
+static bool parseAnnexB(const std::string& path,
+                        std::vector<uint8_t>& data,
                         std::vector<NalUnit>& all_nals,
                         std::vector<VideoFrame>& frames,
                         SpsInfo& spsInfo)
 {
-    size_t fileSize = data.size();
+#ifdef _WIN32
+    std::ifstream ifs(utf8ToWide(path), std::ios::binary);
+#else
+    std::ifstream ifs(path, std::ios::binary);
+#endif
+    if (!ifs) {
+        LOG("[MP4] Cannot open .h264 file: %s", path.c_str());
+        return false;
+    }
+
+    ifs.seekg(0, std::ios::end);
+    size_t fileSize = static_cast<size_t>(ifs.tellg());
+    ifs.seekg(0, std::ios::beg);
+
     if (fileSize < 4) {
         LOG("[MP4] .h264 file too small: %zu bytes", fileSize);
         return false;
     }
 
-    // 按 start code (00 00 00 01 或 00 00 01) 分割 NAL
+    data.resize(fileSize);
+    ifs.read(reinterpret_cast<char*>(data.data()), fileSize);
+    ifs.close();
+
+    // 按 start code (00 00 00 01 或 00 00 01) 分割 NAL。
+    // 注意：不能先跳过 0x00 再判断起始码，否则会把起始码本身跳掉。
     std::vector<uint8_t> sps_raw, pps_raw;
-    size_t pos = 0;
-
-    while (pos + 3 <= fileSize) {
-        size_t scLen = 0;
-        if (data[pos] == 0x00 && data[pos + 1] == 0x00) {
-            if (data[pos + 2] == 0x01)
-                scLen = 3;
-            else if (pos + 4 <= fileSize && data[pos + 2] == 0x00 && data[pos + 3] == 0x01)
+    auto findStartCode = [&](size_t from, size_t& scLen) -> size_t {
+        for (size_t i = from; i + 2 < fileSize; ++i) {
+            if (i + 3 < fileSize && data[i] == 0x00 && data[i + 1] == 0x00 &&
+                data[i + 2] == 0x00 && data[i + 3] == 0x01) {
                 scLen = 4;
-        }
-        if (scLen == 0) {
-            pos++;
-            continue;
-        }
-
-        size_t nalStart = pos + scLen;
-
-        // 找下一个 start code
-        size_t next = nalStart;
-        while (next + 2 < fileSize) {
-            if (data[next] == 0x00 && data[next + 1] == 0x00) {
-                if (data[next + 2] == 0x01) break;
-                if (next + 3 < fileSize && data[next + 2] == 0x00 && data[next + 3] == 0x01) break;
+                return i;
             }
-            next++;
+            if (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01) {
+                scLen = 3;
+                return i;
+            }
         }
-        size_t nalEnd = (next + 2 >= fileSize) ? fileSize : next;
+        scLen = 0;
+        return fileSize;
+    };
+
+    size_t scLen = 0;
+    size_t pos = findStartCode(0, scLen);
+    while (pos < fileSize) {
+        size_t nalStart = pos + scLen;
+        size_t nextScLen = 0;
+        size_t next = findStartCode(nalStart, nextScLen);
+        size_t nalEnd = next;
         // 去掉尾部零
         while (nalEnd > nalStart && data[nalEnd - 1] == 0) nalEnd--;
 
-        if (nalEnd <= nalStart) { pos = next; continue; }
+        if (nalEnd <= nalStart) {
+            pos = next;
+            scLen = nextScLen;
+            continue;
+        }
 
         uint8_t nalType = data[nalStart] & 0x1F;
         NalUnit nu;
@@ -242,65 +315,49 @@ static bool parseAnnexB(const std::vector<uint8_t>& data,
             pps_raw.assign(nu.data, nu.data + nu.size);
         }
 
-        pos = nalEnd;
+        pos = next;
+        scLen = nextScLen;
     }
 
     if (!sps_raw.empty()) {
         parseSPS(sps_raw.data(), sps_raw.size(), spsInfo);
     }
 
-    // 将 NAL 分组为帧（access unit）
-    // 支持 H.264 数据分区（data partitioning）：
-    //   一个非 IDR slice 可拆分为 type 2 + 可选 type 3 + 可选 type 4
-    //   type 2 (PART_A) = slice header + motion vectors — 开始新帧
-    //   type 3 (PART_B) = intra residuals           — 同一帧的延续
-    //   type 4 (PART_C) = inter residuals           — 同一帧的延续
-    //   常规流 type 1 (NON_IDR) / type 5 (IDR) — 各自开始新帧
-    auto starts_new_frame = [](uint8_t t) {
-        return t == MP4_NAL_TYPE_IDR
-            || t == MP4_NAL_TYPE_NON_IDR
-            || t == MP4_NAL_TYPE_PART_A;
-    };
-    auto is_vcl = [](uint8_t t) {
-        return t == MP4_NAL_TYPE_IDR
-            || t == MP4_NAL_TYPE_NON_IDR
-            || t == MP4_NAL_TYPE_PART_A
-            || t == MP4_NAL_TYPE_PART_B
-            || t == MP4_NAL_TYPE_PART_C;
-    };
+    // 将 NAL 分组为 access unit。SPS/PPS/SEI/AUD 等前缀 NAL 归入下一帧；
+    // VCL NAL 只有在 first_mb_in_slice==0 时才表示新画面的首个 slice。
     VideoFrame curFrame;
+    std::vector<NalUnit> pendingPrefix;
+    bool hasVcl = false;
 
-    for (size_t i = 0; i < all_nals.size(); i++) {
-        uint8_t t = all_nals[i].type;
+    for (const auto& nal : all_nals) {
+        const uint8_t t = nal.type;
+        const bool isVcl = (t == MP4_NAL_TYPE_IDR || t == MP4_NAL_TYPE_NON_IDR);
 
-        if (starts_new_frame(t)) {
-            bool hasVcl = false;
-            for (auto& n : curFrame.nals) {
-                if (is_vcl(n.type)) { hasVcl = true; break; }
-            }
-            if (hasVcl) {
+        if (isVcl) {
+            const bool startsNewPicture = isFirstSliceOfPicture(nal);
+            if (hasVcl && startsNewPicture) {
                 frames.push_back(curFrame);
                 curFrame = VideoFrame();
+                hasVcl = false;
             }
-            curFrame.nals.push_back(all_nals[i]);
-            curFrame.is_keyframe = (t == MP4_NAL_TYPE_IDR);
-        } else if (is_vcl(t)) {
-            // 分区延续 NAL (type 3/4)，归入当前帧
-            curFrame.nals.push_back(all_nals[i]);
+            if (!hasVcl && !pendingPrefix.empty()) {
+                curFrame.nals.insert(curFrame.nals.end(), pendingPrefix.begin(), pendingPrefix.end());
+                pendingPrefix.clear();
+            }
+            curFrame.nals.push_back(nal);
+            curFrame.is_keyframe = curFrame.is_keyframe || (t == MP4_NAL_TYPE_IDR);
+            hasVcl = true;
         } else {
-            curFrame.nals.push_back(all_nals[i]);
+            // AUD 明确标记下一 access unit 的开始。
+            if (t == MP4_NAL_TYPE_AUD && hasVcl) {
+                frames.push_back(curFrame);
+                curFrame = VideoFrame();
+                hasVcl = false;
+            }
+            pendingPrefix.push_back(nal);
         }
     }
-    // 最后一帧
-    if (!curFrame.nals.empty()) {
-        bool hasVcl = false;
-        for (auto& n : curFrame.nals) {
-            if (is_vcl(n.type)) { hasVcl = true; break; }
-        }
-        if (hasVcl) {
-            frames.push_back(curFrame);
-        }
-    }
+    if (hasVcl) frames.push_back(curFrame);
 
     return true;
 }
@@ -310,38 +367,30 @@ static bool parseAnnexB(const std::vector<uint8_t>& data,
 // ====================================================================
 
 static void buildAvcC(const std::vector<NalUnit>& all_nals, std::vector<uint8_t>& out) {
-    std::vector<const uint8_t*> sps_ptrs;
-    std::vector<size_t>        sps_lens;
-    std::vector<const uint8_t*> pps_ptrs;
-    std::vector<size_t>        pps_lens;
+    const NalUnit* sps = nullptr;
+    const NalUnit* pps = nullptr;
 
     for (auto& n : all_nals) {
-        if (n.type == MP4_NAL_TYPE_SPS) {
-            sps_ptrs.push_back(n.data);
-            sps_lens.push_back(n.size);
-        } else if (n.type == MP4_NAL_TYPE_PPS) {
-            pps_ptrs.push_back(n.data);
-            pps_lens.push_back(n.size);
-        }
+        if (!sps && n.type == MP4_NAL_TYPE_SPS) sps = &n;
+        if (!pps && n.type == MP4_NAL_TYPE_PPS) pps = &n;
+        if (sps && pps) break;
     }
 
     out.push_back(0x01);  // configurationVersion
-    out.push_back(sps_ptrs.empty() ? 0x42 : sps_ptrs[0][1]);  // profile
-    out.push_back(sps_ptrs.empty() ? 0x00 : sps_ptrs[0][2]);  // compat
-    out.push_back(sps_ptrs.empty() ? 0x1E : sps_ptrs[0][3]);  // level
+    out.push_back(sps ? sps->data[1] : 0x42);  // profile
+    out.push_back(sps ? sps->data[2] : 0x00);  // compat
+    out.push_back(sps ? sps->data[3] : 0x1E);  // level
     out.push_back(0xFF);  // lengthSizeMinusOne: 4 bytes
 
-    // SPS
-    out.push_back(0xE0 | static_cast<uint8_t>(sps_ptrs.size() & 0x1F));
-    for (size_t i = 0; i < sps_ptrs.size(); i++) {
-        w16be(out, static_cast<uint16_t>(sps_lens[i]));
-        out.insert(out.end(), sps_ptrs[i], sps_ptrs[i] + sps_lens[i]);
+    out.push_back(0xE0 | (sps ? 1 : 0));
+    if (sps) {
+        w16be(out, static_cast<uint16_t>(sps->size));
+        out.insert(out.end(), sps->data, sps->data + sps->size);
     }
-    // PPS
-    out.push_back(static_cast<uint8_t>(pps_ptrs.size()));
-    for (size_t i = 0; i < pps_ptrs.size(); i++) {
-        w16be(out, static_cast<uint16_t>(pps_lens[i]));
-        out.insert(out.end(), pps_ptrs[i], pps_ptrs[i] + pps_lens[i]);
+    out.push_back(pps ? 1 : 0);
+    if (pps) {
+        w16be(out, static_cast<uint16_t>(pps->size));
+        out.insert(out.end(), pps->data, pps->data + pps->size);
     }
 }
 
@@ -362,45 +411,91 @@ static std::vector<uint8_t> buildFtyp() {
     return b;
 }
 
-static std::vector<uint8_t> buildMvhd(uint32_t timescale, uint32_t duration) {
+static std::vector<uint8_t> buildMvhd(uint32_t timescale,
+                                      uint32_t duration)
+{
     std::vector<uint8_t> b;
     size_t off = boxBegin(b, "mvhd");
-    w32be(b, 0);                    // version+flags
-    w32be(b, 0); w32be(b, 0);      // ctime+mtime
+
+    w32be(b, 0);                    // version + flags
+    w32be(b, 0);                    // creation_time
+    w32be(b, 0);                    // modification_time
     w32be(b, timescale);
     w32be(b, duration);
-    w32be(b, 0x00010000);          // rate 1.0
-    w16be(b, 0x0100); w16be(b, 0); // volume
-    // matrix (9×4 = 36 bytes)
-    w32be(b, 0x00010000); w32be(b, 0); w32be(b, 0); w32be(b, 0);
-    w32be(b, 0x00010000); w32be(b, 0); w32be(b, 0); w32be(b, 0);
+
+    w32be(b, 0x00010000);           // rate = 1.0
+    w16be(b, 0x0100);               // volume = 1.0
+    w16be(b, 0);                    // reserved
+
+    // 必须存在的 reserved[2]，缺少这 8 字节
+    w32be(b, 0);
+    w32be(b, 0);
+
+    // identity matrix
+    w32be(b, 0x00010000);
+    w32be(b, 0);
+    w32be(b, 0);
+
+    w32be(b, 0);
+    w32be(b, 0x00010000);
+    w32be(b, 0);
+
+    w32be(b, 0);
+    w32be(b, 0);
     w32be(b, 0x40000000);
-    // pre_defined (6×4 = 24 bytes)
-    for (int i = 0; i < 6; i++) w32be(b, 0);
-    w32be(b, 1);  // next_track_id
+
+    // pre_defined[6]
+    for (int i = 0; i < 6; ++i) {
+        w32be(b, 0);
+    }
+
+    // track_id=1 已被使用，下一个可用 track id 应该是 2
+    w32be(b, 2);
+
     boxEnd(b, off);
     return b;
 }
 
-static std::vector<uint8_t> buildTkhd(uint32_t width, uint32_t height) {
+static std::vector<uint8_t> buildTkhd(uint32_t width,
+                                      uint32_t height,
+                                      uint32_t duration)
+{
     std::vector<uint8_t> b;
     size_t off = boxBegin(b, "tkhd");
-    w32be(b, 0x07);                 // flags: track_enabled
-    w32be(b, 0); w32be(b, 0);      // ctime+mtime
+
+    w32be(b, 0x00000007);           // version=0, flags=7
+    w32be(b, 0);                    // creation_time
+    w32be(b, 0);                    // modification_time
     w32be(b, 1);                    // track_id
     w32be(b, 0);                    // reserved
-    w32be(b, 0);                    // duration (from mvhd)
-    w32be(b, 0); w32be(b, 0);      // reserved
-    w16be(b, 0); w16be(b, 0);      // layer+alt_group
-    w16be(b, 0x0100);               // volume
-    w32be(b, 0);                    // reserved
-    // matrix
-    w32be(b, 0x00010000); w32be(b, 0); w32be(b, 0); w32be(b, 0);
-    w32be(b, 0x00010000); w32be(b, 0); w32be(b, 0); w32be(b, 0);
+    w32be(b, duration);
+
+    // reserved[2]
+    w32be(b, 0);
+    w32be(b, 0);
+
+    w16be(b, 0);                    // layer
+    w16be(b, 0);                    // alternate_group
+    w16be(b, 0);                    // video track volume必须为0
+    w16be(b, 0);                    // reserved：注意是16位，不是32位
+
+    // identity matrix
+    w32be(b, 0x00010000);
+    w32be(b, 0);
+    w32be(b, 0);
+
+    w32be(b, 0);
+    w32be(b, 0x00010000);
+    w32be(b, 0);
+
+    w32be(b, 0);
+    w32be(b, 0);
     w32be(b, 0x40000000);
-    // width/height (16.16 fixed point)
-    w32be(b, width  << 16);
+
+    // 16.16 fixed point
+    w32be(b, width << 16);
     w32be(b, height << 16);
+
     boxEnd(b, off);
     return b;
 }
@@ -455,7 +550,8 @@ static std::vector<uint8_t> buildDinf() {
     return b;
 }
 
-static std::vector<uint8_t> buildStsd(const std::vector<uint8_t>& avcC) {
+static std::vector<uint8_t> buildStsd(const std::vector<uint8_t>& avcC,
+                                      uint32_t width, uint32_t height) {
     std::vector<uint8_t> b;
     size_t off = boxBegin(b, "stsd");
     w32be(b, 0);                    // version
@@ -466,7 +562,8 @@ static std::vector<uint8_t> buildStsd(const std::vector<uint8_t>& avcC) {
     w16be(b, 1);                    // data_ref_index
     w16be(b, 0); w16be(b, 0);      // pre_defined+reserved
     w32be(b, 0); w32be(b, 0); w32be(b, 0); // pre_defined
-    w16be(b, 0); w16be(b, 0);      // width+height (placeholder, tkhd has real values)
+    w16be(b, static_cast<uint16_t>(width));
+    w16be(b, static_cast<uint16_t>(height));
     w32be(b, 0x00480000);           // horiz resolution 72dpi
     w32be(b, 0x00480000);           // vert resolution
     w32be(b, 0);                    // reserved
@@ -548,42 +645,30 @@ static std::vector<uint8_t> buildStco(const std::vector<uint64_t>& offsets) {
 // ====================================================================
 
 bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path) {
-    // ---------- 第 1 步：读取 .h264 文件 ----------
-#ifdef _WIN32
-    std::ifstream ifs(utf8ToWide(h264Path), std::ios::binary);
-#else
-    std::ifstream ifs(h264Path, std::ios::binary);
-#endif
-    if (!ifs) {
-        LOG("[MP4] Cannot open .h264 file: %s", h264Path.c_str());
-        return false;
-    }
-
-    ifs.seekg(0, std::ios::end);
-    size_t fileSize = static_cast<size_t>(ifs.tellg());
-    ifs.seekg(0, std::ios::beg);
-
-    if (fileSize < 4) {
-        LOG("[MP4] .h264 file too small: %zu bytes", fileSize);
-        return false;
-    }
-
-    std::vector<uint8_t> fileData(fileSize);
-    ifs.read(reinterpret_cast<char*>(fileData.data()), fileSize);
-    ifs.close();
-
-    // ---------- 第 2 步：解析 Annex B NALU ----------
+    // ---------- 第 1 步：解析 Annex B .h264 文件 ----------
+    std::vector<uint8_t> fileData; // 持有输入文件，保证 NalUnit::data 在整个转换期间有效
     std::vector<NalUnit>    allNals;
     std::vector<VideoFrame> frames;
     SpsInfo                 spsInfo;
 
-    if (!parseAnnexB(fileData, allNals, frames, spsInfo)) return false;
+    if (!parseAnnexB(h264Path, fileData, allNals, frames, spsInfo)) return false;
     if (frames.empty()) {
         LOG("[MP4] No video frames in .h264 file");
         return false;
     }
 
-    // ---------- 第 3 步：收集帧元数据 ----------
+    bool hasSps = false, hasPps = false;
+    for (const auto& n : allNals) {
+        hasSps = hasSps || n.type == MP4_NAL_TYPE_SPS;
+        hasPps = hasPps || n.type == MP4_NAL_TYPE_PPS;
+    }
+    if (!hasSps || !hasPps) {
+        LOG("[MP4] Missing SPS/PPS in H.264 stream (SPS=%d, PPS=%d)",
+            hasSps ? 1 : 0, hasPps ? 1 : 0);
+        return false;
+    }
+
+    // ---------- 第 2 步：收集帧元数据 ----------
     std::vector<size_t>   syncIdx;       // 关键帧索引（0-based）
     std::vector<uint32_t> sampleSizes;   // 每帧 AVC 字节数
 
@@ -598,50 +683,86 @@ bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path) {
 
     // 时间参数
     uint32_t timescale  = 90000u;
-    uint32_t frameRate  = 25u;  // 默认 25fps
+    // 优先使用SPS VUI解析出的帧率，解析失败则fallback为25fps
+    uint32_t frameRate  = (spsInfo.fps > 0.0) ? static_cast<uint32_t>(spsInfo.fps + 0.5) : 25u;
+    if (frameRate == 0) frameRate = 25u;
     uint32_t delta      = timescale / frameRate;
+    if (delta == 0) delta = 1;
     uint32_t duration   = static_cast<uint32_t>(frames.size()) * delta;
     if (duration == 0) duration = 1;
 
-    // ---------- 第 4 步：构建 avcC ----------
+    // ---------- 第 3 步：构建 avcC ----------
     std::vector<uint8_t> avcC;
     buildAvcC(allNals, avcC);
 
-    // ---------- 第 5 步：构建 mdat（记录 chunk offset） ----------
+    auto ftyp = buildFtyp();
+
+    // moov 构建 lambda
+    auto buildMoov = [&](const std::vector<uint64_t>& offsets) {
+        auto stcoBuf = buildStco(offsets);
+        auto sttsBuf = buildStts(static_cast<uint32_t>(frames.size()), delta);
+        auto stssBuf = buildStss(syncIdx);
+        auto stszBuf = buildStsz(sampleSizes);
+        auto stscBuf = buildStsc(1);  // 每个chunk恰好1个sample
+        auto stsdBuf = buildStsd(avcC, spsInfo.width, spsInfo.height);
+
+        std::vector<uint8_t> stbl;
+        size_t stblOff = boxBegin(stbl, "stbl");
+        stbl.insert(stbl.end(), stsdBuf.begin(), stsdBuf.end());
+        stbl.insert(stbl.end(), sttsBuf.begin(), sttsBuf.end());
+        stbl.insert(stbl.end(), stssBuf.begin(), stssBuf.end());
+        stbl.insert(stbl.end(), stszBuf.begin(), stszBuf.end());
+        stbl.insert(stbl.end(), stscBuf.begin(), stscBuf.end());
+        stbl.insert(stbl.end(), stcoBuf.begin(), stcoBuf.end());
+        boxEnd(stbl, stblOff);
+
+        auto vmhdBuf  = buildVmhd();
+        auto dinfBuf  = buildDinf();
+        std::vector<uint8_t> minf;
+        size_t minfOff = boxBegin(minf, "minf");
+        minf.insert(minf.end(), vmhdBuf.begin(), vmhdBuf.end());
+        minf.insert(minf.end(), dinfBuf.begin(), dinfBuf.end());
+        minf.insert(minf.end(), stbl.begin(), stbl.end());
+        boxEnd(minf, minfOff);
+
+        auto mdhdBuf  = buildMdhd(timescale, duration);
+        auto hdlrBuf  = buildHdlr();
+        std::vector<uint8_t> mdia;
+        size_t mdiaOff = boxBegin(mdia, "mdia");
+        mdia.insert(mdia.end(), mdhdBuf.begin(), mdhdBuf.end());
+        mdia.insert(mdia.end(), hdlrBuf.begin(), hdlrBuf.end());
+        mdia.insert(mdia.end(), minf.begin(), minf.end());
+        boxEnd(mdia, mdiaOff);
+
+        auto tkhdBuf  = buildTkhd(spsInfo.width, spsInfo.height, duration);
+        std::vector<uint8_t> trak;
+        size_t trakOff = boxBegin(trak, "trak");
+        trak.insert(trak.end(), tkhdBuf.begin(), tkhdBuf.end());
+        trak.insert(trak.end(), mdia.begin(), mdia.end());
+        boxEnd(trak, trakOff);
+
+        auto mvhdBuf  = buildMvhd(timescale, duration);
+        std::vector<uint8_t> moov;
+        size_t moovOff = boxBegin(moov, "moov");
+        moov.insert(moov.end(), mvhdBuf.begin(), mvhdBuf.end());
+        moov.insert(moov.end(), trak.begin(), trak.end());
+        boxEnd(moov, moovOff);
+
+        return moov;
+    };
+
+    // ---------- 第 4 步：构建 mdat ----------
+    // 先估算 moov 大小作为 mdat 偏移量的初始值
+    size_t estMoov = 8 + 108 + 8 + 92 + 8 + 32 + 8 + 29 + 8 +
+                     20 + 36 + 8 + 8 + 20 + avcC.size() + 8 + 8 + 20 +
+                     8 + 16 + 8 + 4 + syncIdx.size() * 4 +
+                     8 + 8 + sampleSizes.size() * 4 +
+                     8 + 16 + 8 + 8 + frames.size() * 4;
+    uint64_t fileBase = ftyp.size() + estMoov + 8;
+
     std::vector<uint8_t> mdat;
     size_t mdatOff = boxBegin(mdat, "mdat");
     std::vector<uint64_t> chunkOffsets;
-
-    // mdat 在文件中的起始位置
-    uint64_t fileBase = 0;
-    {
-        // ftyp 大小固定
-        std::vector<uint8_t> dummyFtyp = buildFtyp();
-        fileBase = dummyFtyp.size();
-
-        // moov 预估大小：mvhd + trak(tkhd + mdhd + hdlr + vmhd + dinf + stbl(stsd+stts+stss+stsz+stsc+stco)) + 8
-        // 保守估计用固定值
-        // stco 条目数 = frames.size()，每个 4 字节
-        size_t estMoov = 8 +                                  // moov header
-                          108 +                                // mvhd
-                          8 +                                  // trak header
-                          92 +                                 // tkhd
-                          8 +                                  // mdia header
-                          32 +                                 // mdhd
-                          8 + 29 +                             // hdlr
-                          8 +                                  // minf header
-                          20 +                                 // vmhd
-                          36 +                                 // dinf
-                          8 +                                  // stbl header
-                          8 + 20 + avcC.size() + 8 + 8 + 20 +  // stsd
-                          8 + 16 +                             // stts
-                          8 + 4 + syncIdx.size() * 4 +         // stss
-                          8 + 8 + sampleSizes.size() * 4 +     // stsz
-                          8 + 16 +                             // stsc
-                          8 + 8 + frames.size() * 4;           // stco
-
-        fileBase += estMoov + 8;  // +8 for mdat header (size+type)
-    }
 
     for (size_t i = 0; i < frames.size(); i++) {
         chunkOffsets.push_back(fileBase + (mdat.size() - 8));
@@ -652,72 +773,22 @@ bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path) {
     }
     boxEnd(mdat, mdatOff);
 
-    // ---------- 第 6 步：构建 stco（含实际 mdat 偏移） ----------
-    auto stcoBuf       = buildStco(chunkOffsets);
-    auto sttsBuf       = buildStts(static_cast<uint32_t>(frames.size()), delta);
-    auto stssBuf       = buildStss(syncIdx);
-    auto stszBuf       = buildStsz(sampleSizes);
-    auto stscBuf       = buildStsc(1);  // 每 chunk 一个 sample
-    auto stsdBuf       = buildStsd(avcC);
+    // ---------- 第 5 步：构建 moov 并迭代修正 stco 偏移量 ----------
+    auto moov = buildMoov(chunkOffsets);
 
-    // ---------- 第 7 步：组装 box 树 ----------
-    // stbl = stsd + stts + stss + stsz + stsc + stco
-    std::vector<uint8_t> stbl;
-    size_t stblOff = boxBegin(stbl, "stbl");
-    stbl.insert(stbl.end(), stsdBuf.begin(), stsdBuf.end());
-    stbl.insert(stbl.end(), sttsBuf.begin(), sttsBuf.end());
-    stbl.insert(stbl.end(), stssBuf.begin(), stssBuf.end());
-    stbl.insert(stbl.end(), stszBuf.begin(), stszBuf.end());
-    stbl.insert(stbl.end(), stscBuf.begin(), stscBuf.end());
-    stbl.insert(stbl.end(), stcoBuf.begin(), stcoBuf.end());
-    boxEnd(stbl, stblOff);
-
-    // minf = vmhd + dinf + stbl
-    auto vmhdBuf  = buildVmhd();
-    auto dinfBuf  = buildDinf();
-    std::vector<uint8_t> minf;
-    size_t minfOff = boxBegin(minf, "minf");
-    minf.insert(minf.end(), vmhdBuf.begin(), vmhdBuf.end());
-    minf.insert(minf.end(), dinfBuf.begin(), dinfBuf.end());
-    minf.insert(minf.end(), stbl.begin(), stbl.end());
-    boxEnd(minf, minfOff);
-
-    // mdia = mdhd + hdlr + minf
-    auto mdhdBuf  = buildMdhd(timescale, duration);
-    auto hdlrBuf  = buildHdlr();
-    std::vector<uint8_t> mdia;
-    size_t mdiaOff = boxBegin(mdia, "mdia");
-    mdia.insert(mdia.end(), mdhdBuf.begin(), mdhdBuf.end());
-    mdia.insert(mdia.end(), hdlrBuf.begin(), hdlrBuf.end());
-    mdia.insert(mdia.end(), minf.begin(), minf.end());
-    boxEnd(mdia, mdiaOff);
-
-    // trak = tkhd + mdia
-    auto tkhdBuf  = buildTkhd(spsInfo.width, spsInfo.height);
-    std::vector<uint8_t> trak;
-    size_t trakOff = boxBegin(trak, "trak");
-    trak.insert(trak.end(), tkhdBuf.begin(), tkhdBuf.end());
-    trak.insert(trak.end(), mdia.begin(), mdia.end());
-    boxEnd(trak, trakOff);
-
-    // moov = mvhd + trak
-    auto mvhdBuf  = buildMvhd(timescale, duration);
-    std::vector<uint8_t> moov;
-    size_t moovOff = boxBegin(moov, "moov");
-    moov.insert(moov.end(), mvhdBuf.begin(), mvhdBuf.end());
-    moov.insert(moov.end(), trak.begin(), trak.end());
-    boxEnd(moov, moovOff);
-
-    // ftyp
-    auto ftyp = buildFtyp();
-
-    // 验证偏移量
-    if (ftyp.size() + moov.size() + 8 != chunkOffsets[0]) {
-        LOG("[MP4] Warning: moov size estimation off by %lld bytes",
-            (long long)(chunkOffsets[0] - ftyp.size() - moov.size() - 8));
+    // 比较实际 moov 大小与估算值，修正偏移量直到稳定
+    for (int iter = 0; iter < 3; iter++) {
+        int64_t offsetDelta = static_cast<int64_t>(ftyp.size() + moov.size() + 8)
+                            - static_cast<int64_t>(chunkOffsets[0]);
+        if (offsetDelta == 0) break;
+        LOG("[MP4] stco offset correction iter=%d, delta=%lld bytes",
+            iter, (long long)offsetDelta);
+        for (auto& off : chunkOffsets)
+            off = static_cast<uint64_t>(static_cast<int64_t>(off) + offsetDelta);
+        moov = buildMoov(chunkOffsets);
     }
 
-    // ---------- 第 8 步：写入输出文件 ----------
+    // ---------- 第 6 步：写入输出文件 ----------
 #ifdef _WIN32
     std::ofstream ofs(utf8ToWide(mp4Path), std::ios::binary | std::ios::trunc);
 #else

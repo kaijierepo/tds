@@ -632,7 +632,10 @@ void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> packet) {
         }
         rec_ctrl_.preRecordingDone = true;
     }
-    record_queue_.push(packet);
+    {
+        std::lock_guard<std::mutex> queueLock(record_queue_mutex_);
+        record_queue_.push(packet);
+    }
     record_queue_cv_.notify_one();
 }
 
