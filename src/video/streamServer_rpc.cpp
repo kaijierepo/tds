@@ -578,11 +578,6 @@ bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 	yyjson_val* yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
-	if (tag.empty()) {
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param missing, tag is required");
-		return true;
-	}
-
 	std::string recordDir = tds->conf->dbPath + "/record/";
 	json records = json::array();
 
@@ -600,23 +595,30 @@ bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 			return true;
 		}
 
-		std::string prefix = tag + "_";
+		// tag 为空时列出全部录像（主服务批量采集子服务录像文件用）
+		std::string prefix = tag.empty() ? "" : tag + "_";
 		for (const auto& entry : fs::directory_iterator(recordDirPath)) {
 			if (!entry.is_regular_file() || entry.path().extension() != ".h264")
 				continue;
 			// Windows 上 filesystem::path::string() 返回系统编码（中文 Windows 为 GBK），
 			// 而 tag 来自 JSON 是 UTF-8，二者需统一为 UTF-8 才能正确比对前缀
 			std::string fname = str::gb_to_utf8(entry.path().filename().string());
-			if (fname.find(prefix) != 0)
+			if (!prefix.empty() && fname.find(prefix) != 0)
 				continue;
 
 			// parse time from filename: tag_YYYYMMDD_HHMMSS.h264
+			// tag 为空时跳过文件名中的 tag 段（首个下划线之后才是日期段）
+			size_t tsStart = prefix.length();
+			if (tsStart == 0) {
+				size_t p = fname.find('_');
+				tsStart = (p == std::string::npos) ? 0 : p + 1;
+			}
 			std::string tsStr;
-			size_t pos = fname.find("_", prefix.length());
+			size_t pos = fname.find("_", tsStart);
 			if (pos != std::string::npos) {
-				tsStr = fname.substr(prefix.length(), pos - prefix.length());
+				tsStr = fname.substr(tsStart, pos - tsStart);
 			} else {
-				tsStr = fname.substr(prefix.length(), fname.length() - 5); // strip .h264
+				tsStr = fname.substr(tsStart, tsStart - 5); // strip .h264
 			}
 			// format: YYYYMMDD_HHMMSS -> "YYYY-MM-DD HH:MM:SS"
 			std::string formattedTime;

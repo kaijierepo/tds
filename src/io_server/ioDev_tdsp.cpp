@@ -1470,9 +1470,14 @@ void ioDev_tdsp::pullRecordFiles()
 	json result, error;
 	call("getRecordList", json::object(), nullptr, result, error);
 
-	if (error != nullptr || !result.is_array() || result.size() == 0) {
+	if (error != nullptr) {
+		LOG("[录像采集] getRecordList 失败: %s", error.dump().c_str());
 		return;
 	}
+	if (!result.is_array() || result.size() == 0) {
+		return;
+	}
+	LOG("[录像采集] 获取到 %d 个录像文件", (int)result.size());
 
 	int chunkSize = 5000;
 
