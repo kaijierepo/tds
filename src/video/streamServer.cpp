@@ -227,7 +227,7 @@ std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op
 			confChanged = true;
 		}
 
-		if (!confChanged) {
+		if (sn->running_ &&!confChanged) {
 			LOG("[流媒体] 媒体源已打开，重复打开请求，参数未改变,忽略。 位号:%s, 源地址:%s，转发地址:%s",
 				op.tag.c_str(),
 				sn->session_origin_pull_.server_url_.c_str(),
@@ -239,28 +239,17 @@ std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op
 		if (op.srcStreamFetch != "") {
 			sn->config_.srcStreamFetch = op.srcStreamFetch;
 		}
-
-		if (!sn->running_) {
-			if (!sn->run(sn->config_)) {
-				LOG("[StreamServer] openStream start fail, tag:%s, streamUrl:%s",
-					op.tag.c_str(), streamUrl.c_str());
-				return nullptr;
-			}
-			LOG("[StreamServer] openStream success (reuse), tag:%s, streamUrl:%s, originUrl:%s",
-				op.tag.c_str(), streamUrl.c_str(), op.originPullUrl.c_str());
-		}
-		return sn;
 	}
-
-	// 不存在，先 create 再 start
-	sn = createStream(op);
-	if (!sn) {
-		LOG("[StreamServer] openStream create fail, tag:%s", op.tag.c_str());
-		return nullptr;
+	else {
+		sn = createStream(op);
+		if (!sn) {
+			LOG("[StreamServer] openStream create fail, tag:%s", op.tag.c_str());
+			return nullptr;
+		}
 	}
 
 	if (!sn->run(sn->config_)) {
-		LOG("[StreamServer] openStream start fail after create, tag:%s", op.tag.c_str());
+		LOG("[StreamServer] openStream start fail, tag:%s", op.tag.c_str());
 		return nullptr;
 	}
 
