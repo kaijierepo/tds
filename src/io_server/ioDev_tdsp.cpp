@@ -1486,6 +1486,10 @@ void ioDev_tdsp::pullRecordFiles()
 		std::string fileUrl = record.value("fileUrl", "");
 		if (fileUrl.empty()) continue;
 
+		// 只下载 mp4(转换成品)，跳过 h264 中间产物
+		if (fileUrl.size() < 4 || fileUrl.substr(fileUrl.size() - 4) != ".mp4")
+			continue;
+
 		// 2. 下载文件各分片
 		std::vector<unsigned char> fileData;
 		int chunkCount = 0;
@@ -1538,10 +1542,14 @@ void ioDev_tdsp::pullRecordFiles()
 			fwrite(fileData.data(), 1, fileData.size(), fp);
 			fclose(fp);
 
-			// 4. 删除子服务上的录像文件
+			// 4. 删除子服务上的录像文件(h264 与 mp4 一并删除)
 			json delParams;
 			delParams["fileUrl"] = fileUrl;
 			json delResult, delError;
+			call("deleteRecord", delParams, nullptr, delResult, delError);
+
+			// 同时删除对应的 h264 中间产物(与 mp4 同名，仅扩展名不同)
+			delParams["fileUrl"] = fileUrl.substr(0, fileUrl.size() - 4) + ".h264";
 			call("deleteRecord", delParams, nullptr, delResult, delError);
 		}
 	}
