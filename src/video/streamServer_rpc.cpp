@@ -516,7 +516,9 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			// 异步将 .h264 转为 .mp4（不阻塞 RPC 响应）
 			std::string mp4Path = filePath.substr(0, filePath.size() - 5) + ".mp4";
 			std::thread([h264Path = filePath, mp4Path]() {
-				mp4::convertH264toMP4(h264Path, mp4Path);
+					const bool ok = mp4::convertH264toMP4(h264Path, mp4Path);
+					LOG("[MP4] async remux %s: %s -> %s",
+						ok ? "success" : "failed", h264Path.c_str(), mp4Path.c_str());
 			}).detach();
 
 			cleanOldRecords();
