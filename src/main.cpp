@@ -385,6 +385,7 @@ int main(int argc, char** argv)
 
 	//run tds
 	tds->run();
+	prj.startZlmPoll();
 	TIME zlmLastClearPusherTime = timeopt::now();
 	vector<MP*> ezvizMp = prj.getAllEzvizMp();
 

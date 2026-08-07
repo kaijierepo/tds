@@ -672,13 +672,6 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			}
 			return true;
 		}
-		else if (method == "keepStream") {
-			TIME st;
-			timeopt::now(&st);
-
-			m_mapPullerActive[tag] = st;
-			rpcResp.result = "\"ok\"";
-		}
 	}
 	else {
 		bHandled = false;

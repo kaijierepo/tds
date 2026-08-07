@@ -144,6 +144,9 @@ bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& r
 		//else
 		//	rpcResp.error = RPC_FAIL;
 	}
+	else if (method == "keepStream") {
+		rpc_keepStream(params, rpcResp, session);
+	}
 	else if (method == "playWebRtc") {
 		rpc_playWebRtc(params, rpcResp, session);
 	}
@@ -273,6 +276,19 @@ bool StreamServer::rpc_remux(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION 
 	else {
 		rpcResp.error = RPC_FAIL;
 	}
+	return true;
+}
+
+bool StreamServer::rpc_keepStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	yyjson_val* yyv = yyjson_obj_get(params, "tag");
+	if (!yyv) {
+		rpcResp.error = RPC_PARAM_MISSING;
+		return false;
+	}
+	std::string tag = yyjson_get_str(yyv);
+	keepStreamAlive(tag);
+	rpcResp.result = RPC_OK;
 	return true;
 }
 
@@ -504,8 +520,12 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 					now - rc->rec_ctrl_.startTime).count());
 			std::string filePath = rc->rec_ctrl_.path;
 			size_t pos = filePath.find_last_of("/\\");
-			std::string fileName = (pos != std::string::npos) ? filePath.substr(pos + 1) : filePath;
-			std::string fileUrl = "/db/record/" + fileName;
+		std::string fileName = (pos != std::string::npos) ? filePath.substr(pos + 1) : filePath;
+		std::string mp4FileName = fileName;
+		if (mp4FileName.size() > 5 && mp4FileName.substr(mp4FileName.size() - 5) == ".h264") {
+			mp4FileName = mp4FileName.substr(0, mp4FileName.size() - 5) + ".mp4";
+		}
+		std::string fileUrl = "/db/record/" + mp4FileName;
 
 			json j;
 			j["fileUrl"] = fileUrl;
@@ -601,8 +621,7 @@ bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 		std::string prefix = tag.empty() ? "" : tag + "_";
 		for (const auto& entry : fs::directory_iterator(recordDirPath)) {
 			std::string ext = entry.path().extension().string();
-			// 录像文件包含 .h264(转换中间产物)与 .mp4(转换成品)，均返回
-			if (!entry.is_regular_file() || (ext != ".h264" && ext != ".mp4"))
+			if (!entry.is_regular_file() || ext != ".mp4")
 				continue;
 			// Windows 上 filesystem::path::string() 返回系统编码（中文 Windows 为 GBK），
 			// 而 tag 来自 JSON 是 UTF-8，二者需统一为 UTF-8 才能正确比对前缀

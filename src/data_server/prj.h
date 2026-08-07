@@ -95,6 +95,13 @@ public:
 
 	map<std::string, EZVIZ_ACCESS_INFO> m_mapEzvizAccess;
 
+	// ZLM 巡检线程
+	std::thread m_zlmPollThread_;
+	std::atomic<bool> m_zlmPollRunning_{false};
+	void startZlmPoll();
+	void stopZlmPoll();
+	void zlmPollLoop();
+
 public:
 	project();
 	virtual ~project();

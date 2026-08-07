@@ -24,6 +24,7 @@ public:
 	bool rpc_getStreamNodeList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setStream(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_serveLocalFile(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_keepStream(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_remux(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
 	std::shared_ptr<StreamNode> openStream(const STREAM_OPEN_PARAM& openParam);
@@ -103,6 +104,7 @@ private:
 	void startIdleMonitor();
 	void stopIdleMonitor();
 	void idleMonitorLoop();
+	void keepStreamAlive(const std::string& tag);
 
 	std::thread m_rtspThread_;
 	std::atomic<bool> m_rtspRunning_{false};

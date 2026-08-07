@@ -175,6 +175,7 @@ public:
 #define RPC_OK "\"ok\""
 #define RPC_TIMEOUT "\"timeout\""
 #define RPC_FAIL "\"fail\""
+#define RPC_PARAM_MISSING "\"param missing\""
 #define RPC_STR(s) "\""+s+"\""
 
 class RPC_RESP {

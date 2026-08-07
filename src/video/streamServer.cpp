@@ -398,6 +398,14 @@ void StreamServer::idleMonitorLoop() {
 	}
 }
 
+void StreamServer::keepStreamAlive(const std::string& tag) {
+	std::lock_guard<std::mutex> lock(nodeLock_);
+	std::shared_ptr<StreamNode> sn = getStreamNodeByTag(tag);
+	if (!sn) return;
+	if (sn->config_.srcStreamFetch != "ondemand") return;
+	m_idleTrackMap_.erase(sn->config_.streamUrl);
+}
+
 // ============================================================================
 // 以下模块已拆分到独立文件：
 //   - streamServer_file.cpp: 本地文件流服务

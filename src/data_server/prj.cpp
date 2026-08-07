@@ -8,6 +8,8 @@
 #include "yyjson.h"
 #include "rpcHandler.h"
 #include "../video/StreamNode.h"
+#include "../video/streamServer.h"
+#include "mongoose.h"
 
 project prj;
 
@@ -797,6 +799,139 @@ void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& ses
 			result = "\"ok\"";
 			std::thread(updateStreamNodeConfig).detach();
 		}
+	}
+}
+
+
+// ============================================================================
+// ZLM 巡检线程 —— 对 readerCount > 0 的 ondemand 流下发 keepStream 保活
+// ============================================================================
+
+struct zlm_http_data {
+	std::string head;
+	std::string body;
+	bool done = false;
+	int status = 0;
+};
+
+static void zlm_http_cb(struct mg_connection* connect, int ev, void* ev_data) {
+	zlm_http_data* data = (zlm_http_data*)connect->fn_data;
+	if (ev == MG_EV_HTTP_MSG) {
+		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
+		data->head.assign(hm->head.ptr, hm->head.len);
+		data->body.assign(hm->body.ptr, hm->body.len);
+		data->status = mg_http_status(hm);
+		data->done = true;
+		connect->is_closing = 1;
+	}
+	else if (ev == MG_EV_ERROR) {
+		data->done = true;
+		connect->is_closing = 1;
+	}
+}
+
+static std::string zlm_url_encode(const std::string& str) {
+	const char* in = str.c_str();
+	size_t inLen = strlen(in);
+	size_t outLen = 3 * inLen + 1;
+	char* out = new char[outLen];
+	size_t resultLen = mg_url_encode(in, inLen, out, outLen);
+	std::string result(out, resultLen);
+	delete[] out;
+	return result;
+}
+
+void project::startZlmPoll() {
+	m_zlmPollRunning_ = true;
+	m_zlmPollThread_ = std::thread(&project::zlmPollLoop, this);
+}
+
+void project::stopZlmPoll() {
+	m_zlmPollRunning_ = false;
+	if (m_zlmPollThread_.joinable()) {
+		m_zlmPollThread_.join();
+	}
+}
+
+void project::zlmPollLoop() {
+	while (m_zlmPollRunning_) {
+		std::this_thread::sleep_for(std::chrono::seconds(30));
+		if (!m_zlmPollRunning_) break;
+
+		std::string mediaSrvIP = tds->conf->mediaSrvIP;
+		if (mediaSrvIP.empty()) continue;
+
+		std::string sPort = tds->conf->getStr("httpMediaPort", "669");
+		std::string uri = "/index/api/getMediaList";
+		std::string path = uri + "?secret=" + zlm_url_encode("Tds-666666");
+		std::string url = "http://" + mediaSrvIP + ":" + sPort + path;
+
+		struct mg_mgr mgr;
+		mg_mgr_init(&mgr);
+
+		zlm_http_data data;
+		struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), zlm_http_cb, &data);
+		if (connect) {
+			mg_printf(connect,
+				"GET %s HTTP/1.0\r\n"
+				"Host: %s\r\n"
+				"Connection: close\r\n"
+				"\r\n",
+				path.c_str(), mediaSrvIP.c_str()
+			);
+
+			TIME tStart = timeopt::now();
+			while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+				mg_mgr_poll(&mgr, 100);
+			}
+		}
+		mg_mgr_free(&mgr);
+
+		if (data.status != 200) continue;
+
+		yyjson_doc* doc = yyjson_read(data.body.c_str(), data.body.size(), 0);
+		if (!doc) continue;
+
+		yyjson_val* root = yyjson_doc_get_root(doc);
+		if (!root) { yyjson_doc_free(doc); continue; }
+
+		yyjson_val* yy_code = yyjson_obj_get(root, "code");
+		if (!yy_code || yyjson_get_int(yy_code) != 0) { yyjson_doc_free(doc); continue; }
+
+		yyjson_val* yy_data = yyjson_obj_get(root, "data");
+		if (!yy_data || !yyjson_is_arr(yy_data)) { yyjson_doc_free(doc); continue; }
+
+		size_t arr_size = yyjson_arr_size(yy_data);
+		for (size_t i = 0; i < arr_size; i++) {
+			yyjson_val* yy_item = yyjson_arr_get(yy_data, i);
+			if (!yy_item) continue;
+
+			yyjson_val* yy_readerCount = yyjson_obj_get(yy_item, "totalReaderCount");
+			if (!yy_readerCount || yyjson_get_int(yy_readerCount) <= 0) continue;
+
+			yyjson_val* yy_stream = yyjson_obj_get(yy_item, "stream");
+			if (!yy_stream) continue;
+
+			std::string tag = yyjson_get_str(yy_stream);
+
+			// 只保活 ondemand 模式的流
+			MP* pmp = GetMPByTag(tag, "zh");
+			if (!pmp || pmp->m_srcStreamFetch != "ondemand") continue;
+
+			// 路由：子服务 → 转发 keepStream；本地 → 直接刷新 idle timer
+			ioDev* childTds = ioSrv.getOwnerChildTdsDev(tag);
+			if (childTds) {
+				std::string childTdsTag = childTds->m_strTagBind;
+				std::string childTag = TAG::trimRoot(tag, childTdsTag);
+
+				json params;
+				params["tag"] = childTag;
+
+				json childRlt, childErr;
+				childTds->call("keepStream", params, json(), childRlt, childErr);
+			}
+		}
+		yyjson_doc_free(doc);
 	}
 }
 
