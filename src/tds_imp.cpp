@@ -586,11 +586,11 @@ void updateStreamNodeConfig() {
 			else {
 				// 如果 mediaUrl 变更，更新 config
 				bool needRestart = false;
-				if (sn->session_origin_pull_.server_url_ != pmp->m_mediaUrl) {
+				if (sn->session_origin_.server_url_ != pmp->m_mediaUrl) {
 					LOG("[syncStreamNodes] tag=%s mediaUrl变更: %s -> %s",
-						tag.c_str(), sn->session_origin_pull_.server_url_.c_str(), pmp->m_mediaUrl.c_str());
-					sn->session_origin_pull_.server_url_ = pmp->m_mediaUrl;
-					sn->extractRtspAuthInfo(sn->session_origin_pull_);
+						tag.c_str(), sn->session_origin_.server_url_.c_str(), pmp->m_mediaUrl.c_str());
+					sn->session_origin_.server_url_ = pmp->m_mediaUrl;
+					sn->extractRtspAuthInfo(sn->session_origin_);
 				}
 				if (sn->config_.srcStreamFetch != pmp->m_srcStreamFetch) {
 					sn->config_.srcStreamFetch = pmp->m_srcStreamFetch;

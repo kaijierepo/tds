@@ -338,14 +338,14 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 				auto node = std::make_shared<StreamNode>();
 				// 直接设置 pull_session_ 信息（跳过 openOriginPullSession）
 				node->config_ = cfg;
-				node->session_origin_pull_.copyStreamInfoFrom(videoInfo);
-				node->session_origin_pull_.retry_interval_ = 3000;
-				node->session_origin_pull_.max_retries_ = 0;
-				node->session_origin_pull_.rtp_timeout_ = 10000;
+				node->session_origin_.copyStreamInfoFrom(videoInfo);
+				node->session_origin_.retry_interval_ = 3000;
+				node->session_origin_.max_retries_ = 0;
+				node->session_origin_.rtp_timeout_ = 10000;
 				node->clock_rate_ = videoInfo.clock_rate;
 				node->isPulling_ = true;  // 标记为"有流数据"，使 DESCRIBE 不会等待
 				node->running_ = true;
-				node->session_origin_pull_.state_ = SESSION_STATE::SESSION_STREAMING;
+				node->session_origin_.state_ = SESSION_STATE::SESSION_STREAMING;
 
 				std::lock_guard<std::mutex> lock(nodeLock_);
 				m_mapStreamNodes[streamUrl] = node;
@@ -429,8 +429,8 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 			}
 
 		// 按需启动拉流：如果 streamNode origin pull session 处于 idle 或 error 状态，启动拉流
-		if (streamNode->session_origin_pull_.state_ == SESSION_STATE::SESSION_IDLE || streamNode->session_origin_pull_.state_ == SESSION_STATE::SESSION_ERROR) {
-			LOG("[RTSP] 按需启动拉流 tag=%s, state=%d", streamNode->config_.tag.c_str(), (int)streamNode->session_origin_pull_.state_);
+		if (streamNode->session_origin_.state_ == SESSION_STATE::SESSION_IDLE || streamNode->session_origin_.state_ == SESSION_STATE::SESSION_ERROR) {
+			LOG("[RTSP] 按需启动拉流 tag=%s, state=%d", streamNode->config_.tag.c_str(), (int)streamNode->session_origin_.state_);
 				streamNode->run(streamNode->config_);
 			}
 
@@ -710,7 +710,7 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 		else {
 				// ---- 拉流模式 SETUP ----
 			// 复制流信息，设置会话参数
-			rtspSession.copyStreamInfoFrom(streamNode->session_origin_pull_);
+			rtspSession.copyStreamInfoFrom(streamNode->session_origin_);
 			rtspSession.session_type_ = CLIENT_RTSP_PULL;
 				rtspSession.is_webrtc = false;
 				rtspSession.client_rtp_port = clientRtpPort;
@@ -1014,7 +1014,7 @@ void StreamServer::threadCtrl_rtspServer(SocketHandle clientSock, const std::str
 }
 
 std::string StreamServer::buildSdpForStream(const std::shared_ptr<StreamNode>& node) {
-	const auto& si = node->session_origin_pull_;
+	const auto& si = node->session_origin_;
 	std::ostringstream sdp;
 
 	// 获取本机 IP

@@ -70,6 +70,7 @@ public:
 	    bool preRecordingDone = false;  // 预录数据已一次性写出，避免重复写入
         bool isIdrNal = false;
         bool isLastIdrNal = false;
+        int nalCount = 0;
 
         std::vector<char> fu_a_buffer_; // FU-A分片缓存
         std::chrono::steady_clock::time_point startTime;  // 录像开始时间，用于计算 duration
@@ -183,10 +184,8 @@ public:
 
     RecordControl rec_ctrl_;
 
-    // 连接和会话已移到 STREAM_SESSION::conn_ / rtsp_session_id_
-
     // 流信息
-    STREAM_SESSION session_origin_pull_;
+    STREAM_SESSION session_origin_;
     STREAM_SESSION session_relay_push_;
 
     // 流属性（与 session 无关，描述流经本节点的媒体流参数）
@@ -244,6 +243,9 @@ public:
 
     std::chrono::system_clock::time_point open_time_;
 
+    // 最近一次转发请求的时间（用于按需拉流空闲检测）
+    std::chrono::steady_clock::time_point last_forward_request_time_;
+
     // 工作线程
     void threadCtrl_rtspClient();
     void threadRecv_originPull();
@@ -256,6 +258,7 @@ public:
     void forwardRTPPacket(const RTPPacket& packet);
     void recordRTPPacket(std::shared_ptr<RTPPacket> pPkt);
     void flushRecordBuffer();
+    bool hasWorkToDo();
     void threadRec_h264File();
     void writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs);
     void writeRTPPacketToFile(std::shared_ptr<RTPPacket> pPkt, std::ofstream& ofs);

@@ -52,11 +52,11 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 
 	// 源拉流信息
 	json jOrigin;
-	jOrigin["url"] = sn->session_origin_pull_.server_url_;
-	jOrigin["state"] = sessionStateStr(sn->session_origin_pull_.state_);
-	jOrigin["transport"] = (sn->session_origin_pull_.transport_mode == TransportMode::UDP) ? "udp" : "tcp";
-	jOrigin["codec"] = sn->session_origin_pull_.codec;
-	jOrigin["lastError"] = sn->session_origin_pull_.last_error_;
+	jOrigin["url"] = sn->session_origin_.server_url_;
+	jOrigin["state"] = sessionStateStr(sn->session_origin_.state_);
+	jOrigin["transport"] = (sn->session_origin_.transport_mode == TransportMode::UDP) ? "udp" : "tcp";
+	jOrigin["codec"] = sn->session_origin_.codec;
+	jOrigin["lastError"] = sn->session_origin_.last_error_;
 	jSi["originPull"] = jOrigin;
 
 	// 转推流信息
@@ -214,7 +214,9 @@ bool StreamServer::rpc_openStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		op.relayPushUrl = "rtsp://" + op.pushToIP + "/stream/" + op.pushToTag;
 	}
 
-	if (openStream(op) != nullptr) {
+	auto sn = openStream(op);
+	if (sn != nullptr) {
+		sn->last_forward_request_time_ = std::chrono::steady_clock::now();
 		rpcResp.result = RPC_OK;
 	}
 	else {
@@ -288,6 +290,10 @@ bool StreamServer::rpc_keepStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	}
 	std::string tag = yyjson_get_str(yyv);
 	keepStreamAlive(tag);
+	auto sn = getStreamNodeByTag(tag);
+	if (sn) {
+		sn->last_forward_request_time_ = std::chrono::steady_clock::now();
+	}
 	rpcResp.result = RPC_OK;
 	return true;
 }
@@ -321,8 +327,8 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 
 	if (sn) {
 		// 按需启动拉流：如果 origin pull session 处于 idle 或 error 状态，启动拉流
-		if (sn->session_origin_pull_.state_ == SESSION_STATE::SESSION_IDLE || sn->session_origin_pull_.state_ == SESSION_STATE::SESSION_ERROR) {
-			LOG("[WebRTC] 按需启动拉流 tag=%s, state=%d", sn->config_.tag.c_str(), (int)sn->session_origin_pull_.state_);
+		if (sn->session_origin_.state_ == SESSION_STATE::SESSION_IDLE || sn->session_origin_.state_ == SESSION_STATE::SESSION_ERROR) {
+			LOG("[WebRTC] 按需启动拉流 tag=%s, state=%d", sn->config_.tag.c_str(), (int)sn->session_origin_.state_);
 			sn->run(sn->config_);
 
 			// 等待拉流准备好（15秒超时，200ms轮询）
@@ -339,7 +345,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		}
 
 		STREAM_SESSION si;
-		si.copyStreamInfoFrom(sn->session_origin_pull_);
+		si.copyStreamInfoFrom(sn->session_origin_);
 		si.session_type_ = CLIENT_WEBRTC_PULL;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
@@ -424,12 +430,16 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 {
 	string tag;
 	string ip;
+	string streamUrl;
 	yyjson_val* yyv = yyjson_obj_get(params, "camera_ip");
 	if (yyv)
 		ip = yyjson_get_str(yyv);
 	yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "streamUrl");
+	if (yyv)
+		streamUrl = yyjson_get_str(yyv);
 	int preTime = 0;
 	yyv = yyjson_obj_get(params, "preSeconds");
 	if (yyv)
@@ -440,10 +450,13 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 	} else if (!tag.empty()) {
 		rc = getStreamNodeByTag(tag);
 	}
+	else if (!streamUrl.empty()) {
+		rc = getStreamNodeByStreamUrl(streamUrl);
+	}
 	if (rc) {
 		if (!rc->running_) {
 			bool ok = rc->run(rc->config_);
-			LOG("[StreamSrv]streamNode not running while startRecord,run streamNode %s, tag: %s, streamUrl: %s",ok?"success":"fail", tag.c_str(), rc->config_.streamUrl.c_str());
+			LOG("[StreamSrv]流节点没有运行，启动流 %s， tag: %s, streamUrl: %s",ok?"success":"fail", tag.c_str(), rc->config_.streamUrl.c_str());
 			if (!ok) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "run streamNode fail");
 				return true;
@@ -468,19 +481,20 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 			// 启动独立 I/O 线程，将磁盘写入与实时收包线程解耦
 			rc->record_io_running_ = true;
 			rc->record_io_thread_ = std::thread(&StreamNode::threadRec_h264File, rc.get());
-			LOG("[录像] 开始录像 tag=%s, path=%s", rc->config_.tag.c_str(), rc->rec_ctrl_.path.c_str());
+			LOG("[录像] 开始录像 tag=%s, url=%s,path=%s", rc->config_.tag.c_str(), rc->config_.streamUrl.c_str(), rc->rec_ctrl_.path.c_str());
 			rpcResp.result = RPC_OK;
 		}
 		else
 		{
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "record is already started");
+			LOG("[warn][录像] 开始录像，忽略，当前已经在录像， tag=%s, url=%s, path=%s", rc->config_.tag.c_str(), rc->config_.streamUrl.c_str(), rc->rec_ctrl_.path.c_str());
 			return true;
 		}
 	}
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag or ip not found");
+		LOG("[warn][录像] 开始录像，失败，未找到指定的流， tag=%s, url=%s", rc->config_.tag.c_str(), rc->config_.streamUrl.c_str());
 	}
-	LOG("[HTTP API]startRecord, tag: %s, camera_ip: %s, preSeconds: %d", tag.c_str(), ip.c_str(), preTime);
 	return true;
 }
 
@@ -488,17 +502,23 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 {
 	string tag;
 	string ip;
+	string streamUrl;
 	yyjson_val* yyv = yyjson_obj_get(params, "camera_ip");
 	if (yyv)
 		ip = yyjson_get_str(yyv);
 	yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "streamUrl");
+	if (yyv)
+		streamUrl = yyjson_get_str(yyv);
 	std::shared_ptr<StreamNode> rc = nullptr;
 	if (!ip.empty()) {
 		rc = getStreamNodeByIp(ip);
 	} else if (!tag.empty()) {
 		rc = getStreamNodeByTag(tag);
+	} else if (!streamUrl.empty()) {
+		rc = getStreamNodeByStreamUrl(streamUrl);
 	}
 	if (rc) {
 		bool wasRecording = false;
@@ -550,9 +570,9 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		}
 	}
 	else {
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag or ip not found");
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag, streamUrl or ip not found");
 	}
-		LOG("[HTTP API]stopRecord, tag: %s, camera_ip: %s", tag.c_str(), ip.c_str());
+	LOG("[HTTP API]stopRecord, tag: %s, streamUrl: %s, camera_ip: %s", tag.c_str(), streamUrl.c_str(), ip.c_str());
 	return true;
 }
 
@@ -597,9 +617,19 @@ bool StreamServer::rpc_removeRecordFile(yyjson_val* params, RPC_RESP& rpcResp, R
 bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string tag;
+	string streamUrl;
 	yyjson_val* yyv = yyjson_obj_get(params, "tag");
 	if (yyv)
 		tag = yyjson_get_str(yyv);
+	yyv = yyjson_obj_get(params, "streamUrl");
+	if (yyv)
+		streamUrl = yyjson_get_str(yyv);
+	// streamUrl -> tag
+	if (tag.empty() && !streamUrl.empty()) {
+		std::shared_ptr<StreamNode> rc = getStreamNodeByStreamUrl(streamUrl);
+		if (rc)
+			tag = rc->config_.tag;
+	}
 	std::string recordDir = tds->conf->dbPath + "/record/";
 	json records = json::array();
 
@@ -854,10 +884,10 @@ bool StreamServer::rpc_setStream(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESS
 
 	if (!originTransport.empty()) {
 		TransportMode newMode = (originTransport == "udp") ? TransportMode::UDP : TransportMode::TCP;
-		if (sn->session_origin_pull_.transport_mode != newMode) {
+		if (sn->session_origin_.transport_mode != newMode) {
 			LOG("[流媒体] setStream tag=%s originTransport: %d -> %d",
-				sn->config_.tag.c_str(), (int)sn->session_origin_pull_.transport_mode, (int)newMode);
-			sn->session_origin_pull_.transport_mode = newMode;
+				sn->config_.tag.c_str(), (int)sn->session_origin_.transport_mode, (int)newMode);
+			sn->session_origin_.transport_mode = newMode;
 			changed = true;
 		}
 	}

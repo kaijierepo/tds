@@ -12,6 +12,7 @@
 #include <fstream>
 #include <cstring>
 #include <functional>
+#include <cerrno>
 #include <logger.h>
 
 // Windows 下将 UTF-8 路径转为宽字符（std::ofstream 的 string 重载使用系统 locale，中文路径需 wchar_t 重载）
@@ -693,11 +694,28 @@ void StreamNode::writeRTPPacketToFile(std::shared_ptr<RTPPacket> pPkt, std::ofst
 
 // 录像独立 I/O 线程：从队列取包，批量写盘，常驻文件句柄
 void StreamNode::threadRec_h264File() {
-    LOG("[StreamNode] Record I/O thread started, tag=%s", config_.tag.c_str());
+    //open record file
+    std::ofstream ofs; 
+    if (!rec_ctrl_.path.empty()) {
+#ifdef _WIN32
+        ofs.open(pathToWide(rec_ctrl_.path), std::ios::binary | std::ios::app);
+#else
+        ofs.open(rec_ctrl_.path, std::ios::binary | std::ios::app);
+#endif
+        if (!ofs) {
+            LOG("[error][StreamServer]start record,open record file fail, " + rec_ctrl_.path + ", " + std::string(strerror(errno)));
+            return;
+        }
+        else {
+            LOG("[StreamServer]start record,open record file success," + rec_ctrl_.path);
+        }
+    }
 
-    std::ofstream ofs;  // 常驻文件句柄，不再每批重开
     std::vector<std::shared_ptr<RTPPacket>> batch;
-
+    {
+        std::lock_guard<std::mutex> lock(record_queue_mutex_);
+        record_queue_ = {}; //清空队列
+    }
     while (record_io_running_) {
         {
             std::unique_lock<std::mutex> lock(record_queue_mutex_);
@@ -713,20 +731,6 @@ void StreamNode::threadRec_h264File() {
             }
         }
 
-        // 懒打开：首次写数据时才打开文件
-        if (!ofs.is_open() && !rec_ctrl_.path.empty()) {
-#ifdef _WIN32
-            ofs.open(pathToWide(rec_ctrl_.path), std::ios::binary | std::ios::app);
-#else
-            ofs.open(rec_ctrl_.path, std::ios::binary | std::ios::app);
-#endif
-            if (!ofs) {
-                logError("Record I/O: Failed to open file: " + rec_ctrl_.path);
-                batch.clear();
-                continue;
-            }
-        }
-
         for (auto& p : batch) {
             if (!p) continue;  // 防御：极端情况下队列中混入空指针，跳过避免崩溃
             writeRTPPacketToFile(p, ofs);
@@ -735,38 +739,8 @@ void StreamNode::threadRec_h264File() {
         batch.clear();
     }
 
-    // 退出前排空队列中剩余数据
-    {
-        std::lock_guard<std::mutex> lock(record_queue_mutex_);
-        while (!record_queue_.empty()) {
-            batch.push_back(std::move(record_queue_.front()));
-            record_queue_.pop();
-        }
-    }
-
-    if (!batch.empty()) {
-        if (!ofs.is_open() && !rec_ctrl_.path.empty()) {
-#ifdef _WIN32
-            ofs.open(pathToWide(rec_ctrl_.path), std::ios::binary | std::ios::app);
-#else
-            ofs.open(rec_ctrl_.path, std::ios::binary | std::ios::app);
-#endif
-        }
-        if (ofs.is_open()) {
-            for (auto& p : batch) {
-                if (!p) continue;  // 防御：极端情况下队列中混入空指针，跳过避免崩溃
-                writeRTPPacketToFile(p, ofs);
-            }
-            ofs.flush();
-        }
-    }
-
-    if (ofs.is_open()) {
-        ofs.flush();
-        ofs.close();
-    }
-
-    LOG("[StreamNode] Record I/O thread stopped, tag=%s", config_.tag.c_str());
+    ofs.close();
+    LOG("[StreamServer]stop record,close record file," + rec_ctrl_.path + ",nal count=" + std::to_string(rec_ctrl_.nalCount));
 }
 
 void StreamNode::writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs) {
@@ -796,4 +770,5 @@ void StreamNode::writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::o
 
     ofs.write((const char*)start_code, sizeof(start_code));
     ofs.write((const char*)nal, size);
+    rec_ctrl_.nalCount++;
 }

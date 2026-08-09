@@ -320,7 +320,7 @@ StreamNode::StreamNode() {
     open_time_ = std::chrono::system_clock::now();
     stats_.start_time = std::chrono::steady_clock::now();
     stats_.last_frame_time = std::chrono::steady_clock::now();
-    session_origin_pull_.session_type_ = STREAM_SESSION_TYPE::ORIGIN_PULL;
+    session_origin_.session_type_ = STREAM_SESSION_TYPE::ORIGIN_PULL;
     session_relay_push_.session_type_ = STREAM_SESSION_TYPE::RELAY_PUSH;
     session_relay_push_.transport_mode = TransportMode::TCP;
 
@@ -350,7 +350,7 @@ bool StreamNode::run(const Config& config) {
     ctrl_thread_rtsp_client_ = std::thread(&StreamNode::threadCtrl_rtspClient, this);
 	ctrl_thread_rtsp_client_.detach();
 
-    LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), session_origin_pull_.server_url_.c_str(), session_relay_push_.server_url_.c_str());
+    LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), session_origin_.server_url_.c_str(), session_relay_push_.server_url_.c_str());
 
     return true;
 }
@@ -362,10 +362,10 @@ void StreamNode::stop() {
     running_ = false;
 
     //停止rtsp客户端工作
-    session_origin_pull_.close();
+    session_origin_.close();
     session_relay_push_.close();
 
-    session_origin_pull_.setState(SESSION_STATE::SESSION_IDLE);
+    session_origin_.setState(SESSION_STATE::SESSION_IDLE);
     session_relay_push_.setState(SESSION_STATE::SESSION_IDLE);
 
     if (recv_thread_origin_rtp_.joinable()) {
@@ -421,12 +421,37 @@ void StreamNode::stop() {
 // 控制流
 // ============================================================================
 
+// 检查节点是否有工作要做（有客户端播放、正在录像、或最近有转发请求）
+bool StreamNode::hasWorkToDo() {
+	// 1. 有客户端播放
+	{
+		std::lock_guard<std::mutex> lock(session_list_client_pull_mutex_);
+		if (!session_list_client_pull_.empty()) return true;
+	}
+
+	// 2. 正在录像
+	{
+		std::lock_guard<std::recursive_mutex> lock(rec_mutex_);
+		if (rec_ctrl_.recording) return true;
+	}
+
+	// 3. 距离上一次请求转发的时间过去不到3分钟
+	if (last_forward_request_time_.time_since_epoch().count() > 0) {
+		auto now = std::chrono::steady_clock::now();
+		int64_t elapsed = std::chrono::duration_cast<std::chrono::minutes>(
+			now - last_forward_request_time_).count();
+		if (elapsed < 3) return true;
+	}
+
+	return false;
+}
+
 void StreamNode::threadCtrl_rtspClient() {
     while (running_ && !stopping_) {
         // 启动拉流与推流
         if (isPulling_ == false) {
-            if (session_origin_pull_.open()) {
-                clock_rate_ = session_origin_pull_.clock_rate;
+            if (session_origin_.open()) {
+                clock_rate_ = session_origin_.clock_rate;
                 recv_thread_origin_rtp_ = std::thread(&StreamNode::threadRecv_originPull,this);
                 recv_thread_origin_rtp_.detach();
                 open_time_ = std::chrono::system_clock::now();
@@ -437,14 +462,14 @@ void StreamNode::threadCtrl_rtspClient() {
                     std::lock_guard<std::mutex> lock(stats_mutex_);
                     stats_.reconnect_count++;
                 }
-                session_origin_pull_.setState(SESSION_STATE::SESSION_RECONNECTING);
-                session_origin_pull_.doReconnect();
-                session_origin_pull_.close();
+                session_origin_.setState(SESSION_STATE::SESSION_RECONNECTING);
+                session_origin_.doReconnect();
+                session_origin_.close();
             }
         }
 
         if (isPulling_ == true && isPushing_ == false && session_relay_push_.server_url_ != "") {
-            if (session_relay_push_.open(&session_origin_pull_)) {
+            if (session_relay_push_.open(&session_origin_)) {
                 isPushing_ = true;
             }
             else {
@@ -460,11 +485,11 @@ void StreamNode::threadCtrl_rtspClient() {
 
         // 心跳保活
         if (isPulling_) {
-            if (session_origin_pull_.conn_ && !session_origin_pull_.rtsp_session_id_.empty()) {
-                if (!session_origin_pull_.rtspGetParameterReq(session_origin_pull_.server_url_, session_origin_pull_.rtsp_session_id_)) {
-                    session_origin_pull_.recordError("heartbeat timeout");
+            if (session_origin_.conn_ && !session_origin_.rtsp_session_id_.empty()) {
+                if (!session_origin_.rtspGetParameterReq(session_origin_.server_url_, session_origin_.rtsp_session_id_)) {
+                    session_origin_.recordError("heartbeat timeout");
                     isPulling_ = false;
-                    session_origin_pull_.close();
+                    session_origin_.close();
                     session_relay_push_.close();
                 }
             }
@@ -475,7 +500,7 @@ void StreamNode::threadCtrl_rtspClient() {
                 if (!session_relay_push_.rtspGetParameterReq(session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_)) {
                     session_relay_push_.recordError("heartbeat timeout");
                     isPushing_ = false;
-                    session_origin_pull_.close();
+                    session_origin_.close();
                     session_relay_push_.close();
                 }
             }
@@ -488,7 +513,7 @@ void StreamNode::threadCtrl_rtspClient() {
 
 SESSION_STATE StreamNode::getState() {
     std::lock_guard<std::mutex> lock(state_mutex_);
-    return session_origin_pull_.state_;
+    return session_origin_.state_;
 }
 
 bool StreamNode::isRunning() {
@@ -962,11 +987,11 @@ void StreamNode::onRecvOriginRtpPkt(std::shared_ptr<RTPPacket> pkt, STREAM_SESSI
 // ============================================================================
 
 void StreamNode::threadRecv_originPull() {
-    session_origin_pull_.setState(SESSION_STATE::SESSION_STREAMING);
-    bool pullUDP = (session_origin_pull_.transport_mode == TransportMode::UDP);
+    session_origin_.setState(SESSION_STATE::SESSION_STREAMING);
+    bool pullUDP = (session_origin_.transport_mode == TransportMode::UDP);
     LOG("[keyinfo][StreamNode]tag=%s,Pull Success,rtp handle thread start,mode:%s", config_.tag.c_str(), pullUDP ? "UDP" : "TCP");
 
-    std::vector<uint8_t> buffer(session_origin_pull_.buffer_size_);
+    std::vector<uint8_t> buffer(session_origin_.buffer_size_);
     std::string src_ip;
     int src_port = 0;
 
@@ -986,18 +1011,18 @@ void StreamNode::threadRecv_originPull() {
 
         if (pullUDP) {
             // UDP拉流 最多阻塞1秒 configureUDPSocket 中设置了1秒超时
-            received = session_origin_pull_.receiveUDPData(buffer.data(), buffer.size(), src_ip, src_port);
+            received = session_origin_.receiveUDPData(buffer.data(), buffer.size(), src_ip, src_port);
         }
         else {
             // TCP拉流：通过RTSP连接接收RTP数据
-            if (!session_origin_pull_.conn_ || !session_origin_pull_.conn_->isConnected()) {
+            if (!session_origin_.conn_ || !session_origin_.conn_->isConnected()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 continue;
             }
 
             // 接收数据
             char tmpBuf[2048] = { 0 };
-            int n = session_origin_pull_.conn_->receive(tmpBuf, sizeof(tmpBuf), 100);
+            int n = session_origin_.conn_->receive(tmpBuf, sizeof(tmpBuf), 100);
 
             if (n > 0) {
                 // 添加到缓冲区
@@ -1049,7 +1074,7 @@ void StreamNode::threadRecv_originPull() {
             // 解析RTP包
             auto pkt = std::make_shared<RTPPacket>();
             if (pkt->parse(buffer.data(), received)) {
-                onRecvOriginRtpPkt(pkt, session_origin_pull_);
+                onRecvOriginRtpPkt(pkt, session_origin_);
             }
         }
         else if (received > 0 && received <= 12) {
@@ -1064,9 +1089,9 @@ void StreamNode::threadRecv_originPull() {
                 last_frame_time = stats_.last_frame_time;
             }
 
-            if (now - last_frame_time > std::chrono::milliseconds(session_origin_pull_.rtp_timeout_)) {
+            if (now - last_frame_time > std::chrono::milliseconds(session_origin_.rtp_timeout_)) {
                 logError("RTP timeout detected");
-                session_origin_pull_.recordError("RTP timeout");
+                session_origin_.recordError("RTP timeout");
                 break;
             }
         }

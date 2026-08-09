@@ -14,10 +14,10 @@ void openAllStream() {
 	std::lock_guard<std::mutex> lock(streamSrv.nodeLock_);
 	for (auto& pair : streamSrv.m_mapStreamNodes) {
 		std::shared_ptr<StreamNode> sn = pair.second;
-		if (sn && sn->session_origin_pull_.server_url_ != "") {
+		if (sn && sn->session_origin_.server_url_ != "") {
 			sn->run(sn->config_);
 		}
-		LOG("[StreamSrv]持续拉流模式: streamUrl=%s, origin_pull_url=%s", pair.first.c_str(), sn->session_origin_pull_.server_url_.c_str());
+		LOG("[StreamSrv]持续拉流模式: streamUrl=%s, origin_pull_url=%s", pair.first.c_str(), sn->session_origin_.server_url_.c_str());
 	}
 }
 
@@ -128,7 +128,7 @@ std::shared_ptr<StreamNode> StreamServer::getStreamNodeByIp(const std::string& i
 	for (const auto& pair : m_mapStreamNodes) 
 	{
 		if (pair.second &&
-			pair.second->session_origin_pull_.server_url_.find(ip) != std::string::npos) 
+			pair.second->session_origin_.server_url_.find(ip) != std::string::npos) 
 		{
 			return pair.second;
 		}
@@ -142,7 +142,7 @@ std::shared_ptr<StreamNode> StreamServer::getStreamNodeBySrcUrl(const std::strin
 	for (const auto& pair : m_mapStreamNodes)
 	{
 		if (pair.second &&
-			pair.second->session_origin_pull_.server_url_ == srcUrl)
+			pair.second->session_origin_.server_url_ == srcUrl)
 		{
 			return pair.second;
 		}
@@ -175,16 +175,16 @@ std::shared_ptr<StreamNode> StreamServer::createStream(const STREAM_OPEN_PARAM& 
 		LOG("[StreamNode] Error (%d): %s", code, error.c_str());
 		});
 
-	sn->session_origin_pull_.server_url_ = op.originPullUrl;
-	sn->extractRtspAuthInfo(sn->session_origin_pull_);
+	sn->session_origin_.server_url_ = op.originPullUrl;
+	sn->extractRtspAuthInfo(sn->session_origin_);
 	sn->session_relay_push_.server_url_ = op.relayPushUrl;
-	sn->session_origin_pull_.retry_interval_ = 3000;
-	sn->session_origin_pull_.max_retries_ = 0;
-	sn->session_origin_pull_.rtp_timeout_ = 10000;
+	sn->session_origin_.retry_interval_ = 3000;
+	sn->session_origin_.max_retries_ = 0;
+	sn->session_origin_.rtp_timeout_ = 10000;
 	sn->config_.tag = op.tag;
 	sn->config_.streamUrl = streamUrl;
-	sn->session_origin_pull_.tag_ = op.tag;
-	sn->session_origin_pull_.stream_url_ = streamUrl;
+	sn->session_origin_.tag_ = op.tag;
+	sn->session_origin_.stream_url_ = streamUrl;
 	sn->session_relay_push_.tag_ = op.tag;
 	sn->session_relay_push_.stream_url_ = streamUrl;
 	sn->config_.srcStreamFetch = op.srcStreamFetch != "" ? op.srcStreamFetch : "always";
@@ -213,11 +213,11 @@ std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op
 
 	if (sn) {
 		bool confChanged = false;
-		if (op.originPullUrl != "" && sn->session_origin_pull_.server_url_ != op.originPullUrl) {
+		if (op.originPullUrl != "" && sn->session_origin_.server_url_ != op.originPullUrl) {
 			LOG("[流媒体] 媒体源变更，原地址:%s, 新地址:%s",
-				sn->session_origin_pull_.server_url_.c_str(), op.originPullUrl.c_str());
-			sn->session_origin_pull_.server_url_ = op.originPullUrl;
-			sn->extractRtspAuthInfo(sn->session_origin_pull_);
+				sn->session_origin_.server_url_.c_str(), op.originPullUrl.c_str());
+			sn->session_origin_.server_url_ = op.originPullUrl;
+			sn->extractRtspAuthInfo(sn->session_origin_);
 			confChanged = true;
 		}
 		if (op.relayPushUrl != "" && sn->session_relay_push_.server_url_ != op.relayPushUrl) {
@@ -230,7 +230,7 @@ std::shared_ptr<StreamNode> StreamServer::openStream(const STREAM_OPEN_PARAM& op
 		if (sn->running_ &&!confChanged) {
 			LOG("[流媒体] 媒体源已打开，重复打开请求，参数未改变,忽略。 位号:%s, 源地址:%s，转发地址:%s",
 				op.tag.c_str(),
-				sn->session_origin_pull_.server_url_.c_str(),
+				sn->session_origin_.server_url_.c_str(),
 				sn->session_relay_push_.server_url_.c_str());
 			return sn;
 		}
@@ -364,18 +364,12 @@ void StreamServer::idleMonitorLoop() {
 
 			// 只监控 ondemand 模式且状态为 streaming 的流
 			if (sn->config_.srcStreamFetch != "ondemand") continue;
-			if (sn->session_origin_pull_.state_ != SESSION_STATE::SESSION_STREAMING) {
+			if (sn->session_origin_.state_ != SESSION_STATE::SESSION_STREAMING) {
 				m_idleTrackMap_.erase(streamUrl);
 				continue;
 			}
 
-			bool hasClients = false;
-			{
-				std::lock_guard<std::mutex> clLock(sn->session_list_client_pull_mutex_);
-				hasClients = !sn->session_list_client_pull_.empty();
-			}
-
-			if (hasClients) {
+			if (sn->hasWorkToDo()) {
 				m_idleTrackMap_.erase(streamUrl);
 			}
 			else {

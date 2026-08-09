@@ -319,7 +319,7 @@ static unsigned int getFirstMbInSlice(const std::vector<uint8_t>& nal) {
 }
 
 // 本地文件 RTP 喂流线程：循环读取 NAL，封装为 RTP 包，写入 StreamNode 缓冲区并分发给客户端
-static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
+static void threadRecv_localFile(std::shared_ptr<LocalFileStreamCtx> ctx) {
 	if (!ctx || !ctx->node) return;
 
 	const auto& nals = ctx->nals;
@@ -340,14 +340,8 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 	size_t nalIdx = 0;
 	bool wasIdle = true;  // 跟踪是否处于空闲态（无客户端），用于在首个客户端连接时重置启动时间
 	while (ctx->running_ && ctx->node->running_) {
-		// 没有客户端时：空转，不做任何操作，等待客户端连接
-		bool hasClients = false;
-		{
-			ctx->node->session_list_client_pull_mutex_.lock();
-			hasClients = !ctx->node->session_list_client_pull_.empty();
-			ctx->node->session_list_client_pull_mutex_.unlock();
-		}
-		if (!hasClients) {
+		// 没有工作（无客户端、无录像、无近期转发请求）：空转等待
+		if (!ctx->node->hasWorkToDo()) {
 			// 空转：什么也不干，立即再次检查（busy-wait）
 			// 重置播放位置，确保有客户端时从头开始
 			nalIdx = 0;
@@ -378,8 +372,7 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 			pkt->ssrc = ssrc;
 			pkt->marker = false;
 			pkt->payload = nal;
-			ctx->node->addToRtpBuffer(pkt);
-			ctx->node->sendRTPPacketToClients(*pkt);
+			ctx->node->onRecvOriginRtpPkt(pkt, ctx->node->session_origin_);
 			nalIdx = (nalIdx + 1) % nals.size();
 			continue;
 		}
@@ -395,8 +388,7 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 			pkt->marker = true;
 			pkt->payload = nal;
 
-			ctx->node->addToRtpBuffer(pkt);
-			ctx->node->sendRTPPacketToClients(*pkt);
+			ctx->node->onRecvOriginRtpPkt(pkt, ctx->node->session_origin_);
 		} else {
 			// FU-A 分片模式
 			size_t offset = 1;  // 跳过 NAL header
@@ -423,8 +415,7 @@ static void localFileFeedLoop(std::shared_ptr<LocalFileStreamCtx> ctx) {
 				fragPkt->payload[1] = fuHeader;
 				memcpy(&fragPkt->payload[2], &nal[offset], chunkSize);
 
-				ctx->node->addToRtpBuffer(fragPkt);
-				ctx->node->sendRTPPacketToClients(*fragPkt);
+				ctx->node->onRecvOriginRtpPkt(fragPkt, ctx->node->session_origin_);
 				offset += chunkSize;
 				first = false;
 			}
@@ -501,21 +492,21 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 	}
 
 	node->config_ = cfg;
-	node->session_origin_pull_.tag_ = cfg.tag;
-	node->session_origin_pull_.stream_url_ = cfg.streamUrl;
-	node->session_origin_pull_.server_url_ = fileUrl;
-	node->session_origin_pull_.retry_interval_ = 0;
-	node->session_origin_pull_.max_retries_ = 0;
-	node->session_origin_pull_.rtp_timeout_ = 0;
+	node->session_origin_.tag_ = cfg.tag;
+	node->session_origin_.stream_url_ = cfg.streamUrl;
+	node->session_origin_.server_url_ = fileUrl;
+	node->session_origin_.retry_interval_ = 0;
+	node->session_origin_.max_retries_ = 0;
+	node->session_origin_.rtp_timeout_ = 0;
 
 	// 设置 pull_session_ 的编码信息
-	node->session_origin_pull_.codec = "H264";
-	node->session_origin_pull_.payload_type = 96;
-	node->session_origin_pull_.clock_rate = 90000;
+	node->session_origin_.codec = "H264";
+	node->session_origin_.payload_type = 96;
+	node->session_origin_.clock_rate = 90000;
 	node->clock_rate_ = 90000;
-	node->session_origin_pull_.sps = sps;
-	node->session_origin_pull_.pps = pps;
-	node->session_origin_pull_.video_ssrc = 0x4C4F4341;
+	node->session_origin_.sps = sps;
+	node->session_origin_.pps = pps;
+	node->session_origin_.video_ssrc = 0x4C4F4341;
 
 	// 构建 fmtp（包含 sprop-parameter-sets）
 	if (!sps.empty() && !pps.empty()) {
@@ -528,15 +519,15 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 		} else {
 			snprintf(profileId, sizeof(profileId), "42C01F");
 		}
-		node->session_origin_pull_.fmtp = std::string("profile-level-id=") + profileId
+		node->session_origin_.fmtp = std::string("profile-level-id=") + profileId
 			+ ";packetization-mode=1;sprop-parameter-sets="
 			+ spsB64 + "," + ppsB64;
 	}
 
-	node->session_origin_pull_.control_url = "trackID=0";
+	node->session_origin_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;
-	node->session_origin_pull_.state_ = SESSION_STATE::SESSION_STREAMING;
+	node->session_origin_.state_ = SESSION_STATE::SESSION_STREAMING;
 
 	// 继续持有 node 引用，供下方 ctx->node 使用
 	// （三个 shared_ptr 共同管理生命周期：map、局部变量 node、ctx->node）
@@ -572,7 +563,7 @@ bool StreamServer::serveLocalStreamFile(const std::string& filePath, const std::
 			g_localStreams[url] = ctx;
 		}
 	
-		ctx->feed_thread_ = std::thread(localFileFeedLoop, ctx);
+		ctx->feed_thread_ = std::thread(threadRecv_localFile, ctx);
 		ctx->feed_thread_.detach();
 
 	//LOG("[LocalFileStream] Started serving: file=%s, url=%s, tag=%s, nals=%zu",
@@ -676,19 +667,19 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 		if (fileUrl[i] == '\\') fileUrl[i] = '/';
 	}
 	node->config_ = cfg;
-	node->session_origin_pull_.tag_ = cfg.tag;
-	node->session_origin_pull_.stream_url_ = cfg.streamUrl;
-	node->session_origin_pull_.retry_interval_ = 0;
-	node->session_origin_pull_.max_retries_ = 0;
-	node->session_origin_pull_.rtp_timeout_ = 0;
+	node->session_origin_.tag_ = cfg.tag;
+	node->session_origin_.stream_url_ = cfg.streamUrl;
+	node->session_origin_.retry_interval_ = 0;
+	node->session_origin_.max_retries_ = 0;
+	node->session_origin_.rtp_timeout_ = 0;
 
-	node->session_origin_pull_.codec = "H264";
-	node->session_origin_pull_.payload_type = 96;
-	node->session_origin_pull_.clock_rate = 90000;
+	node->session_origin_.codec = "H264";
+	node->session_origin_.payload_type = 96;
+	node->session_origin_.clock_rate = 90000;
 	node->clock_rate_ = 90000;
-	node->session_origin_pull_.sps = sps;
-	node->session_origin_pull_.pps = pps;
-	node->session_origin_pull_.video_ssrc = 0x4C4F4341;
+	node->session_origin_.sps = sps;
+	node->session_origin_.pps = pps;
+	node->session_origin_.video_ssrc = 0x4C4F4341;
 
 	if (!sps.empty() && !pps.empty()) {
 		std::string spsB64 = base64Encode(std::string((char*)sps.data(), sps.size()));
@@ -700,15 +691,15 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 		} else {
 			snprintf(profileId, sizeof(profileId), "42C01F");
 		}
-		node->session_origin_pull_.fmtp = std::string("profile-level-id=") + profileId
+		node->session_origin_.fmtp = std::string("profile-level-id=") + profileId
 			+ ";packetization-mode=1;sprop-parameter-sets="
 			+ spsB64 + "," + ppsB64;
 	}
 
-	node->session_origin_pull_.control_url = "trackID=0";
+	node->session_origin_.control_url = "trackID=0";
 	node->isPulling_ = true;
 	node->running_ = true;
-	node->session_origin_pull_.state_ = SESSION_STATE::SESSION_STREAMING;
+	node->session_origin_.state_ = SESSION_STATE::SESSION_STREAMING;
 
 	// 继续持有 node 引用，供下方 ctx->node 使用
 	// （三个 shared_ptr 共同管理生命周期：map、局部变量 node、ctx->node）
@@ -742,7 +733,7 @@ std::shared_ptr<StreamNode> StreamServer::loadLocalFileStream(const std::string&
 		g_localStreams[tag] = ctx;
 	}
 
-	ctx->feed_thread_ = std::thread(localFileFeedLoop, ctx);
+	ctx->feed_thread_ = std::thread(threadRecv_localFile, ctx);
 	ctx->feed_thread_.detach();
 
 	//LOG("[LocalFileStream] Loaded on demand: file=%s, tag=%s, nals=%zu",
@@ -755,12 +746,7 @@ void StreamServer::cleanupIdleLocalStream(const std::string& tag) {
 	auto node = getStreamNodeByTag(tag);
 	if (!node) return;
 
-	// 检查是否还有客户端
-	node->session_list_client_pull_mutex_.lock();
-	bool hasClients = !node->session_list_client_pull_.empty();
-	node->session_list_client_pull_mutex_.unlock();
-
-	if (hasClients) return;
+	if (node->hasWorkToDo()) return;
 
 	// 没有客户端了，停止喂流线程
 	// 只处理本地文件流：推流(push)创建的 StreamNode 不在此管理
