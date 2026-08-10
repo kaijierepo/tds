@@ -173,6 +173,8 @@ static bool parseSPS(const uint8_t* data, size_t size, SpsInfo& info) {
     uint32_t pic_w_mbs   = br.readUE() + 1;
     uint32_t pic_h_units = br.readUE() + 1;
     uint32_t frame_mbs_only = br.readBits(1);
+    if (!frame_mbs_only)
+        br.readBits(1);  // mb_adaptive_frame_field_flag
 
     info.width  = pic_w_mbs * 16;
     info.height = pic_h_units * 16 * (2 - frame_mbs_only);
@@ -644,7 +646,8 @@ static std::vector<uint8_t> buildStco(const std::vector<uint64_t>& offsets) {
 // 主转换函数
 // ====================================================================
 
-bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path) {
+bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path,
+                      int recordDurationSec) {
     // ---------- 第 1 步：解析 Annex B .h264 文件 ----------
     std::vector<uint8_t> fileData; // 持有输入文件，保证 NalUnit::data 在整个转换期间有效
     std::vector<NalUnit>    allNals;
@@ -683,8 +686,24 @@ bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path) {
 
     // 时间参数
     uint32_t timescale  = 90000u;
-    // 优先使用SPS VUI解析出的帧率，解析失败则fallback为25fps
-    uint32_t frameRate  = (spsInfo.fps > 0.0) ? static_cast<uint32_t>(spsInfo.fps + 0.5) : 25u;
+
+    // 帧率计算优先级：
+    //   1) 用实际录制时长推算（最可靠，不依赖摄像头 SPS）
+    //   2) SPS VUI timing_info
+    //   3) fallback 25fps
+    uint32_t frameRate = 25u;
+    if (recordDurationSec > 0 && !frames.empty()) {
+        frameRate = static_cast<uint32_t>(frames.size()) / static_cast<uint32_t>(recordDurationSec);
+        if (frameRate == 0) frameRate = 1u;
+        LOG("[MP4] frameRate from record duration: %u fps (%zu frames / %d sec)",
+            frameRate, frames.size(), recordDurationSec);
+    } else if (spsInfo.fps > 0.0) {
+        frameRate = static_cast<uint32_t>(spsInfo.fps + 0.5);
+        LOG("[MP4] frameRate from SPS VUI: %u fps", frameRate);
+    } else {
+        LOG("[MP4] frameRate fallback to default: %u fps", frameRate);
+    }
+
     if (frameRate == 0) frameRate = 25u;
     uint32_t delta      = timescale / frameRate;
     if (delta == 0) delta = 1;
