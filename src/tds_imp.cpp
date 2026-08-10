@@ -596,18 +596,29 @@ void updateStreamNodeConfig() {
 					sn->config_.srcStreamFetch = pmp->m_srcStreamFetch;
 				}
 
-				// 同步 relayTransport
-				string mpTransport = pmp->m_relayTransport;
-				if (mpTransport.empty()) mpTransport = "tcp";
-				TransportMode newMode = (mpTransport == "udp") ? TransportMode::UDP : TransportMode::TCP;
+			// 同步 relayTransport
+			string mpTransport = pmp->m_relayTransport;
+			if (mpTransport.empty()) mpTransport = "tcp";
+			TransportMode newMode = (mpTransport == "udp") ? TransportMode::UDP : TransportMode::TCP;
 			if (sn->session_relay_push_.transport_mode != newMode) {
 				LOG("[syncStreamNodes] tag=%s relayTransport变更: %d -> %d",
 					tag.c_str(), (int)sn->session_relay_push_.transport_mode, (int)newMode);
 				sn->session_relay_push_.transport_mode = newMode;
-					needRestart = true;
-				}
+				needRestart = true;
+			}
 
-				// 转发协议变更且正在推流，断开重连以生效
+			// 同步 originTransport
+			string mpOriginTransport = pmp->m_originTransport;
+			if (mpOriginTransport.empty()) mpOriginTransport = "tcp";
+			TransportMode originNewMode = (mpOriginTransport == "udp") ? TransportMode::UDP : TransportMode::TCP;
+			if (sn->session_origin_.transport_mode != originNewMode) {
+				LOG("[syncStreamNodes] tag=%s originTransport变更: %d -> %d",
+					tag.c_str(), (int)sn->session_origin_.transport_mode, (int)originNewMode);
+				sn->session_origin_.transport_mode = originNewMode;
+				needRestart = true;
+			}
+
+			// 转发协议变更且正在推流，断开重连以生效
 				if (needRestart && sn->isPushing_) {
 					LOG("[syncStreamNodes] tag=%s 转发协议变更，断开重连", tag.c_str());
 					sn->stop();

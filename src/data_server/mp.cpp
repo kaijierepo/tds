@@ -290,6 +290,14 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 		}
 	}
 
+	v = yyjson_obj_get(conf, "originTransport");
+	if (v) {
+		string transport = yyjson_get_str(v);
+		if (transport == "tcp" || transport == "udp") {
+			m_originTransport = transport;
+		}
+	}
+
 	return false;
 }
 
@@ -537,6 +545,12 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_PROP_SEL q, bool*
 			if (m_relayTransport != "") {
 				key = yyjson_mut_strcpy(doc, "relayTransport");
 				val = yyjson_mut_strcpy(doc, m_relayTransport.c_str());
+				yyjson_mut_obj_put(conf, key, val);
+			}
+
+			if (m_originTransport != "") {
+				key = yyjson_mut_strcpy(doc, "originTransport");
+				val = yyjson_mut_strcpy(doc, m_originTransport.c_str());
 				yyjson_mut_obj_put(conf, key, val);
 			}
 		}
