@@ -814,6 +814,8 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 		yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
 		yyjson_mut_val* j = yyjson_mut_obj(doc);
 		pd->toJson(j,doc, devQuery);
+		if (parentDev != this && !parentID.empty())
+			yyjson_mut_obj_add_str(doc, j, "parentID", parentID.c_str());
         char* pps = yyjson_mut_val_write(j, 0,nullptr);
 		string sparams;
 		if(pps){
