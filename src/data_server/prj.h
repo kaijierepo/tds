@@ -13,7 +13,7 @@ class StreamNode;
 
 struct OBJ_TEMPLATE {
 	std::string type;
-	json tplData;
+	std::string tplData;
 	OBJ obj;
 
 	OBJ_TEMPLATE() {
@@ -118,9 +118,9 @@ public:
 	void runRtDB();
 
 	//对象模版配置
-	json getObjTemplate(std::string objTplType);
+	bool rpc_getObjTemplate(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool loadObjTemplate();
-	void setObjTemplate(json& params);
+	bool rpc_setObjTemplate(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session);
 	void getAllVarExpScript();
 	map<std::string, OBJ_TEMPLATE*> m_mapObjTempalte;
 

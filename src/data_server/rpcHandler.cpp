@@ -2090,32 +2090,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "ref curve not found");
 		}
 	}
-	else if (method == "getObjTemplate") {
-		if (params.contains("name")) {
-			string type = params["name"];
-			if (prj.m_mapObjTempalte.find(type) != prj.m_mapObjTempalte.end()) {
-				OBJ_TEMPLATE* ct = prj.m_mapObjTempalte[type];
-				rpcResp.result = ct->tplData;
-			}
-			else {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::OBJ_templateNotFound, "object template not found");
-			}
-		}
-		else {
-			json j = json::array();
-			for (auto& iter : prj.m_mapObjTempalte) {
-				json jItem = json::object();
-				jItem["name"] = iter.first;
-				jItem["data"] = iter.second->tplData;
-				j.push_back(jItem);
-			}
-			rpcResp.result = j.dump();
-		}
-	}
-	else if (method == "setObjTemplate") {
-		prj.setObjTemplate(params);
-		rpcResp.result = "\"ok\"";
-	}
 	else if (method == "setObjAttr") {
 		prj.loadConf(params, false);
 		prj.saveConfFile();

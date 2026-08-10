@@ -356,15 +356,30 @@ vector<MP*> project::getAllEzvizMp()
 	return ezvizMps;
 }
 
-json project::getObjTemplate(string devTplType)
+bool project::rpc_getObjTemplate(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	for (auto& i : m_mapObjTempalte) {
-		string tplName = i.first;
-		if (devTplType.find(tplName) != string::npos) {
-			return i.second->tplData;
+	yyjson_val* yyv_name = yyjson_obj_get(params, "name");
+	if (yyv_name) {
+		string type = yyjson_get_str(yyv_name);
+		auto it = m_mapObjTempalte.find(type);
+		if (it != m_mapObjTempalte.end()) {
+			rpcResp.result = it->second->tplData;
+		} else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::OBJ_templateNotFound, "object template not found");
 		}
+	} else {
+		// 返回全部模板数组
+		string s = "[";
+		bool first = true;
+		for (auto& iter : m_mapObjTempalte) {
+			if (!first) s += ",";
+			s += "{\"name\":\"" + iter.first + "\",\"data\":" + iter.second->tplData + "}";
+			first = false;
+		}
+		s += "]";
+		rpcResp.result = s;
 	}
-	return nullptr;
+	return true;
 }
 
 bool project::loadObjTemplate()
@@ -386,8 +401,12 @@ bool project::loadObjTemplate()
 			OBJ_TEMPLATE* pct = new OBJ_TEMPLATE;
 			try
 			{
-				pct->tplData = json::parse(s);
-				pct->obj.loadConf(pct->tplData);
+				yyjson_doc* doc = yyjson_read(s.c_str(), s.size(), 0);
+				if (doc) {
+					pct->tplData = s;
+					pct->obj.loadConf(yyjson_doc_get_root(doc), true);
+					yyjson_doc_free(doc);
+				}
 				string type = str::trimSuffix(fi.name, ".json");
 				m_mapObjTempalte[type] = pct;
 			}
@@ -400,37 +419,58 @@ bool project::loadObjTemplate()
 	return false;
 }
 
-void project::setObjTemplate(json& params)
+bool project::rpc_setObjTemplate(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	OBJ_TEMPLATE* ct  = new OBJ_TEMPLATE();
+	OBJ_TEMPLATE* ct = new OBJ_TEMPLATE();
 
-	ct->type = params["type"];
-	
-	//str::hanZi2Pinyin(ct->typeLabel, ct->type);
-	ct->tplData = params["tplData"];
-	ct->obj.loadConf(ct->tplData);
+	yyjson_val* yyv_type = yyjson_obj_get(params, "type");
+	yyjson_val* yyv_tplData = yyjson_obj_get(params, "tplData");
+	if (!yyv_type || !yyv_tplData) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "type and tplData required");
+		delete ct;
+		return true;
+	}
+
+	ct->type = yyjson_get_str(yyv_type);
+
+	// tplData: 将 yyjson_val* 序列化为字符串存入
+	char* p = yyjson_val_write(yyv_tplData, 0, NULL);
+	if (p) {
+		ct->tplData = p;
+		free(p);
+	}
+
+	yyjson_doc* doc = yyjson_read(ct->tplData.c_str(), ct->tplData.size(), 0);
+	if (doc) {
+		ct->obj.loadConf(yyjson_doc_get_root(doc), false);
+		yyjson_doc_free(doc);
+	}
 
 	auto pOld = m_mapObjTempalte.find(ct->type);
 	if (pOld != m_mapObjTempalte.end()) {
 		delete pOld->second;
 	}
-	prj.m_mapObjTempalte[ct->type] = ct;
+	m_mapObjTempalte[ct->type] = ct;
 
-
-	//保存索引信息
-	string p = tds->conf->confPath + "/template/object/conf.json";
-	json jConf = json::array();
-	for (auto& i : m_mapObjTempalte) {
-		json c;
-		c["type"] = i.second->type;
-		jConf.push_back(c);
+	// 保存索引信息
+	string confPath = tds->conf->confPath + "/template/object/conf.json";
+	string sConf = "[";
+	{
+		bool first = true;
+		for (auto& i : m_mapObjTempalte) {
+			if (!first) sConf += ",";
+			sConf += "{\"type\":\"" + i.second->type + "\"}";
+			first = false;
+		}
 	}
-	string sConf = jConf.dump(2);
-	fs::writeFile(p, sConf);
+	sConf += "]";
+	fs::writeFile(confPath, sConf);
 
 	string chanPath = tds->conf->confPath + "/template/object/";
-	string s = ct->tplData.dump(2);
-	fs::writeFile(chanPath + "/" + ct->type + ".json", s);
+	fs::writeFile(chanPath + "/" + ct->type + ".json", ct->tplData);
+
+	rpcResp.result = RPC_OK;
+	return true;
 }
 
 void project::getAllVarExpScript()
@@ -545,6 +585,12 @@ bool project::handleRpc(string method, yyjson_val* params, RPC_RESP& resp, RPC_S
 	bool handled = true;
 	if (method == "setObj") {
 		rpc_setObj(params, resp, session);
+	}
+	else if (method == "getObjTemplate") {
+		rpc_getObjTemplate(params, resp, session);
+	}
+	else if (method == "setObjTemplate") {
+		rpc_setObjTemplate(params, resp, session);
 	}
 	else if (method == "getObjTree") {
 		shared_lock<shared_mutex> lock(prj.m_csPrj);

@@ -270,12 +270,12 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 bool OBJ::loadConf(yyjson_val* conf, bool bCreate) {
 	//载入配置
 	yyjson_val* v = yyjson_obj_get(conf, "name");
-	if (v) {
+	if (yyjson_is_str(v)) {
 		m_name = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "nameTranslate");
-	if (v) {
+	if (yyjson_is_obj(v)) {
 		yyjson_val* key, * val;
 		size_t indx = 0, max = 0;
 		yyjson_obj_foreach(v, indx, max, key, val) {
@@ -288,118 +288,128 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate) {
 	}
 
 	v = yyjson_obj_get(conf, "level");
-	if (v) {
+	if (yyjson_is_str(v)) {
 		m_level = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "type");
-	if (v) {
+	if (yyjson_is_str(v)) {
 		m_type = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "childTds");
-	if (v) {
+	if (yyjson_is_bool(v)) {
 		m_bChildTds = yyjson_get_bool(v);
 	}
 
 	v = yyjson_obj_get(conf, "streamAccess");
-	if (v) {
+	if (yyjson_is_str(v)) {
 		m_streamAccess = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "group");
-	if (v) {
+	if (yyjson_is_str(v)) {
 		m_groupName = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "dynamicLocation");
-	if (v) {
+	if (yyjson_is_bool(v)) {
 		m_bDynLocation = yyjson_get_bool(v);
 	}
 
 	v = yyjson_obj_get(conf, "locationCalib");
-	if (v) {
+	if (yyjson_is_bool(v)) {
 		m_bLocationCalib = yyjson_get_bool(v);
 	}
 
 	v = yyjson_obj_get(conf, "longitudeCalib");
-	if (v) {
+	if (yyjson_is_num(v)) {
 		m_dbLongitudeCalib = yyjson_get_num(v);
 	}
 
 	v = yyjson_obj_get(conf, "latitudeCalib");
-	if (v) {
+	if (yyjson_is_num(v)) {
 		m_dbLatitudeCalib = yyjson_get_num(v);
 	}
 
 	v = yyjson_obj_get(conf, "longitude");
-	if (v) {
+	if (yyjson_is_num(v)) {
 		m_longitude = yyjson_get_num(v);
 	}
 
 	v = yyjson_obj_get(conf, "latitude");
-	if (v) {
+	if (yyjson_is_num(v)) {
 		m_latitude = yyjson_get_num(v);
 	}
 
 	yyjson_val* yymap = yyjson_obj_get(conf, "map");
-	if (yymap) {
+	if (yyjson_is_obj(yymap)) {
 		m_mapConf.enable = true;
 
 		v = yyjson_obj_get(yymap, "center");
-		m_mapConf.center[0] = yyjson_get_num(yyjson_arr_get(v, 0));
-		m_mapConf.center[1] = yyjson_get_num(yyjson_arr_get(v, 1));
+		if (yyjson_is_arr(v)) {
+			m_mapConf.center[0] = yyjson_get_num(yyjson_arr_get(v, 0));
+			m_mapConf.center[1] = yyjson_get_num(yyjson_arr_get(v, 1));
+		}
 
 		v = yyjson_obj_get(yymap, "pitch");
-		m_mapConf.pitch = yyjson_get_num(v);
+		if (yyjson_is_num(v)) {
+			m_mapConf.pitch = yyjson_get_num(v);
+		}
 
 		v = yyjson_obj_get(yymap, "rotation");
-		m_mapConf.rotation = yyjson_get_num(v);
+		if (yyjson_is_num(v)) {
+			m_mapConf.rotation = yyjson_get_num(v);
+		}
 
 		v = yyjson_obj_get(yymap, "zoom");
-		m_mapConf.zoom = yyjson_get_num(v);
+		if (yyjson_is_num(v)) {
+			m_mapConf.zoom = yyjson_get_num(v);
+		}
 
 		v = yyjson_obj_get(yymap, "viewMode");
-		m_mapConf.viewMode = yyjson_get_str(v);
+		if (yyjson_is_str(v)) {
+			m_mapConf.viewMode = yyjson_get_str(v);
+		}
 	}
 
 	v = yyjson_obj_get(conf, "enableTask");
-	if (v) {
+	if (yyjson_is_bool(v)) {
 		m_bEnableTask = yyjson_get_bool(v);
 	}
 
 	v = yyjson_obj_get(conf, "tasks");
-	if (v) {
+	if (yyjson_is_arr(v)) {
 		loadTask(v);
 	}
 
 	v = yyjson_obj_get(conf, "comment");
-	if (v) {
+	if (yyjson_is_str(v)) {
 		m_comment = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "objID");
-	if (v) {
+	if (yyjson_is_str(v)) {
 		m_objID = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "alias");
-	if (v) {
+	if (yyjson_is_str(v)) {
 		m_alias = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "ioAddrBind");
-	if (v) {
+	if (yyjson_is_str(v)) {
 		m_strIoAddrBind = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "enableIO");
-	if (v) {
+	if (yyjson_is_bool(v)) {
 		m_bEnableIO = yyjson_get_bool(v);
 	}
 
 	v = yyjson_obj_get(conf, "children");
-	if (v) {
+	if (yyjson_is_arr(v)) {
 		yyjson_val* rootChildren = v;
 		if (bCreate) {
 			size_t indx = 0, max = 0;
@@ -409,7 +419,7 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate) {
 				yyjson_val* yylevel = yyjson_obj_get(childVal, "level");
 				string sLevel;
 
-				if (yylevel) {
+				if (yyjson_is_str(yylevel)) {
 					sLevel = yyjson_get_str(yylevel);
 				}
 
@@ -439,8 +449,9 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate) {
 			size_t indx = 0, max = 0;
 			yyjson_val* childVal;
 			yyjson_arr_foreach(rootChildren, indx, max, childVal) {
-				if (yyjson_obj_get(childVal, "name")) {
-					string childName = yyjson_get_str(yyjson_obj_get(childVal, "name"));
+				yyjson_val* childNameVal = yyjson_obj_get(childVal, "name");
+				if (yyjson_is_str(childNameVal)) {
+					string childName = yyjson_get_str(childNameVal);
 
 					auto iter = oldChildren.find(childName);
 					if (iter != oldChildren.end()) {
@@ -455,7 +466,7 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate) {
 						yyjson_val* yylevel = yyjson_obj_get(childVal, "level");
 						string sLevel;
 
-						if (yylevel) {
+						if (yyjson_is_str(yylevel)) {
 							sLevel = yyjson_get_str(yylevel);
 						}
 
