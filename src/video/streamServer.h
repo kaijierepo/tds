@@ -34,6 +34,9 @@ public:
 
 	void setIdleTimeout(int secs);
 
+	// 重置 ondemand 流的空闲计时（ZLM 巡检线程保活入口）
+	void keepStreamAlive(const std::string& tag);
+
 	std::shared_ptr<StreamNode> getStreamNodeByStreamUrl(std::string tag);			   // 通过url查找 StreamNode，包含 /符号
 	std::shared_ptr<StreamNode> getStreamNodeByTag(std::string tag);
 	std::shared_ptr<StreamNode> getStreamNodeByIp(const std::string& ip);  // 通过IP地址查找 StreamNode
@@ -104,7 +107,7 @@ private:
 	void startIdleMonitor();
 	void stopIdleMonitor();
 	void idleMonitorLoop();
-	void keepStreamAlive(const std::string& tag);
+	std::shared_ptr<StreamNode> getStreamNodeByTagNoLock(std::string tag); // 调用方须已持有 nodeLock_
 
 	std::thread m_rtspThread_;
 	std::atomic<bool> m_rtspRunning_{false};

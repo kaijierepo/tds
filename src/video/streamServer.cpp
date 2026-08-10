@@ -110,6 +110,12 @@ std::shared_ptr<StreamNode> StreamServer::getStreamNodeByStreamUrl(std::string s
 std::shared_ptr<StreamNode> StreamServer::getStreamNodeByTag(std::string tag)
 {
 	std::lock_guard<std::mutex> lock(nodeLock_);
+	return getStreamNodeByTagNoLock(tag);
+}
+
+// 内部辅助：调用方必须已持有 nodeLock_
+std::shared_ptr<StreamNode> StreamServer::getStreamNodeByTagNoLock(std::string tag)
+{
 	for (const auto& pair : m_mapStreamNodes)
 	{
 		if (pair.second &&
@@ -394,7 +400,7 @@ void StreamServer::idleMonitorLoop() {
 
 void StreamServer::keepStreamAlive(const std::string& tag) {
 	std::lock_guard<std::mutex> lock(nodeLock_);
-	std::shared_ptr<StreamNode> sn = getStreamNodeByTag(tag);
+	std::shared_ptr<StreamNode> sn = getStreamNodeByTagNoLock(tag);
 	if (!sn) return;
 	if (sn->config_.srcStreamFetch != "ondemand") return;
 	m_idleTrackMap_.erase(sn->config_.streamUrl);
