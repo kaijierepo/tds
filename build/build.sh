@@ -319,7 +319,7 @@ compile_cpp_if_needed ./common/udpSrv.cpp ./common/udpSrv.o
 compile_cpp_if_needed ./common/rsa_verify.cpp ./common/rsa_verify.o
 compile_cpp_if_needed ./data_server/as_interface.cpp ./data_server/as_interface.o
 compile_cpp_if_needed ./data_server/mp.cpp ./data_server/mp.o
-compile_cpp_if_needed ./data_server/mqttSrv.cpp ./data_server/mqttSrv.o
+compile_cpp_if_needed ./data_server/uplink_mqtt.cpp ./data_server/uplink_mqtt.o
 compile_cpp_if_needed ./data_server/uplinkManager.cpp ./data_server/uplinkManager.o
 compile_cpp_if_needed ./data_server/obj.cpp ./data_server/obj.o
 compile_cpp_if_needed ./data_server/prj.cpp ./data_server/prj.o
@@ -376,6 +376,7 @@ compile_cpp_if_needed ./video/streamServer.cpp ./video/streamServer.o
 compile_cpp_if_needed ./video/streamServer_file.cpp ./video/streamServer_file.o
 compile_cpp_if_needed ./video/streamServer_rtsp.cpp ./video/streamServer_rtsp.o
 compile_cpp_if_needed ./video/streamServer_rpc.cpp ./video/streamServer_rpc.o
+compile_cpp_if_needed ./video/streamSession.cpp ./video/streamSession.o
 compile_cpp_if_needed ./video/streamNode.cpp ./video/streamNode.o
 compile_cpp_if_needed ./video/streamSession.cpp ./video/streamSession.o
 compile_cpp_if_needed ./video/streamSession_rtsp.cpp ./video/streamSession_rtsp.o
@@ -426,7 +427,8 @@ obj_files="\
 ./common/udpSrv.o \
 ./data_server/as_interface.o \
 ./data_server/mp.o \
-./data_server/mqttSrv.o \
+./data_server/uplink_mqtt.o \
+./data_server/uplinkManager.o \
 ./data_server/obj.o \
 ./data_server/prj.o \
 ./data_server/rpcHandler.o \
