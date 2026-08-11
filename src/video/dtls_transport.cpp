@@ -289,6 +289,8 @@ bool DtlsTransport::handleDtlsData(const uint8_t* data, size_t len) {
 
 void DtlsTransport::feedData(const uint8_t* data, size_t len) {
     std::lock_guard<std::mutex> lock(recv_buf_mutex_);
+    // 容量上限：握手完成后 mbedtls 不再消费缓冲区，无上限增长会被滥用为内存 DoS
+    if (recv_buf_.size() + len > 64 * 1024) return;
     recv_buf_.insert(recv_buf_.end(), data, data + len);
 }
 
@@ -329,6 +331,11 @@ int DtlsTransport::doHandshakeStep() {
         // 重新绑定 DTLS 定时器回调
         mbedtls_ssl_set_timer_cb(&ssl_, &timer_,
                                   timing_set_delay, timing_get_delay);
+
+        // 重新注册密钥导出回调：session_reset 会清除握手相关状态，
+        // 不重设则 exportSrptKeys 回退到 PSA PRF（与 Chrome/BoringSSL 不兼容，
+        // 导致 SRTP 认证全部失败、画面黑屏）
+        mbedtls_ssl_set_export_keys_cb(&ssl_, captureTlsKeys, &tls_keys_);
     } else if (ret != 0) {
         char buf[128];
         mbedtls_strerror(ret, buf, sizeof(buf));

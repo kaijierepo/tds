@@ -110,8 +110,10 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 		j["openTime"] = toTimeStr(session->open_time_);
 		j["bytesSended"] = session->rtpBytesSended;
 		if (session->session_type_ == STREAM_SESSION_TYPE::CLIENT_WEBRTC_PULL) {
-			if (session->dtls_transport_) {
-				SessionDtlsState* dtls = session->dtls_transport_.get();
+			// 原子加载持有 shared_ptr：ICE 线程退出时 atomic_store(nullptr) 释放对象，
+			// 直接 .get() 会在释放后解引用（UAF）
+			if (auto dtlsShared = std::atomic_load(&session->dtls_transport_)) {
+				SessionDtlsState* dtls = dtlsShared.get();
 				if (dtls->dtls.isHandshakeDone()) {
 					const char* dtlsCipher = dtls->dtls.getDtlsCipherName();
 					const char* srtpProfile = dtls->dtls.getSrtpProfileName();
@@ -363,7 +365,11 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			si.payload_type = h264PT;
 			LOG("[WebRTC] using H264 PT=%d from Offer", h264PT);
 		}
-		si.createUDPConsecutiveSockets(true);
+		if (!si.createUDPConsecutiveSockets(true)) {
+			LOG("[WebRTC] createUDPConsecutiveSockets failed for tag=%s", tag.c_str());
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "create UDP socket pair failed");
+			return true;
+		}
 
 		std::string serverIp = session.localIP;
 		if (serverIp.empty()) serverIp = "0.0.0.0";
@@ -413,11 +419,7 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 
 		sn->startRtcSessionHandleThread(sessionPtr);
 
-#ifdef _WIN32
-		Sleep(1000);
-#else
-		usleep(1000 * 1000);
-#endif
+		// SDP 已构建完毕、ICE 线程已启动，无需等待，直接返回（首帧延迟优化）
 		json j;
 		j["tag"] = sn->config_.tag;
 		j["streamUrl"] = sn->config_.streamUrl;
