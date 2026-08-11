@@ -647,7 +647,7 @@ static std::vector<uint8_t> buildStco(const std::vector<uint64_t>& offsets) {
 // ====================================================================
 
 bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path,
-                      int recordDurationSec) {
+                      double recordDurationSec) {
     // ---------- 第 1 步：解析 Annex B .h264 文件 ----------
     std::vector<uint8_t> fileData; // 持有输入文件，保证 NalUnit::data 在整个转换期间有效
     std::vector<NalUnit>    allNals;
@@ -688,26 +688,29 @@ bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path,
     uint32_t timescale  = 90000u;
 
     // 帧率计算优先级：
-    //   1) 用实际录制时长推算（最可靠，不依赖摄像头 SPS）
+    //   1) 用实际媒体时长推算（最可靠，不依赖摄像头 SPS）
     //   2) SPS VUI timing_info
     //   3) fallback 25fps
-    uint32_t frameRate = 25u;
-    if (recordDurationSec > 0 && !frames.empty()) {
-        frameRate = static_cast<uint32_t>(frames.size()) / static_cast<uint32_t>(recordDurationSec);
-        if (frameRate == 0) frameRate = 1u;
-        LOG("[MP4] frameRate from record duration: %u fps (%zu frames / %d sec)",
-            frameRate, frames.size(), recordDurationSec);
+    double frameRateD = 0.0;
+    if (recordDurationSec > 0.0 && !frames.empty()) {
+        frameRateD = static_cast<double>(frames.size()) / recordDurationSec;
+        LOG("[MP4] frameRate from record duration: %.2f fps (%zu frames / %.3f sec)",
+            frameRateD, frames.size(), recordDurationSec);
     } else if (spsInfo.fps > 0.0) {
-        frameRate = static_cast<uint32_t>(spsInfo.fps + 0.5);
-        LOG("[MP4] frameRate from SPS VUI: %u fps", frameRate);
+        frameRateD = spsInfo.fps;
+        LOG("[MP4] frameRate from SPS VUI: %.2f fps", frameRateD);
     } else {
-        LOG("[MP4] frameRate fallback to default: %u fps", frameRate);
+        LOG("[MP4] frameRate fallback to default: 25 fps");
     }
+    if (frameRateD < 1.0 || frameRateD > 120.0) frameRateD = 25.0;
 
-    if (frameRate == 0) frameRate = 25u;
-    uint32_t delta      = timescale / frameRate;
+    // 帧间隔（stts 用整数值）；duration 用非取整帧率计算，
+    // 保证总时长与真实媒体时长一致（避免帧率取整引入 1-2s 误差）
+    double deltaD     = static_cast<double>(timescale) / frameRateD;
+    uint32_t delta    = static_cast<uint32_t>(deltaD + 0.5);
     if (delta == 0) delta = 1;
-    uint32_t duration   = static_cast<uint32_t>(frames.size()) * delta;
+    uint32_t duration = static_cast<uint32_t>(
+        static_cast<double>(frames.size()) * deltaD + 0.5);
     if (duration == 0) duration = 1;
 
     // ---------- 第 3 步：构建 avcC ----------

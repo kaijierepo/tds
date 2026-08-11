@@ -117,12 +117,20 @@ bool StreamNode::checkIsIdrNalu(const RTPPacket& packet) {
                 isIdrNalu = true;
             }
         }
-        else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 2) {
+        else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 3) {
             // STAP-A: [NAL header(1B)][NALU1 size(2B)][NALU1 data...]...
-            // STAP-A: 一个rtp packet多个nalu，若含SPS/PPS则忽略整个包
-            uint8_t firstNalType = packet.payload[3] & 0x1F;
-            if (firstNalType == NAL_TYPE_IDR) {
-                isIdrNalu = true;
+            // 遍历所有子 NAL：相机首帧常用 STAP-A 聚合 [SPS,PPS,IDR]，
+            // 只查第一个子 NAL 会漏检 IDR，导致关键帧缓存缺失
+            size_t off = 1;
+            while (off + 2 <= packet.payload.size()) {
+                uint16_t L = (uint16_t(packet.payload[off]) << 8) | packet.payload[off + 1];
+                off += 2;
+                if (L == 0 || off + L > packet.payload.size()) break;
+                if ((packet.payload[off] & 0x1F) == NAL_TYPE_IDR) {
+                    isIdrNalu = true;
+                    break;
+                }
+                off += L;
             }
         }
     }
@@ -412,43 +420,81 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
         // 重发缓存的关键帧（SPS+PPS+IDR 分片）。缓存的是相机原始 RTP 包（含 12B 头），
         // 需解析出 NALU 后按安全 MTU 重新分片发送，避免大 IDR 包在弱网被 MTU 丢弃。
         auto resendKeyframe = [&]() {
-            if (keyframe_cache_.empty()) return;
+            // 锁内拷贝出缓存快照，锁外发送：keyframe_cache_ 由 onRecvOriginRtpPkt
+            // （拉流/推流线程）无锁并发维护，这里必须与写入侧互斥
+            std::vector<std::vector<uint8_t>> kfPkts;
+            bool kfComplete = false;
+            {
+                std::lock_guard<std::mutex> lk(keyframe_cache_mutex_);
+                kfPkts = keyframe_cache_.pkts;
+                kfComplete = keyframe_cache_.complete;
+            }
+            // 缓存为空或不完整（IDR 分片有缺失）时不重发：
+            // 重发不完整的关键帧会让浏览器组帧失败继续花屏，宁可等源流下一帧 IDR
+            if (kfPkts.empty() || !kfComplete) return;
             if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
             if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
             RTPPacket kfPkt;
-            for (auto& kfData : keyframe_cache_) {
+            for (auto& kfData : kfPkts) {
                 if (!kfPkt.parse(kfData.data(), kfData.size())) continue;
-                sendH264Nalu(kfPkt.payload, packet.timestamp, kfPkt.marker);
+                // 使用缓存包自身的时间戳重发：用当前包 ts 会导致同 ts 双帧，
+                // 浏览器组帧/解码错乱（偶发花屏）
+                sendH264Nalu(kfPkt.payload, kfPkt.timestamp, kfPkt.marker);
             }
         };
 
-        // 响应浏览器 PLI/FIR：ICE 线程检测到关键帧请求后置位，转发线程在此重发关键帧
+        // 响应浏览器 PLI/FIR：ICE 线程检测到关键帧请求后置位，转发线程在此重发关键帧。
+        // 节流：刚打开时浏览器常连续发多次 PLI，距上次关键帧发送不足 300ms 时不重复
+        // 重发整个 IDR 帧（保留标志，下个包再试），避免 PLI 风暴导致关键帧流量暴涨
         if (dtlsState->request_keyframe_resend_) {
-            dtlsState->request_keyframe_resend_ = false;
-            resendKeyframe();
-            dtlsState->last_idr_sent_time_ = now_steady;
-            LOG("[WebRTC] keyframe resend triggered by client feedback");
+            if (now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(300)) {
+                dtlsState->request_keyframe_resend_ = false;
+                resendKeyframe();
+                dtlsState->last_idr_sent_time_ = now_steady;
+                LOG("[WebRTC] keyframe resend triggered by client feedback");
+            }
+            // 距上次发送不足 300ms：保留标志，下个包再响应
         }
 
-        // 主动重发：距上次发送关键帧超过阈值即重发缓存 IDR，限制解码卡顿的最长自愈时间，
-        // 不依赖浏览器是否发送 PLI（部分浏览器/场景下不会发）。源端 GOP 足够密时不触发。
-        if (now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(kMaxIdrGapMs)) {
+        // 新会话首次发送：SPS + PPS + 缓存的关键帧 RTP 数据。
+        // 置于周期重发之前：首次发送会刷新 last_idr_sent_time_，
+        // 使同一包不再触发周期重发（否则首包会连续重发 2 次整个关键帧）。
+        // 缓存就绪（完整 IDR 已缓存）时立即补发关键帧加速出图；
+        // 缓存未就绪时不消费首次标记，并丢弃非 IDR 包，
+        // 避免浏览器在无参考帧时解码花屏（首帧退化为等下一个 IDR）
+        if (session->is_first_send_) {
+            bool kfReady = false;
+            {
+                std::lock_guard<std::mutex> lk(keyframe_cache_mutex_);
+                kfReady = keyframe_cache_.complete && !keyframe_cache_.pkts.empty();
+            }
+            if (!kfReady && !packet.isIdrNalu) {
+                continue;  // 无参考帧可发，丢弃非关键帧，等下一个 IDR
+            }
+            session->is_first_send_ = false;
+            // 距上次关键帧发送 <300ms 说明本包已由 PLI/FIR 分支重发过，
+            // 只消费首次标记，不重复重发整个 IDR 帧
+            if (kfReady && now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(300)) {
+                resendKeyframe();
+                dtlsState->last_idr_sent_time_ = now_steady;
+                LOG("first send: sps/pps + keyframe for session");
+            }
+        }
+        // 主动重发（仅非首次发送的会话）：距上次发送关键帧超过阈值即重发缓存 IDR。
+        // last_idr_sent_time_ 在每次关键帧发送（PLI 响应/首次发送/IDR 帧到达）时刷新，
+        // 正常流下不触发；仅在 2s 内无任何关键帧（弱网丢 IDR）时兜底
+        else if (now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(kMaxIdrGapMs)) {
             resendKeyframe();
             dtlsState->last_idr_sent_time_ = now_steady;
             LOG("[WebRTC] periodic keyframe resend (gap>%dms)", kMaxIdrGapMs);
         }
-
-        // 新会话首次发送：SPS + PPS + 缓存的关键帧 RTP 数据
-        if (session->is_first_send_) {
-            session->is_first_send_ = false;
-            resendKeyframe();
-            dtlsState->last_idr_sent_time_ = now_steady;
-            LOG("first send: sps/pps + %zu keyframe pkts for session", keyframe_cache_.size());
-        }
-        // 每个IDR之前发送 SPS/PPS
-        else if (packet.isIdrNalu && packet.isLastIdrNalu == false && !session->sps.empty() && !session->pps.empty()) {
-            sendSingleNalRtp(session->sps, packet.timestamp);
-            sendSingleNalRtp(session->pps, packet.timestamp);
+        // 每个IDR之前发送 SPS/PPS。
+        // 注意：last_idr_sent_time_ 刷新在 SPS/PPS 是否为空之前——
+        // 相机 RTP 流不带 SPS 包（仅 SDP sprop 提供）时，IDR 帧到达同样算关键帧已发送，
+        // 否则周期重发会在每个 IDR 帧上再叠加一次完整重发（关键帧流量翻倍）
+        else if (packet.isIdrNalu && packet.isLastIdrNalu == false) {
+            if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
+            if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
             dtlsState->last_idr_sent_time_ = now_steady;
             LOG("send sps/pps");
         }
@@ -532,9 +578,11 @@ bool StreamNode::RTPPacket::parse(const uint8_t * data, size_t size) {
 }
 
 std::vector<uint8_t> StreamNode::RTPPacket::serialize() const {
-    std::vector<uint8_t> data(12 + csrc_count * 4 + payload.size());
+    // 未保存 padding 字节/扩展头/CSRC 列表，序列化时不再声称包含它们：
+    // 保留标志位但无对应数据会使接收端按 padding/extension 长度解析错乱（花屏）
+    std::vector<uint8_t> data(12 + payload.size());
 
-    data[0] = (version << 6) | (padding << 5) | (extension << 4) | csrc_count;
+    data[0] = (version << 6);
     data[1] = (marker << 7) | (payload_type & 0x7F);
 
     data[2] = (sequence_number >> 8) & 0xFF;
@@ -628,11 +676,23 @@ void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> packet) {
         }
         for (auto it = pre_packets.rbegin(); it != pre_packets.rend(); ++it) {
             if (!(*it)) continue;  // 防御：rtp_buffer_ 异常情况下跳过空指针
+            // 预录包同样计入媒体时长范围（文件里确实包含预录内容）
+            if (!rec_ctrl_.has_first_ts_) {
+                rec_ctrl_.first_rtp_ts_ = (*it)->timestamp;
+                rec_ctrl_.has_first_ts_ = true;
+            }
+            rec_ctrl_.last_rtp_ts_ = (*it)->timestamp;
             std::lock_guard<std::mutex> lock(record_queue_mutex_);
             record_queue_.push(*it);
         }
         rec_ctrl_.preRecordingDone = true;
     }
+    // 记录首末帧 RTP 时间戳，用于精确计算媒体时长
+    if (!rec_ctrl_.has_first_ts_) {
+        rec_ctrl_.first_rtp_ts_ = packet->timestamp;
+        rec_ctrl_.has_first_ts_ = true;
+    }
+    rec_ctrl_.last_rtp_ts_ = packet->timestamp;
     {
         std::lock_guard<std::mutex> queueLock(record_queue_mutex_);
         record_queue_.push(packet);
@@ -675,6 +735,10 @@ void StreamNode::writeRTPPacketToFile(std::shared_ptr<RTPPacket> pPkt, std::ofst
         uint8_t fu_a_org_type = fu_header & 0x1F;
         uint8_t nal_header = (payload[0] & 0xE0) | fu_a_org_type;
 
+        // 丢片保护：start 分片丢失时残片没有 NAL 头，继续拼接会写出损坏的
+        // NAL（首字节错位，MP4 解析帧边界错乱），直接丢弃本片
+        if (!start && rec_ctrl_.fu_a_buffer_.empty()) return;
+
         if (start) {
             rec_ctrl_.fu_a_buffer_.clear();
             rec_ctrl_.fu_a_buffer_.push_back(nal_header);
@@ -712,10 +776,6 @@ void StreamNode::threadRec_h264File() {
     }
 
     std::vector<std::shared_ptr<RTPPacket>> batch;
-    {
-        std::lock_guard<std::mutex> lock(record_queue_mutex_);
-        record_queue_ = {}; //清空队列
-    }
     while (record_io_running_) {
         {
             std::unique_lock<std::mutex> lock(record_queue_mutex_);

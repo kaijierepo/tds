@@ -72,6 +72,11 @@ public:
         bool isLastIdrNal = false;
         int nalCount = 0;
 
+        // 首末帧 RTP 时间戳（用于精确计算媒体时长，不受等待首帧/断流空洞影响）
+        uint32_t first_rtp_ts_ = 0;
+        uint32_t last_rtp_ts_ = 0;
+        bool has_first_ts_ = false;
+
         std::vector<char> fu_a_buffer_; // FU-A分片缓存
         std::chrono::steady_clock::time_point startTime;  // 录像开始时间，用于计算 duration
 	};
@@ -201,7 +206,12 @@ public:
     std::vector<char> last_pps_;  // 最新PPS缓存，IDR前写入（在onRecvOriginRtpPkt中更新）
 
     // 最近一个关键帧的 RTP 原始数据缓存（新会话首次发送时使用，加速出图）
-    std::vector<std::vector<uint8_t>> keyframe_cache_;
+    // 帧级缓存：pkts 从 IDR 第一片到 marker=1 的包；complete 表示该帧分片完整
+    struct KfCache {
+        std::vector<std::vector<uint8_t>> pkts;
+        bool complete = false;
+    };
+    KfCache keyframe_cache_;
     // 保护 keyframe_cache_ 与 last_nalu_was_idr_：sendRTPPacketToClients 可能被多个线程并发调用
     // (拉流线程 / 每个 RTSP 推流客户端独立线程 / 文件源线程)，无锁并发读写 std::vector 会造成堆破坏→double free
     std::mutex keyframe_cache_mutex_;

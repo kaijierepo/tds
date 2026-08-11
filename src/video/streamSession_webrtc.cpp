@@ -113,6 +113,9 @@ void sessionHandleSTUN(std::shared_ptr<STREAM_SESSION> session,
             uint16_t attrLen = (buf[attrPos + 2] << 8) | buf[attrPos + 3];
             int paddedLen = (attrLen + 3) & ~3;  // 4-byte aligned
             if (attrType == 0x0006) {  // USERNAME
+                // 长度上限：ufrag+pwd 合法组合最长约 256 字节（RFC 5245），
+                // 超长属性会溢出下方 256 字节的响应缓冲区（可被远程利用）
+                if (attrLen > 300) return;
                 int valLen = attrLen;
                 if (attrPos + 4 + valLen <= len) {
                     reqUsername.assign((const char*)(buf + attrPos + 4), valLen);
@@ -172,8 +175,10 @@ void sessionHandleSTUN(std::shared_ptr<STREAM_SESSION> session,
     response[pos++] = xorAddr & 0xFF;
 
     // USERNAME - 回显请求中的 USERNAME（RFC 5245 §7.1.2.2 MUST）
+    // 防御：为 XOR-MAPPED(12) + USERNAME + USE-CANDIDATE(4) + MI(24) + FP(8) 预留空间，
+    // 剩余不足则跳过该属性，避免栈缓冲区溢出
     int usernameLen = (int)reqUsername.length();
-    if (usernameLen > 0) {
+    if (usernameLen > 0 && (size_t)pos + 4 + ((usernameLen + 3) & ~3) + 28 <= sizeof(response)) {
         int paddedLen = (usernameLen + 3) & ~3;
         response[pos++] = 0x00; response[pos++] = 0x06;  // attr type = USERNAME
         response[pos++] = (usernameLen >> 8) & 0xFF;
@@ -219,6 +224,7 @@ void sessionHandleSTUN(std::shared_ptr<STREAM_SESSION> session,
                 psa_mac_update(&macOp, response, miPos);
                 size_t macLen = 20;
                 psa_status_t ps2 = psa_mac_sign_finish(&macOp, response + miPos + 4, 20, &macLen);
+                psa_mac_abort(&macOp);  // 无论 finish 成功与否都释放操作句柄
                 if (ps2 != PSA_SUCCESS) {
                     LOG("[STUN] psa_mac_sign_finish failed: %d", (int)ps2);
                 } else {
@@ -230,6 +236,7 @@ void sessionHandleSTUN(std::shared_ptr<STREAM_SESSION> session,
                     LOG("[STUN] MI computed, key='%s', hmac=%s", icePwd.c_str(), hmacHex);
                 }
             } else {
+                psa_mac_abort(&macOp);  // setup 失败也要释放操作句柄
                 LOG("[STUN] psa_mac_sign_setup failed: %d", (int)ps);
             }
             psa_destroy_key(keyId);
@@ -350,6 +357,10 @@ void sessionHandleDTLS(std::shared_ptr<STREAM_SESSION> session,
                        struct sockaddr_in& peer,
                        std::chrono::steady_clock::time_point& dtls_start) {
     if (!dtls_state->dtls_initialized) return;
+
+    // 握手完成后忽略迟到的 DTLS 包：mbedtls 不再消费内部缓冲区，
+    // 继续 feedData 会让 recv_buf_ 无限增长（内存 DoS）
+    if (dtls_state->dtls.isHandshakeDone()) return;
 
     // 每次收到 DTLS 数据包，重置握手超时计时器
     dtls_start = std::chrono::steady_clock::now();
