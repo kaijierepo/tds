@@ -57,6 +57,16 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	jOrigin["transport"] = (sn->session_origin_.transport_mode == TransportMode::UDP) ? "udp" : "tcp";
 	jOrigin["codec"] = sn->session_origin_.codec;
 	jOrigin["lastError"] = sn->session_origin_.last_error_;
+
+	json jOriginDiag;
+	jOriginDiag["remoteHost"] = sn->session_origin_.remote_host;
+	jOriginDiag["localRtpPort"] = sn->session_origin_.server_rtp_port;
+	jOriginDiag["localRtcpPort"] = sn->session_origin_.server_rtcp_port;
+	jOriginDiag["remoteRtpPort"] = sn->session_origin_.client_rtp_port;
+	jOriginDiag["remoteRtcpPort"] = sn->session_origin_.client_rtcp_port;
+	jOriginDiag["rtpSocket"] = (unsigned long long)sn->session_origin_.rtp_socket;
+	jOriginDiag["rtcpSocket"] = (unsigned long long)sn->session_origin_.rtcp_socket;
+	jOrigin["diagnostics"] = jOriginDiag;
 	jSi["originPull"] = jOrigin;
 
 	// 转推流信息
@@ -67,6 +77,16 @@ json getStreamInfo(shared_ptr<StreamNode> sn) {
 	jRelay["openTime"] = toTimeStr(sn->session_relay_push_.open_time_);
 	jRelay["bytesSended"] = sn->session_relay_push_.rtpBytesSended;
 	jRelay["lastError"] = sn->session_relay_push_.last_error_;
+
+	json jRelayDiag;
+	jRelayDiag["remoteHost"] = sn->session_relay_push_.remote_host;
+	jRelayDiag["localRtpPort"] = sn->session_relay_push_.server_rtp_port;
+	jRelayDiag["localRtcpPort"] = sn->session_relay_push_.server_rtcp_port;
+	jRelayDiag["remoteRtpPort"] = sn->session_relay_push_.client_rtp_port;
+	jRelayDiag["remoteRtcpPort"] = sn->session_relay_push_.client_rtcp_port;
+	jRelayDiag["rtpSocket"] = (unsigned long long)sn->session_relay_push_.rtp_socket;
+	jRelayDiag["rtcpSocket"] = (unsigned long long)sn->session_relay_push_.rtcp_socket;
+	jRelay["diagnostics"] = jRelayDiag;
 	jSi["relayPush"] = jRelay;
 
 	json jRtpBuffer;

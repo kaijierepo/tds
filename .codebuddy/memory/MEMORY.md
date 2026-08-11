@@ -4,7 +4,10 @@
 
 - **编译**：改完代码即可，不要自动编译，除非用户明确要求。
 - **Git 提交**：不要自动提交，除非用户明确要求。
-- **SVN 提交**：不要自动提交，除非用户明确要求。提交中文消息必须加 `--encoding UTF-8` 参数，否则 SVN 1.9.x 客户端在 Windows 上会用 GBK 编码导致中文乱码。命令格式：`svn commit -m "消息" --encoding UTF-8`
+- **SVN 提交**：不要自动提交，除非用户明确要求。PowerShell 下传中文参数给 svn 会丢失编码，不要用 `svn commit -m "中文" --encoding UTF-8`。正确做法：
+  1. 将提交消息写入 UTF-8 文件：`[System.IO.File]::WriteAllText("msg.txt", "消息", [System.Text.UTF8Encoding]::new($false))`
+  2. 从文件提交：`svn commit -F msg.txt --encoding UTF-8`
+  3. 提交后检查是否乱码，若乱码需用 `svn propset --revprop` 修正（需服务端支持）
 
 ## 项目约定
 
