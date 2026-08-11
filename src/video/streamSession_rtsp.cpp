@@ -994,12 +994,20 @@ bool STREAM_SESSION::rtspGetParameterReq(const std::string& url,
 		host_header += ":" + std::to_string(url_components.port);
 	}
 
+	// 使用独立临时连接发送心跳：interleaved TCP 拉流时信令与 RTP 共用
+	// 拉流连接，复用 conn_ 会导致心跳线程与收包线程竞争 recv 并吞噬 RTP 帧
+	Connection tmp_conn;
+	if (!tmp_conn.connect(url_components.host, url_components.port)) {
+		logError("GET_PARAMETER connect failed: " + url_components.host + ":" + std::to_string(url_components.port));
+		return false;
+	}
+
 	// 使用自身认证信息
 	STREAM_SESSION* auth_session = this;
 
 	std::stringstream request;
 	request << "GET_PARAMETER " << url << " RTSP/1.0\r\n"
-		<< "CSeq: " << conn_->nextCSeq() << "\r\n"
+		<< "CSeq: " << tmp_conn.nextCSeq() << "\r\n"
 		<< "User-Agent: StreamNode/1.0\r\n"
 		<< (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
@@ -1016,18 +1024,18 @@ bool STREAM_SESSION::rtspGetParameterReq(const std::string& url,
 	const std::string req = request.str();
 	logVerbose(">> GET_PARAMETER " + url);
 
-	int sent = conn_->send(req.c_str(), req.size());
+	int sent = tmp_conn.send(req.c_str(), req.size());
 	if (sent != static_cast<int>(req.size())) {
 		logError("GET_PARAMETER send failed: sent=" + std::to_string(sent) +
-			" err=" + std::to_string(conn_->lastError()));
+			" err=" + std::to_string(tmp_conn.lastError()));
 		return false;
 	}
 
 	std::string response;
-	int rc = conn_->receiveHttpResp(response, 5000);
+	int rc = tmp_conn.receiveHttpResp(response, 3000);
 	if (rc <= 0) {
 		logError("GET_PARAMETER recv failed: rc=" + std::to_string(rc) +
-			" err=" + std::to_string(conn_->lastError()));
+			" err=" + std::to_string(tmp_conn.lastError()));
 		return false;
 	}
 
