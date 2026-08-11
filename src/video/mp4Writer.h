@@ -45,9 +45,9 @@ struct VideoFrame {
 // 将 H.264 Annex B 裸流文件转换为 MP4 容器文件
 // h264Path: 输入 .h264 文件路径（UTF-8）
 // mp4Path:  输出 .mp4 文件路径（UTF-8）
-// recordDurationSec: 录像实际时长（秒），>0 时用帧数/时长推算真实帧率
+// recordDurationSec: 录像真实媒体时长（秒，浮点精度），>0 时用帧数/时长推算真实帧率
 // 返回 true 表示转换成功
 bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path,
-                      int recordDurationSec = 0);
+                      double recordDurationSec = 0);
 
 } // namespace mp4
