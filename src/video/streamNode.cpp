@@ -466,6 +466,14 @@ void StreamNode::threadCtrl_rtspClient() {
                 recv_thread_origin_rtp_.detach();
                 open_time_ = std::chrono::system_clock::now();
                 isPulling_ = true;
+
+                // 新连接（含重连）：流参数可能变化（SSRC/SPS/PPS），清空旧关键帧缓存，
+                // 避免新会话首帧重发旧流数据导致花屏
+                {
+                    std::lock_guard<std::mutex> lock(keyframe_cache_mutex_);
+                    keyframe_cache_.pkts.clear();
+                    keyframe_cache_.complete = false;
+                }
             }
             else {
                 {
@@ -754,11 +762,12 @@ void StreamNode::threadCtrl_webrtcServer(std::shared_ptr<STREAM_SESSION> session
             }
         }
 
-        // 检查session->last_stun_bind_req_time 是否过去超过20秒，是则退出线程
+        // 检查会话是否长时间无任何流量（媒体活跃时 SRTCP 反馈会持续刷新时间戳）
+        // 120s 无任何包视为客户端断开；媒体播放中几乎不会触发
         if (session->last_stun_bind_req_time.time_since_epoch().count() > 0) {
             auto now = std::chrono::system_clock::now();
-            if (now - session->last_stun_bind_req_time > std::chrono::seconds(20)) {
-                LOG("[ICE] STUN keep-alive timeout (20s), client disconnected");
+            if (now - session->last_stun_bind_req_time > std::chrono::seconds(120)) {
+                LOG("[ICE] keep-alive timeout (120s), client disconnected");
                 session->ctrl_thread_webrtc_server_running_ = false;
                 break;
             }
@@ -768,6 +777,11 @@ void StreamNode::threadCtrl_webrtcServer(std::shared_ptr<STREAM_SESSION> session
             continue;  // 超时，继续循环
         }
         if (len < 1) continue;
+
+        // 活跃性刷新：收到任何 UDP 包（STUN/DTLS/SRTCP）都视为连接活跃。
+        // RFC 8445 §11.1.1：媒体流活跃时 Chrome 不发 STUN keepalive，
+        // 若只以 STUN 判活会在播放约 20s 后误杀正在播放的会话。
+        session->last_stun_bind_req_time = std::chrono::system_clock::now();
 
         uint8_t firstByte = buf[0];
 
@@ -848,6 +862,25 @@ void StreamNode::threadCtrl_webrtcServer(std::shared_ptr<STREAM_SESSION> session
     }
     logInfo("ICE thread exiting, session removed from client_pull list, socket fd="
             + std::to_string(session->rtp_socket));
+
+    // 关闭本会话的 UDP socket：STREAM_SESSION 无自定义析构，且会话结束路径
+    // 没有其它关闭点，不在此关闭会导致每次断连泄漏 fd，长期运行耗尽系统句柄
+    if (session->rtp_socket != kInvalidSocket) {
+#ifdef _WIN32
+        closesocket(static_cast<SOCKET>(session->rtp_socket));
+#else
+        close(session->rtp_socket);
+#endif
+        session->rtp_socket = kInvalidSocket;
+    }
+    if (session->rtcp_socket != kInvalidSocket) {
+#ifdef _WIN32
+        closesocket(static_cast<SOCKET>(session->rtcp_socket));
+#else
+        close(session->rtcp_socket);
+#endif
+        session->rtcp_socket = kInvalidSocket;
+    }
 
     // 线程自身退出时无法 join 自己；若 thread 对象仍 joinable，析构会 terminate。
     // 在线程返回前 detach，使其与 thread 对象分离，避免后续析构 session 时崩溃。
@@ -967,12 +1000,20 @@ void StreamNode::onRecvOriginRtpPkt(std::shared_ptr<RTPPacket> pkt, STREAM_SESSI
         }
     }
 
-    // 关键帧缓存：跟踪最新 IDR 帧的 RTP 数据，新会话首次发送时使用
-    if (pkt->isLastIdrNalu == false && pkt->isIdrNalu == true) {
-        keyframe_cache_.clear();
-    }
-    if (pkt->isIdrNalu) {
-        keyframe_cache_.push_back(pkt->data);
+    // 关键帧缓存：跟踪最新 IDR 帧的 RTP 数据，新会话首次发送时使用。
+    // 帧级缓存：从 IDR 第一片到 marker=1 的包全部缓存，complete 标记帧完整。
+    // 加锁：onRecvOriginRtpPkt 可能被拉流线程与 RTSP 推流线程并发调用，
+    // 无锁读写 std::vector 会造成堆破坏（见 streamNode.h 成员注释）。
+    {
+        std::lock_guard<std::mutex> lock(keyframe_cache_mutex_);
+        if (pkt->isLastIdrNalu == false && pkt->isIdrNalu == true) {
+            keyframe_cache_.pkts.clear();
+            keyframe_cache_.complete = false;
+        }
+        if (pkt->isIdrNalu) {
+            keyframe_cache_.pkts.push_back(pkt->data);
+            if (pkt->marker) keyframe_cache_.complete = true;
+        }
     }
 
     // 放入缓存
