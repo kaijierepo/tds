@@ -117,7 +117,7 @@ bool StreamNode::checkIsIdrNalu(const RTPPacket& packet) {
                 isIdrNalu = true;
             }
         }
-        else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 2) {
+        else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 3) {
             // STAP-A: [NAL header(1B)][NALU1 size(2B)][NALU1 data...]...
             // STAP-A: 一个rtp packet多个nalu，若含SPS/PPS则忽略整个包
             uint8_t firstNalType = packet.payload[3] & 0x1F;
@@ -628,11 +628,23 @@ void StreamNode::recordRTPPacket(std::shared_ptr<RTPPacket> packet) {
         }
         for (auto it = pre_packets.rbegin(); it != pre_packets.rend(); ++it) {
             if (!(*it)) continue;  // 防御：rtp_buffer_ 异常情况下跳过空指针
+            // 预录包同样计入媒体时长范围（文件里确实包含预录内容）
+            if (!rec_ctrl_.has_first_ts_) {
+                rec_ctrl_.first_rtp_ts_ = (*it)->timestamp;
+                rec_ctrl_.has_first_ts_ = true;
+            }
+            rec_ctrl_.last_rtp_ts_ = (*it)->timestamp;
             std::lock_guard<std::mutex> lock(record_queue_mutex_);
             record_queue_.push(*it);
         }
         rec_ctrl_.preRecordingDone = true;
     }
+    // 记录首末帧 RTP 时间戳，用于精确计算媒体时长
+    if (!rec_ctrl_.has_first_ts_) {
+        rec_ctrl_.first_rtp_ts_ = packet->timestamp;
+        rec_ctrl_.has_first_ts_ = true;
+    }
+    rec_ctrl_.last_rtp_ts_ = packet->timestamp;
     {
         std::lock_guard<std::mutex> queueLock(record_queue_mutex_);
         record_queue_.push(packet);
@@ -675,6 +687,10 @@ void StreamNode::writeRTPPacketToFile(std::shared_ptr<RTPPacket> pPkt, std::ofst
         uint8_t fu_a_org_type = fu_header & 0x1F;
         uint8_t nal_header = (payload[0] & 0xE0) | fu_a_org_type;
 
+        // 丢片保护：start 分片丢失时残片没有 NAL 头，继续拼接会写出损坏的
+        // NAL（首字节错位，MP4 解析帧边界错乱），直接丢弃本片
+        if (!start && rec_ctrl_.fu_a_buffer_.empty()) return;
+
         if (start) {
             rec_ctrl_.fu_a_buffer_.clear();
             rec_ctrl_.fu_a_buffer_.push_back(nal_header);
@@ -712,10 +728,6 @@ void StreamNode::threadRec_h264File() {
     }
 
     std::vector<std::shared_ptr<RTPPacket>> batch;
-    {
-        std::lock_guard<std::mutex> lock(record_queue_mutex_);
-        record_queue_ = {}; //清空队列
-    }
     while (record_io_running_) {
         {
             std::unique_lock<std::mutex> lock(record_queue_mutex_);
