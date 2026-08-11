@@ -48,8 +48,10 @@ size_t IsValidPkt_HTTP(std::string& strData, size_t iLen) {
     if (iPos_contentLengthLineStart == std::string::npos) {
         auto iDataLen = strData.length();
         if (iDataLen >= 4) {
-            std::string tail = strData.substr(iDataLen - 4, 4);
-            if (tail == "\r\n\r\n")
+            // HTTP 响应头结束标记 \r\n\r\n 可出现在任意位置（其后可能紧跟
+            // RTSP interleaved 的 RTP 数据）。按尾部字节判断会把尾随的 RTP
+            // 数据误判为响应体而持续读取，导致心跳线程吞噬视频帧
+            if (strData.find("\r\n\r\n") != std::string::npos)
                 return iLen;
             else
                 return 0;
@@ -406,6 +408,14 @@ void StreamNode::stop() {
 	}
 
 
+
+    //清理录像状态：recording 保持 true 会导致节点重新 run() 后
+    //recordRTPPacket 持续入队但无人消费（IO 线程已退出），队列无限增长
+    {
+        std::lock_guard<std::recursive_mutex> lock(rec_mutex_);
+        rec_ctrl_.recording = false;
+        rec_ctrl_.fu_a_buffer_.clear();
+    }
 
     //录像工作线程
     if (record_io_running_) {
@@ -891,6 +901,10 @@ void StreamNode::threadRecv_rtspPublish(std::shared_ptr<STREAM_SESSION> session)
             if (pkt->parse(buffer.data(), received)) {
                 onRecvOriginRtpPkt(pkt,*session);
             }
+            else {
+                // 收包失败：RTSP 推流 RTP 包解析失败，该包丢弃
+                LOG("[warn][RTSP-Recv]rtp 包解析失败, tag=%s, received=%d", session->tag_.c_str(), received);
+            }
         }
         else if (received < 0) {
             // 超时或错误，检查是否长时间没有收到数据
@@ -1076,9 +1090,15 @@ void StreamNode::threadRecv_originPull() {
             if (pkt->parse(buffer.data(), received)) {
                 onRecvOriginRtpPkt(pkt, session_origin_);
             }
+            else {
+                // 收包失败：RTP 包解析失败（长度/格式异常），该包被丢弃，录像与转发均缺失此包
+                LOG("[warn][StreamNode]rtp 包解析失败, tag=%s, received=%d", config_.tag.c_str(), received);
+            }
         }
         else if (received > 0 && received <= 12) {
-            printf("[StreamNode]rtp handle thread,wrong recv len");
+            // 收包失败：收到数据但长度不足 RTP 头(12字节)，视为异常包丢弃
+            LOG("[warn][StreamNode]rtp 收包长度异常, tag=%s, received=%d (小于RTP头12字节，丢弃)",
+                config_.tag.c_str(), received);
         }
         else {
             // 检查RTP超时

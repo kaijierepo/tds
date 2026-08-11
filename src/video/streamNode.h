@@ -72,6 +72,11 @@ public:
         bool isLastIdrNal = false;
         int nalCount = 0;
 
+        // 首末帧 RTP 时间戳（用于精确计算媒体时长，不受等待首帧/断流空洞影响）
+        uint32_t first_rtp_ts_ = 0;
+        uint32_t last_rtp_ts_ = 0;
+        bool has_first_ts_ = false;
+
         std::vector<char> fu_a_buffer_; // FU-A分片缓存
         std::chrono::steady_clock::time_point startTime;  // 录像开始时间，用于计算 duration
 	};
