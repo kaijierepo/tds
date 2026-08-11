@@ -4,6 +4,7 @@
 #include "mp4Writer.h"
 #include "logger.h"
 #include <thread>
+#include <cmath>
 
 string toTimeStr(std::chrono::system_clock::time_point tp) {
 	std::time_t tt = std::chrono::system_clock::to_time_t(tp);
@@ -267,6 +268,13 @@ bool StreamServer::rpc_remux(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION 
 	if (yyv)
 		target = yyjson_get_str(yyv);
 
+	// 路径安全校验：srcFile/targetFile 是外部输入，禁止目录穿越（..）与盘符（:）
+	if (src.find("..") != std::string::npos || src.find(":") != std::string::npos ||
+		target.find("..") != std::string::npos || target.find(":") != std::string::npos)
+	{
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "invalid srcFile/targetFile");
+		return true;
+	}
 	src = m_recordPath + src;
 	target = m_recordPath + target;
 
@@ -470,6 +478,9 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 			rc->rec_ctrl_.firstWrite = true;
 			rc->rec_ctrl_.preRecordingDone = false;
 			rc->rec_ctrl_.preSeconds = preTime;
+			rc->rec_ctrl_.first_rtp_ts_ = 0;
+			rc->rec_ctrl_.last_rtp_ts_ = 0;
+			rc->rec_ctrl_.has_first_ts_ = false;
 			DB_TIME now; now.setNow();
 			std::string ts = str::format("%04d%02d%02d_%02d%02d%02d",
 				now.wYear, now.wMonth, now.wDay,
@@ -535,9 +546,18 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			rc->flushRecordBuffer();
 
 			auto now = std::chrono::steady_clock::now();
-			int duration = static_cast<int>(
-				std::chrono::duration_cast<std::chrono::seconds>(
-					now - rc->rec_ctrl_.startTime).count());
+			// 用首末帧 RTP 时间戳计算真实媒体时长（比墙钟准确：
+			// 不受等待首个关键帧、断流空洞的影响，且支持 32 位回绕）
+			uint32_t tsDiff = rc->rec_ctrl_.last_rtp_ts_ - rc->rec_ctrl_.first_rtp_ts_;
+			uint32_t clock = (rc->clock_rate_ > 0) ? static_cast<uint32_t>(rc->clock_rate_) : 90000u;
+			double mediaDurationSec = (clock > 0 && rc->rec_ctrl_.has_first_ts_)
+				? static_cast<double>(tsDiff) / clock : 0.0;
+			if (mediaDurationSec <= 0.0) {
+				// 兜底：时间戳缺失/异常（如未收到帧）时回退墙钟时长
+				mediaDurationSec = std::chrono::duration<double>(
+					now - rc->rec_ctrl_.startTime).count();
+			}
+			int duration = static_cast<int>(std::lround(mediaDurationSec));
 			std::string filePath = rc->rec_ctrl_.path;
 			size_t pos = filePath.find_last_of("/\\");
 		std::string fileName = (pos != std::string::npos) ? filePath.substr(pos + 1) : filePath;
@@ -555,8 +575,8 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 
 			// 异步将 .h264 转为 .mp4（不阻塞 RPC 响应）
 			std::string mp4Path = filePath.substr(0, filePath.size() - 5) + ".mp4";
-			std::thread([h264Path = filePath, mp4Path]() {
-					const bool ok = mp4::convertH264toMP4(h264Path, mp4Path);
+			std::thread([h264Path = filePath, mp4Path, mediaDurationSec]() {
+					const bool ok = mp4::convertH264toMP4(h264Path, mp4Path, mediaDurationSec);
 					LOG("[MP4] async remux %s: %s -> %s",
 						ok ? "success" : "failed", h264Path.c_str(), mp4Path.c_str());
 			}).detach();
@@ -585,6 +605,13 @@ bool StreamServer::rpc_removeRecordFile(yyjson_val* params, RPC_RESP& rpcResp, R
 	if (fileUrl.empty())
 	{
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param missing, fileUrl is not specified");
+		return true;
+	}
+	// 路径安全校验：fileUrl 是外部输入，禁止目录穿越（..）与盘符（:）
+	if (fileUrl.find("..") != std::string::npos ||
+		fileUrl.find(":") != std::string::npos)
+	{
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "invalid fileUrl");
 		return true;
 	}
 	std::string filePath = tds->conf->dbPath + fileUrl.substr(std::string("/db").length());
