@@ -443,23 +443,22 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             }
         };
 
-        // 响应浏览器 PLI/FIR：ICE 线程检测到关键帧请求后置位，转发线程在此重发关键帧
+        // 响应浏览器 PLI/FIR：ICE 线程检测到关键帧请求后置位，转发线程在此重发关键帧。
+        // 节流：刚打开时浏览器常连续发多次 PLI，距上次关键帧发送不足 300ms 时不重复
+        // 重发整个 IDR 帧（保留标志，下个包再试），避免 PLI 风暴导致关键帧流量暴涨
         if (dtlsState->request_keyframe_resend_) {
-            dtlsState->request_keyframe_resend_ = false;
-            resendKeyframe();
-            dtlsState->last_idr_sent_time_ = now_steady;
-            LOG("[WebRTC] keyframe resend triggered by client feedback");
-        }
-
-        // 主动重发：距上次发送关键帧超过阈值即重发缓存 IDR，限制解码卡顿的最长自愈时间，
-        // 不依赖浏览器是否发送 PLI（部分浏览器/场景下不会发）。源端 GOP 足够密时不触发。
-        if (now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(kMaxIdrGapMs)) {
-            resendKeyframe();
-            dtlsState->last_idr_sent_time_ = now_steady;
-            LOG("[WebRTC] periodic keyframe resend (gap>%dms)", kMaxIdrGapMs);
+            if (now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(300)) {
+                dtlsState->request_keyframe_resend_ = false;
+                resendKeyframe();
+                dtlsState->last_idr_sent_time_ = now_steady;
+                LOG("[WebRTC] keyframe resend triggered by client feedback");
+            }
+            // 距上次发送不足 300ms：保留标志，下个包再响应
         }
 
         // 新会话首次发送：SPS + PPS + 缓存的关键帧 RTP 数据。
+        // 置于周期重发之前：首次发送会刷新 last_idr_sent_time_，
+        // 使同一包不再触发周期重发（否则首包会连续重发 2 次整个关键帧）。
         // 缓存就绪（完整 IDR 已缓存）时立即补发关键帧加速出图；
         // 缓存未就绪时不消费首次标记，并丢弃非 IDR 包，
         // 避免浏览器在无参考帧时解码花屏（首帧退化为等下一个 IDR）
@@ -473,16 +472,29 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                 continue;  // 无参考帧可发，丢弃非关键帧，等下一个 IDR
             }
             session->is_first_send_ = false;
-            if (kfReady) {
+            // 距上次关键帧发送 <300ms 说明本包已由 PLI/FIR 分支重发过，
+            // 只消费首次标记，不重复重发整个 IDR 帧
+            if (kfReady && now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(300)) {
                 resendKeyframe();
                 dtlsState->last_idr_sent_time_ = now_steady;
                 LOG("first send: sps/pps + keyframe for session");
             }
         }
-        // 每个IDR之前发送 SPS/PPS
-        else if (packet.isIdrNalu && packet.isLastIdrNalu == false && !session->sps.empty() && !session->pps.empty()) {
-            sendSingleNalRtp(session->sps, packet.timestamp);
-            sendSingleNalRtp(session->pps, packet.timestamp);
+        // 主动重发（仅非首次发送的会话）：距上次发送关键帧超过阈值即重发缓存 IDR。
+        // last_idr_sent_time_ 在每次关键帧发送（PLI 响应/首次发送/IDR 帧到达）时刷新，
+        // 正常流下不触发；仅在 2s 内无任何关键帧（弱网丢 IDR）时兜底
+        else if (now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(kMaxIdrGapMs)) {
+            resendKeyframe();
+            dtlsState->last_idr_sent_time_ = now_steady;
+            LOG("[WebRTC] periodic keyframe resend (gap>%dms)", kMaxIdrGapMs);
+        }
+        // 每个IDR之前发送 SPS/PPS。
+        // 注意：last_idr_sent_time_ 刷新在 SPS/PPS 是否为空之前——
+        // 相机 RTP 流不带 SPS 包（仅 SDP sprop 提供）时，IDR 帧到达同样算关键帧已发送，
+        // 否则周期重发会在每个 IDR 帧上再叠加一次完整重发（关键帧流量翻倍）
+        else if (packet.isIdrNalu && packet.isLastIdrNalu == false) {
+            if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
+            if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
             dtlsState->last_idr_sent_time_ = now_steady;
             LOG("send sps/pps");
         }
