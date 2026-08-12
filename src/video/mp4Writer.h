@@ -29,6 +29,9 @@ struct SpsInfo {
     bool     valid       = false;
 };
 
+// 从 SPS NAL（含 NAL header）解析 VUI timing_info 帧率，失败或无 VUI 返回 0.0
+double parseSpsFps(const uint8_t* spsNal, size_t size);
+
 // NAL 单元（引用 .h264 文件数据，不持有内存）
 struct NalUnit {
     const uint8_t* data;
@@ -45,9 +48,11 @@ struct VideoFrame {
 // 将 H.264 Annex B 裸流文件转换为 MP4 容器文件
 // h264Path: 输入 .h264 文件路径（UTF-8）
 // mp4Path:  输出 .mp4 文件路径（UTF-8）
-// recordDurationSec: 录像真实媒体时长（秒，浮点精度），>0 时用帧数/时长推算真实帧率
+// recordDurationSec: 录像真实媒体时长（秒，浮点精度）
+// spsFps: 录制时从 SPS VUI 解析的帧率（>0 时最高优先级，丢包场景帧率仍正确）
+// 帧率优先级：显式 spsFps > 文件内 SPS VUI > 帧数/时长推算 > 25fps
 // 返回 true 表示转换成功
 bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path,
-                      double recordDurationSec = 0);
+                      double recordDurationSec = 0, double spsFps = 0);
 
 } // namespace mp4

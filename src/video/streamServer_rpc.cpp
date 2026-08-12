@@ -579,7 +579,13 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 				mediaDurationSec = std::chrono::duration<double>(
 					now - rc->rec_ctrl_.startTime).count();
 			}
-			int duration = static_cast<int>(std::lround(mediaDurationSec));
+			// 丢包时帧数/时长推算会偏差：duration 以 SPS 帧率推算的播放时长为准
+			// （与 MP4 播放时长一致），无 SPS 帧率信息时维持原 mediaDurationSec
+			double spsFps = rc->rec_ctrl_.sps_fps;
+			uint64_t frameCount = rc->rec_ctrl_.frame_count;
+			int duration = (spsFps > 0.0 && frameCount > 0)
+				? static_cast<int>(std::lround(static_cast<double>(frameCount) / spsFps))
+				: static_cast<int>(std::lround(mediaDurationSec));
 			std::string filePath = rc->rec_ctrl_.path;
 			size_t pos = filePath.find_last_of("/\\");
 		std::string fileName = (pos != std::string::npos) ? filePath.substr(pos + 1) : filePath;
@@ -597,8 +603,8 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 
 			// 异步将 .h264 转为 .mp4（不阻塞 RPC 响应）
 			std::string mp4Path = filePath.substr(0, filePath.size() - 5) + ".mp4";
-			std::thread([h264Path = filePath, mp4Path, mediaDurationSec]() {
-					const bool ok = mp4::convertH264toMP4(h264Path, mp4Path, mediaDurationSec);
+			std::thread([h264Path = filePath, mp4Path, mediaDurationSec, spsFps]() {
+					const bool ok = mp4::convertH264toMP4(h264Path, mp4Path, mediaDurationSec, spsFps);
 					LOG("[MP4] async remux %s: %s -> %s",
 						ok ? "success" : "failed", h264Path.c_str(), mp4Path.c_str());
 			}).detach();
