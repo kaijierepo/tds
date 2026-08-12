@@ -409,7 +409,6 @@ compile_cpp_if_needed ./video/streamServer_rtsp.cpp ./video/streamServer_rtsp.o
 compile_cpp_if_needed ./video/streamServer_rpc.cpp ./video/streamServer_rpc.o
 compile_cpp_if_needed ./video/streamSession.cpp ./video/streamSession.o
 compile_cpp_if_needed ./video/streamNode.cpp ./video/streamNode.o
-compile_cpp_if_needed ./video/streamSession.cpp ./video/streamSession.o
 compile_cpp_if_needed ./video/streamSession_rtsp.cpp ./video/streamSession_rtsp.o
 compile_cpp_if_needed ./video/streamNode_rtp.cpp ./video/streamNode_rtp.o
 compile_cpp_if_needed ./video/mp4Writer.cpp ./video/mp4Writer.o
