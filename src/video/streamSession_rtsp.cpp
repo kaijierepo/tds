@@ -1005,29 +1005,31 @@ bool STREAM_SESSION::rtspGetParameterReq(const std::string& url,
 	// 使用自身认证信息
 	STREAM_SESSION* auth_session = this;
 
-	std::stringstream request;
-	request << "GET_PARAMETER " << url << " RTSP/1.0\r\n"
-		<< "CSeq: " << tmp_conn.nextCSeq() << "\r\n"
-		<< "User-Agent: StreamNode/1.0\r\n"
-		<< (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
+	// 辅助函数：在 tmp_conn 上构建并发送 GET_PARAMETER 请求
+	auto sendRequest = [&]() -> bool {
+		std::stringstream request;
+		request << "GET_PARAMETER " << url << " RTSP/1.0\r\n"
+			<< "CSeq: " << tmp_conn.nextCSeq() << "\r\n"
+			<< "User-Agent: StreamNode/1.0\r\n"
+			<< (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
-	// 添加认证头
-	if (auth_session && auth_session->hasAuthCredentials() && !auth_session->server_auth_header_.empty()) {
-		auth_session->buildAuthHeader("GET_PARAMETER", url);
-		request << auth_session->server_auth_header_ << "\r\n";
-	}
+		if (auth_session && auth_session->hasAuthCredentials()) {
+			auth_session->buildAuthHeader("GET_PARAMETER", url);
+			request << auth_session->server_auth_header_ << "\r\n";
+		}
 
-	request << "Session: " << session << "\r\n"
-		<< "Content-Length: 0\r\n"
-		<< "\r\n";
+		request << "Session: " << session << "\r\n"
+			<< "Content-Length: 0\r\n"
+			<< "\r\n";
 
-	const std::string req = request.str();
+		const std::string req = request.str();
+		int sent = tmp_conn.send(req.c_str(), req.size());
+		return sent == static_cast<int>(req.size());
+	};
+
 	logVerbose(">> GET_PARAMETER " + url);
-
-	int sent = tmp_conn.send(req.c_str(), req.size());
-	if (sent != static_cast<int>(req.size())) {
-		logError("GET_PARAMETER send failed: sent=" + std::to_string(sent) +
-			" err=" + std::to_string(tmp_conn.lastError()));
+	if (!sendRequest()) {
+		logError("GET_PARAMETER send failed: " + url);
 		return false;
 	}
 
@@ -1037,6 +1039,25 @@ bool STREAM_SESSION::rtspGetParameterReq(const std::string& url,
 		logError("GET_PARAMETER recv failed: rc=" + std::to_string(rc) +
 			" err=" + std::to_string(tmp_conn.lastError()));
 		return false;
+	}
+
+	// 某些设备（如海康）将 nonce 与连接绑定，新连接使用旧 nonce 会返回 401
+	// 收到 401 时重新解析新挑战，在同一连接上重发一次
+	if (response.find("401") != std::string::npos && auth_session && auth_session->hasAuthCredentials()) {
+		if (parseWWWAuthenticate(response, *auth_session)) {
+			logVerbose("GET_PARAMETER 401 reauth, nonce=" + auth_session->server_auth_nonce_);
+			if (!sendRequest()) {
+				logError("GET_PARAMETER reauth send failed: " + url);
+				return false;
+			}
+			response.clear();
+			rc = tmp_conn.receiveHttpResp(response, 3000);
+			if (rc <= 0) {
+				logError("GET_PARAMETER reauth recv failed: rc=" + std::to_string(rc) +
+					" err=" + std::to_string(tmp_conn.lastError()));
+				return false;
+			}
+		}
 	}
 
 	if (response.find("200 OK") == std::string::npos) {

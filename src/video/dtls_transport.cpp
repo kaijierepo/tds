@@ -240,9 +240,9 @@ bool DtlsTransport::init(const std::string& cert_pem, const std::string& key_pem
     // DTLS 超时设置
     mbedtls_ssl_conf_handshake_timeout(&conf_, 1000, 30000); // min 1s, max 30s
 
-    // 开启调试
-    mbedtls_ssl_conf_dbg(&conf_, debug_print, nullptr);
-    mbedtls_debug_set_threshold(2);  // INFO level
+    // 开启调试（日志过多，暂时注释；需要排查 DTLS 握手问题时再打开）
+    // mbedtls_ssl_conf_dbg(&conf_, debug_print, nullptr);
+    // mbedtls_debug_set_threshold(2);  // INFO level
 
     conf_ready_ = true;
     initialized_ = true;

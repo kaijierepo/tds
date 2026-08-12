@@ -451,7 +451,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                 dtlsState->request_keyframe_resend_ = false;
                 resendKeyframe();
                 dtlsState->last_idr_sent_time_ = now_steady;
-                LOG("[WebRTC] keyframe resend triggered by client feedback");
+                // LOG("[WebRTC] keyframe resend triggered by client feedback");
             }
             // 距上次发送不足 300ms：保留标志，下个包再响应
         }
@@ -486,7 +486,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
         else if (now_steady - dtlsState->last_idr_sent_time_ >= std::chrono::milliseconds(kMaxIdrGapMs)) {
             resendKeyframe();
             dtlsState->last_idr_sent_time_ = now_steady;
-            LOG("[WebRTC] periodic keyframe resend (gap>%dms)", kMaxIdrGapMs);
+            // LOG("[WebRTC] periodic keyframe resend (gap>%dms)", kMaxIdrGapMs);
         }
         // 每个IDR之前发送 SPS/PPS。
         // 注意：last_idr_sent_time_ 刷新在 SPS/PPS 是否为空之前——
@@ -496,7 +496,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
             if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
             dtlsState->last_idr_sent_time_ = now_steady;
-            LOG("send sps/pps");
+            // LOG("send sps/pps");
         }
 
         // 重新分片发送本帧 H.264 负载（安全 MTU，解决弱网大包被丢弃导致的冻结/花屏）

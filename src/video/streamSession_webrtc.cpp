@@ -56,8 +56,8 @@ void sessionHandleSRTCP(std::shared_ptr<STREAM_SESSION> session,
 
         if (pt == 206 && (fmt == 1 || fmt == 4)) {
             // PSFB: PLI(1)/FIR(4) -> 请求重发关键帧
-            LOG("[ICE] client feedback %s, request keyframe resend",
-                fmt == 1 ? "PLI" : "FIR");
+            // LOG("[ICE] client feedback %s, request keyframe resend",
+            //     fmt == 1 ? "PLI" : "FIR");
             dtls_state->request_keyframe_resend_ = true;
         }
         else if (pt == 205 && fmt == 1) {
@@ -144,8 +144,8 @@ void sessionHandleSTUN(std::shared_ptr<STREAM_SESSION> session,
         }
     }
 
-    LOG("[STUN] Received Binding Request from %s:%d, username=%s, useCandidate=%d",
-        inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), reqUsername.c_str(), hasUseCandidate);
+    // LOG("[STUN] Received Binding Request from %s:%d, username=%s, useCandidate=%d",
+    //     inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), reqUsername.c_str(), hasUseCandidate);
 
     // ---- 构造 Binding Success Response（含 MESSAGE-INTEGRITY） ----
     // ICE 要求 Success Response 必须包含 MESSAGE-INTEGRITY 和 USERNAME，
@@ -228,12 +228,12 @@ void sessionHandleSTUN(std::shared_ptr<STREAM_SESSION> session,
                 if (ps2 != PSA_SUCCESS) {
                     LOG("[STUN] psa_mac_sign_finish failed: %d", (int)ps2);
                 } else {
-                    // 打印 HMAC 用于调试
-                    char hmacHex[41] = {};
-                    for (int i = 0; i < 20; i++) {
-                        sprintf(hmacHex + i * 2, "%02x", response[miPos + 4 + i]);
-                    }
-                    LOG("[STUN] MI computed, key='%s', hmac=%s", icePwd.c_str(), hmacHex);
+                    // 打印 HMAC 用于调试（日志过多，暂时注释；排查 STUN 时再打开）
+                    // char hmacHex[41] = {};
+                    // for (int i = 0; i < 20; i++) {
+                    //     sprintf(hmacHex + i * 2, "%02x", response[miPos + 4 + i]);
+                    // }
+                    // LOG("[STUN] MI computed, key='%s', hmac=%s", icePwd.c_str(), hmacHex);
                 }
             } else {
                 psa_mac_abort(&macOp);  // setup 失败也要释放操作句柄
@@ -311,16 +311,16 @@ void sessionHandleSTUN(std::shared_ptr<STREAM_SESSION> session,
         response[fpValuePos++] = crc & 0xFF;
     }
 
-    // 打印调试信息（已禁用）
-    {
-        char dbg[256] = {};
-        int n = 0;
-        for (int i = 0; i < pos && n < 200; i++) {
-            n += sprintf(dbg + n, "%02x", response[i]);
-        }
-        LOG("[STUN] Response sent to %s:%d, len=%d, hex=%s",
-            inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), pos, dbg);
-    }
+    // 打印调试信息（日志过多，暂时注释；排查 STUN 时再打开）
+    // {
+    //     char dbg[256] = {};
+    //     int n = 0;
+    //     for (int i = 0; i < pos && n < 200; i++) {
+    //         n += sprintf(dbg + n, "%02x", response[i]);
+    //     }
+    //     LOG("[STUN] Response sent to %s:%d, len=%d, hex=%s",
+    //         inet_ntoa(peer.sin_addr), ntohs(peer.sin_port), pos, dbg);
+    // }
 
     int sent = sendto(static_cast<SOCKET_TYPE>(session->rtp_socket),
                     (const char*)response, pos, 0,
