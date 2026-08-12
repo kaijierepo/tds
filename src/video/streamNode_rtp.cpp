@@ -5,6 +5,7 @@
 // ============================================================================
 
 #include "streamNode.h"
+#include "mp4Writer.h"
 #include "streamServer.h"
 #include "streamSession_webrtc.h"
 #include "dtls_transport.h"
@@ -803,7 +804,56 @@ void StreamNode::threadRec_h264File() {
     LOG("[StreamServer]stop record,close record file," + rec_ctrl_.path + ",nal count=" + std::to_string(rec_ctrl_.nalCount));
 }
 
+// 解析 slice_header 首个字段 first_mb_in_slice（Exp-Golomb 无符号），
+// ==0 表示一帧（access unit）的第一个 slice；多 slice 帧的后续 slice 不重复计数。
+// 与 mp4Writer.cpp isFirstSliceOfPicture 判定规则保持一致（含 emulation prevention 处理）。
+static bool isNewFrameSlice(const char* nal, size_t size) {
+    if (size <= 1) return true;
+
+    // 去 emulation prevention bytes，跳过 NAL header 后读第一个 Exp-Golomb 值
+    std::vector<uint8_t> rbsp;
+    rbsp.reserve(size - 1);
+    int zeroCount = 0;
+    for (size_t i = 1; i < size; ++i) {
+        uint8_t byte = static_cast<uint8_t>(nal[i]);
+        if (zeroCount >= 2 && byte == 0x03) {
+            zeroCount = 0;
+            continue;
+        }
+        rbsp.push_back(byte);
+        if (byte == 0x00) ++zeroCount;
+        else zeroCount = 0;
+    }
+    if (rbsp.empty()) return true;
+
+    size_t bitPos = 0;
+    auto getBit = [&]() -> int {
+        if (bitPos >= rbsp.size() * 8) return 0;
+        int bit = (rbsp[bitPos >> 3] >> (7 - (bitPos & 7))) & 1;
+        bitPos++;
+        return bit;
+    };
+    int leadingZeros = 0;
+    while (bitPos < rbsp.size() * 8 && getBit() == 0) leadingZeros++;
+    if (bitPos >= rbsp.size() * 8) return true;  // 数据耗尽，与 mp4Writer readUE 耗尽返回 0 的判定一致
+    if (leadingZeros == 0) return true;  // first_mb_in_slice == 0
+    unsigned int val = 0;
+    for (int i = 0; i < leadingZeros; i++)
+        val = (val << 1) | getBit();
+    return ((1u << leadingZeros) - 1 + val) == 0;
+}
+
 void StreamNode::writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs) {
+    // 记录 SPS VUI 帧率供 MP4 转换使用（丢包时帧数/时长推算会偏差）。
+    // 每次收到 SPS 都更新，与 mp4Writer 取文件内最后一个 SPS 的行为一致；解析失败保持原值。
+    // 置于 firstWrite 检查之前：首个 SPS 可能先于首个 IDR 到达并被跳过，不能漏解析。
+    if (nal_type == NAL_TYPE_SPS) {
+        double fps = mp4::parseSpsFps((const uint8_t*)nal, size);
+        if (fps > 0.0) {
+            rec_ctrl_.sps_fps = fps;
+            LOG("[录像] tag=%s: SPS 帧率 %.2f fps", config_.tag.c_str(), fps);
+        }
+    }
     //文件头写入关键帧
     if (rec_ctrl_.firstWrite) {
         if (nal_type != NAL_TYPE_IDR) {
@@ -811,6 +861,11 @@ void StreamNode::writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::o
         }
     }
     rec_ctrl_.firstWrite = false;
+    // VCL 帧计数（first_mb_in_slice==0 计为新帧，多 slice 不重复计数，与 MP4 分帧一致）
+    // 放在 firstWrite 检查后：只数实际写入文件的帧，与 MP4 解析的文件内容对应
+    if ((nal_type == NAL_TYPE_IDR || nal_type == NAL_TYPE_NON_IDR) && isNewFrameSlice(nal, size)) {
+        rec_ctrl_.frame_count++;
+    }
     rec_ctrl_.isLastIdrNal = rec_ctrl_.isIdrNal;
     rec_ctrl_.isIdrNal = nal_type == NAL_TYPE_IDR;
 
@@ -819,6 +874,14 @@ void StreamNode::writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::o
     // 切换到关键帧前写入 sps/pps（由 onRecvOriginRtpPkt 实时更新缓存）
     if (rec_ctrl_.isLastIdrNal == false && rec_ctrl_.isIdrNal == true) {
         if (!last_sps_.empty()) {
+            // 兜底：RTP 流未直接携带 SPS 时（SPS 仅存在于 SDP/缓存），从写入的 SPS 解析帧率
+            if (rec_ctrl_.sps_fps <= 0.0) {
+                double fps = mp4::parseSpsFps((const uint8_t*)last_sps_.data(), last_sps_.size());
+                if (fps > 0.0) {
+                    rec_ctrl_.sps_fps = fps;
+                    LOG("[录像] tag=%s: SPS 帧率 %.2f fps (cached)", config_.tag.c_str(), fps);
+                }
+            }
             ofs.write((const char*)start_code, sizeof(start_code));
             ofs.write(last_sps_.data(), last_sps_.size());
         }

@@ -77,6 +77,11 @@ public:
         uint32_t last_rtp_ts_ = 0;
         bool has_first_ts_ = false;
 
+        // SPS VUI 帧率与写入帧数（供 stopRecord 转 MP4 使用：
+        // 丢包时帧数/时长推算会偏差，以 SPS 帧率为准计算帧率与播放时长）
+        double sps_fps = 0.0;
+        uint64_t frame_count = 0;
+
         std::vector<char> fu_a_buffer_; // FU-A分片缓存
         std::chrono::steady_clock::time_point startTime;  // 录像开始时间，用于计算 duration
 	};

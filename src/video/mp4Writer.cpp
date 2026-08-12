@@ -121,8 +121,25 @@ private:
 static bool parseSPS(const uint8_t* data, size_t size, SpsInfo& info) {
     if (size < 4) return false;
 
+    // 去除 emulation prevention bytes（0x00 0x00 0x03 中的 0x03 是编码时插入的）。
+    // 时序字段（num_units_in_tick/time_scale）含连续 0x00 时必然触发插入，
+    // 不去除会导致位流错位、帧率解析错误（如 20fps 被解析成 0）
+    std::vector<uint8_t> rbsp;
+    rbsp.reserve(size);
+    int zeroCount = 0;
+    for (size_t i = 0; i < size; i++) {
+        uint8_t byte = data[i];
+        if (zeroCount >= 2 && byte == 0x03) {
+            zeroCount = 0;
+            continue;
+        }
+        rbsp.push_back(byte);
+        if (byte == 0x00) ++zeroCount;
+        else zeroCount = 0;
+    }
+
     // 跳过 NAL header (1 byte)
-    BitReader br(data + 1, size - 1);
+    BitReader br(rbsp.data() + 1, rbsp.size() - 1);
 
     info.profile_idc = br.readBits(8);
     br.readBits(8);          // constraint flags + reserved
@@ -210,6 +227,12 @@ static bool parseSPS(const uint8_t* data, size_t size, SpsInfo& info) {
 
     info.valid  = true;
     return true;
+}
+
+double parseSpsFps(const uint8_t* spsNal, size_t size) {
+    SpsInfo info;
+    if (!parseSPS(spsNal, size, info)) return 0.0;
+    return info.fps;
 }
 
 // slice_header 的第一个字段 first_mb_in_slice 用于判断一个 VCL NAL
@@ -647,7 +670,7 @@ static std::vector<uint8_t> buildStco(const std::vector<uint64_t>& offsets) {
 // ====================================================================
 
 bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path,
-                      double recordDurationSec) {
+                      double recordDurationSec, double spsFps) {
     // ---------- 第 1 步：解析 Annex B .h264 文件 ----------
     std::vector<uint8_t> fileData; // 持有输入文件，保证 NalUnit::data 在整个转换期间有效
     std::vector<NalUnit>    allNals;
@@ -688,17 +711,21 @@ bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path,
     uint32_t timescale  = 90000u;
 
     // 帧率计算优先级：
-    //   1) 用实际媒体时长推算（最可靠，不依赖摄像头 SPS）
-    //   2) SPS VUI timing_info
-    //   3) fallback 25fps
+    //   1) 显式传入的 SPS 帧率（录制时从摄像头 SPS 解析，丢包时帧数/时长推算会偏低）
+    //   2) 文件内 SPS VUI timing_info（rpc_remux 等未显式传帧率场景）
+    //   3) 用实际媒体时长推算（无任何 SPS 帧率信息时的兜底，无丢包时准确）
+    //   4) fallback 25fps
     double frameRateD = 0.0;
-    if (recordDurationSec > 0.0 && !frames.empty()) {
-        frameRateD = static_cast<double>(frames.size()) / recordDurationSec;
-        LOG("[MP4] frameRate from record duration: %.2f fps (%zu frames / %.3f sec)",
-            frameRateD, frames.size(), recordDurationSec);
+    if (spsFps > 0.0) {
+        frameRateD = spsFps;
+        LOG("[MP4] frameRate from SPS VUI (explicit): %.2f fps", frameRateD);
     } else if (spsInfo.fps > 0.0) {
         frameRateD = spsInfo.fps;
         LOG("[MP4] frameRate from SPS VUI: %.2f fps", frameRateD);
+    } else if (recordDurationSec > 0.0 && !frames.empty()) {
+        frameRateD = static_cast<double>(frames.size()) / recordDurationSec;
+        LOG("[MP4] frameRate from record duration: %.2f fps (%zu frames / %.3f sec)",
+            frameRateD, frames.size(), recordDurationSec);
     } else {
         LOG("[MP4] frameRate fallback to default: 25 fps");
     }
