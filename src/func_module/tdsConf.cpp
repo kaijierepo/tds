@@ -104,7 +104,6 @@ fileUploadPort=671	   #文件上传服务端口671
 
 #流媒体服务
 rtspPort=554           #rtsp服务端口554
-alwaysOpenStream = 0   #视频监控点是否始终保持向源地址拉流，0=不保持，1=保持。默认0
 mediaSrvIP=            #流媒体服务与数据服务分离部署模式,留空为本机
 
 #IO服务

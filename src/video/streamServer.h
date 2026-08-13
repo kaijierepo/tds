@@ -46,7 +46,6 @@ public:
 	mutable std::mutex nodeLock_; // 保护 m_mapStreamNodes 的互斥锁
 
 	bool m_enableZLM = false;
-	bool m_alwaysOpenStream = false;
 	std::string m_recordPath;
 
 	// DTLS 证书（所有 WebRTC 会话共用）

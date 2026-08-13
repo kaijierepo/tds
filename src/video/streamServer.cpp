@@ -14,7 +14,9 @@ void openAllStream() {
 	std::lock_guard<std::mutex> lock(streamSrv.nodeLock_);
 	for (auto& pair : streamSrv.m_mapStreamNodes) {
 		std::shared_ptr<StreamNode> sn = pair.second;
-		if (sn && sn->session_origin_.server_url_ != "") {
+		// 仅启动时自动打开 srcStreamFetch=always（持续拉流）的流，ondemand 流按需拉取
+		if (!sn || sn->config_.srcStreamFetch != "always") continue;
+		if (sn->session_origin_.server_url_ != "") {
 			sn->run(sn->config_);
 		}
 		LOG("[StreamSrv]持续拉流模式: streamUrl=%s, origin_pull_url=%s", pair.first.c_str(), sn->session_origin_.server_url_.c_str());
@@ -33,10 +35,9 @@ bool StreamServer::run() {
 	// 默认加载 tds 同级目录下 rtsp 文件夹的 h264 文件作为流媒体源
 	serveDefaultFolder("rtsp");
 
-	if (m_alwaysOpenStream) {
-		thread t_os(openAllStream);
-		t_os.detach();
-	}
+	// 启动持续拉流：仅 srcStreamFetch=always 的流在启动时自动打开
+	thread t_os(openAllStream);
+	t_os.detach();
 
 	startIdleMonitor();
 
