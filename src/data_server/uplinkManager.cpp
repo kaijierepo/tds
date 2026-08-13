@@ -222,8 +222,7 @@ void UplinkManager::startTdspUplink() {
 
 	if (!tdspAddrs.empty()) {
 		std::string childTdsIP = tds->conf->getStr("childTdsIP", "");
-		int keepAliveSec = tds->conf->tcpKeepAliveDS;
-		sockSrv.addTdspUplinkClients(tdspAddrs, childTdsIP, keepAliveSec);
+		sockSrv.addTdspUplinkClients(tdspAddrs, childTdsIP);
 	}
 }
 
@@ -480,7 +479,6 @@ void UplinkManager::rpc_enableUplink(yyjson_val* params, RPC_RESP& rpcResp) {
 	// 对 tdsp 启用连接
 	else if (proto == "tdsp") {
 		std::string childTdsIP = tds->conf->getStr("childTdsIP", "");
-		int keepAliveSec = tds->conf->tcpKeepAliveDS;
 
 		{
 			std::lock_guard<std::mutex> lk(m_mutex);
@@ -499,7 +497,6 @@ void UplinkManager::rpc_enableUplink(yyjson_val* params, RPC_RESP& rpcResp) {
 		}
 
 		tcpClt* pTcpClt = new tcpClt();
-		pTcpClt->m_keepAliveTimeout = keepAliveSec;
 		std::string addr = targetIp + ":" + std::to_string(targetPort);
 		pTcpClt->run(&sockSrv, addr, childTdsIP);
 		sockSrv.m_tcpClt_ParentTds.push_back(pTcpClt);

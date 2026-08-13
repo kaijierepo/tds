@@ -53,7 +53,7 @@ struct SOCK_SRV_CONF {
 	std::string tcpServerRegPkt;
 
 	SOCK_SRV_CONF() {
-		tcpKeepAliveSec = 300;
+		tcpKeepAliveSec = 0;
 		tcpSrvPort = 0;
 		udpSrvPort = 0;
 	}
@@ -65,7 +65,7 @@ class tSockSrv : public ICallback_tcpSrv,public ICallback_tcpClt,public ICallbac
 public:
 	bool run(SOCK_SRV_CONF& conf);
 	void addTdspUplinkClients(std::vector<std::string>& addrs,
-		std::string childTdsIP, int keepAliveSec);
+		std::string childTdsIP);
 	void stop();
 	tSockSrv();
 	virtual ~tSockSrv();

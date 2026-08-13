@@ -165,7 +165,6 @@ bool tSockSrv::run(SOCK_SRV_CONF& conf)
 			int port;
 			getIpPort(addr, ip, port);
 
-			pTcpClt->m_keepAliveTimeout = m_conf.tcpKeepAliveSec;
 			pTcpClt->run(this, addr, m_conf.childTdsIP);
 			m_tcpClt_ParentTds.push_back(pTcpClt);
 
@@ -191,12 +190,11 @@ bool tSockSrv::run(SOCK_SRV_CONF& conf)
 }
 
 void tSockSrv::addTdspUplinkClients(std::vector<std::string>& addrs,
-	std::string childTdsIP, int keepAliveSec) {
+	std::string childTdsIP) {
 	for (int i = 0; i < addrs.size(); i++) {
 		std::string addr = addrs[i];
 		tcpClt* pTcpClt = new tcpClt();
 
-		pTcpClt->m_keepAliveTimeout = keepAliveSec;
 		pTcpClt->run(this, addr, childTdsIP);
 		m_tcpClt_ParentTds.push_back(pTcpClt);
 
