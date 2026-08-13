@@ -369,12 +369,13 @@ void StreamNode::stop() {
     session_origin_.setState(SESSION_STATE::SESSION_IDLE);
     session_relay_push_.setState(SESSION_STATE::SESSION_IDLE);
 
-    if (recv_thread_origin_rtp_.joinable()) {
-        recv_thread_origin_rtp_.join();
-    }
-
+    // 先 join 控制线程，避免控制线程在 open() 返回后新建接收线程而 stop() 已错过 join
     if (ctrl_thread_rtsp_client_.joinable()) {
         ctrl_thread_rtsp_client_.join();
+    }
+
+    if (recv_thread_origin_rtp_.joinable()) {
+        recv_thread_origin_rtp_.join();
     }
 
 	//停止webrtc服务端工作
@@ -459,6 +460,10 @@ void StreamNode::threadCtrl_rtspClient() {
     while (running_ && !stopping_) {
         // 启动拉流与推流
         if (isPulling_ == false) {
+            // 旧接收线程若因 RTP 超时自行退出仍未 join，直接重赋值 std::thread 会 terminate
+            if (recv_thread_origin_rtp_.joinable()) {
+                recv_thread_origin_rtp_.join();
+            }
             if (session_origin_.open()) {
                 clock_rate_ = session_origin_.clock_rate;
                 recv_thread_origin_rtp_ = std::thread(&StreamNode::threadRecv_originPull,this);
