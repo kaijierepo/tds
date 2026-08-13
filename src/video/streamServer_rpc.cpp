@@ -526,7 +526,7 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 	}
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "rtsp client of specified tag or ip not found");
-		LOG("[warn][录像] 开始录像，失败，未找到指定的流， tag=%s, url=%s", rc->config_.tag.c_str(), rc->config_.streamUrl.c_str());
+		LOG("[warn][录像] 开始录像，失败，未找到指定的流， tag=%s, url=%s", tag.c_str(), streamUrl.c_str());
 	}
 	return true;
 }
