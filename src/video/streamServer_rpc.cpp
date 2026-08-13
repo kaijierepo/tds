@@ -507,8 +507,9 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 			std::string ts = str::format("%04d%02d%02d_%02d%02d%02d",
 				now.wYear, now.wMonth, now.wDay,
 				now.wHour, now.wMinute, now.wSecond);
+			// 录像文件名: 位号_年月日_时分秒_pre{预录秒}_duration{持续秒}.mp4（duration 在停止时按实际时长补齐）
 			rc->rec_ctrl_.path = tds->conf->dbPath + "/record/"
-				+ rc->config_.tag + "_" + ts + ".h264";
+				+ rc->config_.tag + "_" + ts + "_pre" + std::to_string(preTime) + ".h264";
 			rc->rec_ctrl_.startTime = std::chrono::steady_clock::now();
 			rc->rec_ctrl_.recording = true;
 			// 启动独立 I/O 线程，将磁盘写入与实时收包线程解耦
@@ -587,6 +588,32 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 				? static_cast<int>(std::lround(static_cast<double>(frameCount) / spsFps))
 				: static_cast<int>(std::lround(mediaDurationSec));
 			std::string filePath = rc->rec_ctrl_.path;
+			// 重命名 .h264，文件名追加实际持续时长: 位号_年月日_时分秒_pre{预录}_duration{时长}.h264
+			std::string finalPath = filePath;
+			{
+				size_t dotPos = finalPath.find_last_of('.');
+				std::string baseName = (dotPos != std::string::npos)
+					? finalPath.substr(0, dotPos) : finalPath;
+				finalPath = baseName + "_duration" + std::to_string(duration)
+					+ ((dotPos != std::string::npos) ? finalPath.substr(dotPos) : "");
+			}
+#ifdef _WIN32
+			std::wstring wOldPath = str::utf8_to_utf16(filePath);
+			std::wstring wNewPath = str::utf8_to_utf16(finalPath);
+			if (_wrename(wOldPath.c_str(), wNewPath.c_str()) == 0) {
+				filePath = finalPath;
+			}
+			else {
+				LOG("[warn][录像] 重命名录像文件失败, %s -> %s", filePath.c_str(), finalPath.c_str());
+			}
+#else
+			if (std::rename(filePath.c_str(), finalPath.c_str()) == 0) {
+				filePath = finalPath;
+			}
+			else {
+				LOG("[warn][录像] 重命名录像文件失败, %s -> %s", filePath.c_str(), finalPath.c_str());
+			}
+#endif
 			size_t pos = filePath.find_last_of("/\\");
 		std::string fileName = (pos != std::string::npos) ? filePath.substr(pos + 1) : filePath;
 		std::string mp4FileName = fileName;
@@ -714,8 +741,8 @@ bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 			if (!prefix.empty() && fname.find(prefix) != 0)
 				continue;
 
-			// parse time from filename: tag_YYYYMMDD_HHMMSS.h264 / tag_YYYYMMDD_HHMMSS.mp4
-			// 先去掉扩展名，h264 与 mp4 统一解析时间
+			// parse time from filename: tag_YYYYMMDD_HHMMSS_pre{pre}_duration{dur}.mp4
+			// 先去掉扩展名，统一解析
 			std::string nameNoExt = fname.substr(0, fname.size() - ext.size());
 			// tag 为空时跳过文件名中的 tag 段（首个下划线之后才是日期段）
 			size_t tsStart = prefix.length();
@@ -723,10 +750,14 @@ bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 				size_t p = nameNoExt.find('_');
 				tsStart = (p == std::string::npos) ? 0 : p + 1;
 			}
+			// 时间戳段为日期与时间之间的下划线起、到下一个下划线（_pre 前）止: YYYYMMDD_HHMMSS
 			std::string tsStr;
-			size_t pos = nameNoExt.find("_", tsStart);
-			if (pos != std::string::npos) {
-				tsStr = nameNoExt.substr(tsStart, pos - tsStart);
+			size_t p1 = nameNoExt.find('_', tsStart);
+			if (p1 != std::string::npos) {
+				size_t p2 = nameNoExt.find('_', p1 + 1);
+				tsStr = (p2 != std::string::npos)
+					? nameNoExt.substr(tsStart, p2 - tsStart)
+					: nameNoExt.substr(tsStart);
 			} else {
 				tsStr = nameNoExt.substr(tsStart);
 			}
@@ -738,15 +769,33 @@ bool StreamServer::rpc_getRecordList(yyjson_val* params, RPC_RESP& rpcResp, RPC_
 			} else {
 				formattedTime = tsStr;
 			}
+			// 从文件名解析预录秒数(pre)与持续秒数(duration)
+			int preSec = 0;
+			int durSec = 0;
+			{
+				size_t prePos = nameNoExt.find("_pre", tsStart);
+				if (prePos != std::string::npos)
+					preSec = std::atoi(nameNoExt.c_str() + prePos + 4);
+				size_t durPos = nameNoExt.find("_duration", tsStart);
+				if (durPos != std::string::npos)
+					durSec = std::atoi(nameNoExt.c_str() + durPos + 9);
+			}
+			// tag 为空时从文件名解析位号（文件名首个下划线前的内容）
+			std::string fileTag;
+			if (tag.empty()) {
+				size_t p0 = nameNoExt.find('_');
+				if (p0 != std::string::npos)
+					fileTag = nameNoExt.substr(0, p0);
+			}
 
 			std::string fileUrl = "/db/record/" + fname;
 			int fileSize = static_cast<int>(entry.file_size());
 
 			json jRec;
-			jRec["tag"] = tag;
+			jRec["tag"] = tag.empty() ? fileTag : tag;
 			jRec["time"] = formattedTime;
-			jRec["duration"] = 0;  // unknown from filename alone
-			jRec["preSeconds"] = 0;
+			jRec["duration"] = durSec;
+			jRec["preSeconds"] = preSec;
 			jRec["fileUrl"] = fileUrl;
 			jRec["fileSize"] = fileSize;
 			records.push_back(jRec);

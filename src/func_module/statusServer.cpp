@@ -1,4 +1,3 @@
-#include "StatusServer.h"
 #include "statusServer.h"
 #include "database/tDatabase.h"
 #include <thread>

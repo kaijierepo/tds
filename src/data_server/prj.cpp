@@ -7,7 +7,7 @@
 #include "logger.h"
 #include "yyjson.h"
 #include "rpcHandler.h"
-#include "../video/StreamNode.h"
+#include "../video/streamNode.h"
 #include "../video/streamServer.h"
 #include "mongoose.h"
 
