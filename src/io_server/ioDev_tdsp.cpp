@@ -1490,6 +1490,8 @@ void ioDev_tdsp::pullRecordFiles()
 		if (fileUrl.size() < 4 || fileUrl.substr(fileUrl.size() - 4) != ".mp4")
 			continue;
 
+		LOG("[录像采集] 开始下载 %s", fileUrl.c_str());
+
 		// 2. 下载文件各分片
 		std::vector<unsigned char> fileData;
 		int chunkCount = 0;
@@ -1505,16 +1507,19 @@ void ioDev_tdsp::pullRecordFiles()
 			call("downloadFile", dlParams, nullptr, dlResult, dlError);
 
 			if (dlError != nullptr) {
+				LOG("[录像采集] downloadFile 失败 %s chunk=%d: %s", fileUrl.c_str(), ch, dlError.dump().c_str());
 				downloadOk = false;
 				break;
 			}
 
 			if (ch == 0) {
 				chunkCount = dlResult.value("chunkCount", 1);
+				LOG("[录像采集] %s 共 %d 个分片", fileUrl.c_str(), chunkCount);
 			}
 
 			std::string b64Data = dlResult.value("data", "");
 			if (b64Data.empty()) {
+				LOG("[录像采集] downloadFile 空数据 %s chunk=%d", fileUrl.c_str(), ch);
 				downloadOk = false;
 				break;
 			}
@@ -1528,6 +1533,7 @@ void ioDev_tdsp::pullRecordFiles()
 		}
 
 		if (!downloadOk) continue;
+		LOG("[录像采集] 下载完成 %s, %zu 字节", fileUrl.c_str(), fileData.size());
 
 		// 3. 保存到本地录像目录
 		std::string fname = fileUrl;
@@ -1537,7 +1543,19 @@ void ioDev_tdsp::pullRecordFiles()
 		std::string savePath = tds->conf->dbPath + "/record/" + fname;
 		fs::createFolderOfPath(savePath);
 
-		FILE* fp = fopen(savePath.c_str(), "wb");
+		FILE* fp = nullptr;
+#ifdef _WIN32
+		// Windows 下 fopen 走系统代码页，UTF-8 中文路径会失败，需转宽字符调用 _wfopen
+		std::wstring wSavePath;
+		int wlen = MultiByteToWideChar(CP_UTF8, 0, savePath.c_str(), -1, nullptr, 0);
+		if (wlen > 0) {
+			wSavePath.resize(wlen - 1);
+			MultiByteToWideChar(CP_UTF8, 0, savePath.c_str(), -1, &wSavePath[0], wlen);
+			_wfopen_s(&fp, wSavePath.c_str(), L"wb");
+		}
+#else
+		fp = fopen(savePath.c_str(), "wb");
+#endif
 		if (fp) {
 			fwrite(fileData.data(), 1, fileData.size(), fp);
 			fclose(fp);

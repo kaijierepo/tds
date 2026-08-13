@@ -3299,6 +3299,7 @@ bool rpcHandler::handleMethodCall_fileDownload(const std::string& method, yyjson
 		chunkIndex = yyjson_get_int(yyv_chunkIndex);
 	}
 
+
 	// url -> filesystem path
 	// /db/record/xxx.h264 -> {dbPath}/record/xxx.h264
 	// /record/xxx.mp4      -> {dbPath}/record/xxx.mp4
@@ -3315,7 +3316,19 @@ bool rpcHandler::handleMethodCall_fileDownload(const std::string& method, yyjson
 	}
 
 	// open file
-	FILE* fp = fopen(filePath.c_str(), "rb");
+	FILE* fp = nullptr;
+#ifdef _WIN32
+	// Windows 下 fopen 走系统代码页，UTF-8 中文路径会失败，需转宽字符调用 _wfopen
+	std::wstring wPath;
+	int wlen = MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, nullptr, 0);
+	if (wlen > 0) {
+		wPath.resize(wlen - 1);
+		MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, &wPath[0], wlen);
+		_wfopen_s(&fp, wPath.c_str(), L"rb");
+	}
+#else
+	fp = fopen(filePath.c_str(), "rb");
+#endif
 	if (!fp) {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::OS_fileNotExist, "file not found: " + filePath);
 		return true;
@@ -3383,6 +3396,8 @@ bool rpcHandler::handleMethodCall_fileDownload(const std::string& method, yyjson
 	free(jsonStr);
 	yyjson_mut_doc_free(doc);
 
+	LOG("[下载] downloadFile 响应发出, url=%s, chunkIndex=%d, chunkCount=%d, dataLen=%d",
+		url.c_str(), chunkIndex, chunkCount, (int)b64Data.length());
 	return true;
 }
 
