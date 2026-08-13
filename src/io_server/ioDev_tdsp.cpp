@@ -1529,12 +1529,48 @@ void ioDev_tdsp::pullRecordFiles()
 
 		if (!downloadOk) continue;
 
-		// 3. 保存到本地录像目录
+		// 3. 保存到本地录像目录（TDB 树状结构）
+		//    路径: {dbPath}/{YYYYMM}/{DD}/{tagBind目录}/{fname}
+		//    例:   D:/video/202608/12/科技大学A幢/二楼/摄像头1/123310.mp4
 		std::string fname = fileUrl;
 		size_t pos = fname.rfind('/');
 		if (pos != std::string::npos) fname = fname.substr(pos + 1);
 
-		std::string savePath = tds->conf->dbPath + "/record/" + fname;
+		// 位号目录: 设备绑定位号 m_strTagBind 去掉前两段(根组织+组织编号)后点分转斜杠路径
+		// 例: "202606.01.科技大学A幢.二楼.摄像头1" -> "科技大学A幢/二楼/摄像头1"
+		std::string tagPath = m_strTagBind;
+		size_t dot1 = tagPath.find('.');
+		size_t dot2 = (dot1 != std::string::npos) ? tagPath.find('.', dot1 + 1) : std::string::npos;
+		if (dot2 != std::string::npos) {
+			tagPath = tagPath.substr(dot2 + 1); // 去掉根组织(第一段)与组织编号(第二段)
+		}
+		for (char& c : tagPath) {
+			if (c == '.') c = '/';
+		}
+
+		// 日期目录: 从录像时间 time("YYYY-MM-DD HH:MM:SS") 提取 YYYYMM/DD 两层
+		std::string timeStr = record.value("time", "");
+		std::string dateYM = "";   // YYYYMM
+		std::string dateDD = "";   // DD
+		std::string dateStr = "";  // YYYYMMDD (用于文件名前缀匹配)
+		if (timeStr.size() >= 10) {
+			dateYM = timeStr.substr(0, 4) + timeStr.substr(5, 2);
+			dateDD = timeStr.substr(8, 2);
+			dateStr = dateYM + dateDD;
+		}
+
+		// 文件名: 子服务文件名为 {tag}_{YYYYMMDD_HHMMSS}.mp4，
+		//         去掉位号与日期前缀，仅保留时间部分 HHMMSS.mp4
+		std::string tagPrefix = record.value("tag", "") + "_" + dateStr + "_";
+		if (!tagPrefix.empty() && fname.size() > tagPrefix.size() && fname.compare(0, tagPrefix.size(), tagPrefix) == 0) {
+			fname = fname.substr(tagPrefix.size());
+		}
+
+		std::string savePath = tds->conf->dbPath;
+		if (!dateYM.empty() && !dateDD.empty()) {
+			savePath += "/" + dateYM + "/" + dateDD;
+		}
+		savePath += "/" + tagPath + "/" + fname;
 		fs::createFolderOfPath(savePath);
 
 		FILE* fp = fopen(savePath.c_str(), "wb");
