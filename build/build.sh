@@ -52,6 +52,34 @@ done
 
 echo "目标架构: $ARCH    模式: $MODE    并行数: $JOBS"
 
+# ===================== 1.5 生成版本信息 =====================
+# 从 git 提交次数生成 SVN_VERSION（兼容原 tds_imp.cpp 的 USE_SVN_REV）
+if command -v git >/dev/null 2>&1; then
+    pushd .. >/dev/null
+    # 浅克隆需要解除限制才能统计完整提交数
+    if git rev-parse --is-shallow-repository 2>/dev/null | grep -q '^true$'; then
+        echo "检测到浅克隆，拉取完整历史以统计提交数..."
+        git fetch --unshallow 2>/dev/null || true
+    fi
+    REV_COUNT="$(git rev-list --count HEAD 2>/dev/null || echo 0)"
+    popd >/dev/null
+    echo "源码版本(rev): $REV_COUNT"
+    cat > ../src/version.h <<EOF
+#ifndef VERSION_H_
+#define VERSION_H_
+
+#define SVN_VERSION "$REV_COUNT"
+
+#if 0
+#pragma message("warning: local modification found ,please make sure source is updated,when bulid release package")
+#endif
+
+#endif
+EOF
+else
+    echo "警告: 未找到 git，SVN_VERSION 保持原样"
+fi
+
 # ===================== 2. 架构配置 =====================
 case "$ARCH" in
 x86_64)
