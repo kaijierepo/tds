@@ -350,7 +350,6 @@ bool StreamNode::run(const Config& config) {
     g_stream_verbose = config_.verbose;
 
     ctrl_thread_rtsp_client_ = std::thread(&StreamNode::threadCtrl_rtspClient, this);
-	ctrl_thread_rtsp_client_.detach();
 
     LOG("[StreamNode] StreamNode started,tag=%s,src=%s,target=%s",config_.tag.c_str(), session_origin_.server_url_.c_str(), session_relay_push_.server_url_.c_str());
 
@@ -463,7 +462,6 @@ void StreamNode::threadCtrl_rtspClient() {
             if (session_origin_.open()) {
                 clock_rate_ = session_origin_.clock_rate;
                 recv_thread_origin_rtp_ = std::thread(&StreamNode::threadRecv_originPull,this);
-                recv_thread_origin_rtp_.detach();
                 open_time_ = std::chrono::system_clock::now();
                 isPulling_ = true;
 
@@ -509,6 +507,10 @@ void StreamNode::threadCtrl_rtspClient() {
                     isPulling_ = false;
                     session_origin_.close();
                     session_relay_push_.close();
+                    //等待接收线程退出，否则重连重新赋值线程对象时 std::thread 会 terminate
+                    if (recv_thread_origin_rtp_.joinable()) {
+                        recv_thread_origin_rtp_.join();
+                    }
                 }
             }
         }
