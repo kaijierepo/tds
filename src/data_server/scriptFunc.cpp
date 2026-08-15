@@ -645,6 +645,41 @@ static JSValue qjs_ioDev_setOffline(JSContext* ctx, JSValueConst this_val, int a
     return JS_NULL;
 }
 
+static JSValue qjs_ioDev_childInput(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+    json jDev;
+    jsValToJsonVal(ctx, this_val, jDev);
+
+    if (!jDev.is_object())
+        return JS_NewBool(ctx, false);
+
+    if (jDev["confNodeId"] == nullptr)
+        return JS_NewBool(ctx, false);
+
+    std::string confNodeId = jDev["confNodeId"];
+
+    ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+    if (!p)
+        return JS_NewBool(ctx, false);
+    else {
+        if (jArgs.size() >= 1) {
+            json jDevAddr = jArgs[0];
+            string devAddr = jDevAddr.get<string>();
+            ioDev* pChildDev = p->getChild(devAddr);
+            if (pChildDev) {
+                json& jChans = jArgs[1];
+                for (auto& [key, val] : jChans.items()) {
+                    pChildDev->input(val, key);
+                }
+                return JS_NewBool(ctx, true);
+            }
+        }
+    }
+    return JS_NewBool(ctx, false);
+}
+
+
+
 static JSValue qjs_ioDev_input(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
 
@@ -763,6 +798,7 @@ void initIODevFunc(JSContext* ctx, void* pDev, JSValue obj) {
     JS_SetPropertyStr(ctx, obj, "getDevVar", JS_NewCFunction(ctx, qjs_ioDev_getDevVar, "getDevVar", 1));
     JS_SetPropertyStr(ctx, obj, "setOffline", JS_NewCFunction(ctx, qjs_ioDev_setOffline, "setOffline", 0));
     JS_SetPropertyStr(ctx, obj, "input", JS_NewCFunction(ctx, qjs_ioDev_input, "input", 2));
+    JS_SetPropertyStr(ctx, obj, "childInput", JS_NewCFunction(ctx, qjs_ioDev_childInput, "childInput", 1));
     
     ioDev* pDevTemp = (ioDev*)pDev;
 

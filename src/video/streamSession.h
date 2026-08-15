@@ -256,7 +256,7 @@ public:
         const std::string& sdp, std::string& session);
     bool rtspRecordReq(const std::string& url,
         const std::string& session);
-    bool rtspGetParameterReq(const std::string& url,
+    bool rtspOptionsReq(const std::string& url,
         const std::string& session);
 
 private:

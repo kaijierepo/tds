@@ -1,7 +1,7 @@
 // ============================================================================
 // streamSession_rtsp.cpp — STREAM_SESSION 的 RTSP 协议方法实现
 // 包含：open/close、RTSP 信令（DESCRIBE/SETUP/PLAY/TEARDOWN/ANNOUNCE/RECORD/
-//       GET_PARAMETER）、认证、SDP 解析/生成
+//       OPTIONS）、认证、SDP 解析/生成
 // ============================================================================
 
 #include "streamSession.h"
@@ -982,7 +982,7 @@ bool STREAM_SESSION::rtspRecordReq(const std::string& url,
 	return true;
 }
 
-bool STREAM_SESSION::rtspGetParameterReq(const std::string& url,
+bool STREAM_SESSION::rtspOptionsReq(const std::string& url,
 	const std::string& session) {
 	StreamNode::URLComponents url_components;
 	std::string host_header;
@@ -998,28 +998,29 @@ bool STREAM_SESSION::rtspGetParameterReq(const std::string& url,
 	// 拉流连接，复用 conn_ 会导致心跳线程与收包线程竞争 recv 并吞噬 RTP 帧
 	Connection tmp_conn;
 	if (!tmp_conn.connect(url_components.host, url_components.port)) {
-		logError("GET_PARAMETER connect failed: " + url_components.host + ":" + std::to_string(url_components.port));
+		logError("OPTIONS connect failed: " + url_components.host + ":" + std::to_string(url_components.port));
 		return false;
 	}
 
 	// 使用自身认证信息
 	STREAM_SESSION* auth_session = this;
 
-	// 辅助函数：在 tmp_conn 上构建并发送 GET_PARAMETER 请求
+	// 辅助函数：在 tmp_conn 上构建并发送 OPTIONS 请求
 	auto sendRequest = [&]() -> bool {
 		std::stringstream request;
-		request << "GET_PARAMETER " << url << " RTSP/1.0\r\n"
+		request << "OPTIONS " << url << " RTSP/1.0\r\n"
 			<< "CSeq: " << tmp_conn.nextCSeq() << "\r\n"
 			<< "User-Agent: StreamNode/1.0\r\n"
 			<< (host_header.empty() ? "" : ("Host: " + host_header + "\r\n"));
 
 		if (auth_session && auth_session->hasAuthCredentials()) {
-			auth_session->buildAuthHeader("GET_PARAMETER", url);
+			auth_session->buildAuthHeader("OPTIONS", url);
 			request << auth_session->server_auth_header_ << "\r\n";
 		}
 
+		// OPTIONS 标准上无需 body，带上 Session 以重置服务器会话超时计时器，
+		// 并让服务器校验会话有效性（会话已失效时部分设备会回 454）
 		request << "Session: " << session << "\r\n"
-			<< "Content-Length: 0\r\n"
 			<< "\r\n";
 
 		const std::string req = request.str();
@@ -1027,16 +1028,16 @@ bool STREAM_SESSION::rtspGetParameterReq(const std::string& url,
 		return sent == static_cast<int>(req.size());
 	};
 
-	logVerbose(">> GET_PARAMETER " + url);
+	logVerbose(">> OPTIONS " + url);
 	if (!sendRequest()) {
-		logError("GET_PARAMETER send failed: " + url);
+		logError("OPTIONS send failed: " + url);
 		return false;
 	}
 
 	std::string response;
 	int rc = tmp_conn.receiveHttpResp(response, 3000);
 	if (rc <= 0) {
-		logError("GET_PARAMETER recv failed: rc=" + std::to_string(rc) +
+		logError("OPTIONS recv failed: rc=" + std::to_string(rc) +
 			" err=" + std::to_string(tmp_conn.lastError()));
 		return false;
 	}
@@ -1045,23 +1046,32 @@ bool STREAM_SESSION::rtspGetParameterReq(const std::string& url,
 	// 收到 401 时重新解析新挑战，在同一连接上重发一次
 	if (response.find("401") != std::string::npos && auth_session && auth_session->hasAuthCredentials()) {
 		if (parseWWWAuthenticate(response, *auth_session)) {
-			logVerbose("GET_PARAMETER 401 reauth, nonce=" + auth_session->server_auth_nonce_);
+			logVerbose("OPTIONS 401 reauth, nonce=" + auth_session->server_auth_nonce_);
 			if (!sendRequest()) {
-				logError("GET_PARAMETER reauth send failed: " + url);
+				logError("OPTIONS reauth send failed: " + url);
 				return false;
 			}
 			response.clear();
 			rc = tmp_conn.receiveHttpResp(response, 3000);
 			if (rc <= 0) {
-				logError("GET_PARAMETER reauth recv failed: rc=" + std::to_string(rc) +
+				logError("OPTIONS reauth recv failed: rc=" + std::to_string(rc) +
 					" err=" + std::to_string(tmp_conn.lastError()));
 				return false;
 			}
 		}
 	}
 
+	// 部分设备不支持 OPTIONS，返回 501 Not Implemented（会话本身仍存活）。
+	// 不能判为心跳失败：否则会触发 close() 关闭正在收流的 UDP socket，
+	// recvfrom 阻塞中被 closesocket 打断 → WSAEINTR(10004)/WSAENOTSOCK(10038)
+	// → 收包线程收不到数据 → RTP timeout → 无限重连循环。
+	if (response.find("501") != std::string::npos) {
+		logVerbose("OPTIONS 501 Not Implemented, keep session alive");
+		return true;
+	}
+
 	if (response.find("200 OK") == std::string::npos) {
-		logError("GET_PARAMETER failed: " + response.substr(0, 200));
+		logError("OPTIONS failed: " + response.substr(0, 200));
 		return false;
 	}
 

@@ -507,7 +507,7 @@ void StreamNode::threadCtrl_rtspClient() {
         // 心跳保活
         if (isPulling_) {
             if (session_origin_.conn_ && !session_origin_.rtsp_session_id_.empty()) {
-                if (!session_origin_.rtspGetParameterReq(session_origin_.server_url_, session_origin_.rtsp_session_id_)) {
+                if (!session_origin_.rtspOptionsReq(session_origin_.server_url_, session_origin_.rtsp_session_id_)) {
                     session_origin_.recordError("heartbeat timeout");
                     isPulling_ = false;
                     session_origin_.close();
@@ -522,7 +522,7 @@ void StreamNode::threadCtrl_rtspClient() {
 
         if (isPushing_) {
             if (session_relay_push_.conn_ && !session_relay_push_.rtsp_session_id_.empty()) {
-                if (!session_relay_push_.rtspGetParameterReq(session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_)) {
+                if (!session_relay_push_.rtspOptionsReq(session_relay_push_.server_url_, session_relay_push_.rtsp_session_id_)) {
                     session_relay_push_.recordError("heartbeat timeout");
                     isPushing_ = false;
                     session_origin_.close();
