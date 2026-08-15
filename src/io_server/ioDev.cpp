@@ -1012,24 +1012,8 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 
-	kv = conf.find("ioMode");
-	if (kv != conf.end()) {
-		json& item = kv.value();
-		if (item.is_string()) {
-			m_ioMode = item.get<string>();
-		}
-	}
-
-	kv = conf.find("viaAdaptor");
-	if (kv != conf.end()) {
-		json& item = kv.value();
-		if (item.is_boolean()) {
-			bool b = item.get<bool>();
-			if (b) {
-				m_ioMode = "adaptor";
-			}
-		}
-	}
+	// 扩展IO配置已取消：m_ioMode 固定保持构造函数默认值 "none"，
+	// 不再从配置文件读取 ioMode / viaAdaptor
 
 	kv = conf.find("translatorProto");
 	if (kv != conf.end()) {
