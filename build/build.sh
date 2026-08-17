@@ -285,6 +285,7 @@ c_srcs="$(cat <<'EOF'
 ./common/crypto/psa/core/tf_psa_crypto_version.c
 ./common/crypto/psa/drivers/builtin/src/aes.c
 ./common/crypto/psa/drivers/builtin/src/aesce.c
+./common/crypto/psa/drivers/builtin/src/aesni.c
 ./common/crypto/psa/drivers/builtin/src/aria.c
 ./common/crypto/psa/drivers/builtin/src/bignum.c
 ./common/crypto/psa/drivers/builtin/src/bignum_core.c
