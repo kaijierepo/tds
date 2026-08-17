@@ -44,6 +44,18 @@
 #define NAL_TYPE_STAP_A           24
 #define NAL_TYPE_FU_A             28
 
+// H.265 (HEVC) NAL unit type constants (RFC 7798)
+#define NAL_TYPE_H265_TRAIL_N     0
+#define NAL_TYPE_H265_TSA_N       1
+#define NAL_TYPE_H265_IDR_W_RADL  19
+#define NAL_TYPE_H265_IDR_N_LP    20
+#define NAL_TYPE_H265_VPS         32
+#define NAL_TYPE_H265_SPS         33
+#define NAL_TYPE_H265_PPS         34
+#define NAL_TYPE_H265_AUD         35
+#define NAL_TYPE_H265_AP          48   // Aggregation Packet
+#define NAL_TYPE_H265_FU          49   // Fragmentation Unit
+
 
 
 struct STREAM_OPEN_PARAM {
@@ -266,7 +278,7 @@ public:
     void threadRecv_originPull();
     void threadRecv_rtspPublish(std::shared_ptr<STREAM_SESSION> session);
     void onRecvOriginRtpPkt(std::shared_ptr<RTPPacket> pkt, STREAM_SESSION& session);
-    bool checkIsIdrNalu(const RTPPacket& packet);
+    bool checkIsIdrNalu(const RTPPacket& packet, const std::string& codec);
     void sendSingleNalRtp(const std::vector<uint8_t>& nal, uint32_t ts, STREAM_SESSION& session);
 
     void sendRTPPacketToClients(const RTPPacket& packet);

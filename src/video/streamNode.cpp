@@ -984,13 +984,14 @@ void StreamNode::onRecvOriginRtpPkt(std::shared_ptr<RTPPacket> pkt, STREAM_SESSI
     // 序列化RTP包
     pkt->data = pkt->serialize();
 
-    // 检测当前包是否包含 IDR NAL（用于在 IDR 前插入 SPS/PPS）
-    pkt->isIdrNalu = checkIsIdrNalu(*pkt);
+    // 检测当前包是否包含 IDR NAL（用于在 IDR 前插入 SPS/PPS/VPS）
+    pkt->isIdrNalu = checkIsIdrNalu(*pkt, session.codec);
     pkt->isLastIdrNalu = last_nalu_was_idr_;
     last_nalu_was_idr_ = pkt->isIdrNalu;
 
-    // 从 RTP 包中提取 SPS/PPS 并缓存（用于录像文件 IDR 前插入）
-    // 优先使用 session 中已缓存的 sps/pps（SDP sprop-parameter-sets 或动态解析）
+    // 从 RTP 包中提取参数集并缓存（用于录像文件 IDR 前插入 / WebRTC 首次发送）
+    // 优先使用 session 中已缓存的参数集（SDP sprop 或动态解析）
+    bool isH265 = (session.codec == "H265" || session.codec == "HEVC");
     if (!session.sps.empty()) {
         last_sps_.assign((char*)session.sps.data(), (char*)session.sps.data() + session.sps.size());
     }
@@ -999,11 +1000,27 @@ void StreamNode::onRecvOriginRtpPkt(std::shared_ptr<RTPPacket> pkt, STREAM_SESSI
     }
     // 兜底：从 Single NAL 的 RTP payload 提取（覆盖默认值或 session 缓存）
     if (!pkt->payload.empty()) {
-        uint8_t nal_type = pkt->payload[0] & 0x1F;
-        if (nal_type == NAL_TYPE_SPS) {
-            last_sps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());
-        } else if (nal_type == NAL_TYPE_PPS) {
-            last_pps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());
+        if (isH265) {
+            // H.265: 2 字节 NAL header, type = (payload[0] >> 1) & 0x3F
+            if (pkt->payload.size() >= 2) {
+                uint8_t nal_type = (pkt->payload[0] >> 1) & 0x3F;
+                if (nal_type == NAL_TYPE_H265_VPS) {
+                    session.vps = pkt->payload;
+                } else if (nal_type == NAL_TYPE_H265_SPS) {
+                    session.sps = pkt->payload;
+                    last_sps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());
+                } else if (nal_type == NAL_TYPE_H265_PPS) {
+                    session.pps = pkt->payload;
+                    last_pps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());
+                }
+            }
+        } else {
+            uint8_t nal_type = pkt->payload[0] & 0x1F;
+            if (nal_type == NAL_TYPE_SPS) {
+                last_sps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());
+            } else if (nal_type == NAL_TYPE_PPS) {
+                last_pps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());
+            }
         }
     }
 

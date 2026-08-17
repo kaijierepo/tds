@@ -71,8 +71,12 @@ void sessionHandleSRTCP(std::shared_ptr<STREAM_SESSION> session,
                         uint8_t* buf, int len,
                         struct sockaddr_in& peer);
 
-// 从浏览器 SDP Offer 中提取 H264 payload type（返回 0 表示未找到）
-int parseH264PTFromOffer(const std::string& sdpOffer);
+// 从浏览器 SDP Offer 中提取指定 codec 的 payload type（返回 0 表示未找到）
+// codec 支持 "H264" / "H265"，H265 也兼容浏览器常用的 "HEVC" 命名
+int parseCodecPTFromOffer(const std::string& sdpOffer, const std::string& codec);
+
+// 从浏览器 SDP Offer 中提取指定 PT 对应的编码名（如 H264/H265/HEVC），未找到返回空串
+std::string parseCodecNameFromOffer(const std::string& sdpOffer, int pt);
 
 // WebRTC SDP Answer 构建（设置 si.is_webrtc/ice_ufrag/ice_pwd/sdp）
 void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,

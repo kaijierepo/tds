@@ -240,6 +240,7 @@ bool STREAM_SESSION::open(const STREAM_SESSION* origin_session)
             fmtp = origin_session->fmtp;
             sps = origin_session->sps;
             pps = origin_session->pps;
+            vps = origin_session->vps;
             sdp = origin_session->sdp;
             video_ssrc = origin_session->video_ssrc;
         }
@@ -1157,6 +1158,28 @@ bool STREAM_SESSION::parseSDP(const std::string& sdp, STREAM_SESSION& audio_info
                             auto pps_dec = base64Decode(pps_b64);
                             if (!sps_dec.empty()) current_info->sps = std::move(sps_dec);
                             if (!pps_dec.empty()) current_info->pps = std::move(pps_dec);
+                        }
+                    }
+
+                    // 解析 H.265 参数集 sprop-vps/sprop-sps/sprop-pps（RFC 7798），
+                    // 格式类似：sprop-vps=...;sprop-sps=...;sprop-pps=...（顺序可能不定）
+                    {
+                        static const char* h265params[] = { "sprop-vps=", "sprop-sps=", "sprop-pps=" };
+                        for (size_t k = 0; k < 3; k++) {
+                            size_t pos = current_info->fmtp.find(h265params[k]);
+                            if (pos == std::string::npos) continue;
+                            size_t start = pos + strlen(h265params[k]);
+                            size_t end = current_info->fmtp.find(';', start);
+                            std::string b64 = (end == std::string::npos)
+                                ? current_info->fmtp.substr(start)
+                                : current_info->fmtp.substr(start, end - start);
+                            while (!b64.empty() && b64.front() == ' ') b64.erase(b64.begin());
+                            while (!b64.empty() && b64.back() == ' ') b64.pop_back();
+                            auto dec = base64Decode(b64);
+                            if (dec.empty()) continue;
+                            if (k == 0) current_info->vps = std::move(dec);
+                            else if (k == 1) current_info->sps = std::move(dec);
+                            else current_info->pps = std::move(dec);
                         }
                     }
                 }

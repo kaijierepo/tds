@@ -91,6 +91,7 @@ void STREAM_SESSION::copyStreamInfoFrom(const STREAM_SESSION& other)
     fmtp = other.fmtp;
     sps = other.sps;
     pps = other.pps;
+    vps = other.vps;
     sdp = other.sdp;
     video_ssrc = other.video_ssrc;
 }

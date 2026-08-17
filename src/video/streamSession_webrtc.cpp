@@ -433,28 +433,57 @@ void sessionHandleDTLS(std::shared_ptr<STREAM_SESSION> session,
 // WebRTC SDP Answer 构建 - 生成 ICE 凭据、编码 sprop-parameter-sets、组装 SDP
 // ============================================================================
 
-// 从浏览器 SDP Offer 中解析 H264 payload type（返回 0 表示未找到）
-int parseH264PTFromOffer(const std::string& sdpOffer) {
-    int h264PT = 0;
+// 从浏览器 SDP Offer 中提取指定 PT 对应的编码名（如 H264/H265/HEVC），未找到返回空串
+std::string parseCodecNameFromOffer(const std::string& sdpOffer, int pt) {
     std::istringstream ss(sdpOffer);
     std::string line;
     while (std::getline(ss, line)) {
-        // 匹配 "a=rtpmap:<PT> H264/90000" 或 "a=rtpmap:<PT> H264/90000\r"
-        if (line.find("a=rtpmap:") == 0 || line.find("a=rtpmap:") != std::string::npos) {
+        if (line.find("a=rtpmap:") != std::string::npos) {
             size_t rtpmapPos = line.find("a=rtpmap:");
-            if (rtpmapPos == std::string::npos) continue;
             size_t ptStart = rtpmapPos + 9;  // strlen("a=rtpmap:")
             size_t ptEnd = line.find(' ', ptStart);
             if (ptEnd == std::string::npos) continue;
             std::string ptStr = line.substr(ptStart, ptEnd - ptStart);
-            // 检查是否是 H264
-            if (line.find("H264") != std::string::npos) {
-                h264PT = std::stoi(ptStr);
-                break;  // 使用第一个 H264 PT
+            if (std::stoi(ptStr) != pt) continue;
+            // rtpmap 行的编码名位于空格与 '/' 之间，如 "a=rtpmap:98 H265/90000"
+            size_t nameStart = ptEnd + 1;
+            size_t slash = line.find('/', nameStart);
+            if (slash == std::string::npos) continue;
+            return line.substr(nameStart, slash - nameStart);
+        }
+    }
+    return "";
+}
+
+// 从浏览器 SDP Offer 中解析指定 codec 的 payload type（返回 0 表示未找到）
+// H.265 在浏览器中可能命名为 H265 或 HEVC，两者都识别
+int parseCodecPTFromOffer(const std::string& sdpOffer, const std::string& codec) {
+    int codecPT = 0;
+    std::istringstream ss(sdpOffer);
+    std::string line;
+    while (std::getline(ss, line)) {
+        // 匹配 "a=rtpmap:<PT> H264/90000" 或 "a=rtpmap:<PT> H265/90000\r"
+        if (line.find("a=rtpmap:") != std::string::npos) {
+            size_t rtpmapPos = line.find("a=rtpmap:");
+            size_t ptStart = rtpmapPos + 9;  // strlen("a=rtpmap:")
+            size_t ptEnd = line.find(' ', ptStart);
+            if (ptEnd == std::string::npos) continue;
+            std::string ptStr = line.substr(ptStart, ptEnd - ptStart);
+            // 检查 codec 是否匹配（H265 兼容 HEVC 命名）
+            bool matched = false;
+            if (codec == "H265") {
+                matched = (line.find("H265") != std::string::npos ||
+                           line.find("HEVC") != std::string::npos);
+            } else {
+                matched = (line.find(codec) != std::string::npos);
+            }
+            if (matched) {
+                codecPT = std::stoi(ptStr);
+                break;  // 使用第一个匹配的 PT
             }
         }
     }
-    return h264PT;
+    return codecPT;
 }
 
 void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
@@ -476,17 +505,6 @@ void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
     si.ice_ufrag = iceUfrag;
     si.ice_pwd = icePwd;
 
-    // 将 SPS/PPS 编码为 Base64（用于 SDP sprop-parameter-sets）
-    // 格式: <sps_base64>,<pps_base64>
-    std::string spropParamSets;
-    if (!si.sps.empty() && !si.pps.empty()) {
-        std::string sps_raw(reinterpret_cast<const char*>(si.sps.data()), si.sps.size());
-        std::string pps_raw(reinterpret_cast<const char*>(si.pps.data()), si.pps.size());
-        std::string sps_b64 = base64Encode(sps_raw);
-        std::string pps_b64 = base64Encode(pps_raw);
-        spropParamSets = sps_b64 + "," + pps_b64;
-    }
-
     std::ostringstream sdp;
     sdp << "v=0\r\n";
     sdp << "o=- 0 0 IN IP4 " << serverIp << "\r\n";
@@ -502,38 +520,74 @@ void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
     sdp << "a=rtpmap:" << si.payload_type
         << " " << si.codec << "/" << si.clock_rate << "\r\n";
 
-    // 构造 fmtp 行：如果已有 fmtp 则在其后追加 sprop-parameter-sets，
-    // 否则从 sps/pps 构造完整 fmtp
+    // 构造 fmtp 行：如果已有 fmtp 则在其后追加参数集，
+    // 否则从参数集构造完整 fmtp
     std::string fmtpLine;
     if (!si.fmtp.empty()) {
         fmtpLine = si.fmtp;
     }
-    if (!spropParamSets.empty()) {
-        // 如果原有 fmtp 已有 sprop-parameter-sets，则不重复添加
-        if (fmtpLine.find("sprop-parameter-sets") == std::string::npos) {
-            if (!fmtpLine.empty()) fmtpLine += ";";
-            fmtpLine += "sprop-parameter-sets=" + spropParamSets;
+
+    bool isH265 = (si.codec == "H265" || si.codec == "HEVC");
+    if (isH265) {
+        // H.265 fmtp（RFC 7798）：sprop-vps/sprop-sps/sprop-pps 以分号分隔
+        // 源 fmtp 可能已含这些参数，逐项检测避免重复
+        std::string h265ParamSets;
+        if (!si.vps.empty() && fmtpLine.find("sprop-vps=") == std::string::npos) {
+            std::string vps_raw(reinterpret_cast<const char*>(si.vps.data()), si.vps.size());
+            h265ParamSets += "sprop-vps=" + base64Encode(vps_raw);
         }
-    }
-    // 确保 packetization-mode 存在（RFC 6184 必需，默认 mode=1 支持 FU-A/STAP-A）
-    if (!fmtpLine.empty() && fmtpLine.find("packetization-mode") == std::string::npos) {
-        fmtpLine = "packetization-mode=1;" + fmtpLine;
-    }
-    // 确保 profile-level-id 存在
-    if (!fmtpLine.empty() && fmtpLine.find("profile-level-id") == std::string::npos) {
-        if (si.sps.size() >= 4 && (si.sps[0] & 0x1F) == NAL_TYPE_SPS) {
-            // sps 包含完整 NAL 单元，profile-level-id 取自 SPS RBSP 第 1-3 字节
-            char buf[16];
-            snprintf(buf, sizeof(buf), "profile-level-id=%02X%02X%02X",
-                si.sps[1], si.sps[2], si.sps[3]);
-            fmtpLine = std::string(buf) + ";" + fmtpLine;
-        } else {
-            fmtpLine = "profile-level-id=42C01F;" + fmtpLine;
+        if (!si.sps.empty() && fmtpLine.find("sprop-sps=") == std::string::npos) {
+            if (!h265ParamSets.empty()) h265ParamSets += ";";
+            std::string sps_raw(reinterpret_cast<const char*>(si.sps.data()), si.sps.size());
+            h265ParamSets += "sprop-sps=" + base64Encode(sps_raw);
         }
-    }
-    // 确保 level-asymmetry-allowed 存在
-    if (!fmtpLine.empty() && fmtpLine.find("level-asymmetry-allowed") == std::string::npos) {
-        fmtpLine += ";level-asymmetry-allowed=1";
+        if (!si.pps.empty() && fmtpLine.find("sprop-pps=") == std::string::npos) {
+            if (!h265ParamSets.empty()) h265ParamSets += ";";
+            std::string pps_raw(reinterpret_cast<const char*>(si.pps.data()), si.pps.size());
+            h265ParamSets += "sprop-pps=" + base64Encode(pps_raw);
+        }
+        if (!h265ParamSets.empty()) {
+            if (!fmtpLine.empty() && fmtpLine.back() != ';') fmtpLine += ";";
+            fmtpLine += h265ParamSets;
+        }
+    } else {
+        // H.264：将 SPS/PPS 编码为 Base64（用于 SDP sprop-parameter-sets）
+        // 格式: <sps_base64>,<pps_base64>
+        std::string spropParamSets;
+        if (!si.sps.empty() && !si.pps.empty()) {
+            std::string sps_raw(reinterpret_cast<const char*>(si.sps.data()), si.sps.size());
+            std::string pps_raw(reinterpret_cast<const char*>(si.pps.data()), si.pps.size());
+            std::string sps_b64 = base64Encode(sps_raw);
+            std::string pps_b64 = base64Encode(pps_raw);
+            spropParamSets = sps_b64 + "," + pps_b64;
+        }
+        if (!spropParamSets.empty()) {
+            // 如果原有 fmtp 已有 sprop-parameter-sets，则不重复添加
+            if (fmtpLine.find("sprop-parameter-sets") == std::string::npos) {
+                if (!fmtpLine.empty()) fmtpLine += ";";
+                fmtpLine += "sprop-parameter-sets=" + spropParamSets;
+            }
+        }
+        // 确保 packetization-mode 存在（RFC 6184 必需，默认 mode=1 支持 FU-A/STAP-A）
+        if (!fmtpLine.empty() && fmtpLine.find("packetization-mode") == std::string::npos) {
+            fmtpLine = "packetization-mode=1;" + fmtpLine;
+        }
+        // 确保 profile-level-id 存在
+        if (!fmtpLine.empty() && fmtpLine.find("profile-level-id") == std::string::npos) {
+            if (si.sps.size() >= 4 && (si.sps[0] & 0x1F) == NAL_TYPE_SPS) {
+                // sps 包含完整 NAL 单元，profile-level-id 取自 SPS RBSP 第 1-3 字节
+                char buf[16];
+                snprintf(buf, sizeof(buf), "profile-level-id=%02X%02X%02X",
+                    si.sps[1], si.sps[2], si.sps[3]);
+                fmtpLine = std::string(buf) + ";" + fmtpLine;
+            } else {
+                fmtpLine = "profile-level-id=42C01F;" + fmtpLine;
+            }
+        }
+        // 确保 level-asymmetry-allowed 存在
+        if (!fmtpLine.empty() && fmtpLine.find("level-asymmetry-allowed") == std::string::npos) {
+            fmtpLine += ";level-asymmetry-allowed=1";
+        }
     }
     if (!fmtpLine.empty()) {
         sdp << "a=fmtp:" << si.payload_type << " " << fmtpLine << "\r\n";

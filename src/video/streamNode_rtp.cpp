@@ -101,9 +101,48 @@ void StreamNode::addToRtpBuffer(std::shared_ptr<RTPPacket> pPkt)
     }
 }
 
-bool StreamNode::checkIsIdrNalu(const RTPPacket& packet) {
+bool StreamNode::checkIsIdrNalu(const RTPPacket& packet, const std::string& codec) {
     bool isIdrNalu = false;
-    if (!packet.payload.empty()) {
+    if (packet.payload.empty()) {
+        return isIdrNalu;
+    }
+
+    // H.265/HEVC：2 字节 NAL header，nal_unit_type = (payload[0] >> 1) & 0x3F
+    bool isH265 = (codec == "H265" || codec == "HEVC");
+    if (isH265) {
+        if (packet.payload.size() < 2) {
+            return isIdrNalu;
+        }
+        uint8_t nalType = (packet.payload[0] >> 1) & 0x3F;
+        if (nalType == NAL_TYPE_H265_IDR_W_RADL || nalType == NAL_TYPE_H265_IDR_N_LP) {
+            isIdrNalu = true;
+        }
+        else if (nalType == NAL_TYPE_H265_FU && packet.payload.size() > 2) {
+            // H.265 FU: [FU indicator(2B)][FU header(1B)]，FU header 低 6 位是 NAL type
+            uint8_t fuNalType = packet.payload[2] & 0x3F;
+            if (fuNalType == NAL_TYPE_H265_IDR_W_RADL || fuNalType == NAL_TYPE_H265_IDR_N_LP) {
+                isIdrNalu = true;
+            }
+        }
+        else if (nalType == NAL_TYPE_H265_AP && packet.payload.size() > 3) {
+            // H.265 AP: [AP header(2B)][NALU1 size(2B)][NALU1 data...]...
+            // 遍历所有子 NAL：关键帧前常聚合 [VPS,SPS,PPS,IDR]，只查第一个会漏检 IDR
+            size_t off = 2;
+            while (off + 2 <= packet.payload.size()) {
+                uint16_t L = (uint16_t(packet.payload[off]) << 8) | packet.payload[off + 1];
+                off += 2;
+                if (L == 0 || off + L > packet.payload.size()) break;
+                uint8_t subNalType = (packet.payload[off] >> 1) & 0x3F;
+                if (subNalType == NAL_TYPE_H265_IDR_W_RADL || subNalType == NAL_TYPE_H265_IDR_N_LP) {
+                    isIdrNalu = true;
+                    break;
+                }
+                off += L;
+            }
+        }
+    }
+    else {
+        // H.264：1 字节 NAL header，type = payload[0] & 0x1F
         uint8_t nalHeader = packet.payload[0];
         uint8_t nalType = nalHeader & 0x1F;
         if (nalType == NAL_TYPE_IDR) {
@@ -202,12 +241,18 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
 
     // === WebRTC SRTP 发送路径 ===
     // 遍历所有 client_sessions_，对 DTLS+SRTP 已完成的会话通过 SRTP 加密后发送视频
-    uint8_t nalType = packet.payload[0] & 0x1F;
-
     for (auto& session : playClients) {
         if (!session || !session->is_webrtc) continue;
         // state: streaming=SRTP激活
         if (session->state_ != SESSION_STATE::SESSION_STREAMING) continue;
+
+        // 按会话 codec 解析 NAL 类型：
+        // H.264: 1 字节 NAL header, type = payload[0] & 0x1F
+        // H.265: 2 字节 NAL header, type = (payload[0] >> 1) & 0x3F
+        bool isH265 = (session->codec == "H265" || session->codec == "HEVC");
+        uint8_t nalType = isH265
+            ? ((packet.payload.size() >= 2) ? ((packet.payload[0] >> 1) & 0x3F) : 0)
+            : (packet.payload[0] & 0x1F);
 
         // 通过 SessionDtlsState 正确访问 DTLS 和 SRTP 上下文
         // dtls_transport_ 为 shared_ptr（由 ICE 线程管理），原子加载快照后持有引用，
@@ -220,34 +265,68 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
         DtlsTransport& dtls = dtlsState->dtls;
         SrptProtect::Context& srtpCtx = dtlsState->srtp_ctx;
 
-        // 从源流动态缓存 SPS/PPS（当相机 SDP 不含 sprop-parameter-sets 时，
-        // 后续的 IDR 前插入和首次发送逻辑依赖缓存的 SPS/PPS）
-        // 注意：SPS/PPS 可能以 Single NAL、STAP-A 或 FU-A 格式到达
-        if (nalType == NAL_TYPE_SPS) {
-            session->sps = packet.payload;
-        } else if (nalType == NAL_TYPE_PPS) {
-            session->pps = packet.payload;
-        } else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 3) {
-            // STAP-A: [STAP-A header(1B)] [NALU1 size(2B)] [NALU1 data] ...
-            size_t off = 1;
-            while (off + 2 <= packet.payload.size()) {
-                uint16_t L = (packet.payload[off] << 8) | packet.payload[off + 1];
-                off += 2;
-                if (L == 0 || off + L > packet.payload.size()) break;
-                uint8_t subType = packet.payload[off] & 0x1F;
-                if (subType == NAL_TYPE_SPS) {
-                    session->sps = std::vector<uint8_t>(
-                        packet.payload.begin() + off,
-                        packet.payload.begin() + off + L);
-                } else if (subType == NAL_TYPE_PPS) {
-                    session->pps = std::vector<uint8_t>(
-                        packet.payload.begin() + off,
-                        packet.payload.begin() + off + L);
+        // 从源流动态缓存参数集（当相机 SDP 不含 sprop 参数时，
+        // 后续的 IDR 前插入和首次发送逻辑依赖缓存的参数集）
+        // H.264: SPS/PPS 可能以 Single NAL、STAP-A 或 FU-A 格式到达
+        // H.265: VPS/SPS/PPS 可能以 Single NAL、AP 或 FU 格式到达（RFC 7798）
+        if (isH265) {
+            if (nalType == NAL_TYPE_H265_VPS) {
+                session->vps = packet.payload;
+            } else if (nalType == NAL_TYPE_H265_SPS) {
+                session->sps = packet.payload;
+            } else if (nalType == NAL_TYPE_H265_PPS) {
+                session->pps = packet.payload;
+            } else if (nalType == NAL_TYPE_H265_AP && packet.payload.size() > 3) {
+                // AP: [AP header(2B)] [NALU1 size(2B)] [NALU1 data] ...
+                size_t off = 2;
+                while (off + 2 <= packet.payload.size()) {
+                    uint16_t L = (packet.payload[off] << 8) | packet.payload[off + 1];
+                    off += 2;
+                    if (L == 0 || off + L > packet.payload.size()) break;
+                    uint8_t subType = (packet.payload[off] >> 1) & 0x3F;
+                    if (subType == NAL_TYPE_H265_VPS) {
+                        session->vps = std::vector<uint8_t>(
+                            packet.payload.begin() + off,
+                            packet.payload.begin() + off + L);
+                    } else if (subType == NAL_TYPE_H265_SPS) {
+                        session->sps = std::vector<uint8_t>(
+                            packet.payload.begin() + off,
+                            packet.payload.begin() + off + L);
+                    } else if (subType == NAL_TYPE_H265_PPS) {
+                        session->pps = std::vector<uint8_t>(
+                            packet.payload.begin() + off,
+                            packet.payload.begin() + off + L);
+                    }
+                    off += L;
                 }
-                off += L;
             }
-        } else if (nalType == NAL_TYPE_FU_A && packet.payload.size() > 1) {
-            // FU-A 极少用于 SPS/PPS（SPS/PPS 通常很小无需分片），暂不处理
+        } else {
+            if (nalType == NAL_TYPE_SPS) {
+                session->sps = packet.payload;
+            } else if (nalType == NAL_TYPE_PPS) {
+                session->pps = packet.payload;
+            } else if (nalType == NAL_TYPE_STAP_A && packet.payload.size() > 3) {
+                // STAP-A: [STAP-A header(1B)] [NALU1 size(2B)] [NALU1 data] ...
+                size_t off = 1;
+                while (off + 2 <= packet.payload.size()) {
+                    uint16_t L = (packet.payload[off] << 8) | packet.payload[off + 1];
+                    off += 2;
+                    if (L == 0 || off + L > packet.payload.size()) break;
+                    uint8_t subType = packet.payload[off] & 0x1F;
+                    if (subType == NAL_TYPE_SPS) {
+                        session->sps = std::vector<uint8_t>(
+                            packet.payload.begin() + off,
+                            packet.payload.begin() + off + L);
+                    } else if (subType == NAL_TYPE_PPS) {
+                        session->pps = std::vector<uint8_t>(
+                            packet.payload.begin() + off,
+                            packet.payload.begin() + off + L);
+                    }
+                    off += L;
+                }
+            } else if (nalType == NAL_TYPE_FU_A && packet.payload.size() > 1) {
+                // FU-A 极少用于 SPS/PPS（SPS/PPS 通常很小无需分片），暂不处理
+            }
         }
 
         // 初始化 per-session 序列号（以原始流第一个包的 seq 为基准）
@@ -308,12 +387,118 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             }
         };
 
-        // 把一个 H.264 NALU（含其 NAL 头字节）重新打包成一个或多个 RTP 包发送：
-        // Single NAL（≤kMaxRtpPayload）直接发送；更大则用 FU-A 切分。
-        // STAP-A 聚合包先拆成单 NAL 逐发；相机已 FU-A 分片但单片仍过大的，按片再切小。
-        std::function<void(const std::vector<uint8_t>&, uint32_t, bool)> sendH264Nalu =
+        // 把一个 NALU（含其 NAL 头字节）重新打包成一个或多个 RTP 包发送。
+        // H.264：Single NAL（≤kMaxRtpPayload）直接发送，更大则用 FU-A 切分；
+        //        STAP-A 聚合包先拆成单 NAL 逐发；相机已 FU-A 分片但单片仍过大的，按片再切小。
+        // H.265：Single NAL（≤kMaxRtpPayload）直接发送，更大则用 FU（2B indicator + 1B FU header）切分；
+        //        AP 聚合包先拆成单 NAL 逐发；相机已 FU 分片但单片仍过大的，按片再切小。
+        std::function<void(const std::vector<uint8_t>&, uint32_t, bool)> sendNalu =
             [&](const std::vector<uint8_t>& nalu, uint32_t ts, bool marker) {
             if (nalu.empty()) return;
+
+            if (isH265) {
+                if (nalu.size() < 2) return;
+                uint8_t nt = (nalu[0] >> 1) & 0x3F;
+
+                // H.265 AP：拆成多个单 NAL 逐发（marker 仅落在最后一个子 NALU 上）
+                if (nt == NAL_TYPE_H265_AP) {
+                    size_t off = 2;
+                    while (off + 2 <= nalu.size()) {
+                        uint16_t L = (uint16_t(nalu[off]) << 8) | uint16_t(nalu[off + 1]);
+                        off += 2;
+                        if (L == 0 || off + L > nalu.size()) break;
+                        bool isLast = (off + L >= nalu.size());
+                        std::vector<uint8_t> sub(nalu.begin() + off, nalu.begin() + off + L);
+                        sendNalu(sub, ts, marker && isLast);
+                        off += L;
+                    }
+                    return;
+                }
+
+                // 相机已 FU 分片：单 RTP 包内负载(含 3B FU 头)未超上限则原样重映射发送；
+                // 仍过大（弱网隧道场景）时按片再切成更小的 FU。
+                if (nt == NAL_TYPE_H265_FU) {
+                    if (nalu.size() <= kMaxRtpPayload) {
+                        std::vector<uint8_t> rtp(12 + nalu.size());
+                        rtp[0] = 0x80;
+                        rtp[1] = (marker ? 0x80 : 0x00) | (session->payload_type & 0x7F);
+                        rtp[4] = (ts >> 24) & 0xFF; rtp[5] = (ts >> 16) & 0xFF;
+                        rtp[6] = (ts >> 8) & 0xFF;  rtp[7] = ts & 0xFF;
+                        rtp[8] = (sessionSsrc >> 24) & 0xFF; rtp[9] = (sessionSsrc >> 16) & 0xFF;
+                        rtp[10] = (sessionSsrc >> 8) & 0xFF;  rtp[11] = sessionSsrc & 0xFF;
+                        memcpy(&rtp[12], nalu.data(), nalu.size());
+                        sendBuiltRtp(rtp);
+                    }
+                    else {
+                        uint8_t fuType = nalu[2] & 0x3F;
+                        bool camS = (nalu[2] & 0x80) != 0;
+                        bool camE = (nalu[2] & 0x40) != 0;
+                        size_t dataLen = nalu.size() - 3;
+                        size_t chunkMax = kMaxRtpPayload - 3;
+                        size_t pos = 0;
+                        while (pos < dataLen) {
+                            size_t frag = (dataLen - pos > chunkMax) ? chunkMax : (dataLen - pos);
+                            bool isFirst = (pos == 0) && camS;
+                            bool isLast = (pos + frag >= dataLen) && camE;
+                            std::vector<uint8_t> rtp(12 + 3 + frag);
+                            rtp[0] = 0x80;
+                            rtp[1] = ((isLast && marker) ? 0x80 : 0x00) | (session->payload_type & 0x7F);
+                            rtp[4] = (ts >> 24) & 0xFF; rtp[5] = (ts >> 16) & 0xFF;
+                            rtp[6] = (ts >> 8) & 0xFF;  rtp[7] = ts & 0xFF;
+                            rtp[8] = (sessionSsrc >> 24) & 0xFF; rtp[9] = (sessionSsrc >> 16) & 0xFF;
+                            rtp[10] = (sessionSsrc >> 8) & 0xFF;  rtp[11] = sessionSsrc & 0xFF;
+                            rtp[12] = nalu[0]; rtp[13] = nalu[1];  // FU indicator 原样（2B）
+                            rtp[14] = (uint8_t)(fuType | (isFirst ? 0x80 : 0) | (isLast ? 0x40 : 0));
+                            memcpy(&rtp[15], &nalu[3 + pos], frag);
+                            sendBuiltRtp(rtp);
+                            pos += frag;
+                        }
+                    }
+                    return;
+                }
+
+                // Single NAL（或未识别类型）：过大则 FU 切分，否则直接发送
+                if (nalu.size() <= kMaxRtpPayload) {
+                    std::vector<uint8_t> rtp(12 + nalu.size());
+                    rtp[0] = 0x80;
+                    rtp[1] = (marker ? 0x80 : 0x00) | (session->payload_type & 0x7F);
+                    rtp[4] = (ts >> 24) & 0xFF; rtp[5] = (ts >> 16) & 0xFF;
+                    rtp[6] = (ts >> 8) & 0xFF;  rtp[7] = ts & 0xFF;
+                    rtp[8] = (sessionSsrc >> 24) & 0xFF; rtp[9] = (sessionSsrc >> 16) & 0xFF;
+                    rtp[10] = (sessionSsrc >> 8) & 0xFF;  rtp[11] = sessionSsrc & 0xFF;
+                    memcpy(&rtp[12], nalu.data(), nalu.size());
+                    sendBuiltRtp(rtp);
+                }
+                else {
+                    uint8_t nalType = nt;
+                    uint8_t fuIndicator0 = (nalu[0] & 0x81) | (NAL_TYPE_H265_FU << 1);  // type=49
+                    uint8_t fuIndicator1 = nalu[1];
+                    size_t chunkMax = kMaxRtpPayload - 3;
+                    size_t offset = 2;
+                    bool first = true;
+                    while (offset < nalu.size()) {
+                        size_t remain = nalu.size() - offset;
+                        size_t frag = (remain > chunkMax) ? chunkMax : remain;
+                        bool isLast = (offset + frag >= nalu.size());
+                        std::vector<uint8_t> rtp(12 + 3 + frag);
+                        rtp[0] = 0x80;
+                        rtp[1] = ((isLast && marker) ? 0x80 : 0x00) | (session->payload_type & 0x7F);
+                        rtp[4] = (ts >> 24) & 0xFF; rtp[5] = (ts >> 16) & 0xFF;
+                        rtp[6] = (ts >> 8) & 0xFF;  rtp[7] = ts & 0xFF;
+                        rtp[8] = (sessionSsrc >> 24) & 0xFF; rtp[9] = (sessionSsrc >> 16) & 0xFF;
+                        rtp[10] = (sessionSsrc >> 8) & 0xFF;  rtp[11] = sessionSsrc & 0xFF;
+                        rtp[12] = fuIndicator0; rtp[13] = fuIndicator1;  // FU indicator（2B）
+                        rtp[14] = (uint8_t)(nalType | (first ? 0x80 : 0) | (isLast ? 0x40 : 0));
+                        memcpy(&rtp[15], &nalu[offset], frag);
+                        sendBuiltRtp(rtp);
+                        offset += frag;
+                        first = false;
+                    }
+                }
+                return;
+            }
+
+            // H.264 路径
             uint8_t nt = nalu[0] & 0x1F;
 
             // STAP-A：拆成多个单 NAL 逐发（marker 仅落在最后一个子 NALU 上）
@@ -325,7 +510,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                     if (L == 0 || off + L > nalu.size()) break;
                     bool isLast = (off + L >= nalu.size());
                     std::vector<uint8_t> sub(nalu.begin() + off, nalu.begin() + off + L);
-                    sendH264Nalu(sub, ts, marker && isLast);
+                    sendNalu(sub, ts, marker && isLast);
                     off += L;
                 }
                 return;
@@ -413,12 +598,13 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             }
         };
 
-        // 发送单个 NAL（SPS/PPS 等小包），marker=0
+        // 发送单个 NAL（参数集等小包），marker=0
         auto sendSingleNalRtp = [&](const std::vector<uint8_t>& nal, uint32_t ts) {
-            sendH264Nalu(nal, ts, false);
+            sendNalu(nal, ts, false);
         };
 
-        // 重发缓存的关键帧（SPS+PPS+IDR 分片）。缓存的是相机原始 RTP 包（含 12B 头），
+        // 重发缓存的关键帧（H.264: SPS+PPS+IDR 分片；H.265: VPS+SPS+PPS+IDR 分片）。
+        // 缓存的是相机原始 RTP 包（含 12B 头），
         // 需解析出 NALU 后按安全 MTU 重新分片发送，避免大 IDR 包在弱网被 MTU 丢弃。
         auto resendKeyframe = [&]() {
             // 锁内拷贝出缓存快照，锁外发送：keyframe_cache_ 由 onRecvOriginRtpPkt
@@ -433,6 +619,9 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             // 缓存为空或不完整（IDR 分片有缺失）时不重发：
             // 重发不完整的关键帧会让浏览器组帧失败继续花屏，宁可等源流下一帧 IDR
             if (kfPkts.empty() || !kfComplete) return;
+            if (isH265) {
+                if (!session->vps.empty()) sendSingleNalRtp(session->vps, packet.timestamp);
+            }
             if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
             if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
             RTPPacket kfPkt;
@@ -440,7 +629,7 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                 if (!kfPkt.parse(kfData.data(), kfData.size())) continue;
                 // 使用缓存包自身的时间戳重发：用当前包 ts 会导致同 ts 双帧，
                 // 浏览器组帧/解码错乱（偶发花屏）
-                sendH264Nalu(kfPkt.payload, kfPkt.timestamp, kfPkt.marker);
+                sendNalu(kfPkt.payload, kfPkt.timestamp, kfPkt.marker);
             }
         };
 
@@ -489,19 +678,20 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             dtlsState->last_idr_sent_time_ = now_steady;
             // LOG("[WebRTC] periodic keyframe resend (gap>%dms)", kMaxIdrGapMs);
         }
-        // 每个IDR之前发送 SPS/PPS。
-        // 注意：last_idr_sent_time_ 刷新在 SPS/PPS 是否为空之前——
-        // 相机 RTP 流不带 SPS 包（仅 SDP sprop 提供）时，IDR 帧到达同样算关键帧已发送，
+        // 每个IDR之前发送参数集（H.264: SPS/PPS；H.265: VPS/SPS/PPS）。
+        // 注意：last_idr_sent_time_ 刷新在参数集是否为空之前——
+        // 相机 RTP 流不带参数集包（仅 SDP sprop 提供）时，IDR 帧到达同样算关键帧已发送，
         // 否则周期重发会在每个 IDR 帧上再叠加一次完整重发（关键帧流量翻倍）
         else if (packet.isIdrNalu && packet.isLastIdrNalu == false) {
+            if (isH265 && !session->vps.empty()) sendSingleNalRtp(session->vps, packet.timestamp);
             if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
             if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
             dtlsState->last_idr_sent_time_ = now_steady;
             // LOG("send sps/pps");
         }
 
-        // 重新分片发送本帧 H.264 负载（安全 MTU，解决弱网大包被丢弃导致的冻结/花屏）
-        sendH264Nalu(packet.payload, packet.timestamp, packet.marker);
+        // 重新分片发送本帧负载（安全 MTU，解决弱网大包被丢弃导致的冻结/花屏）
+        sendNalu(packet.payload, packet.timestamp, packet.marker);
 
     }
 }

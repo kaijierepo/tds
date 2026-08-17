@@ -89,6 +89,8 @@ struct STREAM_SESSION {
     // 如果 SDP 中包含 sprop-parameter-sets，会把解码后的 SPS/PPS 保存到这里
     std::vector<uint8_t> sps;
     std::vector<uint8_t> pps;
+    // H.265 参数集：sprop-vps 解码后的 VPS
+    std::vector<uint8_t> vps;
     std::string sdp;
     STREAM_SESSION_TYPE session_type_;
     std::string tag_;

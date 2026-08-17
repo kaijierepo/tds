@@ -379,11 +379,18 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		si.session_type_ = CLIENT_WEBRTC_PULL;
 		si.client_rtp_port = clientRtpPort;
 		si.remote_host = session.remoteIP;
-		// 从浏览器 Offer 中解析 H264 payload type（避免 PT 冲突）
-		int h264PT = parseH264PTFromOffer(sdpOffer);
-		if (h264PT > 0) {
-			si.payload_type = h264PT;
-			LOG("[WebRTC] using H264 PT=%d from Offer", h264PT);
+		// 从浏览器 Offer 中解析源流 codec 的 payload type（避免 PT 冲突）
+		// H.265 浏览器可能命名为 H265 或 HEVC，parseCodecPTFromOffer 两者都识别
+		int webrtcPT = parseCodecPTFromOffer(sdpOffer, si.codec);
+		if (webrtcPT > 0) {
+			si.payload_type = webrtcPT;
+			// 以浏览器 Offer 中的实际编码名（如 H265/HEVC）作为 Answer 的 rtpmap 编码名，
+			// 保证 Answer 与 Offer 严格匹配
+			std::string offerCodecName = parseCodecNameFromOffer(sdpOffer, webrtcPT);
+			if (!offerCodecName.empty()) {
+				si.codec = offerCodecName;
+			}
+			LOG("[WebRTC] using codec=%s PT=%d from Offer", si.codec.c_str(), webrtcPT);
 		}
 		if (!si.createUDPConsecutiveSockets(true)) {
 			LOG("[WebRTC] createUDPConsecutiveSockets failed for tag=%s", tag.c_str());
