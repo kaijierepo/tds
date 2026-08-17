@@ -1,0 +1,34 @@
+version: '1.0'
+name: pipeline-linux-x86_64
+displayName: Linux x86_64 构建
+triggers:
+  trigger: auto
+  push:
+    branches:
+      prefix:
+        - ''
+stages:
+  - name: build-linux-x86_64
+    displayName: Linux x86_64 编译
+    strategy: naturally
+    trigger: auto
+    executor: []
+    steps:
+      - step: build@gcc
+        name: build_gcc
+        displayName: GCC 构建
+        gccVersion: '9.4'
+        commands:
+          - '# 安装编译依赖（gcc/g++、make、libssl、libkrb5、file）'
+          - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
+          - '# 进入 build 目录执行 x86_64 release 构建'
+          - cd build
+          - bash build.sh x86_64
+        artifacts:
+          - name: BUILD_ARTIFACT
+            path:
+              - ./out/tds
+        caches: []
+        notify: []
+        strategy:
+          retry: '0'
