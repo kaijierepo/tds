@@ -90,8 +90,8 @@ x86_64)
     arch_flags="-march=x86-64 -mtune=generic"
     SYSROOT=""
     strip_tool="strip"
-    # 本机编译：链接系统动态库
-    linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -ldl -static-libgcc -static-libstdc++"
+    # 本机编译：链接系统基础库（MG_TLS_BUILTIN 内置 mbedtls，不需要 openssl/krb5）
+    linkerflags="-lpthread -lutil -lrt -ldl -static-libgcc -static-libstdc++"
     output_file="../out/tds/tds_x86_64_${MODE}"
     ;;
 arm64)

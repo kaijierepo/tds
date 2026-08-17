@@ -27,11 +27,33 @@ stages:
           - '# 进入 build 目录执行 x86_64 release 构建'
           - cd build
           - bash build.sh x86_64
+          - '# 打包发布物：out/dist/tds-v{提交次数}-linux-x86_64.tar.gz'
+          - bash package.sh x86_64
         artifacts:
           - name: BUILD_ARTIFACT
             path:
-              - ./out/tds
+              - ./out/dist
         caches: []
+        notify: []
+        strategy:
+          retry: '0'
+  - name: release
+    displayName: 发布 Gitee Release
+    strategy: naturally
+    trigger: manual
+    executor: []
+    steps:
+      - step: release@gitee
+        name: release_gitee
+        displayName: Gitee Release
+        releaseName: ${TDS_VERSION}
+        tagName: ${TDS_VERSION}
+        upstreamArtifact:
+          - BUILD_ARTIFACT
+        assertFiles:
+          - out/dist/${TDS_VERSION}.tar.gz
+        prerelease: false
+        allowUpdate: true
         notify: []
         strategy:
           retry: '0'
