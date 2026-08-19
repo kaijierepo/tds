@@ -29,9 +29,9 @@ stages:
           - bash build.sh x86_64
           - '# 打包发布物：out/dist/tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz'
           - bash package.sh x86_64
-          - '# 产物生成在 build/out/dist，复制到根目录 out/dist（artifacts 的 path 相对根目录解析）'
-          - 'mkdir -p ../out/dist && cp -f out/dist/*.tar.gz ../out/dist/'
-          - 'ls -la ../out/dist/'
+          - '# 返回工作区根目录：package.sh 产物在根目录 out/dist，artifacts.path 相对该目录收集'
+          - 'cd ..'
+          - 'ls -la out/dist/'
         artifacts:
           - name: BUILD_ARTIFACT
             path:
