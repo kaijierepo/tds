@@ -1,15 +1,16 @@
 version: '1.0'
 # ============================================================
-# 流水线配置版本标识：TDS_CFG=v9
+# 流水线配置版本标识：TDS_CFG=v10
 # 编辑界面保存本文件后，重新触发构建，build 阶段第一条日志会打印
-# "TDS_CFG=v9"。拷贝日志时搜索该标识即可确认编辑界面配置已更新。
+# "TDS_CFG=v10"。拷贝日志时搜索该标识即可确认编辑界面配置已更新。
 #
-# 相对 v8 的变更：
-#   - releaseName / tagName: tds-v{N}-linux-x86_64 → tds-linux-x86_64（去掉构建号前缀）
-#   - 包名: release-package.tar.gz → tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz
-#     通过流水线变量 ${TDS_VERSION} 引用（package.sh 已写入 GITEE_PARAMS）
-#   - 包结构: package.sh 产出的 tds-v{X}/tds 嵌套目录 → 扁平 tds（build 阶段 cd
-#     进版本目录后 tar czf tds，包内只有 tds 一个文件）
+# 相对 v9 的变更：
+#   - releaseName / tagName: tds-linux-x86_64 → tds-{短哈希}-linux-x86_64
+#     （构建号 vN 换成 commit 短哈希，build 阶段写入流水线变量 TDS_SHA）
+#
+# v9 已实现（保留）：
+#   - 包名: tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz（${TDS_VERSION}）
+#   - 包结构: 扁平 tds，无嵌套目录
 #
 # 说明：Gitee Release 页"下载 Source code (zip/tar.gz)"是平台内置固定功能，
 #       release@gitee 插件不支持关闭，无法通过 yml 关掉。
@@ -34,7 +35,7 @@ stages:
         displayName: GCC 构建
         gccVersion: '9.4'
         commands:
-          - 'echo "TDS_CFG=v9"'
+          - 'echo "TDS_CFG=v10"'
           - '# 安装编译依赖（gcc/g++、make、libssl、libkrb5、file）'
           - export DEBIAN_FRONTEND=noninteractive
           - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
@@ -46,6 +47,8 @@ stages:
           - bash package.sh x86_64
           - '# 返回工作区根目录'
           - 'cd ..'
+          - '# 计算 commit 短哈希写入流水线变量 TDS_SHA（release 标题/tag 使用，与 TDS_VERSION 同机制）'
+          - 'echo "TDS_SHA=$(git rev-parse --short HEAD)" >> "$GITEE_PARAMS"'
           - '# 重新打包为扁平结构：进入版本目录后只 tar tds，避免嵌套目录前缀'
           - 'VER="${TDS_VERSION:-tds-v0-linux-x86_64-unknown}"'
           - 'cd "out/dist/${VER}" && tar czf "../../${VER}.tar.gz" tds && cd ../..'
@@ -67,8 +70,8 @@ stages:
       - step: release@gitee
         name: release_gitee
         displayName: Gitee Release
-        releaseName: tds-linux-x86_64
-        tagName: tds-linux-x86_64
+        releaseName: tds-${TDS_SHA}-linux-x86_64
+        tagName: tds-${TDS_SHA}-linux-x86_64
         description: TDS Linux x86_64 自动构建发布包，产物文件名包含提交次数+日期（tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz），包内仅含 tds 可执行文件。
         upstreamArtifact:
           - BUILD_ARTIFACT
