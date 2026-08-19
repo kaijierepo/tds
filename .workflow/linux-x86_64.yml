@@ -1,8 +1,8 @@
 version: '1.0'
 # ============================================================
-# 流水线配置版本标识：TDS_CFG=v7
+# 流水线配置版本标识：TDS_CFG=v8
 # 编辑界面保存本文件后，重新触发构建，build 阶段第一条日志会打印
-# "TDS_CFG=v7"。拷贝日志时搜索该标识即可确认编辑界面配置已更新。
+# "TDS_CFG=v8"。拷贝日志时搜索该标识即可确认编辑界面配置已更新。
 # ============================================================
 name: pipeline-linux-x86_64
 displayName: Linux x86_64 构建
@@ -24,26 +24,26 @@ stages:
         displayName: GCC 构建
         gccVersion: '9.4'
         commands:
-          - 'echo "TDS_CFG=v7"'
+          - 'echo "TDS_CFG=v8"'
           - '# 安装编译依赖（gcc/g++、make、libssl、libkrb5、file）'
           - export DEBIAN_FRONTEND=noninteractive
           - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
           - '# 限制并行数，避免 CI 免费节点 OOM（build.sh 默认取 nproc 会虚高）'
           - export JOBS=2
-          - 'echo "PWD_START=$(pwd)"'
           - cd build
           - bash build.sh x86_64
           - '# 打包发布物：out/dist/tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz'
           - bash package.sh x86_64
           - '# 返回工作区根目录：package.sh 产物在根目录 out/dist，artifacts.path 相对该目录收集'
           - 'cd ..'
-          - 'echo "PWD_END=$(pwd)"'
-          - 'ls -la out/dist/'
-          - 'find . -maxdepth 3 -name "*.tar.gz" 2>/dev/null'
+          - '# 复制固定名到根目录：release 插件还原 artifact 时会平铺，根目录文件路径最稳'
+          - 'cp -f out/dist/tds-*.tar.gz release-package.tar.gz'
+          - 'ls -la out/dist/ release-package.tar.gz'
         artifacts:
           - name: BUILD_ARTIFACT
             path:
               - ./out/dist
+              - ./release-package.tar.gz
         caches: []
         notify: []
         strategy:
@@ -63,7 +63,7 @@ stages:
         upstreamArtifact:
           - BUILD_ARTIFACT
         assertFiles:
-          - ./out/dist/*.tar.gz
+          - ./release-package.tar.gz
         prerelease: false
         allowUpdate: true
         notify: []
