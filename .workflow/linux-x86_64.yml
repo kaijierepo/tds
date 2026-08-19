@@ -1,4 +1,9 @@
 version: '1.0'
+# ============================================================
+# 流水线配置版本标识：TDS_CFG=v6
+# 编辑界面保存本文件后，重新触发构建，build 阶段第一条日志会打印
+# "TDS_CFG=v6"。拷贝日志时搜索该标识即可确认编辑界面配置已更新。
+# ============================================================
 name: pipeline-linux-x86_64
 displayName: Linux x86_64 构建
 triggers:
@@ -19,6 +24,7 @@ stages:
         displayName: GCC 构建
         gccVersion: '9.4'
         commands:
+          - 'echo "TDS_CFG=v6"'
           - '# 安装编译依赖（gcc/g++、make、libssl、libkrb5、file）'
           - export DEBIAN_FRONTEND=noninteractive
           - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
