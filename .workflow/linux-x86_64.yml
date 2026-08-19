@@ -24,17 +24,14 @@ stages:
           - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
           - '# 限制并行数，避免 CI 免费节点 OOM（build.sh 默认取 nproc 会虚高）'
           - export JOBS=2
-          - '# 版本号 = Gitee API 秒取仓库提交总数（响应头 commit_count）+ 当天日期（yyMMdd）'
-          - 'COMMIT_COUNT=$(curl -s -D - -o /dev/null "https://gitee.com/api/v5/repos/liangtuSoft/tds/commits?per_page=1" | tr -d "\r" | awk -F": " "/^[Cc]ommit_count/{print \$2}")'
-          - 'export TDS_VERSION_OVERRIDE="tds-v${COMMIT_COUNT:-unknown}-linux-x86_64-$(date +%y%m%d)"'
-          - 'echo "构建版本号: ${TDS_VERSION_OVERRIDE}"'
+          - '# 版本号由 package.sh 自动生成：tds-v{提交次数}-linux-x86_64-{yyMMdd}'
           - cd build
           - bash build.sh x86_64
           - '# 打包发布物：out/dist/tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz'
           - bash package.sh x86_64
           - '# 兜底：额外产出固定文件名，应对 release 插件可能不支持 glob 的情况'
-          - 'cp out/dist/tds-v*-linux-x86_64-*.tar.gz out/dist/tds-linux-x86_64.tar.gz 2>/dev/null || true'
-          - 'ls -la out/dist/'
+          - 'cp ../out/dist/tds-v*-linux-x86_64-*.tar.gz ../out/dist/tds-linux-x86_64.tar.gz 2>/dev/null || true'
+          - 'ls -la ../out/dist/'
         artifacts:
           - name: BUILD_ARTIFACT
             path:
@@ -52,8 +49,8 @@ stages:
       - step: release@gitee
         name: release_gitee
         displayName: Gitee Release
-        releaseName: tds-${GITEE_COMMIT_SHORT}-linux-x86_64
-        tagName: tds-${GITEE_COMMIT_SHORT}-linux-x86_64
+        releaseName: tds-v${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
+        tagName: tds-v${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
         description: TDS Linux x86_64 自动构建发布包，产物文件名包含提交次数+日期（tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz）。
         upstreamArtifact:
           - BUILD_ARTIFACT
