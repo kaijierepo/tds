@@ -43,11 +43,23 @@ stages:
     trigger: manual
     executor: []
     steps:
+      - step: build@gcc
+        name: calc_version
+        displayName: 计算版本号
+        gccVersion: '9.4'
+        commands:
+          - '# 手动触发 release 阶段不会执行 build 阶段，需要自己算版本号（git 提交次数）'
+          - REV_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+          - echo "TDS_VERSION=tds-v${REV_COUNT}-linux-x86_64" >> "$GITEE_PARAMS"
+          - cat "$GITEE_PARAMS"
       - step: release@gitee
         name: release_gitee
         displayName: Gitee Release
         releaseName: ${TDS_VERSION}
         tagName: ${TDS_VERSION}
+        # 发布说明（body）必填，不能为空
+        deion: TDS ${TDS_VERSION} Linux x86_64 自动构建发布包，产物见附件。
+        description: TDS ${TDS_VERSION} Linux x86_64 自动构建发布包，产物见附件。
         upstreamArtifact:
           - BUILD_ARTIFACT
         assertFiles:
