@@ -29,8 +29,8 @@ stages:
           - bash build.sh x86_64
           - '# 打包发布物：out/dist/tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz'
           - bash package.sh x86_64
-          - '# 兜底：额外产出固定文件名，应对 release 插件可能不支持 glob 的情况'
-          - 'cp ../out/dist/tds-v*-linux-x86_64-*.tar.gz ../out/dist/tds-linux-x86_64.tar.gz 2>/dev/null || true'
+          - '# 产物生成在 build/out/dist，复制到根目录 out/dist（artifacts 的 path 相对根目录解析）'
+          - 'mkdir -p ../out/dist && cp -f out/dist/*.tar.gz ../out/dist/'
           - 'ls -la ../out/dist/'
         artifacts:
           - name: BUILD_ARTIFACT
@@ -56,7 +56,6 @@ stages:
           - BUILD_ARTIFACT
         assertFiles:
           - ./out/dist/*.tar.gz
-          - ./out/dist/tds-linux-x86_64.tar.gz
         prerelease: false
         allowUpdate: true
         notify: []
