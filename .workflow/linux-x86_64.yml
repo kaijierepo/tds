@@ -1,34 +1,4 @@
 version: '1.0'
-# ============================================================
-# 流水线配置版本标识：TDS_CFG=v14
-# 编辑界面保存本文件后，重新触发构建，build 阶段第一条日志会打印
-# "TDS_CFG=v14"。拷贝日志时搜索该标识即可确认编辑界面配置已更新。
-#
-# 相对 v13 的变更：
-#   - 修复 Gitee 编译失败：commit 2e3d94b6 删除 DTW.hpp 时漏改
-#     src/data_server/tdb.cpp（还 include "DTW.hpp" 并在 dtw/dtw2 分支使用
-#     DTW::dtw_distance_only），已同步删除，与 tDatebase.cpp 保持一致。
-#   - 产物收集不再用固定名 release-package.tar.gz：
-#       * 扁平包 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz 生成在
-#         out/dist 下并删除版本目录，artifacts 目录收集 ./out/dist
-#       * assertFiles 用 ./tds-*.tar.gz（release 插件还原 artifact 时会平铺
-#         到工作区根目录，动态包即位于根目录；v7 用 ./out/dist/*.tar.gz 失败
-#         是因用了平铺前的路径，glob 写法本身保留）
-#       * 若 glob 不被支持导致 release 失败，退回固定名 release-package.tar.gz
-#
-# v13 已实现（保留）：
-#   - 包名日期后缀 {yyMMddHHmmss}（精确到秒），package.sh 同步
-#   - 版本串无 v 前缀：包名 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz
-#   - 包结构: 扁平 tds，无嵌套目录
-#
-# v12 已实现（保留）：
-#   - 不再依赖 GITEE_PARAMS 动态参数（build@gcc 环境为空，v10/v11 因此失败）
-#   - releaseName/tagName 用系统变量 GITEE_PIPELINE_BUILD_NUMBER
-#     （系统级参数，任何任务可用，v7 已验证；放弃 commit 短哈希方案）
-#
-# 说明：Gitee Release 页"下载 Source code (zip/tar.gz)"是平台内置固定功能，
-#       release@gitee 插件不支持关闭，无法通过 yml 关掉。
-# ============================================================
 name: pipeline-linux-x86_64
 displayName: Linux x86_64 构建
 triggers:
@@ -49,7 +19,7 @@ stages:
         displayName: GCC 构建
         gccVersion: '9.4'
         commands:
-          - 'echo "TDS_CFG=v14"'
+          - 'echo "TDS_CFG=v15"'
           - '# 安装编译依赖（gcc/g++、make、libssl、libkrb5、file）'
           - export DEBIAN_FRONTEND=noninteractive
           - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
@@ -57,14 +27,12 @@ stages:
           - export JOBS=2
           - cd build
           - bash build.sh x86_64
-          - '# 打包发布物：out/dist/tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}/tds（含嵌套目录）'
+          - '# 打包发布物：package.sh 直接产出扁平包 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz（包内仅 tds，无目录）'
           - bash package.sh x86_64
           - '# 返回工作区根目录'
           - 'cd ..'
-          - '# 解析实际版本目录，在 out/dist 下重新打包为扁平结构（包内仅 tds，覆盖 package.sh 的嵌套包）'
+          - '# 删除版本目录，out/dist 只保留扁平包'
           - 'PKG="$(basename "$(ls -d out/dist/tds-*-linux-x86_64-*/ | sort | tail -1)")"'
-          - 'cd "out/dist/${PKG}" && tar czf "../${PKG}.tar.gz" tds && cd ../..'
-          - '# 删除版本目录，out/dist 只保留动态名扁平包 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz'
           - 'rm -rf "out/dist/${PKG}"'
           - 'ls -la out/dist/'
         artifacts:
@@ -78,7 +46,7 @@ stages:
   - name: release
     displayName: 发布 Gitee Release
     strategy: naturally
-    trigger: manual
+    trigger: auto
     executor: []
     steps:
       - step: release@gitee
