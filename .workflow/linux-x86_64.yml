@@ -27,18 +27,15 @@ stages:
           - export JOBS=2
           - cd build
           - bash build.sh x86_64
-          - '# 打包发布物：package.sh 直接产出扁平包 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz（包内仅 tds，无目录）'
+          - '# 打包发布物：package.sh 直接在 out/tds 中产出扁平包 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz（包内仅 tds，无目录，不创建 out/dist）'
           - bash package.sh x86_64
-          - '# 返回工作区根目录'
+          - '# 返回工作区根目录，查看打包产物'
           - 'cd ..'
-          - '# 删除版本目录，out/dist 只保留扁平包'
-          - 'PKG="$(basename "$(ls -d out/dist/tds-*-linux-x86_64-*/ | sort | tail -1)")"'
-          - 'rm -rf "out/dist/${PKG}"'
-          - 'ls -la out/dist/'
+          - 'ls -la out/tds/'
         artifacts:
           - name: BUILD_ARTIFACT
             path:
-              - ./out/dist
+              - ./out/tds
         caches: []
         notify: []
         strategy:
