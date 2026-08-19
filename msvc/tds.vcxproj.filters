@@ -141,9 +141,6 @@
     <ClCompile Include="..\src\common\miniz.c">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\common\dtwrecoge.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_dcqk.cpp">
       <Filter>device\io_dev</Filter>
     </ClCompile>
@@ -271,9 +268,6 @@
       <Filter>framework</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tds_imp.cpp">
-      <Filter>framework</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\test.cpp">
       <Filter>framework</Filter>
     </ClCompile>
     <ClCompile Include="..\src\video\streamNode.cpp">
@@ -719,12 +713,6 @@
     <ClInclude Include="..\src\common\miniz.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\common\DTW.hpp">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\common\dtwrecoge.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_dcqk.h">
       <Filter>device\io_dev</Filter>
     </ClInclude>
@@ -929,6 +917,7 @@
     <ClInclude Include="..\src\video\mp4Writer.h">
       <Filter>video</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\data_server\uplinkConf.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico">

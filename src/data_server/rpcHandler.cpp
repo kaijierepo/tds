@@ -3263,21 +3263,7 @@ void jsonToList(json& curve, vector<double>& p)
 
 float CalDTWDist(const vector<double>& vecRef, const vector<double>& vecCur)
 {
-	int curSize = vecCur.size();
-
-	double* ref = new double[curSize]; //这里ref是被对比的含义
-	for (int j = 0; j < curSize; j++) {
-		ref[j] = vecRef[j];
-	}
-	double* Current = new double[curSize];
-	for (int j = 0; j < curSize; j++) {
-		Current[j] = vecCur[j];
-	}
-
-	float dVal = DTWDistanceFun(ref, curSize, Current, curSize, curSize / 10);
-	delete[]ref; delete[]Current;
-
-	return dVal;
+	return 0;
 }
 
 bool rpcHandler::handleMethodCall_fileDownload(const std::string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session)
