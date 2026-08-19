@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_VIDEO_STREAMSESSION_H
+#define TDS_VIDEO_STREAMSESSION_H
+
 
 #include <string>
 #include <thread>
@@ -267,3 +269,5 @@ private:
     std::string extractTransport(const std::string& response);
     bool parseWWWAuthenticate(const std::string& response, STREAM_SESSION& session);
 };
+
+#endif /* TDS_VIDEO_STREAMSESSION_H */

@@ -5,6 +5,8 @@ out/conf/
 .vs/x64/
 .vs/Debug/
 .vs/Release/
+msvc/.vs/
+msvc/x64/
 7-Zip/
 localStorage/
 chrome/
@@ -16,6 +18,8 @@ temp/
 
 *.o
 *.obj
+*.d
+*.gch
 *.aps
 *.ipch
 *.db*

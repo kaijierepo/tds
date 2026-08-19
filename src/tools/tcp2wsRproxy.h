@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_TOOLS_TCP2WSRPROXY_H
+#define TDS_TOOLS_TCP2WSRPROXY_H
+
 #include "webSrv.h"
 #include "tcpClt.h"
 
@@ -21,3 +23,4 @@ public:
 };
 
 extern Tcp2wsRproxy* tcp2wsRproxy;
+#endif /* TDS_TOOLS_TCP2WSRPROXY_H */

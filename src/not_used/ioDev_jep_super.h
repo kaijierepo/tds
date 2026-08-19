@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿#ifndef TDS_NOT_USED_IODEV_JEP_SUPER_H
+#define TDS_NOT_USED_IODEV_JEP_SUPER_H
+
 #include "ioDev.h"
 #include "JHDEqpProtocol.h"
 
@@ -61,3 +63,5 @@ protected:
 	float m_fTempWhenStarted = FLT_MIN;
 };
 
+
+#endif /* TDS_NOT_USED_IODEV_JEP_SUPER_H */

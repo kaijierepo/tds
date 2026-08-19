@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿#ifndef TDS_IO_SERVER_IODEV_H
+#define TDS_IO_SERVER_IODEV_H
+
 #include "tdsSession.h"
 #include "udpSrv.h"
 #include "json.hpp"
@@ -669,3 +671,4 @@ public:
 
 
 string generateDevId();
+#endif /* TDS_IO_SERVER_IODEV_H */

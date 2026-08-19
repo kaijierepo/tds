@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_CAMERA_H
+#define TDS_IO_SERVER_IODEV_CAMERA_H
+
 #include "ioDev.h"
 
 
@@ -20,3 +22,5 @@ public:
 	bool isMoving;
 	TIME startMoveTime;
 };
+
+#endif /* TDS_IO_SERVER_IODEV_CAMERA_H */

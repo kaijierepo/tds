@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_VIDEO_STREAMCOMMON_H
+#define TDS_VIDEO_STREAMCOMMON_H
+
 
 #include <string>
 #include <cctype>
@@ -167,3 +169,5 @@ constexpr SocketHandle kInvalidSocket = INVALID_SOCKET;
 using SocketHandle = int;
 constexpr SocketHandle kInvalidSocket = -1;
 #endif
+
+#endif /* TDS_VIDEO_STREAMCOMMON_H */

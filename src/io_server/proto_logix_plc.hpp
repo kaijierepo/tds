@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_PROTO_LOGIX_PLC_H
+#define TDS_IO_SERVER_PROTO_LOGIX_PLC_H
+
 
 #include "proto_common.h"
 
@@ -24,3 +26,5 @@ namespace LOGIX_TAG_VAL_TYPE {
 
 #pragma pack()
 
+
+#endif /* TDS_IO_SERVER_PROTO_LOGIX_PLC_H */

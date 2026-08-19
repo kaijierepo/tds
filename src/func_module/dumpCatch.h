@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_FUNC_MODULE_DUMPCATCH_H
+#define TDS_FUNC_MODULE_DUMPCATCH_H
+
 
 #ifdef WINDOWS
 class CDumpCatch
@@ -33,3 +35,4 @@ private:
 extern CDumpCatch dumpCatch;
 
 #endif
+#endif /* TDS_FUNC_MODULE_DUMPCATCH_H */

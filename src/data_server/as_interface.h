@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_DATA_SERVER_AS_INTERFACE_H
+#define TDS_DATA_SERVER_AS_INTERFACE_H
+
 #include <string>
 #include "json.hpp"
 using json = nlohmann::json;
@@ -10,3 +12,5 @@ void funcImp_log(const char* pszFmt, ...);
 bool funcImp_rpcHand_notify(string method, json& js);
 bool funcImp_sms_notify(string tag, string& msg);
 bool funcImp_usrMng_checkTagPermission(string user, string tag);
+
+#endif /* TDS_DATA_SERVER_AS_INTERFACE_H */

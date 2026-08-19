@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_DATA_SERVER_UPLINKCONF_H
+#define TDS_DATA_SERVER_UPLINKCONF_H
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -41,3 +43,5 @@ struct UPLINK_CONF_TDSP : public UPLINK_CONF {
 struct UPLINK_CONF_OPCUA : public UPLINK_CONF {
 	const char* protoName() const override { return "opcua"; }
 };
+
+#endif /* TDS_DATA_SERVER_UPLINKCONF_H */

@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿#ifndef TDS_COMMON_COMMON_H
+#define TDS_COMMON_COMMON_H
 #include "tds.h"
 #include <time.h>
 #include <queue>
@@ -449,3 +450,4 @@ inline std::string getbuilddate()
 {
 	return str::format("%d-%02d-%02d", YEAR, MONTH + 1, DAY);
 }
+#endif /* TDS_COMMON_COMMON_H */

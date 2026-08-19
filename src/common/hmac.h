@@ -1,10 +1,12 @@
+#ifndef TDS_COMMON_HMAC_H
+#define TDS_COMMON_HMAC_H
+
 // //////////////////////////////////////////////////////////
 // hmac.h
 // Copyright (c) 2015 Stephan Brumme. All rights reserved.
 // see http://create.stephan-brumme.com/disclaimer.html
 //
 
-#pragma once
 
 // based on http://tools.ietf.org/html/rfc2104
 // see also http://en.wikipedia.org/wiki/Hash-based_message_authentication_code
@@ -81,3 +83,5 @@ std::string hmac(const std::string& data, const std::string& key)
 {
   return hmac<HashMethod>(data.c_str(), data.size(), key.c_str(), key.size());
 }
+
+#endif /* TDS_COMMON_HMAC_H */

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_COMMON_SERIAL_H
+#define TDS_COMMON_SERIAL_H
+
 #include <string>
 #include <windows.h>
 using namespace std;
@@ -57,3 +59,4 @@ public:
 
 	string m_strErrorInfo;
 };
+#endif /* TDS_COMMON_SERIAL_H */

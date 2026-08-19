@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_FUNC_MODULE_STATUSSERVER_H
+#define TDS_FUNC_MODULE_STATUSSERVER_H
+
 #include <atomic>
 #include <string>
 #include <stdexcept>
@@ -253,3 +255,4 @@ extern StatusServer statusSrv;
 
 void statisSend(int port, size_t len);
 #endif
+#endif /* TDS_FUNC_MODULE_STATUSSERVER_H */

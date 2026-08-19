@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_TOOLS_TCPHUB_H
+#define TDS_TOOLS_TCPHUB_H
+
 #include "tcpSrv.h"
 #include "tcpClt.h"
 
@@ -36,3 +38,4 @@ public:
 	virtual void onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 
 };
+#endif /* TDS_TOOLS_TCPHUB_H */

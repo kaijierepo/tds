@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_PROTO_BACNET_H
+#define TDS_IO_SERVER_PROTO_BACNET_H
+
 
 #include "proto_common.h"
 
@@ -511,3 +513,5 @@ public:
 
 #pragma pack()
 
+
+#endif /* TDS_IO_SERVER_PROTO_BACNET_H */

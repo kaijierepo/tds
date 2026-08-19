@@ -1,5 +1,7 @@
+#ifndef TDS_IO_SERVER_IODEV_DCQK_H
+#define TDS_IO_SERVER_IODEV_DCQK_H
+
 #ifdef _WIN32
-#pragma once
 #include "tcpClt.h"
 #include "tdsSession.h"
 #include "proto_tb3386.h"
@@ -205,3 +207,4 @@ public:
 	thread m_threadDownloadVedio;		//下载视频线程
 };
 #endif
+#endif /* TDS_IO_SERVER_IODEV_DCQK_H */

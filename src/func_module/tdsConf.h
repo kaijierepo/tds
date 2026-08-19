@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_FUNC_MODULE_TDSCONF_H
+#define TDS_FUNC_MODULE_TDSCONF_H
+
 #include <string>
 #include "kvIni.h"
 #include "tds.h"//not good, but if not include this,it will show the error: undefined iTDSConf.
@@ -42,3 +44,5 @@ public:
 };
 
 extern tdsConfig tdsConf;
+
+#endif /* TDS_FUNC_MODULE_TDSCONF_H */

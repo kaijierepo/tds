@@ -1,3 +1,6 @@
+#ifndef TDS_FUNC_MODULE_ALIDDNS_H
+#define TDS_FUNC_MODULE_ALIDDNS_H
+
 #include <string>
 #include <map>
 #include "json.hpp"
@@ -28,3 +31,5 @@ public:
 };
 
 extern AliDDNS aliDDNS;
+
+#endif /* TDS_FUNC_MODULE_ALIDDNS_H */

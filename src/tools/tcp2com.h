@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_TOOLS_TCP2COM_H
+#define TDS_TOOLS_TCP2COM_H
+
 #include "tcpSrv.h"
 #include "tcpClt.h"
 #include "udpSrv.h"
@@ -54,3 +56,4 @@ public:
 	 string registerPktStr;
 	 string registerPktHexStr;
 };
+#endif /* TDS_TOOLS_TCP2COM_H */

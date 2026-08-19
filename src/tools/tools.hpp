@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_TOOLS_TOOLS_H
+#define TDS_TOOLS_TOOLS_H
+
 #include "common.h"
 #include "logger.h"
 using namespace std;
@@ -17,3 +19,4 @@ namespace Tools {
 		}
 	}
 }
+#endif /* TDS_TOOLS_TOOLS_H */

@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿#ifndef TDS_IO_SERVER_IOCHAN_H
+#define TDS_IO_SERVER_IOCHAN_H
+
 
 #include "json.hpp"
 #include "ioDev.h"
@@ -86,3 +88,5 @@ public:
 	mutex m_csStreamPuller;
 	vector<shared_ptr<TDS_SESSION>> m_vecStreamPuller;
 };
+
+#endif /* TDS_IO_SERVER_IOCHAN_H */

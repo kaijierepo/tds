@@ -1,3 +1,6 @@
+#ifndef TDS_MONGOOSE_MONGOOSE_H
+#define TDS_MONGOOSE_MONGOOSE_H
+
 // Copyright (c) 2004-2013 Sergey Lyubka
 // Copyright (c) 2013-2024 Cesanta Software Limited
 // All rights reserved
@@ -2940,3 +2943,6 @@ struct mg_tcpip_driver_tm4c_data {
 }
 #endif
 #endif  // MONGOOSE_H
+
+
+#endif /* TDS_MONGOOSE_MONGOOSE_H */

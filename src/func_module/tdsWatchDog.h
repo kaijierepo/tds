@@ -1,5 +1,7 @@
+#ifndef TDS_FUNC_MODULE_TDSWATCHDOG_H
+#define TDS_FUNC_MODULE_TDSWATCHDOG_H
+
 #ifdef _WIN32
-#pragma once
 #include "tcpClt.h"
 #include "udpSrv.h"
 #include "kvIni.h"
@@ -39,3 +41,5 @@ extern tdsWatchDog watchDog;
 #endif
 
 
+
+#endif /* TDS_FUNC_MODULE_TDSWATCHDOG_H */

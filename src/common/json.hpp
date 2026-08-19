@@ -1,3 +1,6 @@
+#ifndef TDS_COMMON_JSON_H
+#define TDS_COMMON_JSON_H
+
 //     __ _____ _____ _____
 //  __|  |   __|     |   | |  JSON for Modern C++
 // |  |  |__   |  |  | | | |  version 3.11.3
@@ -24765,3 +24768,4 @@ inline void swap(nlohmann::NLOHMANN_BASIC_JSON_TPL& j1, nlohmann::NLOHMANN_BASIC
 #endif  // INCLUDE_NLOHMANN_JSON_HPP_
 
 using json = nlohmann::json;
+#endif /* TDS_COMMON_JSON_H */

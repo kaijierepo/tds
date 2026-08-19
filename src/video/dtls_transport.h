@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_VIDEO_DTLS_TRANSPORT_H
+#define TDS_VIDEO_DTLS_TRANSPORT_H
+
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -174,3 +176,5 @@ private:
     static void timing_set_delay(void* data, uint32_t int_ms, uint32_t fin_ms);
     static int  timing_get_delay(void* data);
 };
+
+#endif /* TDS_VIDEO_DTLS_TRANSPORT_H */

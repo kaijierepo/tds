@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_ONVIF_H
+#define TDS_IO_SERVER_IODEV_ONVIF_H
+
 #include "ioDev.h"
 #include "tdsSession.h"
 #include "ioDev_camera.h"
@@ -67,3 +69,4 @@ public:
 	int  m_pauseResumeInterval;  //0
 	bool m_bImgAcqThreadRunning;
 };
+#endif /* TDS_IO_SERVER_IODEV_ONVIF_H */

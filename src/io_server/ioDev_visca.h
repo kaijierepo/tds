@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_VISCA_H
+#define TDS_IO_SERVER_IODEV_VISCA_H
+
 #include "ioDev.h"
 #include "tdsSession.h"
 #include "proto_visca.hpp"
@@ -36,3 +38,4 @@ public:
 	bool m_bIsReadingFile;
 	bool m_bIsWaitingAcq;
 };
+#endif /* TDS_IO_SERVER_IODEV_VISCA_H */

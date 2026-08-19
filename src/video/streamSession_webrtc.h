@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_VIDEO_STREAMSESSION_WEBRTC_H
+#define TDS_VIDEO_STREAMSESSION_WEBRTC_H
+
 
 #include <chrono>
 #include <atomic>
@@ -81,3 +83,5 @@ std::string parseCodecNameFromOffer(const std::string& sdpOffer, int pt);
 // WebRTC SDP Answer 构建（设置 si.is_webrtc/ice_ufrag/ice_pwd/sdp）
 void buildWebRTCSdpAnswer(STREAM_SESSION& si, const std::string& serverIp,
                           const std::string& dtlsFingerprint);
+
+#endif /* TDS_VIDEO_STREAMSESSION_WEBRTC_H */

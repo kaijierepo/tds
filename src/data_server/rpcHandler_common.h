@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿#ifndef TDS_DATA_SERVER_RPCHANDLER_COMMON_H
+#define TDS_DATA_SERVER_RPCHANDLER_COMMON_H
+
 #include <string>
 #include "yyjson.h"
 #include "json.hpp"
@@ -22,3 +24,4 @@ public:
 };
 
 extern RpcHandler_common rpcHandler_common;
+#endif /* TDS_DATA_SERVER_RPCHANDLER_COMMON_H */

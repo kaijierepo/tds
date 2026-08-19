@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IOGW_RS485TONET_H
+#define TDS_IO_SERVER_IOGW_RS485TONET_H
+
 #include "ioDev.h"
 #include "tcpClt.h"
 #include "tdsSession.h"
@@ -33,3 +35,5 @@ public:
 	bool isBusBusy() override;
 };
 
+
+#endif /* TDS_IO_SERVER_IOGW_RS485TONET_H */

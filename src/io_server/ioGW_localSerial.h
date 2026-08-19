@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IOGW_LOCALSERIAL_H
+#define TDS_IO_SERVER_IOGW_LOCALSERIAL_H
+
 #include "ioDev.h"
 #include "tcpClt.h"
 #include "tdsSession.h"
@@ -61,3 +63,4 @@ public:
 };
 
 #endif
+#endif /* TDS_IO_SERVER_IOGW_LOCALSERIAL_H */

@@ -1,3 +1,6 @@
+#ifndef TDS_IO_SERVER_PROTO_CAN_H
+#define TDS_IO_SERVER_PROTO_CAN_H
+
 
 #include "proto/proto_common.h"
 //Can总线协议
@@ -66,3 +69,4 @@ struct CAN_PKT_V2 //size = 13字节
 		//memset(arrData,0, sizeof(arrData));
 	}
 };
+#endif /* TDS_IO_SERVER_PROTO_CAN_H */

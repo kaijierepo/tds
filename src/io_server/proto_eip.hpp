@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_PROTO_EIP_H
+#define TDS_IO_SERVER_PROTO_EIP_H
+
 
 //CIP（Common Industrial Protocol）是一种用于工业自动化的通信协议，
 // 支持多种网络类型，如 EtherNet / IP、DeviceNet 和 ControlNet
@@ -377,3 +379,5 @@ public:
 
 #pragma pack()
 
+
+#endif /* TDS_IO_SERVER_PROTO_EIP_H */

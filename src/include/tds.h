@@ -1,3 +1,6 @@
+#ifndef TDS_INCLUDE_TDS_H
+#define TDS_INCLUDE_TDS_H
+
 /*
   TDS for iot version 1.0.0
   https://gitee.com/liangtuSoft/tds.git
@@ -42,7 +45,6 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 */
 
 
-#pragma once
 #include "tdsRPC.h"
 #include <string>
 #include <vector>
@@ -651,3 +653,6 @@ i_tds* getITDS();
 #ifdef TDS
 extern i_tds* tds;
 #endif
+
+
+#endif /* TDS_INCLUDE_TDS_H */

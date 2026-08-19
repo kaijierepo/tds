@@ -1,3 +1,6 @@
+#ifndef TDS_COMMON_MINIZ_H
+#define TDS_COMMON_MINIZ_H
+
 #ifndef MINIZ_EXPORT
 #define MINIZ_EXPORT
 #endif
@@ -113,7 +116,6 @@
      uses the 64-bit variants: fopen64(), stat64(), etc. Otherwise you won't be able to process large files
      (i.e. 32-bit stat() fails for me on files > 0x7FFFFFFF bytes).
 */
-#pragma once
 
 
 
@@ -533,7 +535,6 @@ typedef void *const voidpc;
 
 
 
-#pragma once
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -629,7 +630,6 @@ extern MINIZ_EXPORT void *miniz_def_realloc_func(void *opaque, void *address, si
 #ifdef __cplusplus
 }
 #endif
- #pragma once
 
 
 #ifndef MINIZ_NO_DEFLATE_APIS
@@ -823,7 +823,6 @@ MINIZ_EXPORT void tdefl_compressor_free(tdefl_compressor *pComp);
 #endif
 
 #endif /*#ifndef MINIZ_NO_DEFLATE_APIS*/
- #pragma once
 
 /* ------------------- Low-level Decompression API Definitions */
 
@@ -972,7 +971,6 @@ struct tinfl_decompressor_tag
 
 #endif /*#ifndef MINIZ_NO_INFLATE_APIS*/
  
-#pragma once
 
 
 /* ------------------- ZIP archive reading/writing */
@@ -1420,3 +1418,5 @@ MINIZ_EXPORT void *mz_zip_extract_archive_file_to_heap_v2(const char *pZip_filen
 #endif
 
 #endif /* MINIZ_NO_ARCHIVE_APIS */
+
+#endif /* TDS_COMMON_MINIZ_H */

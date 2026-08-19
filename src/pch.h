@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TDS_PCH_H
+#define TDS_PCH_H
 
 //功能模块
 //
@@ -40,3 +41,6 @@ using namespace std;
 #endif
 
 extern i_tds* tds;
+
+
+#endif /* TDS_PCH_H */

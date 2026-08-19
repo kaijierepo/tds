@@ -1,4 +1,6 @@
-#pragma once 
+#ifndef TDS_COMMON_TCPSRV_H
+#define TDS_COMMON_TCPSRV_H
+
 #include <map>
 #include <vector>
 #include <mutex>
@@ -124,3 +126,5 @@ public:
 extern fp_statisSend g_fp_tcpSrv_statisSend;
 extern std::string        g_cmdListScockIP;
 extern std::string        g_cmdListScockPort;
+
+#endif /* TDS_COMMON_TCPSRV_H */

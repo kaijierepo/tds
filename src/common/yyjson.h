@@ -1,3 +1,6 @@
+#ifndef TDS_COMMON_YYJSON_H
+#define TDS_COMMON_YYJSON_H
+
 /*==============================================================================
  * Created by Yaoyuan on 2019/3/9.
  * Copyright (C) 2019 Yaoyuan <ibireme@gmail.com>.
@@ -6243,3 +6246,6 @@ yyjson_api_inline bool yyjson_get_str_pointer(
 #endif /* extern "C" end */
 
 #endif /* YYJSON_H */
+
+
+#endif /* TDS_COMMON_YYJSON_H */

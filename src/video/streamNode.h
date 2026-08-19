@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_VIDEO_STREAMNODE_H
+#define TDS_VIDEO_STREAMNODE_H
+
 
 #include <string>
 #include <thread>
@@ -298,3 +300,4 @@ private:
     // ICE-Lite 工作循环（由每个 WebRTC session 的 ice_thread_ 执行）
     void threadCtrl_webrtcServer(std::shared_ptr<STREAM_SESSION> session);
 };
+#endif /* TDS_VIDEO_STREAMNODE_H */

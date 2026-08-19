@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿#ifndef TDS_FUNC_MODULE_CSVTABLE_H
+#define TDS_FUNC_MODULE_CSVTABLE_H
+
 
 #include <mutex>
 #include "database/tDatabase.h"
@@ -36,3 +38,4 @@ public:
 	string buffDataFilePath; //缓存数据的文件路径
 	vector<string> m_vecKeys; //列头
 };
+#endif /* TDS_FUNC_MODULE_CSVTABLE_H */

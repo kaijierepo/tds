@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_TOOLS_SHELLSERVER_H
+#define TDS_TOOLS_SHELLSERVER_H
+
 #include "tcpSrv.h"
 #include "stream2pkt.h"
 
@@ -24,3 +26,4 @@ public:
 
 
 extern shellServer shellSrv;
+#endif /* TDS_TOOLS_SHELLSERVER_H */

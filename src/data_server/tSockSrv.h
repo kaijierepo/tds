@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_DATA_SERVER_TSOCKSRV_H
+#define TDS_DATA_SERVER_TSOCKSRV_H
+
 #include <string>
 #include "udpSrv.h"
 #include "tcpSrv.h"
@@ -104,3 +106,5 @@ public:
 
 
 extern tSockSrv sockSrv;
+
+#endif /* TDS_DATA_SERVER_TSOCKSRV_H */

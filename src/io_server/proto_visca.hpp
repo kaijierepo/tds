@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_PROTO_VISCA_H
+#define TDS_IO_SERVER_PROTO_VISCA_H
+
 
 #include "proto_common.h"
 #pragma pack(1)
@@ -30,3 +32,5 @@ struct VISCA_PKT : public DEV_PKT{
 
 #pragma pack()
 
+
+#endif /* TDS_IO_SERVER_PROTO_VISCA_H */

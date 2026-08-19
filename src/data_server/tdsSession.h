@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_DATA_SERVER_TDSSESSION_H
+#define TDS_DATA_SERVER_TDSSESSION_H
+
 
 #include "tcpClt.h"
 #include "tcpSrv.h"
@@ -162,3 +164,5 @@ public:
 };
 
 extern std::vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;
+
+#endif /* TDS_DATA_SERVER_TDSSESSION_H */

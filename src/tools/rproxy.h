@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_TOOLS_RPROXY_H
+#define TDS_TOOLS_RPROXY_H
+
 #include "httplib.h"
 #include "json.hpp"
 using json = nlohmann::json;
@@ -12,3 +14,4 @@ public:
 };
 
 extern RProxy* rpProxy;
+#endif /* TDS_TOOLS_RPROXY_H */

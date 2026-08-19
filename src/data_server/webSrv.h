@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_DATA_SERVER_WEBSRV_H
+#define TDS_DATA_SERVER_WEBSRV_H
+
 
 /*
 web server of tds
@@ -99,3 +101,5 @@ extern bool getBlackList(string type, json& listVal);
 typedef bool (*fn_http_handler)(mg_http_message* hm, struct mg_connection* c);
 extern std::map<string,fn_http_handler> g_mapHttpHandler;
 
+
+#endif /* TDS_DATA_SERVER_WEBSRV_H */

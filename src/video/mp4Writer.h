@@ -1,9 +1,11 @@
+#ifndef TDS_VIDEO_MP4WRITER_H
+#define TDS_VIDEO_MP4WRITER_H
+
 // ============================================================================
 // mp4Writer.h - 轻量 MP4 容器封装器
 // 将 H.264 Annex B 裸流 (.h264) 转换为 MP4 容器 (.mp4)
 // 零外部依赖，纯 C++ 标准库实现
 // ============================================================================
-#pragma once
 
 #include <string>
 #include <vector>
@@ -56,3 +58,5 @@ bool convertH264toMP4(const std::string& h264Path, const std::string& mp4Path,
                       double recordDurationSec = 0, double spsFps = 0);
 
 } // namespace mp4
+
+#endif /* TDS_VIDEO_MP4WRITER_H */

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IOSRV_H
+#define TDS_IO_SERVER_IOSRV_H
+
 #include "ioDev.h"
 #include <string>
 #include <functional>
@@ -258,3 +260,4 @@ public:
 };
 
 extern ioServer ioSrv;
+#endif /* TDS_IO_SERVER_IOSRV_H */

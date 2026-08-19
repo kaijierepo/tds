@@ -1,3 +1,6 @@
+#ifndef TDS_COMMON_DTW_H
+#define TDS_COMMON_DTW_H
+
 //
 // DTW.hpp
 //
@@ -243,3 +246,5 @@ namespace DTW
   };
 
 }
+
+#endif /* TDS_COMMON_DTW_H */

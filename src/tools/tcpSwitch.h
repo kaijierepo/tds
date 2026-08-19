@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_TOOLS_TCPSWITCH_H
+#define TDS_TOOLS_TCPSWITCH_H
+
 #include "tcpSrv.h"
 
 class tcpSwitch : public  ITcpServerCallBack {
@@ -17,3 +19,4 @@ public:
 	 void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
 	 void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 };
+#endif /* TDS_TOOLS_TCPSWITCH_H */
