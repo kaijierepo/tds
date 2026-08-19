@@ -1,23 +1,30 @@
 version: '1.0'
 # ============================================================
-# 流水线配置版本标识：TDS_CFG=v13
+# 流水线配置版本标识：TDS_CFG=v14
 # 编辑界面保存本文件后，重新触发构建，build 阶段第一条日志会打印
-# "TDS_CFG=v13"。拷贝日志时搜索该标识即可确认编辑界面配置已更新。
+# "TDS_CFG=v14"。拷贝日志时搜索该标识即可确认编辑界面配置已更新。
 #
-# 相对 v12 的变更：
-#   - 包名日期后缀由 {yyMMdd} 改为 {yyMMddHHmmss}（精确到秒，
-#     避免同日多次构建版本名冲突），package.sh 同步修改。
+# 相对 v13 的变更：
+#   - 修复 Gitee 编译失败：commit 2e3d94b6 删除 DTW.hpp 时漏改
+#     src/data_server/tdb.cpp（还 include "DTW.hpp" 并在 dtw/dtw2 分支使用
+#     DTW::dtw_distance_only），已同步删除，与 tDatebase.cpp 保持一致。
+#   - 产物收集不再用固定名 release-package.tar.gz：
+#       * 扁平包 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz 生成在
+#         out/dist 下并删除版本目录，artifacts 目录收集 ./out/dist
+#       * assertFiles 用 ./tds-*.tar.gz（release 插件还原 artifact 时会平铺
+#         到工作区根目录，动态包即位于根目录；v7 用 ./out/dist/*.tar.gz 失败
+#         是因用了平铺前的路径，glob 写法本身保留）
+#       * 若 glob 不被支持导致 release 失败，退回固定名 release-package.tar.gz
 #
-# v12 已实现（保留）：
-#   - 不再依赖 GITEE_PARAMS 动态参数（build@gcc 环境为空，v10/v11 因此失败）：
-#       * build 阶段内部解析版本目录生成扁平包（无需流水线变量）
-#       * artifacts/assertFiles 用固定名 release-package.tar.gz（v8 验证最稳）
-#       * releaseName/tagName 用系统变量 GITEE_PIPELINE_BUILD_NUMBER
-#         （系统级参数，任何任务可用，v7 已验证；放弃 commit 短哈希方案）
-#
-# v11 已实现（保留）：
+# v13 已实现（保留）：
+#   - 包名日期后缀 {yyMMddHHmmss}（精确到秒），package.sh 同步
 #   - 版本串无 v 前缀：包名 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz
 #   - 包结构: 扁平 tds，无嵌套目录
+#
+# v12 已实现（保留）：
+#   - 不再依赖 GITEE_PARAMS 动态参数（build@gcc 环境为空，v10/v11 因此失败）
+#   - releaseName/tagName 用系统变量 GITEE_PIPELINE_BUILD_NUMBER
+#     （系统级参数，任何任务可用，v7 已验证；放弃 commit 短哈希方案）
 #
 # 说明：Gitee Release 页"下载 Source code (zip/tar.gz)"是平台内置固定功能，
 #       release@gitee 插件不支持关闭，无法通过 yml 关掉。
@@ -42,7 +49,7 @@ stages:
         displayName: GCC 构建
         gccVersion: '9.4'
         commands:
-          - 'echo "TDS_CFG=v13"'
+          - 'echo "TDS_CFG=v14"'
           - '# 安装编译依赖（gcc/g++、make、libssl、libkrb5、file）'
           - export DEBIAN_FRONTEND=noninteractive
           - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
@@ -54,16 +61,16 @@ stages:
           - bash package.sh x86_64
           - '# 返回工作区根目录'
           - 'cd ..'
-          - '# 解析实际版本目录（out/dist/tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}/），重新打包为扁平结构（包内仅 tds）'
+          - '# 解析实际版本目录，在 out/dist 下重新打包为扁平结构（包内仅 tds，覆盖 package.sh 的嵌套包）'
           - 'PKG="$(basename "$(ls -d out/dist/tds-*-linux-x86_64-*/ | sort | tail -1)")"'
-          - 'cd "out/dist/${PKG}" && tar czf "../../${PKG}.tar.gz" tds && cd ../..'
-          - '# 复制固定名到根目录：release 插件还原 artifact 时会平铺，根目录文件路径最稳'
-          - 'cp -f "${PKG}.tar.gz" release-package.tar.gz'
-          - 'ls -la release-package.tar.gz "${PKG}.tar.gz" out/dist/'
+          - 'cd "out/dist/${PKG}" && tar czf "../${PKG}.tar.gz" tds && cd ../..'
+          - '# 删除版本目录，out/dist 只保留动态名扁平包 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz'
+          - 'rm -rf "out/dist/${PKG}"'
+          - 'ls -la out/dist/'
         artifacts:
           - name: BUILD_ARTIFACT
             path:
-              - ./release-package.tar.gz
+              - ./out/dist
         caches: []
         notify: []
         strategy:
@@ -79,11 +86,11 @@ stages:
         displayName: Gitee Release
         releaseName: tds-${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
         tagName: tds-${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
-        description: TDS Linux x86_64 自动构建发布包，包名 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz（附件以固定名 release-package.tar.gz 上传），包内仅含 tds 可执行文件。
+        description: TDS Linux x86_64 自动构建发布包，附件 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz（扁平包，仅含 tds 可执行文件）。
         upstreamArtifact:
           - BUILD_ARTIFACT
         assertFiles:
-          - ./release-package.tar.gz
+          - ./tds-*.tar.gz
         prerelease: false
         allowUpdate: true
         notify: []

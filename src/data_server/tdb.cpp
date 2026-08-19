@@ -33,7 +33,6 @@ SOFTWARE.
 #include <stdarg.h>
 #include <mutex>
 #include <regex>
-#include "DTW.hpp"
 #include <thread>
 #include "dtwrecoge.h"
 #include <chrono>
@@ -3511,55 +3510,6 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 							SORT_FLAG sf;
 							sf.dbFlag = sortIdx++;
 							result.rltDataSet[sf] = yyv_aes_de;
-						}
-						else if (deSel.calc == "dtw") {
-							if (pBase->size() != pCur->size()) {
-								DBLog("dtw calc use different length,%d,%d\r\n", pBase->size(), pCur->size());
-							}
-
-							size_t len = pBase->size() < pCur->size() ? pBase->size() : pCur->size();
-							double dtw = DTWDistanceFun(pCur->data(), pCur->size(), pBase->data(), pBase->size(), pBase->size() / 10);
-
-							yyjson_mut_val* yyv_dtw_de = yyjson_mut_obj(rlt_mut_doc);
-							yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
-							yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
-							yyjson_mut_obj_put(yyv_dtw_de, yyv_time_key, yyv_time_val);
-
-							yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
-							yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, dtw);
-							yyjson_mut_obj_put(yyv_dtw_de, yyv_val_key, yyv_val_val);
-
-							SORT_FLAG sf;
-							sf.dbFlag = sortIdx++;
-							result.rltDataSet[sf] = yyv_dtw_de;
-						}
-						else if (deSel.calc == "dtw2") {
-							std::vector<std::vector<double>> base;
-							for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
-								std::vector<double> pt;
-								pt.push_back((*pBase)[i]);
-								base.push_back(pt);
-							}
-							std::vector<std::vector<double>> cur;
-							for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
-								std::vector<double> pt;
-								pt.push_back((*pCur)[i]);
-								cur.push_back(pt);
-							}
-							double dtw = DTW::dtw_distance_only(base, cur, 2);
-
-							yyjson_mut_val* yyv_dtw_de = yyjson_mut_obj(rlt_mut_doc);
-							yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
-							yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
-							yyjson_mut_obj_put(yyv_dtw_de, yyv_time_key, yyv_time_val);
-
-							yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
-							yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, dtw);
-							yyjson_mut_obj_put(yyv_dtw_de, yyv_val_key, yyv_val_val);
-
-							SORT_FLAG sf;
-							sf.dbFlag = sortIdx++;
-							result.rltDataSet[sf] = yyv_dtw_de;
 						}
 					}
 
