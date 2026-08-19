@@ -58,17 +58,18 @@ echo "目标架构: $ARCH    模式: $MODE    并行数: $JOBS"
 # ===================== 1.5 生成版本信息 =====================
 # 从 Gitee API 获取提交次数生成 GIT_VERSION（tds_imp.cpp 通过 -DGIT_VERSION 注入 g_version）
 # Gitee 公开匿名 API：commits 接口响应头含 commit_count/total_count，无需本地 git
-REV_COUNT="unknown"
+# GIT_VERSION 约定为数字（tds_imp.cpp 用 to_string(GIT_VERSION)），失败回退 0
+REV_COUNT="0"
 if command -v curl >/dev/null 2>&1; then
     API_COUNT="$(curl -s -D - -o /dev/null "https://gitee.com/api/v5/repos/liangtuSoft/tds/commits?per_page=1" 2>/dev/null | tr -d '\r' | awk -F': ' '/^[Cc]ommit_count|^[Tt]otal_count/{print $2}' | tail -1)"
     if [ -n "$API_COUNT" ] && echo "$API_COUNT" | grep -qE '^[0-9]+$'; then
         REV_COUNT="$API_COUNT"
         echo "源码版本(rev, Gitee API): $REV_COUNT"
     else
-        echo "警告: Gitee API 未返回有效提交数，版本号记为 unknown"
+        echo "警告: Gitee API 未返回有效提交数，版本号记为 0"
     fi
 else
-    echo "警告: 未找到 curl，版本号记为 unknown"
+    echo "警告: 未找到 curl，版本号记为 0"
 fi
 echo "源码版本(rev): $REV_COUNT"
 
@@ -349,9 +350,7 @@ cpp_srcs="$(cat <<'EOF'
 ./main.cpp
 ./pch.cpp
 ./tds_imp.cpp
-./test.cpp
 ./common/common.cpp
-./common/dtwrecoge.cpp
 ./common/kvIni.cpp
 ./common/logger.cpp
 ./common/md5.cpp

@@ -59,7 +59,8 @@ SOFTWARE.
 string InterfaceEncoding = "utf8";
 
 #ifdef GIT_VERSION
-	string g_version = GIT_VERSION;
+	// GIT_VERSION 约定为数字（Linux 由 -D 注入、Windows 由 version.h 定义），失败回退 0
+	string g_version = to_string(GIT_VERSION);
 #else
 	string g_version = "1.0";
 #endif
