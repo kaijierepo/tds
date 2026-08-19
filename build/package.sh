@@ -5,8 +5,8 @@ set -e
 # TDS 发布打包脚本
 #
 # 把 build.sh 构建出的可执行文件打包为:
-#   out/dist/tds-v{提交次数}-linux-{架构}-{yyMMdd}/tds
-#   out/dist/tds-v{提交次数}-linux-{架构}-{yyMMdd}.tar.gz
+#   out/dist/tds-{提交次数}-linux-{架构}-{yyMMdd}/tds
+#   out/dist/tds-{提交次数}-linux-{架构}-{yyMMdd}.tar.gz
 #
 # 用法:
 #   bash package.sh <x86_64|arm64|armv7> [release|debug]
@@ -15,7 +15,7 @@ set -e
 # （与 build.sh 生成 version.h 的方法一致）。
 #
 # 输出:
-#   out/dist/tds-v{提交次数}-linux-{架构}-{yyMMdd}.tar.gz
+#   out/dist/tds-{提交次数}-linux-{架构}-{yyMMdd}.tar.gz
 # ============================================================
 
 ARCH="${1:-}"
@@ -64,7 +64,7 @@ if [ ! -f "$bin_file" ]; then
 fi
 
 # ===================== 3. 打包 =====================
-VER="tds-v${REV_COUNT}-linux-${ARCH}-$(date +%y%m%d)"
+VER="tds-${REV_COUNT}-linux-${ARCH}-$(date +%y%m%d)"
 # 支持流水线用构建号覆盖版本号（TDS_VERSION_OVERRIDE），
 # 保证产物包名与 release 版本号一致（release@gitee 插件可用 ${GITEE_PIPELINE_BUILD_NUMBER}）
 if [ -n "${TDS_VERSION_OVERRIDE:-}" ]; then
