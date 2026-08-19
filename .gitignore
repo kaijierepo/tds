@@ -15,6 +15,7 @@ out/
 publish/
 front_end/
 temp/
+src/version.h
 
 *.o
 *.obj

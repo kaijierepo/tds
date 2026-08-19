@@ -53,15 +53,16 @@ SOFTWARE.
 #include "as_interface.h"
 #ifdef _WIN32
 #include "memDiag.h"
-#endif
-
-#ifdef USE_SVN_REV  //把svn版本号编译到目标文件中
 #include "version.h"
 #endif
 
 string InterfaceEncoding = "utf8";
 
-string version = "v1.0";
+#ifdef GIT_VERSION
+	string g_version = GIT_VERSION;
+#else
+	string g_version = "1.0";
+#endif
 string g_ComputerStartupTime="";
 string g_strStartupTime = "";
 
@@ -705,11 +706,7 @@ bool TDS_imp::run(string cmdline) {
 
 	string appName = fs::appName();
 
-#ifdef USE_SVN_REV
-	m_sTitle = appName + " v" + SVN_VERSION + " b" + getbuildtimeShort();
-#else
-	m_sTitle = appName + " " + version + "(" + getbuildtime() + ")";
-#endif
+	m_sTitle = appName + " v" + g_version + " b" + getbuildtimeShort();
 
 	LOG("[keyinfo]服务启动,版本:%s", m_sTitle.c_str());
 	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + logger.m_strLogDir);
@@ -1140,20 +1137,12 @@ bool TDS_imp::connectDev(string ioAddr)
 }
 
 string TDS_imp::getVersion() {
-#ifdef USE_SVN_REV
-	string s = version + "." + SVN_VERSION;
-#else
-	string s = version;
-#endif
-	return s;
+	return g_version;
 }
 
 string TDS_imp::getSvnVersion() {
 	string s;
-#ifdef USE_SVN_REV
-	s = SVN_VERSION;
-#endif
-
+	s = g_version;
 	if (s != "")
 		s += "_";
 

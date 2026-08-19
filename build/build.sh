@@ -18,15 +18,13 @@ set -e
 #   NO_CCACHE=1  禁用 ccache 加速
 #
 # 输出:
-#   x86_64 → ../out/tds/tds_x86_64_<mode>
-#   arm64  → ../out/tds_arm64
-#   armv7  → ../out/tds_armv7
+#   所有架构 → ../out/tds/tds
 #
 # 注意: 切勿同时启动多个 build.sh 实例（并行写 .o 会冲突）。
 #
 # 编译加速说明:
 #   - 自动使用 GCC 预编译头（src/pch.h.gch，按 debug/release 分目录）加速 C++ 编译
-#   - version.h 仅在内容变化时才重写，避免无改动时触发依赖文件重编
+#   - 版本号通过 -DGIT_VERSION 编译参数注入（Gitee API 提交数），不再生成 version.h
 #   - 检测到 ccache 时自动启用（NO_CCACHE=1 关闭），建议安装: apt install ccache
 # ============================================================
 
@@ -58,41 +56,21 @@ done
 echo "目标架构: $ARCH    模式: $MODE    并行数: $JOBS"
 
 # ===================== 1.5 生成版本信息 =====================
-# 从 git 提交次数生成 SVN_VERSION（兼容原 tds_imp.cpp 的 USE_SVN_REV）
-# 无 git 环境时 SVN_VERSION 记为 unknown
+# 从 Gitee API 获取提交次数生成 GIT_VERSION（tds_imp.cpp 通过 -DGIT_VERSION 注入 g_version）
+# Gitee 公开匿名 API：commits 接口响应头含 commit_count/total_count，无需本地 git
 REV_COUNT="unknown"
-if command -v git >/dev/null 2>&1; then
-    pushd .. >/dev/null
-    # 浅克隆需要解除限制才能统计完整提交数；成功后打标记，避免每次编译都联网 fetch
-    if git rev-parse --is-shallow-repository 2>/dev/null | grep -q '^true$' && [ ! -f ../out/tds/.unshallowed ]; then
-        echo "检测到浅克隆，拉取完整历史以统计提交数..."
-        git fetch --unshallow 2>/dev/null && mkdir -p ../out/tds && touch ../out/tds/.unshallowed || true
+if command -v curl >/dev/null 2>&1; then
+    API_COUNT="$(curl -s -D - -o /dev/null "https://gitee.com/api/v5/repos/liangtuSoft/tds/commits?per_page=1" 2>/dev/null | tr -d '\r' | awk -F': ' '/^[Cc]ommit_count|^[Tt]otal_count/{print $2}' | tail -1)"
+    if [ -n "$API_COUNT" ] && echo "$API_COUNT" | grep -qE '^[0-9]+$'; then
+        REV_COUNT="$API_COUNT"
+        echo "源码版本(rev, Gitee API): $REV_COUNT"
+    else
+        echo "警告: Gitee API 未返回有效提交数，版本号记为 unknown"
     fi
-    REV_COUNT="$(git rev-list --count HEAD 2>/dev/null || echo unknown)"
-    popd >/dev/null
 else
-    echo "警告: 未找到 git，SVN_VERSION 设为 unknown"
+    echo "警告: 未找到 curl，版本号记为 unknown"
 fi
 echo "源码版本(rev): $REV_COUNT"
-# 仅在内容变化时重写 version.h，避免每次构建都触发依赖它的文件重编（也避免产生无意义的 git diff）
-tmp_version="../src/version.h.tmp"
-cat > "$tmp_version" <<EOF
-#ifndef VERSION_H_
-#define VERSION_H_
-
-#define SVN_VERSION "$REV_COUNT"
-
-#if 0
-#pragma message("warning: local modification found ,please make sure source is updated,when bulid release package")
-#endif
-
-#endif
-EOF
-if cmp -s "$tmp_version" ../src/version.h 2>/dev/null; then
-    rm -f "$tmp_version"
-else
-    mv -f "$tmp_version" ../src/version.h
-fi
 
 # ===================== 2. 架构配置 =====================
 case "$ARCH" in
@@ -104,7 +82,7 @@ x86_64)
     strip_tool="strip"
     # 本机编译：链接系统基础库（MG_TLS_BUILTIN 内置 mbedtls，不需要 openssl/krb5）
     linkerflags="-lpthread -lutil -lrt -ldl -static-libgcc -static-libstdc++"
-    output_file="../out/tds/tds_x86_64_${MODE}"
+    output_file="../out/tds/tds"
     ;;
 arm64)
     TOOLCHAIN_PATH="/opt/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu"
@@ -122,7 +100,7 @@ arm64)
 -Wl,--end-group \
 -static-libgcc -static-libstdc++ \
 "
-    output_file="../out/tds_arm64"
+    output_file="../out/tds/tds"
     ;;
 armv7)
     TOOLCHAIN_PATH="/opt/armv7-eabihf--glibc--stable-2020.08-1"
@@ -139,7 +117,7 @@ armv7)
 -Wl,--end-group \
 -static-libgcc -static-libstdc++ \
 "
-    output_file="../out/tds_armv7"
+    output_file="../out/tds/tds"
     ;;
 *)
     echo "错误: 未知架构 '$ARCH'，支持 x86_64 / arm64 / armv7"
@@ -157,7 +135,7 @@ common_flags+=" \
 -DENABLE_QJS \
 -DENABLE_QJS_HTTP \
 -DUTF8 \
--DUSE_SVN_REV \
+-DGIT_VERSION=\"${REV_COUNT}\" \
 -DTDS \
 -DENABLE_JERRY_SCRIPT \
 -D_TDS \
