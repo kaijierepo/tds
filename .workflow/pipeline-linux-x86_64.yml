@@ -24,10 +24,12 @@ stages:
           - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
           - '# 限制并行数，避免 CI 免费节点 OOM（build.sh 默认取 nproc 会虚高）'
           - export JOBS=2
-          - '# 进入 build 目录执行 x86_64 release 构建'
+          - '# 版本号统一用流水线构建号（系统参数，任何任务内可用），不依赖 GITEE_PARAMS 传参'
+          - 'export TDS_VERSION_OVERRIDE="tds-v${GITEE_PIPELINE_BUILD_NUMBER:-unknown}-linux-x86_64"'
+          - 'echo "构建版本号: ${TDS_VERSION_OVERRIDE}"'
           - cd build
           - bash build.sh x86_64
-          - '# 打包发布物：out/dist/tds-v{提交次数}-linux-x86_64.tar.gz'
+          - '# 打包发布物：out/dist/tds-v{构建号}-linux-x86_64.tar.gz'
           - bash package.sh x86_64
         artifacts:
           - name: BUILD_ARTIFACT
@@ -43,43 +45,16 @@ stages:
     trigger: manual
     executor: []
     steps:
-      - step: build@gcc
-        name: calc_version
-        displayName: 计算版本号
-        gccVersion: '9.4'
-        commands:
-          - '# 手动触发 release 阶段不会执行 build 阶段，需要自己算版本号（git 提交次数）并写入流水线变量'
-          - 'echo "===== 诊断: GITEE 相关环境变量 ====="'
-          - 'env | grep -iE "GITEE|GO_" | sort || echo "(环境变量中无 GITEE_/GO_ 系列)"'
-          - 'echo "===== 诊断: 工作目录与 GITEE_PARAMS 文件 ====="'
-          - 'pwd'
-          - 'ls -la GITEE_PARAMS 2>/dev/null || echo "(当前目录无 GITEE_PARAMS 文件)"'
-          - 'find / -maxdepth 4 -name "GITEE_PARAMS" 2>/dev/null || echo "(系统中未找到 GITEE_PARAMS 文件)"'
-          - '# 浅克隆需拉全量历史才能统计完整提交数'
-          - 'git fetch --unshallow 2>/dev/null || true'
-          - 'REV_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo 0)'
-          - 'VER="tds-v${REV_COUNT}-linux-x86_64"'
-          - 'echo "REV_COUNT=${REV_COUNT}"'
-          - 'echo "VER=${VER}"'
-          - '# 尝试1: 通过环境变量 GITEE_PARAMS 写入（官方文档写法）'
-          - 'if [ -n "$GITEE_PARAMS" ]; then echo "TDS_VERSION=${VER}" >> "$GITEE_PARAMS" && echo "尝试1(环境变量 \$GITEE_PARAMS=$GITEE_PARAMS) 成功"; else echo "尝试1(环境变量) 失败: GITEE_PARAMS 为空"; fi'
-          - '# 尝试2: 当前目录文件 GITEE_PARAMS（不带 $）'
-          - 'echo "TDS_VERSION=${VER}" >> GITEE_PARAMS 2>/dev/null && echo "尝试2(当前目录文件) 成功" || echo "尝试2(当前目录文件) 失败"'
-          - '# 尝试3: 绝对路径 /opt/GITEE_PARAMS'
-          - 'echo "TDS_VERSION=${VER}" >> /opt/GITEE_PARAMS 2>/dev/null && echo "尝试3(/opt/GITEE_PARAMS) 成功" || echo "尝试3(/opt/GITEE_PARAMS) 失败"'
-          - 'echo "===== 诊断结束 ====="'
       - step: release@gitee
         name: release_gitee
         displayName: Gitee Release
-        releaseName: ${TDS_VERSION}
-        tagName: ${TDS_VERSION}
-        # 发布说明（body）必填，不能为空
-        deion: TDS ${TDS_VERSION} Linux x86_64 自动构建发布包，产物见附件。
-        description: TDS ${TDS_VERSION} Linux x86_64 自动构建发布包，产物见附件。
+        releaseName: tds-v${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
+        tagName: tds-v${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
+        description: TDS Linux x86_64 自动构建发布包，产物见附件。
         upstreamArtifact:
           - BUILD_ARTIFACT
         assertFiles:
-          - out/dist/${TDS_VERSION}.tar.gz
+          - out/dist/tds-v${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64.tar.gz
         prerelease: false
         allowUpdate: true
         notify: []
