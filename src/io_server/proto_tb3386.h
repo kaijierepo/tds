@@ -1,9 +1,9 @@
-﻿#ifdef _WIN32
-/*
+﻿/*
 315协议解析类
 */
 //#include <string>
 #include "common/common.h"
+#include "common/winCompat.h"
 
 using namespace std;
 
@@ -1557,4 +1557,3 @@ private:
 	static BOOL Release(StVedioSetTitle&);
 	static BOOL Release(StVedioRealPlay&);
 };
-#endif

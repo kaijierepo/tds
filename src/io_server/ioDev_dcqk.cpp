@@ -1,4 +1,3 @@
-#ifdef _WIN32
 #include "pch.h"
 #include "ioDev_dcqk.h"
 #include "logger.h"
@@ -125,7 +124,7 @@ void ThreadDownloadVedio(void* lpParam)
 
 			if (pST)
 			{
-				LeaveCriticalSection(&it->second->m_csVedio);
+				EnterCriticalSection(&it->second->m_csVedio);
 				it->second->m_mapVideos.clear();
 				LeaveCriticalSection(&it->second->m_csVedio);
 
@@ -545,7 +544,7 @@ bool ioDev_dcqk::onRecvPkt(unsigned char* pData, size_t iLen)
 	StFrame data;
 	ZeroMemory(&data, sizeof(StFrame));
 
-	if (Parse315Protocol::Parse(data, LPVOID(pData), int(iLen)))
+	if (Parse315Protocol::Parse(data, (LPVOID)pData, (int)iLen))
 	{
 		DealJHDData(&data);
 	}
@@ -907,7 +906,7 @@ void ioDev_dcqk::DealVedioFile(T* data)
 	}
 	VedioFile& vfile = pEqp->m_mapVideos[data->time];
 
-	vfile.maxpacklen = max(data->datalen, vfile.maxpacklen);
+	vfile.maxpacklen = (data->datalen > vfile.maxpacklen) ? (WORD)data->datalen : vfile.maxpacklen;
 	CopyMemory(vfile.vctPacks.data() + data->curpackid * vfile.maxpacklen, data->lpdata, data->datalen);
 
 	vfile.setPack.insert(data->curpackid);
@@ -1580,7 +1579,7 @@ int ioDev_dcqk::SendHeartbeat()
 	StHeartBeat315 hb;
 	ZeroMemory(&hb, sizeof(StHeartBeat315));
 
-	hb.hbtime = _time32(NULL);
+	hb.hbtime = (DWORD)time(NULL);
 	memset(hb.filldata, 0xFF, 3);
 
 	data.lpdata = &hb;
@@ -1619,7 +1618,7 @@ void ioDev_dcqk::BanDongOpr(int iSID, BYTE bType)
 
 	subdata.cmdid = CMD_CODE_1DQJINFO;
 	subdata.sid = iSID;
-	subdata.time = _time32(NULL);
+	subdata.time = (DWORD)time(NULL);
 
 	subdata.status = bType;
 
@@ -2685,4 +2684,3 @@ void ioDev_dcqk::QueryVedio(WORD sid, StVedioRecord *pST)
 	Parse315Protocol::Unparse(data, buf, len);
 	sendData((unsigned char*)buf.data(), len);
 }
-#endif
