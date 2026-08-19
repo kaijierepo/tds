@@ -397,7 +397,7 @@ cpp_srcs="$(cat <<'EOF'
 ./data_server/scriptFunc.cpp
 ./data_server/scriptManager.cpp
 ./data_server/tAlmSrv.cpp
-./data_server/tdb.cpp
+./database/tDatebase.cpp
 ./data_server/tdsSession.cpp
 ./data_server/tSockSrv.cpp
 ./data_server/webSrv.cpp
