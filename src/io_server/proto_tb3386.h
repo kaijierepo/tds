@@ -1,12 +1,11 @@
 ﻿#ifndef TDS_IO_SERVER_PROTO_TB3386_H
 #define TDS_IO_SERVER_PROTO_TB3386_H
-
-#ifdef _WIN32
 /*
 315协议解析类
 */
 //#include <string>
 #include "common/common.h"
+#include "common/winCompat.h"
 
 using namespace std;
 
@@ -1558,5 +1557,4 @@ private:
 	static BOOL Release(StVedioSetTitle&);
 	static BOOL Release(StVedioRealPlay&);
 };
-#endif
 #endif /* TDS_IO_SERVER_PROTO_TB3386_H */

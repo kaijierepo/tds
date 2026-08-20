@@ -1,11 +1,13 @@
 #ifndef TDS_IO_SERVER_IODEV_DCQK_H
 #define TDS_IO_SERVER_IODEV_DCQK_H
 
-#ifdef _WIN32
 #include "tcpClt.h"
 #include "tdsSession.h"
 #include "proto_tb3386.h"
 #include "ioDev_tdsp.h"
+
+#include <list>
+#include <set>
 
 //报警类型
 #define ALARM_TYPE_QKYJ			1				//缺口预警及预警图像
@@ -206,5 +208,4 @@ public:
 	bool m_bDownloadVedioing;			//是否正在下载视频
 	thread m_threadDownloadVedio;		//下载视频线程
 };
-#endif
 #endif /* TDS_IO_SERVER_IODEV_DCQK_H */

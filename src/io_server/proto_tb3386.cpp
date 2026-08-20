@@ -1,8 +1,5 @@
-﻿#ifdef _WIN32
-#include "proto_tb3386.h"
+﻿#include "proto_tb3386.h"
 #include "logger.h"
-#include "tchar.h"
-#include "inaddr.h"
 
 
 BOOL Parse315Protocol::b26res4byte = FALSE;
@@ -105,7 +102,7 @@ BOOL CVedioParser::Release(StVedioFrame& data)
 		break;
 	}
 
-	delete data.lpdata;
+	delete (BYTE*)data.lpdata;
 
 	return TRUE;
 }
@@ -132,7 +129,7 @@ BOOL CVedioParser::Release(StVedioSetTitle& data)
 BOOL CVedioParser::Release(StVedioRealPlay& data)
 {
 	if (data.len != 0)
-		delete[] data.lpdata;
+		delete[] (BYTE*)data.lpdata;
 
 	return TRUE;
 }
@@ -1851,7 +1848,7 @@ BOOL Parse315Protocol::Release(StFrame& data, int dir)
 				if (dir != 0)
 				{
 					StPowerFileData* lpdata = (StPowerFileData*)data.lpdata;
-					delete[] lpdata->dataInfo;
+					delete[] (BYTE*)lpdata->dataInfo;
 					//delete lpdata;
 				}
 				break;
@@ -1873,7 +1870,7 @@ BOOL Parse315Protocol::Release(StFrame& data, int dir)
 			break;
 		}
 
-		delete data.lpdata;
+		delete (BYTE*)data.lpdata;
 	}
 	return TRUE;
 }
@@ -1883,7 +1880,7 @@ BOOL Parse315Protocol::Release(StAlarmListRes& data)
 	if (data.cnt == 0 || data.lprecord == NULL)
 		return TRUE;
 
-	delete[] data.lprecord;
+	delete[] (BYTE*)data.lprecord;
 
 	return TRUE;
 }
@@ -2207,7 +2204,7 @@ BOOL Parse315Protocol::Release(StOilBoxVolumeData& data)
 		return TRUE;
 
 
-	delete[] data.dataInfo;
+	delete[] (StOilBoxVolume*)data.dataInfo;
 
 	return TRUE;
 }
@@ -2231,7 +2228,7 @@ BOOL Parse315Protocol::Release(StGapCfgRes& data)
 		}
 	}
 
-	delete[] data.lpcfg;
+	delete[] (StSwitchCfg*)data.lpcfg;
 
 	return TRUE;
 }
@@ -2322,7 +2319,7 @@ BOOL Parse315Protocol::Release(StGapValue& data)
 	if (data.cnt == 0 || data.lpdata == NULL)
 		return TRUE;
 
-	delete[] data.lpdata;
+	delete[] (BYTE*)data.lpdata;
 
 	return TRUE;
 }
@@ -2395,7 +2392,7 @@ BOOL Parse315Protocol::Release(StAlarmAndImgInfo& data)
 	if (data.imglen == 0 || data.lpimg == NULL)
 		return TRUE;
 
-	delete[] data.lpimg;
+	delete[] (BYTE*)data.lpimg;
 
 	return TRUE;
 }
@@ -2461,7 +2458,7 @@ BOOL Parse315Protocol::Release(StActionInfo& data)
 	if (data.imglen == 0 || data.lpimg == NULL)
 		return TRUE;
 
-	delete[] data.lpimg;
+	delete[] (BYTE*)data.lpimg;
 
 	return TRUE;
 }
@@ -2542,7 +2539,7 @@ BOOL Parse315Protocol::Release(StLastGapImgRes& data)
 	if (data.imglen == 0 || data.lpimg == NULL)
 		return TRUE;
 
-	delete[] data.lpimg;
+	delete[] (BYTE*)data.lpimg;
 
 	return TRUE;
 }
@@ -2625,7 +2622,7 @@ BOOL Parse315Protocol::Release(StImgListRes& data)
 	if (data.cnt == 0 || data.lprecord == NULL)
 		return TRUE;
 
-	delete[] data.lprecord;
+	delete[] (BYTE*)data.lprecord;
 
 	return TRUE;
 }
@@ -2749,7 +2746,7 @@ BOOL Parse315Protocol::Release(StImgInfoRes& data)
 	if (data.imglen == 0 || data.lpimg == NULL)
 		return TRUE;
 
-	delete[] data.lpimg;
+	delete[] (BYTE*)data.lpimg;
 
 	return TRUE;
 }
@@ -2825,7 +2822,7 @@ BOOL Parse315Protocol::Release(StVedioListRes& data)
 	if (data.cnt == 0 || data.lprecord == NULL)
 		return TRUE;
 
-	delete[] data.lprecord;
+	delete[] (BYTE*)data.lprecord;
 
 	return TRUE;
 }
@@ -3098,10 +3095,10 @@ BOOL Parse315Protocol::Release(StOilPreCurve& data)
 		StCurve& curv = ((StCurve*)data.lpdata)[i];
 
 		if (curv.len && curv.lpdata)
-			delete[] curv.lpdata;
+			delete[] (BYTE*)curv.lpdata;
 	}
 
-	delete[] data.lpdata;
+	delete[] (BYTE*)data.lpdata;
 
 	return TRUE;
 }
@@ -3144,7 +3141,7 @@ BOOL Parse315Protocol::Release(StOilLevelInfo& data)
 	if (data.cnt == 0 || data.lpdata == NULL)
 		return TRUE;
 
-	delete[] data.lpdata;
+	delete[] (BYTE*)data.lpdata;
 
 	return TRUE;
 }
@@ -3334,7 +3331,7 @@ BOOL Parse315Protocol::Release(StRealCtrlReq& data)
 	if (sz == 0 || data.lpdata == NULL)
 		return TRUE;
 
-	delete[] data.lpdata;
+	delete[] (BYTE*)data.lpdata;
 
 	return TRUE;
 }
@@ -3359,7 +3356,7 @@ BOOL Parse315Protocol::Release(StRealCtrlRes& data)
 	if (sz == 0 || data.lpdata == NULL)
 		return TRUE;
 
-	delete[] data.lpdata;
+	delete[] (BYTE*)data.lpdata;
 
 	return TRUE;
 }
@@ -3404,7 +3401,7 @@ BOOL Parse315Protocol::Release(StRealStream& data)
 	if (data.packlen == 0 || data.lpdata == NULL)
 		return TRUE;
 
-	delete[] data.lpdata;
+	delete[] (BYTE*)data.lpdata;
 
 	return TRUE;
 }
@@ -3480,7 +3477,7 @@ BOOL Parse315Protocol::Release(StPowerListRes& data)
 	if (data.cnt == 0 || data.lprecord == NULL)
 		return TRUE;
 
-	delete[] data.lprecord;
+	delete[] (BYTE*)data.lprecord;
 
 	return TRUE;
 }
@@ -3699,7 +3696,7 @@ BOOL Parse315Protocol::Release(DBJFBJInfo& data)
 	if (data.dataCount == 0 || data.curveInfoList == NULL)
 		return TRUE;
 
-	delete[] data.curveInfoList;
+	delete[] (BYTE*)data.curveInfoList;
 
 	return TRUE;
 }
@@ -3790,10 +3787,10 @@ BOOL Parse315Protocol::Release(StPowerInfoRes& data)
 
 	StPowerCurveInfo* p1 = (StPowerCurveInfo*)data.lprecord;
 	if (p1->lpcurvedata != NULL) {
-		delete[] p1->lpcurvedata;
+		delete[] (BYTE*)p1->lpcurvedata;
 		p1->lpcurvedata = NULL;
 	}
-	delete[] data.lprecord;
+	delete[] (BYTE*)data.lprecord;
 
 	return TRUE;
 }
@@ -6388,10 +6385,10 @@ BOOL Parse315Protocol::Release(StElecCurve& data)
 		StElecCurveData& curv = ((StElecCurveData*)data.lpdata)[i];
 
 		if (curv.datalen != 0 && curv.lpdata != NULL)
-			delete[] curv.lpdata;
+			delete[] (BYTE*)curv.lpdata;
 	}
 
-	delete[] data.lpdata;
+	delete[] (BYTE*)data.lpdata;
 
 	return TRUE;
 }
@@ -6410,7 +6407,7 @@ BOOL Parse315Protocol::Release(StStaticPowerList& data)
 	if (data.zzjcnt == 0 || data.lprecord == NULL)
 		return TRUE;
 
-	delete[]data.lprecord;
+	delete[] (BYTE*)data.lprecord;
 
 	return TRUE;
 }
@@ -7282,4 +7279,3 @@ tstring Parse315Protocol::GetElecCurveTypeDesc(int ElecCurveType)
 	}
 	return _T("");
 }
-#endif
