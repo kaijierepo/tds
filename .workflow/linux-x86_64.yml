@@ -44,8 +44,8 @@ stages:
       - step: release@gitee
         name: release_gitee
         displayName: Gitee Release
-        releaseName: tds-latest-linux-x86_64
-        tagName: tds-latest-linux-x86_64
+        releaseName: tds-v1.0-linux-x86_64
+        tagName: tds-v1.0-linux-x86_64
         description: TDS Linux x86_64 自动构建发布包，附件 tds-v{提交次数}-linux-x86_64-{yyyyMMdd_HHmmss}.tar.gz（扁平包，仅含 tds 可执行文件）。
         upstreamArtifact:
           - BUILD_ARTIFACT
