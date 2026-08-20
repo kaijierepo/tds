@@ -26,6 +26,10 @@ if [ -z "$ARCH" ]; then
     exit 1
 fi
 
+# 切换到脚本所在目录（build/），保证 ../out/tds 相对路径在任何调用方式下都正确
+# （流水线 build@gcc 的 commands 每行是独立 shell，不能依赖调用者先 cd build）
+cd "$(dirname "$0")" || { echo "错误: 无法进入脚本目录 $(dirname "$0")"; exit 1; }
+
 # ===================== 1. 获取提交次数（Gitee API） =====================
 REV_COUNT="unknown"
 if command -v curl >/dev/null 2>&1; then

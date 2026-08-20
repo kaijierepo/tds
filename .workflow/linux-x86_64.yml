@@ -25,13 +25,8 @@ stages:
           - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
           - '# 限制并行数，避免 CI 免费节点 OOM（build.sh 默认取 nproc 会虚高）'
           - export JOBS=2
-          - cd build
-          - bash build.sh x86_64
-          - '# 打包发布物：package.sh 直接在 out/tds 中产出扁平包 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz（包内仅 tds，无目录，不创建 out/dist）'
-          - bash package.sh x86_64
-          - '# 返回工作区根目录，查看打包产物'
-          - 'cd ..'
-          - 'ls -la out/tds/'
+          - '# build.sh / package.sh 均自包含路径（自带 cd），合并为一行 && 链，任何一步失败即中止步骤'
+          - 'cd build && bash build.sh x86_64 && bash package.sh x86_64 && cd .. && ls -la out/tds/'
         artifacts:
           - name: BUILD_ARTIFACT
             path:
