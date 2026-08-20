@@ -55,7 +55,7 @@ stages:
         upstreamArtifact:
           - BUILD_ARTIFACT
         assertFiles:
-          - ./tds-*.tar.gz
+          - ./out/tds/tds-*.tar.gz
         prerelease: false
         allowUpdate: true
         notify: []
