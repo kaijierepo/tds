@@ -108,3 +108,14 @@ scrollbar-thumb-hover: rgba(64, 134, 241, 0.35);
   - 操作整个文档：`yyjson_read(doc)` / `yyjson_write(doc)` / `yyjson_doc_free(doc)`
   - 操作单个 val：`yyjson_val_write(val)` / `yyjson_val_mut_copy(doc, val)` / `yyjson_val_mut_imut_copy(imut_doc, val)`
   - mut 文档中按 key 取值用 `yyjson_mut_obj_get(obj, key)`，普通文档用 `yyjson_obj_get(obj, key)`
+
+### 流水线产物路径与 Release 命名
+
+**文件**：`.workflow/linux-x86_64.yml`
+
+- 构建产物默认生成在 `out/tds/tds-v*.tar.gz`。
+- `.gitignore` 第 14 行忽略了 `out/`，CI 收集 artifacts 与文件断言通常遵循 `.gitignore`，导致 `out/` 下的文件匹配不到。
+- 因此构建步骤末尾必须 `cp out/tds/tds-v*.tar.gz ./`，将包放到工作目录根（`tar.gz` 不在 `.gitignore` 忽略列表内）。
+- `artifacts.path` 与 `assertFiles` 必须同时指向根目录的 `./tds-v*.tar.gz`，不能只改其中一个。
+- Gitee Release 的 `releaseName` 和 `tagName` 统一使用带版本号的命名，例如 `tds-v1.0-linux-x86_64`（不要再使用 `tds-latest-linux-x86_64`）。
+- 相关文件修改后需**自动提交并推送**，确保流水线尽快拉到最新配置。
