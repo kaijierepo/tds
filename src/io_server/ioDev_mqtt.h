@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_MQTT_H
+#define TDS_IO_SERVER_IODEV_MQTT_H
+
 #include "ioDev.h"
 #include "ioDev_custom.h"
 
@@ -22,3 +24,5 @@ public:
 };
 
 
+
+#endif /* TDS_IO_SERVER_IODEV_MQTT_H */

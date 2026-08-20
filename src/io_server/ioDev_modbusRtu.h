@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_MODBUSRTU_H
+#define TDS_IO_SERVER_IODEV_MODBUSRTU_H
+
 #include "ioDev_modbusSlave.h"
 #include "proto_rtu.hpp"
 
@@ -16,3 +18,5 @@ public:
 };
 
 
+
+#endif /* TDS_IO_SERVER_IODEV_MODBUSRTU_H */

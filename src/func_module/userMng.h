@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_FUNC_MODULE_USERMNG_H
+#define TDS_FUNC_MODULE_USERMNG_H
+
 #include "json.hpp"
 #include "tdsSession.h"
 
@@ -130,3 +132,4 @@ public:
 
 extern userManager userMng;
 extern json jsNull;
+#endif /* TDS_FUNC_MODULE_USERMNG_H */

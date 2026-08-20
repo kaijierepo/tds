@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_CDATASIMU_H
+#define TDS_CDATASIMU_H
+
 #include <iostream>
 #include <unordered_map>
 #include <string>
@@ -10,3 +12,4 @@ public:
 };
 
 extern CDataSimu* g_pDataSimu;
+#endif /* TDS_CDATASIMU_H */

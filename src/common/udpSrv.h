@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_COMMON_UDPSRV_H
+#define TDS_COMMON_UDPSRV_H
+
 #include <string>
 using namespace std;
 
@@ -64,3 +66,6 @@ public:
 };
 
 
+
+
+#endif /* TDS_COMMON_UDPSRV_H */

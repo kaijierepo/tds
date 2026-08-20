@@ -5,6 +5,8 @@ out/conf/
 .vs/x64/
 .vs/Debug/
 .vs/Release/
+msvc/.vs/
+msvc/x64/
 7-Zip/
 localStorage/
 chrome/
@@ -13,9 +15,12 @@ out/
 publish/
 front_end/
 temp/
+src/version.h
 
 *.o
 *.obj
+*.d
+*.gch
 *.aps
 *.ipch
 *.db*

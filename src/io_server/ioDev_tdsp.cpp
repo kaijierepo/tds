@@ -1713,7 +1713,7 @@ bool doTranslate(char* p,size_t len,string& sRecv) {
 		
 	sendto(g_translatorSock, (char*)p, len, 0, (struct sockaddr*)&servaddr, sizeof(servaddr));
 	
-	int l = sizeof(servaddr);
+	socklen_t l = sizeof(servaddr);
 	int recvLen = recvfrom(g_translatorSock, g_translatorRecvBuffer, TRANSLATOR_RECV_BUFF_LEN, 0, (struct sockaddr*)&servaddr, &l);
 
 	if (recvLen < 0) {

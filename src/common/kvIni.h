@@ -1,3 +1,6 @@
+#ifndef TDS_COMMON_KVINI_H
+#define TDS_COMMON_KVINI_H
+
 /*
 key value Ini配置文件
 仅支持Key,value和#注释的最简配置文件
@@ -15,7 +18,6 @@ key value Ini配置文件
 */
 
 
-#pragma once
 #include <string>
 #include <vector>
 using namespace std;
@@ -55,3 +57,6 @@ public:
 	std::string m_strConf;//ini所有内容
 };
 
+
+
+#endif /* TDS_COMMON_KVINI_H */

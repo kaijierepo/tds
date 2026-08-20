@@ -1,4 +1,6 @@
-﻿#pragma once 
+﻿#ifndef TDS_DATA_SERVER_MP_H
+#define TDS_DATA_SERVER_MP_H
+
 
 #include "obj.h"
 #include "tdsSession.h"
@@ -178,3 +180,6 @@ public:
 
 	TIME m_simuDataTime;
 };
+
+
+#endif /* TDS_DATA_SERVER_MP_H */

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_DCQK_H
+#define TDS_IO_SERVER_IODEV_DCQK_H
+
 #include "tcpClt.h"
 #include "tdsSession.h"
 #include "proto_tb3386.h"
@@ -206,3 +208,4 @@ public:
 	bool m_bDownloadVedioing;			//是否正在下载视频
 	thread m_threadDownloadVedio;		//下载视频线程
 };
+#endif /* TDS_IO_SERVER_IODEV_DCQK_H */

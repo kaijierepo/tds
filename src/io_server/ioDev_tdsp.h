@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_TDSP_H
+#define TDS_IO_SERVER_IODEV_TDSP_H
+
 #include "ioDev.h"
 #include "tcpClt.h"
 #include "tdsSession.h"
@@ -68,3 +70,4 @@ public:
 	TIME m_stLastRecordPullTime;
 	void pullRecordFiles();
 };
+#endif /* TDS_IO_SERVER_IODEV_TDSP_H */

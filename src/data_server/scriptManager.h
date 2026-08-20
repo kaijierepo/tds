@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_DATA_SERVER_SCRIPTMANAGER_H
+#define TDS_DATA_SERVER_SCRIPTMANAGER_H
+
 #include <string>
 #include <map>
 #include <mutex>
@@ -73,3 +75,4 @@ public:
 };
 
 extern ScriptManager scriptManager;
+#endif /* TDS_DATA_SERVER_SCRIPTMANAGER_H */

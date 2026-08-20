@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_NOT_USED_IOGW_TUYAPROJECT_H
+#define TDS_NOT_USED_IOGW_TUYAPROJECT_H
+
 #include "ioDev.h"
 #include "tcpClt.h"
 
@@ -16,3 +18,5 @@ public:
 	string m_sign;
 };
 
+
+#endif /* TDS_NOT_USED_IOGW_TUYAPROJECT_H */

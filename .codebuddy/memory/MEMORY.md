@@ -3,7 +3,9 @@
 ## 用户偏好
 
 - **编译**：改完代码即可，不要自动编译，除非用户明确要求。
-- **Git 提交**：不要自动提交，除非用户明确要求。
+- **Git 提交**：
+  - **`.workflow` 下的流水线 yml 文件**：改好后**自动提交并推送**（用户 2026-08-19 明确要求，方便流水线尽快拉到最新配置），无需等用户发话。
+  - **一般代码**：不要自动提交，除非用户明确要求。
 - **SVN 提交**：不要自动提交，除非用户明确要求。PowerShell 下传中文参数给 svn 会丢失编码，不要用 `svn commit -m "中文" --encoding UTF-8`。正确做法：
   1. 将提交消息写入 UTF-8 文件：`[System.IO.File]::WriteAllText("msg.txt", "消息", [System.Text.UTF8Encoding]::new($false))`
   2. 从文件提交：`svn commit -F msg.txt --encoding UTF-8`
@@ -85,6 +87,15 @@ scrollbar-thumb-hover: rgba(64, 134, 241, 0.35);
 
 - 使用**全局变量 + `extern` 声明**，不使用 `instance()` 静态函数。
 - 模式：`.h` 文件中 `extern ClassName g_varName;`，`.cpp` 文件中 `ClassName g_varName;`
+
+### 头文件 include guard（重要，2026-08-19 起）
+
+- 项目启用 GCC 预编译头（`src/pch.h.gch`，由 build.sh 自动生成）。
+- **所有头文件一律只用 include guard（`#ifndef X` / `#define X` / `#endif`），不用 `#pragma once`**（2026-08-19 已全量删除所有 `#pragma once`，含 json.hpp/miniz.h 等）。
+- guard 命名统一：`TDS_路径_文件名_H`（如 common/hmac.h → `TDS_COMMON_HMAC_H`；文件名含连字符的替换为下划线；`.hpp` 去扩展名）。
+- 原因：GCC 的 PCH 传递 include guard 的宏定义，但**不恢复 `#pragma once` 的文件状态**，仅靠 `#pragma once` 的头在 PCH 下会 redefinition。
+- **例外（故意无 guard，禁止加）**：`common/crypto/library/mbedtls_config_check_*.h`、`common/crypto/psa/core/tf_psa_crypto_config_check_*.h`、`everest/.../wasmsupport.h`、`script/libunicode-table.h`、`script/quickjs-opcode.h`、`script/quickjs-atom.h`、`script/libregexp-opcode.h`、`script/unicode_gen_def.h`（quickjs 表文件是**重复 include 生成代码**，加 guard 会破坏）。
+- **机制差异**：MSVC 的 PCH（/Yu）是完整编译器状态快照，会保存 `#pragma once` 的"文件已包含"状态，所以 VS 工程（msvc/tds.vcxproj 用 `<PrecompiledHeader>Use</PrecompiledHeader>`）不补 guard 也能正常编译。GCC 的 .gch 只保存宏+AST，不保存 `#pragma once` 状态，所以必须靠 include guard。
 
 ### JSON 库迁移
 

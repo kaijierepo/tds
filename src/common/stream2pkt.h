@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_COMMON_STREAM2PKT_H
+#define TDS_COMMON_STREAM2PKT_H
+
 #include <vector>
 #include <string>
 #include <map>
@@ -94,3 +96,5 @@ extern size_t IsValidPkt_TDSP(unsigned char* pData, size_t iLen);
 extern size_t IsValidPkt_LeakDetect(unsigned char* pData, size_t iLen);
 extern size_t isValidPkt_DLT645_2007(unsigned char* p, size_t iLen);
 extern size_t IsValidPkt_315(unsigned char* pData, int iLen);
+
+#endif /* TDS_COMMON_STREAM2PKT_H */

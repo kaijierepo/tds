@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿#ifndef TDS_FUNC_MODULE_LOGSERVER_H
+#define TDS_FUNC_MODULE_LOGSERVER_H
+
 
 #include <mutex>
 #include "database/tDatabase.h"
@@ -57,3 +59,4 @@ public:
 };
 
 extern logServer logSrv;
+#endif /* TDS_FUNC_MODULE_LOGSERVER_H */

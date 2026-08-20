@@ -1,3 +1,6 @@
+#ifndef TDS_FUNC_MODULE_GZHSERVER_H
+#define TDS_FUNC_MODULE_GZHSERVER_H
+
 #include <string>
 #include <map>
 #include "json.hpp"
@@ -26,3 +29,4 @@ public:
 };
 
 extern GzhServer gzhServer;
+#endif /* TDS_FUNC_MODULE_GZHSERVER_H */

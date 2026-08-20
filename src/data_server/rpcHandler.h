@@ -1,7 +1,9 @@
-﻿/*
+﻿#ifndef TDS_DATA_SERVER_RPCHANDLER_H
+#define TDS_DATA_SERVER_RPCHANDLER_H
+
+/*
 rpc handler
 */
-#pragma once
 #include "database/tDatabase.h"
 #include "tdsSession.h"
 #include "obj.h"
@@ -161,3 +163,5 @@ void jsonToList(json & data, std::vector<double>& p);
 float CalDTWDist(const std::vector<double>& vecRef, const std::vector<double>& vecCur);
 void onSockSrvCallback(char* pData, size_t iLen, std::shared_ptr<SOCK_SESSION> sockSess);
 void onSockSrvStatusCallback(bool conn, std::shared_ptr<SOCK_SESSION> sockSess);
+
+#endif /* TDS_DATA_SERVER_RPCHANDLER_H */

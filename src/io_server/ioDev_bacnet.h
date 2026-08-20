@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_BACNET_H
+#define TDS_IO_SERVER_IODEV_BACNET_H
+
 #include "ioDev.h"
 #include "proto_bacnet.hpp"
 #include "udpSrv.h"
@@ -132,3 +134,4 @@ public:
 
 	udpServer udpClt;
 };
+#endif /* TDS_IO_SERVER_IODEV_BACNET_H */

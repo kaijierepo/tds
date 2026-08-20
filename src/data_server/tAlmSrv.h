@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿#ifndef TDS_DATA_SERVER_TALMSRV_H
+#define TDS_DATA_SERVER_TALMSRV_H
+
 
 #include <mutex>
 #ifdef TDS
@@ -506,3 +508,5 @@ public:
 bool generalMatch(std::string pattern, const std::string& src);
 extern almServer almSrv;
 
+
+#endif /* TDS_DATA_SERVER_TALMSRV_H */

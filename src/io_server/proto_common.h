@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_PROTO_COMMON_H
+#define TDS_IO_SERVER_PROTO_COMMON_H
+
 
 #include <string.h>
 using namespace std;
@@ -128,3 +130,4 @@ public:
 	}
 };
 #pragma pack()
+#endif /* TDS_IO_SERVER_PROTO_COMMON_H */

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_DATA_SERVER_PRJ_H
+#define TDS_DATA_SERVER_PRJ_H
+
 #include "obj.h"
 #include "tdsConf.h"
 #include "json.hpp"
@@ -135,3 +137,5 @@ public:
 
 extern void g_getTagsByTagSelector(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt);
 extern project prj;
+
+#endif /* TDS_DATA_SERVER_PRJ_H */

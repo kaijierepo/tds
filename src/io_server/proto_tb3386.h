@@ -1,4 +1,6 @@
-﻿/*
+﻿#ifndef TDS_IO_SERVER_PROTO_TB3386_H
+#define TDS_IO_SERVER_PROTO_TB3386_H
+/*
 315协议解析类
 */
 //#include <string>
@@ -7,14 +9,12 @@
 
 using namespace std;
 
-#pragma once
 
 
 /*
 协议数据结构定义
 */
 
-#pragma once
 
 //#include <WinDef.h>
 //#include <vector>
@@ -1557,3 +1557,4 @@ private:
 	static BOOL Release(StVedioSetTitle&);
 	static BOOL Release(StVedioRealPlay&);
 };
+#endif /* TDS_IO_SERVER_PROTO_TB3386_H */

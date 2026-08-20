@@ -1,3 +1,6 @@
+#ifndef TDS_INCLUDE_TDSRPC_H
+#define TDS_INCLUDE_TDSRPC_H
+
 /*
   TDS for iot version 1.0.0
   https://gitee.com/liangtuSoft/tds.git
@@ -40,7 +43,6 @@ most of time you want to get value 0-255 when you use expression int a = p[i]
 it will be easier to deal with a Hex packet in debuging or coding when you think a 0-255 value instead of a -127 or 127value
 in most protocol specificatin,0-255 will be used to define a value of one byte
 */
-#pragma once
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -310,3 +312,5 @@ inline std::string makeRPCError(int code, std::string msg,std::string desc = "")
 
 	return error;
 }
+
+#endif /* TDS_INCLUDE_TDSRPC_H */

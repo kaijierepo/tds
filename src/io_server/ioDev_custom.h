@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_CUSTOM_H
+#define TDS_IO_SERVER_IODEV_CUSTOM_H
+
 #include "ioDev.h"
 #include "tcpClt.h"
 #include "tdsSession.h"
@@ -73,3 +75,4 @@ public:
 	SCRIPT_RUN_INFO m_lastRunInfo_output;
 	SCRIPT_RUN_INFO m_lastRunInfo_onRecv;
 };
+#endif /* TDS_IO_SERVER_IODEV_CUSTOM_H */

@@ -1,10 +1,12 @@
+#ifndef TDS_COMMON_MD5_H
+#define TDS_COMMON_MD5_H
+
 // //////////////////////////////////////////////////////////
 // md5.h
 // Copyright (c) 2014 Stephan Brumme. All rights reserved.
 // see http://create.stephan-brumme.com/disclaimer.html
 //
 
-#pragma once
 
 //#include "hash.h"
 #include <string>
@@ -119,3 +121,5 @@ private:
   }
 #endif
 };
+
+#endif /* TDS_COMMON_MD5_H */

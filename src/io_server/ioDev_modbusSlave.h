@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_MODBUSSLAVE_H
+#define TDS_IO_SERVER_IODEV_MODBUSSLAVE_H
+
 #include "ioDev.h"
 #include "proto_rtu.hpp"
 
@@ -119,3 +121,5 @@ public:
 };
 void mbBuff2Local(char* pMB, char* pLocal, string byteOrder, int size);
 
+
+#endif /* TDS_IO_SERVER_IODEV_MODBUSSLAVE_H */

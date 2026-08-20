@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_DLT645_2007_H
+#define TDS_IO_SERVER_IODEV_DLT645_2007_H
+
 #include "ioDev.h"
 #include "proto_dlt645_2007.hpp"
 
@@ -96,3 +98,5 @@ public:
 };
 
 
+
+#endif /* TDS_IO_SERVER_IODEV_DLT645_2007_H */

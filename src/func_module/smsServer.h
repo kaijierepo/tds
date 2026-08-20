@@ -1,3 +1,6 @@
+#ifndef TDS_FUNC_MODULE_SMSSERVER_H
+#define TDS_FUNC_MODULE_SMSSERVER_H
+
 #include <string>
 #include <map>
 #include "json.hpp"
@@ -22,3 +25,4 @@ public:
 };
 
 extern SmsServer smsServer;
+#endif /* TDS_FUNC_MODULE_SMSSERVER_H */

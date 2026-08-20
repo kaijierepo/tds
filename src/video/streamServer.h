@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_VIDEO_STREAMSERVER_H
+#define TDS_VIDEO_STREAMSERVER_H
+
 #include "streamNode.h"
 #include "yyjson.h"
 #include "tdsRPC.h"
@@ -114,3 +116,4 @@ private:
 };
 
 extern StreamServer streamSrv;
+#endif /* TDS_VIDEO_STREAMSERVER_H */

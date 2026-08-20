@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_NOT_USED_HMRSRV_H
+#define TDS_NOT_USED_HMRSRV_H
+
 #include "httplib.h"
 #include "json.hpp"
 #include "tcpSrv.h"
@@ -37,3 +39,4 @@ public:
 
 extern HMRServer hmrServer;
 extern string hmrCodeStr;
+#endif /* TDS_NOT_USED_HMRSRV_H */

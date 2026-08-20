@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_FUNC_MODULE_DISKCLEANER_H
+#define TDS_FUNC_MODULE_DISKCLEANER_H
+
 #include <string>
 using namespace std;
 
@@ -11,3 +13,4 @@ public:
 };
 
 extern DiskCleaner diskCleaner;
+#endif /* TDS_FUNC_MODULE_DISKCLEANER_H */

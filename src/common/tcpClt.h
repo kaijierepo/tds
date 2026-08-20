@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_COMMON_TCPCLT_H
+#define TDS_COMMON_TCPCLT_H
+
 #include <string>
 #include <vector>
 #include <mutex>
@@ -104,3 +106,6 @@ public:
 	bool m_bRecvThreadRunning;
 	bool m_bConnThreadRunning;
 };
+
+
+#endif /* TDS_COMMON_TCPCLT_H */

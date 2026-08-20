@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_NOT_USED_PROTO_LEAKDETECT_H
+#define TDS_NOT_USED_PROTO_LEAKDETECT_H
+
 
 #include "common.h"
 #include "proto/proto_common.h"
@@ -251,3 +253,5 @@ struct LDP_READ_FILE_RESP {
 
 #pragma pack()
 
+
+#endif /* TDS_NOT_USED_PROTO_LEAKDETECT_H */

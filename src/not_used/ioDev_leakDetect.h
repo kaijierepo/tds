@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_NOT_USED_IODEV_LEAKDETECT_H
+#define TDS_NOT_USED_IODEV_LEAKDETECT_H
+
 #include "ioDev.h"
 #include "tdsSession.h"
 #include "../ioProto/proto_leakDetect.hpp"
@@ -24,3 +26,4 @@ public:
 	bool m_bIsReadingFile;
 	bool m_bIsWaitingAcq;
 };
+#endif /* TDS_NOT_USED_IODEV_LEAKDETECT_H */

@@ -1,4 +1,7 @@
-﻿/*
+﻿#ifndef TDS_DATABASE_TDATABASE_H
+#define TDS_DATABASE_TDATABASE_H
+
+/*
   TDB version 1.0.0
   a minimal time series database based on json files for iot
   https://gitee.com/liangtuSoft/tds.git
@@ -26,7 +29,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#pragma once
 #include <map>
 #include <unordered_map>
 #include <set>
@@ -1102,3 +1104,6 @@ bool IsLeapYear(int wYear);
 int DaysInAMonth(int wYear, int wMonth);
 
 extern TDB db;
+
+
+#endif /* TDS_DATABASE_TDATABASE_H */

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_DATA_SERVER_UPLINK_MQTT_H
+#define TDS_DATA_SERVER_UPLINK_MQTT_H
+
 #include <string>
 #include <vector>
 #include <mutex>
@@ -70,3 +72,5 @@ private:
 
 
 extern MqttUplink mqttUplink;
+
+#endif /* TDS_DATA_SERVER_UPLINK_MQTT_H */

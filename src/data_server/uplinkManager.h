@@ -1,3 +1,6 @@
+#ifndef TDS_DATA_SERVER_UPLINKMANAGER_H
+#define TDS_DATA_SERVER_UPLINKMANAGER_H
+
 /*
   TDS for iot version 1.0.0
   https://gitee.com/liangtuSoft/tds.git
@@ -7,7 +10,6 @@ SPDX-License-Identifier: MIT
 Copyright (c) 2020-present Tao Lu
 */
 
-#pragma once
 #include <string>
 #include <vector>
 #include <memory>
@@ -52,3 +54,5 @@ private:
 };
 
 extern UplinkManager uplinkMnger;
+
+#endif /* TDS_DATA_SERVER_UPLINKMANAGER_H */

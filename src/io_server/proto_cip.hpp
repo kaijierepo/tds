@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_PROTO_CIP_H
+#define TDS_IO_SERVER_PROTO_CIP_H
+
 
 #include "proto_common.h"
 #include "proto_logix_plc.hpp"
@@ -257,3 +259,5 @@ public:
 
 #pragma pack()
 
+
+#endif /* TDS_IO_SERVER_PROTO_CIP_H */

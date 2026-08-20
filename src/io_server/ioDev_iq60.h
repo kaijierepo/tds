@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_IQ60_H
+#define TDS_IO_SERVER_IODEV_IQ60_H
+
 #include "ioDev.h"
 #include "tcpClt.h"
 #include "tdsSession.h"
@@ -80,3 +82,4 @@ public:
 };
 
 extern void onRecvIQ60Pkt(char* pData, size_t iLen,std::shared_ptr<TDS_SESSION> pALC);
+#endif /* TDS_IO_SERVER_IODEV_IQ60_H */

@@ -1,3 +1,6 @@
+#ifndef TDS_TDS_IMP_H
+#define TDS_TDS_IMP_H
+
 /*
   TDS for iot version 1.0.0
   https://gitee.com/liangtuSoft/tds.git
@@ -26,7 +29,6 @@ SOFTWARE.
 */
 
 
-#pragma once
 
 #ifndef IN
 #define IN
@@ -101,3 +103,5 @@ void updateStreamNodeConfig();
 typedef bool (*LoadModelFunc)(const char*, const bool&);                             // load_model
 typedef bool (*PredictFunc)(IN const char* funcType, IN const char* modelPath, IN void* inData, IN size_t inDataLen, OUT char* outData, OUT size_t& outDataLen, OUT char* errData, OUT size_t& errDataLen);   // predict
 extern PredictFunc dv_predict;
+
+#endif /* TDS_TDS_IMP_H */

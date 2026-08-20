@@ -1,4 +1,7 @@
-﻿/*
+﻿#ifndef TDS_DATA_SERVER_OBJ_H
+#define TDS_DATA_SERVER_OBJ_H
+
+/*
   TDS for iot version 1.0.0
   https://gitee.com/liangtuSoft/tds.git
 
@@ -25,7 +28,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#pragma once
 #include "json.hpp"
 #include "common.h"
 #include <set>
@@ -559,3 +561,6 @@ public:
 
 OBJ* createMO(std::string type);
 
+
+
+#endif /* TDS_DATA_SERVER_OBJ_H */

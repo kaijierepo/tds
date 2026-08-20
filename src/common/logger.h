@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_COMMON_LOGGER_H
+#define TDS_COMMON_LOGGER_H
+
 #include <string>
 #include <mutex>
 
@@ -57,3 +59,5 @@ void LOG(std::string info);
 void LOG_C(char* p);
 
 int _vscprintf_cross_log(const char* format, va_list pargs);
+
+#endif /* TDS_COMMON_LOGGER_H */

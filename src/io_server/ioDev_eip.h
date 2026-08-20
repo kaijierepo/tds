@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_IODEV_EIP_H
+#define TDS_IO_SERVER_IODEV_EIP_H
+
 #include "ioDev.h"
 #include "proto_eip.hpp"
 
@@ -102,3 +104,5 @@ public:
 };
 
 
+
+#endif /* TDS_IO_SERVER_IODEV_EIP_H */

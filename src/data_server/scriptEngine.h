@@ -1,5 +1,7 @@
+#ifndef TDS_DATA_SERVER_SCRIPTENGINE_H
+#define TDS_DATA_SERVER_SCRIPTENGINE_H
+
 #ifdef ENABLE_QJS
-#pragma once
 #include <string>
 #include <map>
 #include "json.hpp"
@@ -119,3 +121,4 @@ yyjson_val* qjsVal_to_yyVal(JSContext* ctx, JSValueConst js_val, yyjson_doc*& do
 extern std::map<std::string, std::string> g_mapConfFile;
 
 #endif
+#endif /* TDS_DATA_SERVER_SCRIPTENGINE_H */

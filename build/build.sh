@@ -18,11 +18,14 @@ set -e
 #   NO_CCACHE=1  禁用 ccache 加速
 #
 # 输出:
-#   x86_64 → ../out/tds/tds_x86_64_<mode>
-#   arm64  → ../out/tds_arm64
-#   armv7  → ../out/tds_armv7
+#   所有架构 → ../out/tds/tds
 #
 # 注意: 切勿同时启动多个 build.sh 实例（并行写 .o 会冲突）。
+#
+# 编译加速说明:
+#   - 自动使用 GCC 预编译头（src/pch.h.gch，按 debug/release 分目录）加速 C++ 编译
+#   - 版本号通过 -DGIT_VERSION 编译参数注入（Gitee API 提交数），不再生成 version.h
+#   - 检测到 ccache 时自动启用（NO_CCACHE=1 关闭），建议安装: apt install ccache
 # ============================================================
 
 # ===================== 1. 参数解析 =====================
@@ -53,34 +56,22 @@ done
 echo "目标架构: $ARCH    模式: $MODE    并行数: $JOBS"
 
 # ===================== 1.5 生成版本信息 =====================
-# 从 git 提交次数生成 SVN_VERSION（兼容原 tds_imp.cpp 的 USE_SVN_REV）
-# 无 git 环境时 SVN_VERSION 记为 unknown
-REV_COUNT="unknown"
-if command -v git >/dev/null 2>&1; then
-    pushd .. >/dev/null
-    # 浅克隆需要解除限制才能统计完整提交数
-    if git rev-parse --is-shallow-repository 2>/dev/null | grep -q '^true$'; then
-        echo "检测到浅克隆，拉取完整历史以统计提交数..."
-        git fetch --unshallow 2>/dev/null || true
+# 从 Gitee API 获取提交次数生成 GIT_VERSION（tds_imp.cpp 通过 -DGIT_VERSION 注入 g_version）
+# Gitee 公开匿名 API：commits 接口响应头含 commit_count/total_count，无需本地 git
+# GIT_VERSION 约定为数字（tds_imp.cpp 用 to_string(GIT_VERSION)），失败回退 0
+REV_COUNT="0"
+if command -v curl >/dev/null 2>&1; then
+    API_COUNT="$(curl -s -D - -o /dev/null "https://gitee.com/api/v5/repos/liangtuSoft/tds/commits?per_page=1" 2>/dev/null | tr -d '\r' | awk -F': ' '/^[Cc]ommit_count|^[Tt]otal_count/{print $2}' | tail -1)"
+    if [ -n "$API_COUNT" ] && echo "$API_COUNT" | grep -qE '^[0-9]+$'; then
+        REV_COUNT="$API_COUNT"
+        echo "源码版本(rev, Gitee API): $REV_COUNT"
+    else
+        echo "警告: Gitee API 未返回有效提交数，版本号记为 0"
     fi
-    REV_COUNT="$(git rev-list --count HEAD 2>/dev/null || echo unknown)"
-    popd >/dev/null
 else
-    echo "警告: 未找到 git，SVN_VERSION 设为 unknown"
+    echo "警告: 未找到 curl，版本号记为 0"
 fi
 echo "源码版本(rev): $REV_COUNT"
-cat > ../src/version.h <<EOF
-#ifndef VERSION_H_
-#define VERSION_H_
-
-#define SVN_VERSION "$REV_COUNT"
-
-#if 0
-#pragma message("warning: local modification found ,please make sure source is updated,when bulid release package")
-#endif
-
-#endif
-EOF
 
 # ===================== 2. 架构配置 =====================
 case "$ARCH" in
@@ -92,7 +83,7 @@ x86_64)
     strip_tool="strip"
     # 本机编译：链接系统基础库（MG_TLS_BUILTIN 内置 mbedtls，不需要 openssl/krb5）
     linkerflags="-lpthread -lutil -lrt -ldl -static-libgcc -static-libstdc++"
-    output_file="../out/tds/tds_x86_64_${MODE}"
+    output_file="../out/tds/tds"
     ;;
 arm64)
     TOOLCHAIN_PATH="/opt/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu"
@@ -110,7 +101,7 @@ arm64)
 -Wl,--end-group \
 -static-libgcc -static-libstdc++ \
 "
-    output_file="../out/tds_arm64"
+    output_file="../out/tds/tds"
     ;;
 armv7)
     TOOLCHAIN_PATH="/opt/armv7-eabihf--glibc--stable-2020.08-1"
@@ -127,7 +118,7 @@ armv7)
 -Wl,--end-group \
 -static-libgcc -static-libstdc++ \
 "
-    output_file="../out/tds_armv7"
+    output_file="../out/tds/tds"
     ;;
 *)
     echo "错误: 未知架构 '$ARCH'，支持 x86_64 / arm64 / armv7"
@@ -145,7 +136,7 @@ common_flags+=" \
 -DENABLE_QJS \
 -DENABLE_QJS_HTTP \
 -DUTF8 \
--DUSE_SVN_REV \
+-DGIT_VERSION=\"${REV_COUNT}\" \
 -DTDS \
 -DENABLE_JERRY_SCRIPT \
 -D_TDS \
@@ -200,13 +191,15 @@ if [ -n "$SYSROOT" ]; then
 fi
 
 # 3.7 语言标准参数（分离C/C++）
-c_flags="-std=gnu99"
-cpp_flags="-std=gnu++17 -fpermissive -Wno-psabi"
+c_flags="-std=gnu99 -pipe"
+cpp_flags="-std=gnu++17 -fpermissive -Wno-psabi -pipe"
 
 # 3.8 ccache 加速（自动检测，可 NO_CCACHE=1 关闭）
 if [ "${NO_CCACHE:-0}" != "1" ] && command -v ccache >/dev/null 2>&1; then
     CC="ccache $CC"
     CXX="ccache $CXX"
+    # 配合预编译头(PCH)使用需放宽 hash 条件，否则 ccache 无法正确缓存带 .gch 的编译
+    export CCACHE_SLOPPINESS="${CCACHE_SLOPPINESS:-pch_defines,time_macros}"
     echo "已启用 ccache 加速"
 fi
 
@@ -357,9 +350,7 @@ cpp_srcs="$(cat <<'EOF'
 ./main.cpp
 ./pch.cpp
 ./tds_imp.cpp
-./test.cpp
 ./common/common.cpp
-./common/dtwrecoge.cpp
 ./common/kvIni.cpp
 ./common/logger.cpp
 ./common/md5.cpp
@@ -383,7 +374,7 @@ cpp_srcs="$(cat <<'EOF'
 ./data_server/scriptFunc.cpp
 ./data_server/scriptManager.cpp
 ./data_server/tAlmSrv.cpp
-./data_server/tdb.cpp
+./database/tDatebase.cpp
 ./data_server/tdsSession.cpp
 ./data_server/tSockSrv.cpp
 ./data_server/webSrv.cpp
@@ -448,6 +439,7 @@ if [ "$CLEAN" = "yes" ]; then
     echo "清理原有 .o/.d 目标文件..."
     find . -name "*.o" -type f -delete
     find . -name "*.d" -type f -delete
+    rm -rf pch.h.gch
     echo "清理完成"
 else
     echo "增量编译模式（保留原有 .o），全量重编请加 --clean"
@@ -480,6 +472,29 @@ append_cmd_if_needed() {
 
 C_CMD="$CC $common_flags $c_flags"
 CPP_CMD="$CXX $common_flags $cpp_flags"
+
+# ===================== 7.5 预编译头（PCH） =====================
+# GCC 在 #include "pch.h" 时会自动优先使用同目录的 pch.h.gch，无需改动编译命令。
+# 按 debug/release 分目录存放，模式切换时互不干扰（GCC 自动匹配兼容项）。
+PCH_GCH="pch.h.gch/$MODE"
+PCH_DEP="pch.d"
+need_pch="no"
+if [ ! -f "$PCH_GCH" ] || [ ! -f "$PCH_DEP" ] || [ pch.h -nt "$PCH_GCH" ]; then
+    need_pch="yes"
+else
+    # 检查 pch.h 的依赖头文件是否更新（与 append_cmd_if_needed 相同策略）
+    while IFS= read -r header; do
+        if [ -f "$header" ] && [ "$header" -nt "$PCH_GCH" ]; then
+            need_pch="yes"
+            break
+        fi
+    done < <(sed -n 's/^ *//; s/ *\\*$//; /^$/d' "$PCH_DEP" | tr ' ' '\n' | grep '\.h$')
+fi
+if [ "$need_pch" = "yes" ]; then
+    echo "生成预编译头 pch.h.gch (模式: $MODE)..."
+    mkdir -p pch.h.gch
+    $CPP_CMD -MMD -MP -MF "$PCH_DEP" -x c++-header pch.h -o "$PCH_GCH"
+fi
 
 for src in $c_srcs; do
     append_cmd_if_needed "$src" "${src%.*}.o" "$C_CMD"

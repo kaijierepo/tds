@@ -1,5 +1,7 @@
+#ifndef TDS_COMMON_MEMDIAG_H
+#define TDS_COMMON_MEMDIAG_H
+
 #ifdef _WIN32
-#pragma once
 #define STACK_INFO_SIZE 4096
 #include "Windows.h"
 #include <atomic>
@@ -139,3 +141,5 @@ extern void *operator new[](size_t size);
 extern void operator delete(void *ptr);
 extern void operator delete[](void *ptr);
 #endif
+
+#endif /* TDS_COMMON_MEMDIAG_H */

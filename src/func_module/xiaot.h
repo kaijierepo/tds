@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_FUNC_MODULE_XIAOT_H
+#define TDS_FUNC_MODULE_XIAOT_H
+
 #include <string>
 #include <map>
 #include "json.hpp"
@@ -56,3 +58,4 @@ public:
 };
 
 extern CXiaoT xiaot;
+#endif /* TDS_FUNC_MODULE_XIAOT_H */

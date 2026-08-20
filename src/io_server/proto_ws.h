@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_IO_SERVER_PROTO_WS_H
+#define TDS_IO_SERVER_PROTO_WS_H
+
 #include <string>
 /*用于处理websocket中的所有编码相关,解析websocket格式
 1.解析websocket连接请求中的sec，并生成对应的accept码，（通过sha1与base64编码）
@@ -163,3 +165,4 @@ public:
 };
 
 extern size_t IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen);
+#endif /* TDS_IO_SERVER_PROTO_WS_H */

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef TDS_VIDEO_SRTP_PROTECT_H
+#define TDS_VIDEO_SRTP_PROTECT_H
+
 #include <cstdint>
 #include <cstring>
 #include <vector>
@@ -100,3 +102,5 @@ private:
                          const uint8_t* data, size_t data_len,
                          uint8_t out[20]);
 };
+
+#endif /* TDS_VIDEO_SRTP_PROTECT_H */

@@ -1,10 +1,12 @@
+#ifndef TDS_COMMON_SHA1_H
+#define TDS_COMMON_SHA1_H
+
 // //////////////////////////////////////////////////////////
 // sha1.h
 // Copyright (c) 2014,2015 Stephan Brumme. All rights reserved.
 // see http://create.stephan-brumme.com/disclaimer.html
 //
 
-#pragma once
 
 //#include "hash.h"
 #include <string>
@@ -105,3 +107,5 @@ private:
           (x << 24);
   }
 };
+
+#endif /* TDS_COMMON_SHA1_H */

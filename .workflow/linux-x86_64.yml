@@ -1,9 +1,4 @@
 version: '1.0'
-# ============================================================
-# 流水线配置版本标识：TDS_CFG=v6
-# 编辑界面保存本文件后，重新触发构建，build 阶段第一条日志会打印
-# "TDS_CFG=v6"。拷贝日志时搜索该标识即可确认编辑界面配置已更新。
-# ============================================================
 name: pipeline-linux-x86_64
 displayName: Linux x86_64 构建
 triggers:
@@ -24,24 +19,18 @@ stages:
         displayName: GCC 构建
         gccVersion: '9.4'
         commands:
-          - 'echo "TDS_CFG=v6"'
+          - 'echo "TDS_CFG=v15"'
           - '# 安装编译依赖（gcc/g++、make、libssl、libkrb5、file）'
           - export DEBIAN_FRONTEND=noninteractive
           - apt-get update && apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
           - '# 限制并行数，避免 CI 免费节点 OOM（build.sh 默认取 nproc 会虚高）'
           - export JOBS=2
-          - '# 版本号由 package.sh 自动生成：tds-v{提交次数}-linux-x86_64-{yyMMdd}'
-          - cd build
-          - bash build.sh x86_64
-          - '# 打包发布物：out/dist/tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz'
-          - bash package.sh x86_64
-          - '# 返回工作区根目录：package.sh 产物在根目录 out/dist，artifacts.path 相对该目录收集'
-          - 'cd ..'
-          - 'ls -la out/dist/'
+          - '# build.sh / package.sh 均自包含路径（自带 cd），合并为一行 && 链，任何一步失败即中止步骤'
+          - 'cd build && bash build.sh x86_64 && bash package.sh x86_64 && cd .. && ls -la out/tds/'
         artifacts:
           - name: BUILD_ARTIFACT
             path:
-              - ./out/dist
+              - ./out/tds
         caches: []
         notify: []
         strategy:
@@ -49,19 +38,19 @@ stages:
   - name: release
     displayName: 发布 Gitee Release
     strategy: naturally
-    trigger: manual
+    trigger: auto
     executor: []
     steps:
       - step: release@gitee
         name: release_gitee
         displayName: Gitee Release
-        releaseName: tds-v${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
-        tagName: tds-v${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
-        description: TDS Linux x86_64 自动构建发布包，产物文件名包含提交次数+日期（tds-v{提交次数}-linux-x86_64-{yyMMdd}.tar.gz）。
+        releaseName: tds-${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
+        tagName: tds-${GITEE_PIPELINE_BUILD_NUMBER}-linux-x86_64
+        description: TDS Linux x86_64 自动构建发布包，附件 tds-{提交次数}-linux-x86_64-{yyMMddHHmmss}.tar.gz（扁平包，仅含 tds 可执行文件）。
         upstreamArtifact:
           - BUILD_ARTIFACT
         assertFiles:
-          - ./out/dist/*.tar.gz
+          - ./out/tds/tds-*.tar.gz
         prerelease: false
         allowUpdate: true
         notify: []
