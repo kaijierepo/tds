@@ -63,7 +63,7 @@ if [ ! -f "$bin_file" ]; then
 fi
 
 # ===================== 3. 打包 =====================
-VER="tds-${REV_COUNT}-linux-${ARCH}-$(date +%y%m%d%H%M%S)"
+VER="tds-v${REV_COUNT}-linux-${ARCH}-$(date +%Y%m%d_%H%M%S)"
 # 支持流水线用构建号覆盖版本号（TDS_VERSION_OVERRIDE），
 # 保证产物包名与 release 版本号一致（release@gitee 插件可用 ${GITEE_PIPELINE_BUILD_NUMBER}）
 if [ -n "${TDS_VERSION_OVERRIDE:-}" ]; then
