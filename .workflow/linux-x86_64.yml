@@ -38,7 +38,7 @@ stages:
   - name: release
     displayName: 发布 Gitee Release
     strategy: naturally
-    trigger: auto
+    trigger: manual
     executor: []
     steps:
       - step: release@gitee
