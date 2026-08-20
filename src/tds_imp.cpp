@@ -49,6 +49,7 @@ SOFTWARE.
 #include "uplink_mqtt.h"
 #include "uplinkManager.h"
 #include "video/streamServer.h"
+#include "rtdb.h"
 
 #include "as_interface.h"
 #ifdef _WIN32
@@ -784,6 +785,8 @@ bool TDS_imp::run(string cmdline) {
 		string recPath = tds->conf->dbPath + "/record";
 		fs::createFolderOfPath(recPath);
 	}
+
+	rtdb.m_path = tds->conf->dbPath;
 
 	string startupLogPath = tds->conf->dbPath + "/selfcheck/startup.log";
 	string startupInfo = g_strStartupTime + " " + m_sTitle + "\r\n";

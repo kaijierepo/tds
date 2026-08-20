@@ -62,6 +62,7 @@ public:
 extern string rootDir;
 extern string confDir;
 extern string filesDir;
+extern string dbDir;
 
 extern vector<WebServer*> g_WebServerList;
 WebServer* getWebServer(int port, bool isHttps);

@@ -2,6 +2,7 @@
 #include "webSrv.h"
 #include "tdsSession.h"
 #include "rpcHandler.h"
+#include "rtdb.h"
 #include "common.h"
 #include "logger.h"
 
@@ -1219,6 +1220,9 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			 if (it != g_mapHttpHandler.end()) {
 				 it->second(hm, c);
 			 }
+		}
+		else if (mg_http_match_uri(hm, "/rtdb/*") || mg_http_match_uri(hm, "/rtdb/*/*") || mg_http_match_uri(hm, "/rtdb")) {
+			 rtdb_handler(hm, c);
 		}
 		else if (mg_http_match_uri(hm, "/rpc/*"))  // path after rpc is method name,use url param to hold rpc params
 		{

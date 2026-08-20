@@ -631,6 +631,7 @@
     <ClCompile Include="..\src\data_server\uplink_mqtt.cpp" />
     <ClCompile Include="..\src\data_server\uplinkManager.cpp" />
     <ClCompile Include="..\src\data_server\rpcHandler_common.cpp" />
+    <ClCompile Include="..\src\data_server\rtdb.cpp" />
     <ClCompile Include="..\src\data_server\scriptEngine.cpp" />
     <ClCompile Include="..\src\data_server\scriptFunc.cpp" />
     <ClCompile Include="..\src\data_server\tAlmSrv.cpp" />
@@ -830,6 +831,7 @@
     <ClInclude Include="..\src\data_server\uplink_mqtt.h" />
     <ClInclude Include="..\src\data_server\uplinkManager.h" />
     <ClInclude Include="..\src\data_server\rpcHandler_common.h" />
+    <ClInclude Include="..\src\data_server\rtdb.h" />
     <ClInclude Include="..\src\data_server\scriptEngine.h" />
     <ClInclude Include="..\src\data_server\scriptFunc.h" />
     <ClInclude Include="..\src\data_server\tAlmSrv.h" />

@@ -370,6 +370,7 @@ cpp_srcs="$(cat <<'EOF'
 ./data_server/prj.cpp
 ./data_server/rpcHandler.cpp
 ./data_server/rpcHandler_common.cpp
+./data_server/rtdb.cpp
 ./data_server/scriptEngine.cpp
 ./data_server/scriptFunc.cpp
 ./data_server/scriptManager.cpp
