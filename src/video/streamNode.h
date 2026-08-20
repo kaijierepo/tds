@@ -98,6 +98,11 @@ public:
 
         std::vector<char> fu_a_buffer_; // FU-A分片缓存
         std::chrono::steady_clock::time_point startTime;  // 录像开始时间，用于计算 duration
+
+        // 录像媒体编码 "H264"/"H265"/""(未知)，startRecord 时优先从会话 codec 确定；
+        // SDP 未解析时留空，由录像 I/O 线程在参数集缓存就绪后探测实际编码。
+        // 决定写盘格式(.h264/.h265)与转 MP4 的解析路径
+        std::string codec = "";
 	};
 
     // 配置结构
@@ -223,6 +228,7 @@ public:
     bool last_nalu_was_idr_ = false; //判断上一个是否是IDR的RTP包，一般一个IDR帧会分成多个
     std::vector<char> last_sps_;  // 最新SPS缓存，IDR前写入（在onRecvOriginRtpPkt中更新）
     std::vector<char> last_pps_;  // 最新PPS缓存，IDR前写入（在onRecvOriginRtpPkt中更新）
+    std::vector<char> last_vps_;  // 最新H.265 VPS缓存，IDR前写入（在onRecvOriginRtpPkt中更新）
 
     // 最近一个关键帧的 RTP 原始数据缓存（新会话首次发送时使用，加速出图）
     // 帧级缓存：pkts 从 IDR 第一片到 marker=1 的包；complete 表示该帧分片完整

@@ -904,8 +904,78 @@ void StreamNode::writeRTPPacketToFile(std::shared_ptr<RTPPacket> pPkt, std::ofst
     const std::vector<uint8_t>& payload = pPkt->payload;
     if (payload.empty()) return;
 
-    uint8_t nal_unit_type = payload[0] & 0x1F;
+    // 录像编码未知（startRecord 早于 SDP 解析）时，用已缓存的参数集探测实际编码：
+    // VPS 为 H.265 独有；H.265 SPS 首字节按 2 字节 NAL 头解释 type=33，H.264 SPS 为 0x67(type=7)。
+    // onRecvOriginRtpPkt 在 SDP 解析后会把会话参数集同步到 last_sps_/last_vps_，
+    // 故首个 RTP 包到达时探测必然可确定；此前包按 H.264 处理（firstWrite 丢弃到首个关键帧，无副作用）。
+    if (rec_ctrl_.codec.empty()) {
+        std::string detected;
+        if (!last_vps_.empty()) {
+            detected = "H265";
+        } else if (!last_sps_.empty()) {
+            detected = ((((uint8_t)last_sps_[0] >> 1) & 0x3F) == NAL_TYPE_H265_SPS) ? "H265" : "H264";
+        }
+        if (!detected.empty()) {
+            rec_ctrl_.codec = detected;
+            LOG("[录像] tag=%s: 探测到录像编码 %s", config_.tag.c_str(), detected.c_str());
+        }
+    }
 
+    // H.264: 1 字节 NAL 头, type = payload[0] & 0x1F
+    // H.265: 2 字节 NAL 头, type = (payload[0] >> 1) & 0x3F
+    const bool isH265 = (rec_ctrl_.codec == "H265" || rec_ctrl_.codec == "HEVC");
+    uint8_t nal_unit_type = isH265 ? ((payload[0] >> 1) & 0x3F) : (payload[0] & 0x1F);
+
+    if (isH265) {
+        // H.265 聚合包 AP：NAL 头(2) + [长度(2) + NAL]*n
+        if (nal_unit_type == NAL_TYPE_H265_AP && payload.size() >= 4) {
+            size_t off = 2;
+            while (off + 2 <= payload.size()) {
+                uint16_t L = (payload[off] << 8) | payload[off + 1];
+                off += 2;
+                if (L == 0) continue;
+                if (off + L > payload.size()) break;
+                const uint8_t* subNal = &payload[off];
+                uint8_t sub_nal_type = (subNal[0] >> 1) & 0x3F;
+                writeNALtoFile(sub_nal_type, (char*)subNal, L, ofs);
+                off += L;
+            }
+        }
+        // H.265 分片包 FU：NAL 头(2) + FU 头(1, 仅低 6 位为类型，其余为 start/end)
+        else if (nal_unit_type == NAL_TYPE_H265_FU && payload.size() >= 3) {
+            uint8_t fu_header = payload[2];
+            bool start = (fu_header & 0x80) != 0;
+            bool end   = (fu_header & 0x40) != 0;
+            uint8_t fu_org_type = fu_header & 0x3F;
+            // 重组 2 字节 NAL 头：保留原头的前 2 bit（forbidden+layer_id 高位）与第 2 字节
+            uint8_t nal_header[2];
+            nal_header[0] = (payload[0] & 0x81) | (fu_org_type << 1);
+            nal_header[1] = payload[1];
+
+            // 丢片保护：start 分片丢失时残片没有 NAL 头，继续拼接会写出损坏的 NAL
+            if (!start && rec_ctrl_.fu_a_buffer_.empty()) return;
+
+            if (start) {
+                rec_ctrl_.fu_a_buffer_.clear();
+                rec_ctrl_.fu_a_buffer_.push_back(nal_header[0]);
+                rec_ctrl_.fu_a_buffer_.push_back(nal_header[1]);
+            }
+            rec_ctrl_.fu_a_buffer_.insert(rec_ctrl_.fu_a_buffer_.end(),
+                payload.begin() + 3, payload.end());
+
+            if (end) {
+                writeNALtoFile(fu_org_type, rec_ctrl_.fu_a_buffer_.data(),
+                    rec_ctrl_.fu_a_buffer_.size(), ofs);
+            }
+        }
+        // H.265 单 NAL 包（payload 即完整 NAL，含 2 字节头）
+        else {
+            writeNALtoFile(nal_unit_type, (char*)payload.data(), payload.size(), ofs);
+        }
+        return;
+    }
+
+    // ---- H.264 ----
     if (nal_unit_type == NAL_TYPE_STAP_A && payload.size() >= 2) {
         size_t off = 1;
         while (off + 2 <= payload.size()) {
@@ -1033,40 +1103,88 @@ static bool isNewFrameSlice(const char* nal, size_t size) {
     return ((1u << leadingZeros) - 1 + val) == 0;
 }
 
+// H.265 slice header 第一个字段 first_slice_segment_in_pic_flag（1 bit），
+// ==1 表示一帧的第一个 slice。跳过 2 字节 NAL 头后读首 bit。
+// 与 mp4Writer.cpp isFirstSliceOfPictureHevc 判定规则保持一致。
+static bool isNewFrameSliceH265(const char* nal, size_t size) {
+    if (size <= 2) return true;
+
+    std::vector<uint8_t> rbsp;
+    rbsp.reserve(size - 2);
+    int zeroCount = 0;
+    for (size_t i = 2; i < size; ++i) {
+        uint8_t byte = static_cast<uint8_t>(nal[i]);
+        if (zeroCount >= 2 && byte == 0x03) {
+            zeroCount = 0;
+            continue;
+        }
+        rbsp.push_back(byte);
+        if (byte == 0x00) ++zeroCount;
+        else zeroCount = 0;
+    }
+    if (rbsp.empty()) return true;
+
+    // first_slice_segment_in_pic_flag = rbsp 首个字节的最高位
+    return (rbsp[0] & 0x80) != 0;
+}
+
 void StreamNode::writeNALtoFile(uint8_t nal_type, char* nal, size_t size, std::ofstream& ofs) {
+    // 录像编码（H264/H265），startRecord 时从会话 codec 确定
+    const bool isH265 = (rec_ctrl_.codec == "H265" || rec_ctrl_.codec == "HEVC");
+
     // 记录 SPS VUI 帧率供 MP4 转换使用（丢包时帧数/时长推算会偏差）。
     // 每次收到 SPS 都更新，与 mp4Writer 取文件内最后一个 SPS 的行为一致；解析失败保持原值。
     // 置于 firstWrite 检查之前：首个 SPS 可能先于首个 IDR 到达并被跳过，不能漏解析。
-    if (nal_type == NAL_TYPE_SPS) {
-        double fps = mp4::parseSpsFps((const uint8_t*)nal, size);
+    const uint8_t spsType = isH265 ? NAL_TYPE_H265_SPS : NAL_TYPE_SPS;
+    if (nal_type == spsType) {
+        double fps = isH265 ? mp4::parseHevcSpsFps((const uint8_t*)nal, size)
+                            : mp4::parseSpsFps((const uint8_t*)nal, size);
         if (fps > 0.0) {
             rec_ctrl_.sps_fps = fps;
             LOG("[录像] tag=%s: SPS 帧率 %.2f fps", config_.tag.c_str(), fps);
         }
     }
+
+    // H.265 IRAP（16-23）对应 H.264 IDR，作为可随机访问点
+    const bool isKeyNal = isH265 ? (nal_type >= 16 && nal_type <= 23)
+                                 : (nal_type == NAL_TYPE_IDR);
+
     //文件头写入关键帧
     if (rec_ctrl_.firstWrite) {
-        if (nal_type != NAL_TYPE_IDR) {
+        if (!isKeyNal) {
             return;
         }
     }
     rec_ctrl_.firstWrite = false;
-    // VCL 帧计数（first_mb_in_slice==0 计为新帧，多 slice 不重复计数，与 MP4 分帧一致）
+
+    // VCL 帧计数（新帧首个 slice 计为一帧，多 slice 不重复计数，与 MP4 分帧一致）
+    // H.265 所有 0-31 的 NAL 均为 VCL；H.264 仅 IDR/NON_IDR
     // 放在 firstWrite 检查后：只数实际写入文件的帧，与 MP4 解析的文件内容对应
-    if ((nal_type == NAL_TYPE_IDR || nal_type == NAL_TYPE_NON_IDR) && isNewFrameSlice(nal, size)) {
-        rec_ctrl_.frame_count++;
+    const bool isVcl = isH265 ? (nal_type <= 31)
+                              : (nal_type == NAL_TYPE_IDR || nal_type == NAL_TYPE_NON_IDR);
+    if (isVcl) {
+        bool isNewSlice = isH265 ? isNewFrameSliceH265(nal, size) : isNewFrameSlice(nal, size);
+        if (isNewSlice) {
+            rec_ctrl_.frame_count++;
+        }
     }
     rec_ctrl_.isLastIdrNal = rec_ctrl_.isIdrNal;
-    rec_ctrl_.isIdrNal = nal_type == NAL_TYPE_IDR;
+    rec_ctrl_.isIdrNal = isKeyNal;
 
     const uint8_t start_code[4] = { 0x00, 0x00, 0x00, 0x01 };
 
-    // 切换到关键帧前写入 sps/pps（由 onRecvOriginRtpPkt 实时更新缓存）
+    // 切换到关键帧前写入参数集（由 onRecvOriginRtpPkt 实时更新缓存）
     if (rec_ctrl_.isLastIdrNal == false && rec_ctrl_.isIdrNal == true) {
+        // H.265 先写 VPS，再 SPS/PPS
+        if (isH265 && !last_vps_.empty()) {
+            ofs.write((const char*)start_code, sizeof(start_code));
+            ofs.write(last_vps_.data(), last_vps_.size());
+        }
         if (!last_sps_.empty()) {
             // 兜底：RTP 流未直接携带 SPS 时（SPS 仅存在于 SDP/缓存），从写入的 SPS 解析帧率
             if (rec_ctrl_.sps_fps <= 0.0) {
-                double fps = mp4::parseSpsFps((const uint8_t*)last_sps_.data(), last_sps_.size());
+                double fps = isH265 ? mp4::parseHevcSpsFps((const uint8_t*)last_sps_.data(), last_sps_.size())
+                                    : mp4::parseSpsFps((const uint8_t*)last_sps_.data(), last_sps_.size());
                 if (fps > 0.0) {
                     rec_ctrl_.sps_fps = fps;
                     LOG("[录像] tag=%s: SPS 帧率 %.2f fps (cached)", config_.tag.c_str(), fps);

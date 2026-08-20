@@ -998,6 +998,9 @@ void StreamNode::onRecvOriginRtpPkt(std::shared_ptr<RTPPacket> pkt, STREAM_SESSI
     if (!session.pps.empty()) {
         last_pps_.assign((char*)session.pps.data(), (char*)session.pps.data() + session.pps.size());
     }
+    if (!session.vps.empty()) {
+        last_vps_.assign((char*)session.vps.data(), (char*)session.vps.data() + session.vps.size());
+    }
     // 兜底：从 Single NAL 的 RTP payload 提取（覆盖默认值或 session 缓存）
     if (!pkt->payload.empty()) {
         if (isH265) {
@@ -1006,6 +1009,7 @@ void StreamNode::onRecvOriginRtpPkt(std::shared_ptr<RTPPacket> pkt, STREAM_SESSI
                 uint8_t nal_type = (pkt->payload[0] >> 1) & 0x3F;
                 if (nal_type == NAL_TYPE_H265_VPS) {
                     session.vps = pkt->payload;
+                    last_vps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());
                 } else if (nal_type == NAL_TYPE_H265_SPS) {
                     session.sps = pkt->payload;
                     last_sps_.assign((char*)pkt->payload.data(), (char*)pkt->payload.data() + pkt->payload.size());

@@ -299,7 +299,9 @@ void StreamServer::cleanOldRecords() {
 			return;
 
 		for (const auto& entry : fs::directory_iterator(recordDir)) {
-			if (entry.is_regular_file() && entry.path().extension() == ".h264") {
+			// 录像源文件可能为 .h264 或 .h265（H.265 录像），一并纳入清理
+			if (entry.is_regular_file() &&
+				(entry.path().extension() == ".h264" || entry.path().extension() == ".h265")) {
 				files.push_back({ entry.path().string(), entry.last_write_time() });
 			}
 		}

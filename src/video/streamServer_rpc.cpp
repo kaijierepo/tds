@@ -300,7 +300,10 @@ bool StreamServer::rpc_remux(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION 
 	src = m_recordPath + src;
 	target = m_recordPath + target;
 
-	bool ok = mp4::convertH264toMP4(src, target);
+	// 按源文件扩展名自动选择转换路径：.h265 走 H.265 解析，其余按 H.264
+	const bool isH265 = (src.size() > 5 && src.substr(src.size() - 5) == ".h265");
+	bool ok = isH265 ? mp4::convertH265toMP4(src, target)
+	                 : mp4::convertH264toMP4(src, target);
 
 	if (ok) {
 		rpcResp.result = RPC_OK;
@@ -503,6 +506,17 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 		std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);
 		if (rc->rec_ctrl_.recording == false)
 		{
+			// 录像编码由会话 codec 决定（H264/H265），扩展名与转 MP4 路径随之选择。
+			// SDP 未解析前 session_origin_.codec 仍是默认值 "H264"，不可信；
+			// 以会话参数集是否就绪（SDP 已解析）为界：就绪才直接采用，否则留空，
+			// 由录像 I/O 线程在首个参数集到达后探测实际编码
+			std::string recCodec;
+			if (!rc->session_origin_.sps.empty()) {
+				recCodec = (rc->session_origin_.codec == "H265" || rc->session_origin_.codec == "HEVC")
+					? "H265" : "H264";
+			}
+			rc->rec_ctrl_.codec = recCodec;
+			const bool isH265 = (recCodec == "H265");
 			rc->rec_ctrl_.fu_a_buffer_.clear();
 			rc->rec_ctrl_.firstWrite = true;
 			rc->rec_ctrl_.preRecordingDone = false;
@@ -514,9 +528,10 @@ bool StreamServer::rpc_startRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SE
 			std::string ts = str::format("%04d%02d%02d_%02d%02d%02d",
 				now.wYear, now.wMonth, now.wDay,
 				now.wHour, now.wMinute, now.wSecond);
-			// 录像文件名: 位号_年月日_时分秒_pre{预录秒}_duration{持续秒}.mp4（duration 在停止时按实际时长补齐）
+			// 录像文件名: 位号_年月日_时分秒_pre{预录秒}_duration{持续秒}.h264/.h265（duration 在停止时按实际时长补齐）
 			rc->rec_ctrl_.path = tds->conf->dbPath + "/record/"
-				+ rc->config_.tag + "_" + ts + "_pre" + std::to_string(preTime) + ".h264";
+				+ rc->config_.tag + "_" + ts + "_pre" + std::to_string(preTime)
+				+ (isH265 ? ".h265" : ".h264");
 			rc->rec_ctrl_.startTime = std::chrono::steady_clock::now();
 			rc->rec_ctrl_.recording = true;
 			// 启动独立 I/O 线程，将磁盘写入与实时收包线程解耦
@@ -563,6 +578,8 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 	}
 	if (rc) {
 		bool wasRecording = false;
+		// 录像编码在 lock 内读取：rec_ctrl_.codec 在 startRecord 时确定，录像线程结束后仍保留
+		std::string recCodec;
 		{
 			std::lock_guard<std::recursive_mutex> lock(rc->rec_mutex_);
 			if (rc->rec_ctrl_.recording == true)
@@ -570,7 +587,10 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 				rc->rec_ctrl_.recording = false;
 				wasRecording = true;
 			}
+			recCodec = rc->rec_ctrl_.codec;
 		}
+		const bool isH265 = (recCodec == "H265" || recCodec == "HEVC");
+		const std::string srcExt = isH265 ? ".h265" : ".h264";
 		if (wasRecording)
 		{
 			rc->flushRecordBuffer();
@@ -595,14 +615,15 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 				? static_cast<int>(std::lround(static_cast<double>(frameCount) / spsFps))
 				: static_cast<int>(std::lround(mediaDurationSec));
 			std::string filePath = rc->rec_ctrl_.path;
-			// 重命名 .h264，文件名追加实际持续时长: 位号_年月日_时分秒_pre{预录}_duration{时长}.h264
+			// 重命名文件，文件名追加实际持续时长: 位号_年月日_时分秒_pre{预录}_duration{时长}.h264/.h265。
+			// 扩展名一律以 rec_ctrl_.codec（会话确定或 I/O 线程探测）对应的 srcExt 为准，
+			// 避免 startRecord 早于 SDP 解析时扩展名与实际编码不一致
 			std::string finalPath = filePath;
 			{
 				size_t dotPos = finalPath.find_last_of('.');
 				std::string baseName = (dotPos != std::string::npos)
 					? finalPath.substr(0, dotPos) : finalPath;
-				finalPath = baseName + "_duration" + std::to_string(duration)
-					+ ((dotPos != std::string::npos) ? finalPath.substr(dotPos) : "");
+				finalPath = baseName + "_duration" + std::to_string(duration) + srcExt;
 			}
 #ifdef _WIN32
 			std::wstring wOldPath = str::utf8_to_utf16(filePath);
@@ -624,7 +645,7 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			size_t pos = filePath.find_last_of("/\\");
 		std::string fileName = (pos != std::string::npos) ? filePath.substr(pos + 1) : filePath;
 		std::string mp4FileName = fileName;
-		if (mp4FileName.size() > 5 && mp4FileName.substr(mp4FileName.size() - 5) == ".h264") {
+		if (mp4FileName.size() > 5 && mp4FileName.substr(mp4FileName.size() - 5) == srcExt) {
 			mp4FileName = mp4FileName.substr(0, mp4FileName.size() - 5) + ".mp4";
 		}
 		std::string fileUrl = "/db/record/" + mp4FileName;
@@ -635,12 +656,14 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 			j["preSeconds"] = rc->rec_ctrl_.preSeconds;
 			rpcResp.result = j.dump();
 
-			// 异步将 .h264 转为 .mp4（不阻塞 RPC 响应）
+			// 异步将 .h264/.h265 转为 .mp4（不阻塞 RPC 响应）
 			std::string mp4Path = filePath.substr(0, filePath.size() - 5) + ".mp4";
-			std::thread([h264Path = filePath, mp4Path, mediaDurationSec, spsFps]() {
-					const bool ok = mp4::convertH264toMP4(h264Path, mp4Path, mediaDurationSec, spsFps);
+			std::thread([srcPath = filePath, mp4Path, mediaDurationSec, spsFps, isH265]() {
+					const bool ok = isH265
+						? mp4::convertH265toMP4(srcPath, mp4Path, mediaDurationSec, spsFps)
+						: mp4::convertH264toMP4(srcPath, mp4Path, mediaDurationSec, spsFps);
 					LOG("[MP4] async remux %s: %s -> %s",
-						ok ? "success" : "failed", h264Path.c_str(), mp4Path.c_str());
+						ok ? "success" : "failed", srcPath.c_str(), mp4Path.c_str());
 			}).detach();
 
 			cleanOldRecords();
