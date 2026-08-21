@@ -36,17 +36,13 @@
 #include <time.h>
 #include <fenv.h>
 #include <math.h>
-
-#if defined(_MSC_VER)
-/* 新版 Windows SDK 的 UCRT 可能把 NAN 定义成 __builtin_nanf("0") 函数调用，
-   不能用于 static const 数组的初始化；用 INFINITY*0.0 这种常量表达式代替。 */
-#define JS_CONST_INFINITY   ((double)INFINITY)
-#define JS_CONST_NAN        ((double)INFINITY * 0.0)
-#else
-#define JS_CONST_INFINITY   INFINITY
-#define JS_CONST_NAN        NAN
+#ifdef _MSC_VER
+#undef NAN
+#undef INFINITY
+#define NAN (0.0 / 0.0)
+#define INFINITY (1.0 / 0.0)
+static __inline double __js_infinity(void) { double x = 1.0; return x / 0.0; }
 #endif
-
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #elif defined(__linux__) || defined(__GLIBC__)
@@ -3125,11 +3121,11 @@ static JSValue JS_AtomIsNumericIndex1(JSContext *ctx, JSAtom atom)
     case JS_ATOM_minus_zero:
         return __JS_NewFloat64(ctx, -0.0);
     case JS_ATOM_Infinity:
-        return __JS_NewFloat64(ctx, INFINITY);
+        return __JS_NewFloat64(ctx, __js_infinity());
     case JS_ATOM_minus_Infinity:
-        return __JS_NewFloat64(ctx, -INFINITY);
+        return __JS_NewFloat64(ctx, -__js_infinity());
     case JS_ATOM_NaN:
-        return __JS_NewFloat64(ctx, NAN);
+        return __JS_NewFloat64(ctx, __js_nan());
     default:
         break;
     }
@@ -12050,7 +12046,7 @@ static JSValue js_stof(JSContext *ctx, const char *str, const char **pp,
             (atod_type == ATOD_TYPE_FLOAT64) &&
             strstart(p, "Infinity", &p)) {
             //double d = 1.0 / 0.0;
-            double d = (double)INFINITY;
+            double d = __js_infinity();
             if (is_neg)
                 d = -d;
             val = JS_NewFloat64(ctx, d);
@@ -41205,9 +41201,9 @@ static const JSCFunctionListEntry js_number_funcs[] = {
     JS_CFUNC_DEF("isSafeInteger", 1, js_number_isSafeInteger ),
     JS_PROP_DOUBLE_DEF("MAX_VALUE", 1.7976931348623157e+308, 0 ),
     JS_PROP_DOUBLE_DEF("MIN_VALUE", 5e-324, 0 ),
-    JS_PROP_DOUBLE_DEF("NaN", JS_CONST_NAN, 0 ),
-    JS_PROP_DOUBLE_DEF("NEGATIVE_INFINITY", -JS_CONST_INFINITY, 0 ),
-    JS_PROP_DOUBLE_DEF("POSITIVE_INFINITY", JS_CONST_INFINITY, 0 ),
+    JS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
+    JS_PROP_DOUBLE_DEF("NEGATIVE_INFINITY", -INFINITY, 0 ),
+    JS_PROP_DOUBLE_DEF("POSITIVE_INFINITY", INFINITY, 0 ),
     JS_PROP_DOUBLE_DEF("EPSILON", 2.220446049250313e-16, 0 ), /* ES6 */
     JS_PROP_DOUBLE_DEF("MAX_SAFE_INTEGER", 9007199254740991.0, 0 ), /* ES6 */
     JS_PROP_DOUBLE_DEF("MIN_SAFE_INTEGER", -9007199254740991.0, 0 ), /* ES6 */
@@ -43287,7 +43283,7 @@ static JSValue js_math_min_max(JSContext *ctx, JSValueConst this_val,
     uint32_t tag;
 
     if (unlikely(argc == 0)) {
-        return __JS_NewFloat64(ctx, is_max ? -INFINITY : INFINITY);
+        return __JS_NewFloat64(ctx, is_max ? -__js_infinity() : __js_infinity());
     }
 
     tag = JS_VALUE_GET_TAG(argv[0]);
@@ -49797,8 +49793,8 @@ static const JSCFunctionListEntry js_global_funcs[] = {
     JS_CFUNC_MAGIC_DEF("encodeURIComponent", 1, js_global_encodeURI, 1 ),
     JS_CFUNC_DEF("escape", 1, js_global_escape ),
     JS_CFUNC_DEF("unescape", 1, js_global_unescape ),
-    JS_PROP_DOUBLE_DEF("Infinity", JS_CONST_INFINITY, 0 ),
-    JS_PROP_DOUBLE_DEF("NaN", JS_CONST_NAN, 0 ),
+    JS_PROP_DOUBLE_DEF("Infinity", 1.0 / 0.0, 0 ),
+    JS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
     JS_PROP_UNDEFINED_DEF("undefined", 0 ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "global", JS_PROP_CONFIGURABLE ),
 };
@@ -49937,7 +49933,7 @@ static double time_clip(double t) {
     if (t >= -8.64e15 && t <= 8.64e15)
         return trunc(t) + 0.0;  /* convert -0 to +0 */
     else
-        return NAN;
+        return __js_nan();
 }
 
 /* The spec mandates the use of 'double' and it specifies the order
@@ -49957,7 +49953,7 @@ static double set_date_fields(double fields[minimum_length(7)], int is_local) {
     if (mn < 0)
         mn += 12;
     if (ym < -271821 || ym > 275760)
-        return NAN;
+        return __js_nan();
 
     yi = ym;
     mi = mn;
@@ -49989,7 +49985,7 @@ static double set_date_fields(double fields[minimum_length(7)], int is_local) {
     /* emulate 21.4.1.16 MakeDate ( day, time ) */
     tv = (temp = day * 86400000) + time;   /* prevent generation of FMA */
     if (!isfinite(tv))
-        return NAN;
+        return __js_nan();
 
     /* adjust for local time and clip */
     if (is_local) {
@@ -50028,7 +50024,7 @@ static JSValue set_date_field(JSContext *ctx, JSValueConst this_val,
     int res, first_field, end_field, is_local, i, n, res1;
     double d, a;
 
-    d = NAN;
+    d = __js_nan();
     first_field = (magic >> 8) & 0x0F;
     end_field = (magic >> 4) & 0x0F;
     is_local = magic & 0x0F;
@@ -50230,7 +50226,7 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
             if (i == 0 && fields[0] >= 0 && fields[0] < 100)
                 fields[0] += 1900;
         }
-        val = (i == n) ? set_date_fields(fields, 1) : NAN;
+        val = (i == n) ? set_date_fields(fields, 1) : __js_nan();
     }
 has_val:
 #if 0
