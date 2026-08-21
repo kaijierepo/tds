@@ -31,11 +31,22 @@
 #ifndef _WIN32
 #include <sys/time.h>
 #else
-#include <winsock2.h> // Windows ƽ̨��Ҫ������ͷ�ļ��Զ��� timeval
+#include <winsock2.h> // Windows 平台需要包含此头文件以定义 timeval
 #endif
 #include <time.h>
 #include <fenv.h>
 #include <math.h>
+
+#if defined(_MSC_VER)
+/* 新版 Windows SDK 的 UCRT 可能把 NAN 定义成 __builtin_nanf("0") 函数调用，
+   不能用于 static const 数组的初始化；用 INFINITY*0.0 这种常量表达式代替。 */
+#define JS_CONST_INFINITY   ((double)INFINITY)
+#define JS_CONST_NAN        ((double)INFINITY * 0.0)
+#else
+#define JS_CONST_INFINITY   INFINITY
+#define JS_CONST_NAN        NAN
+#endif
+
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
 #elif defined(__linux__) || defined(__GLIBC__)
@@ -41194,9 +41205,9 @@ static const JSCFunctionListEntry js_number_funcs[] = {
     JS_CFUNC_DEF("isSafeInteger", 1, js_number_isSafeInteger ),
     JS_PROP_DOUBLE_DEF("MAX_VALUE", 1.7976931348623157e+308, 0 ),
     JS_PROP_DOUBLE_DEF("MIN_VALUE", 5e-324, 0 ),
-    JS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
-    JS_PROP_DOUBLE_DEF("NEGATIVE_INFINITY", -INFINITY, 0 ),
-    JS_PROP_DOUBLE_DEF("POSITIVE_INFINITY", INFINITY, 0 ),
+    JS_PROP_DOUBLE_DEF("NaN", JS_CONST_NAN, 0 ),
+    JS_PROP_DOUBLE_DEF("NEGATIVE_INFINITY", -JS_CONST_INFINITY, 0 ),
+    JS_PROP_DOUBLE_DEF("POSITIVE_INFINITY", JS_CONST_INFINITY, 0 ),
     JS_PROP_DOUBLE_DEF("EPSILON", 2.220446049250313e-16, 0 ), /* ES6 */
     JS_PROP_DOUBLE_DEF("MAX_SAFE_INTEGER", 9007199254740991.0, 0 ), /* ES6 */
     JS_PROP_DOUBLE_DEF("MIN_SAFE_INTEGER", -9007199254740991.0, 0 ), /* ES6 */
@@ -49786,8 +49797,8 @@ static const JSCFunctionListEntry js_global_funcs[] = {
     JS_CFUNC_MAGIC_DEF("encodeURIComponent", 1, js_global_encodeURI, 1 ),
     JS_CFUNC_DEF("escape", 1, js_global_escape ),
     JS_CFUNC_DEF("unescape", 1, js_global_unescape ),
-    JS_PROP_DOUBLE_DEF("Infinity", 1.0 / 0.0, 0 ),
-    JS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
+    JS_PROP_DOUBLE_DEF("Infinity", JS_CONST_INFINITY, 0 ),
+    JS_PROP_DOUBLE_DEF("NaN", JS_CONST_NAN, 0 ),
     JS_PROP_UNDEFINED_DEF("undefined", 0 ),
     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "global", JS_PROP_CONFIGURABLE ),
 };
