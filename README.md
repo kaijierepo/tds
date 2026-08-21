@@ -1,6 +1,8 @@
 # TDS - 物联网数据服务
 
-   用户手册与二次开发文档 https://tdserver.org
+   用户手册与二次开发文档  https://tdserver.org
+
+   版本下载  http://release.liangtusoft.com:3011/
 
 ## 最轻便的物联网组态软件
 
