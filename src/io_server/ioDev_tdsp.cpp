@@ -1453,6 +1453,9 @@ void ioDev_tdsp::DoCycleTask()
 	}
 }
 
+//录像分析结果文件写入互斥(拉取周期可能重叠,多个线程并发写同一 {YYYYMMDD}_result.json)
+static std::mutex g_csAnalyseResultFile;
+
 void ioDev_tdsp::pullRecordFiles()
 {
 	// 仅对子服务类型执行
@@ -1480,6 +1483,9 @@ void ioDev_tdsp::pullRecordFiles()
 	LOG("[录像采集] 获取到 %d 个录像文件", (int)result.size());
 
 	int chunkSize = 5000;
+
+	// 本次拉取中下载成功的录像,等待逐个分析
+	std::vector<json> analyseTasks;
 
 	for (size_t i = 0; i < result.size(); i++) {
 		json record = result[i];
@@ -1605,7 +1611,65 @@ void ioDev_tdsp::pullRecordFiles()
 			// 同时删除对应的 h264 中间产物(与 mp4 同名，仅扩展名不同)
 			delParams["fileUrl"] = fileUrl.substr(0, fileUrl.size() - 4) + ".h264";
 			call("deleteRecord", delParams, nullptr, delResult, delError);
+
+			// 5. 下载成功,收集分析任务(分析在后台线程执行,不阻塞IO线程)
+			json analyseTask;
+			analyseTask["tag"] = m_strTagBind;   // 中心端完整位号
+			analyseTask["time"] = timeStr;       // "YYYY-MM-DD HH:MM:SS",rpc_doAnalyse会只取数字位
+			analyseTask["file"] = fname;
+			analyseTask["dir"] = savePath.substr(0, savePath.size() - fname.size()); // 录像所在目录(末尾带/)
+			analyseTask["dateStr"] = dateStr;    // YYYYMMDD
+			analyseTasks.push_back(analyseTask);
 		}
+	}
+
+	// 6. 对本次下载的录像逐个调用rpc_doAnalyse(后台线程,不阻塞IO线程),结果追加写入录像同目录 {YYYYMMDD}_result.json
+	if (!analyseTasks.empty()) {
+		std::thread t([analyseTasks]() {
+			for (auto& task : analyseTasks) {
+				json params;
+				params["tag"] = task["tag"];
+				params["time"] = task["time"];
+				params["async"] = false;
+				params["noCache"] = false;
+				params["orient"] = "auto";
+				params["margin"] = 150;
+				params["minArea"] = 800;
+				params["maxVideoFrames"] = 30;
+
+				RPC_RESP resp;
+				RPC_SESSION session;
+				rpcSrv.rpc_doAnalyse(params, resp, session);
+
+				json one;
+				one["tag"] = task["tag"];
+				one["time"] = task["time"];
+				one["file"] = task["file"];
+				if (resp.error != "") {
+					try { one["error"] = json::parse(resp.error); } catch (...) { one["error"] = resp.error; }
+					LOG("[录像分析] %s 分析失败: %s", task["file"].get<std::string>().c_str(), resp.error.c_str());
+				}
+				else {
+					try { one["result"] = json::parse(resp.result); } catch (...) { one["result"] = resp.result; }
+					LOG("[录像分析] %s 分析完成", task["file"].get<std::string>().c_str());
+				}
+
+				// 追加写入 录像同目录 {YYYYMMDD}_result.json(JSON数组,每个文件一个元素)
+				std::string resultPath = task["dir"].get<std::string>() + task["dateStr"].get<std::string>() + "_result.json";
+				std::lock_guard<std::mutex> lock(g_csAnalyseResultFile);
+				std::string sExist;
+				json arr = json::array();
+				if (fs::readFile(resultPath, sExist) && !sExist.empty()) {
+					try { arr = json::parse(sExist); } catch (...) { arr = json::array(); }
+					if (!arr.is_array()) arr = json::array();
+				}
+				arr.push_back(one);
+				std::string sOut = arr.dump(2);
+				fs::writeFile(resultPath, sOut);
+			}
+			LOG("[录像分析] 本批 %d 个录像分析结束", (int)analyseTasks.size());
+		});
+		t.detach();
 	}
 }
 

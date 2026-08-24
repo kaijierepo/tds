@@ -1,4 +1,4 @@
-﻿#ifndef TDS_DATA_SERVER_RPCHANDLER_H
+#ifndef TDS_DATA_SERVER_RPCHANDLER_H
 #define TDS_DATA_SERVER_RPCHANDLER_H
 
 /*
@@ -114,6 +114,9 @@ public:
 	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION& session);
 	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, std::string tag);
 	json rpc_getStreamUrl(MP* pmp, std::string tag, bool isHttps, std::string hostname, int port);
+
+	//image/video analyse
+	void rpc_doAnalyse(json params, RPC_RESP& resp, RPC_SESSION& session);
 
 	//notification
 	//orgSession不为null表示来自于tds客户端，为null表示来自tds服务

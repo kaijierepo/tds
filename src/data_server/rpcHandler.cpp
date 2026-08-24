@@ -1,4 +1,4 @@
-﻿#include <common/dtwrecoge.h>
+#include <common/dtwrecoge.h>
 #include "pch.h"
 #include "miniz.h"
 #include "rpcHandler.h"
@@ -3243,11 +3243,94 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 
 		rpcResp.result = RPC_OK;
 	}
+	//转发到外部分析引擎(与tds同机,127.0.0.1:671),引擎返回分析结果JSON原样回传
+	else if (method == "doAnalyse") {
+		rpc_doAnalyse(params, rpcResp, session);
+	}
 	else {
 		bHandled = false;
 	}
 
 	return bHandled;
+}
+
+//doAnalyse: 参数校验后,把完整JSON-RPC请求POST转发给外部分析引擎(127.0.0.1:671),引擎返回的分析结果JSON作为rpc result回传给调用方
+//async/noCache/orient/margin/minArea/targetColor/maxVideoFrames等参数原样透传,异步语义由引擎处理
+void rpcHandler::rpc_doAnalyse(json params, RPC_RESP& resp, RPC_SESSION& session) {
+	if (!params.contains("tag") || !params["tag"].is_string()) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : tag");
+		return;
+	}
+	if (!params.contains("time") || !params["time"].is_string()) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : time");
+		return;
+	}
+
+	//time只取数字位,如 20260819 或 20260819_090444 -> 20260819090444
+	string timeDigits;
+	{
+		string time = params["time"].get<string>();
+		for (char c : time) {
+			if (c >= '0' && c <= '9') {
+				timeDigits += c;
+			}
+		}
+	}
+	params["time"] = timeDigits;
+
+	//重建完整JSON-RPC请求(原请求的id在分发层不可见,固定使用1),转发给外部分析引擎
+	json jReq;
+	jReq["jsonrpc"] = "2.0";
+	jReq["method"] = "doAnalyse";
+	jReq["params"] = params;
+	jReq["id"] = 1;
+	string body = jReq.dump();
+
+	string url = "http://127.0.0.1:671/";
+	LOG("[doAnalyse]转发分析请求 url=%s, tag=%s, time=%s", url.c_str(), params["tag"].get<string>().c_str(), timeDigits.c_str());
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		string protocol, ip, port, path;
+		if (parse_url(url, protocol, ip, port, path)) {
+			mg_printf(connect,
+				"POST %s HTTP/1.0\r\n"
+				"Host: %s\r\n"
+				"Content-Type: application/json\r\n"
+				"Content-Length: %u\r\n"
+				"\r\n"
+				"%s",
+				path.c_str(), ip.c_str(), (unsigned int)body.size(), body.c_str()
+			);
+
+			TIME tStart;
+			tStart.setNow();
+			while (!data.done && TIME::calcTimePassSecond(tStart) < 60.0) {
+				mg_mgr_poll(&mgr, 100);
+			}
+		}
+		else {
+			LOG("[warn]doAnalyse url parse failed");
+		}
+	}
+	else {
+		LOG("[warn]doAnalyse connect engine failed, url=%s", url.c_str());
+	}
+
+	mg_mgr_free(&mgr);
+
+	if (data.done && data.status == 200) {
+		resp.result = data.body;
+	}
+	else {
+		string status = data.done ? std::to_string(data.status) : "timeout";
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "doAnalyse engine request failed, status=" + status);
+	}
 }
 
 void jsonToList(json& curve, vector<double>& p)
@@ -3382,8 +3465,8 @@ bool rpcHandler::handleMethodCall_fileDownload(const std::string& method, yyjson
 	free(jsonStr);
 	yyjson_mut_doc_free(doc);
 
-	LOG("[下载] downloadFile 响应发出, url=%s, chunkIndex=%d, chunkCount=%d, dataLen=%d",
-		url.c_str(), chunkIndex, chunkCount, (int)b64Data.length());
+	//LOG("[下载] downloadFile 响应发出, url=%s, chunkIndex=%d, chunkCount=%d, dataLen=%d",
+	//	url.c_str(), chunkIndex, chunkCount, (int)b64Data.length());
 	return true;
 }
 
