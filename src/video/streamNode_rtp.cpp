@@ -299,6 +299,13 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                     }
                     off += L;
                 }
+            } else if (nalType == NAL_TYPE_H265_FU && packet.payload.size() > 2) {
+                // FU 分片：检查是否包含参数集（虽然参数集通常很小，不会分片，但为了完整性）
+                uint8_t fuNalType = packet.payload[2] & 0x3F;
+                if (fuNalType == NAL_TYPE_H265_VPS || fuNalType == NAL_TYPE_H265_SPS || fuNalType == NAL_TYPE_H265_PPS) {
+                    // 注意：参数集的 FU 分片需要完整重组才能使用，这里暂时不处理
+                    // 因为参数集通常很小，不会被分片
+                }
             }
         } else {
             if (nalType == NAL_TYPE_SPS) {
@@ -471,8 +478,10 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                 }
                 else {
                     uint8_t nalType = nt;
-                    uint8_t fuIndicator0 = (nalu[0] & 0x81) | (NAL_TYPE_H265_FU << 1);  // type=49
-                    uint8_t fuIndicator1 = nalu[1];
+                    // H.265 FU indicator (2 bytes): [F(1)][Type(6)][LayerId_high(1)] [LayerId_low(5)][TID(3)]
+                    // Type = 49 (FU), F = forbidden bit from original NAL, LayerId = 0, TID = 1
+                    uint8_t fuIndicator0 = (nalu[0] & 0x81) | (NAL_TYPE_H265_FU << 1);  // F bit + Type=49 + LayerId_high
+                    uint8_t fuIndicator1 = (nalu[1] & 0xF8) | 0x01;  // LayerId_low=0 + TID=1
                     size_t chunkMax = kMaxRtpPayload - 3;
                     size_t offset = 2;
                     bool first = true;
@@ -619,11 +628,69 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
             // 缓存为空或不完整（IDR 分片有缺失）时不重发：
             // 重发不完整的关键帧会让浏览器组帧失败继续花屏，宁可等源流下一帧 IDR
             if (kfPkts.empty() || !kfComplete) return;
+            
+            // 对于 H.265，必须先发送参数集（VPS/SPS/PPS），否则解码器无法初始化
             if (isH265) {
-                if (!session->vps.empty()) sendSingleNalRtp(session->vps, packet.timestamp);
+                if (!session->vps.empty()) {
+                    sendSingleNalRtp(session->vps, packet.timestamp);
+                } else {
+                    // 如果没有 VPS，尝试从关键帧缓存中提取
+                    for (auto& kfData : kfPkts) {
+                        RTPPacket kfPkt;
+                        if (!kfPkt.parse(kfData.data(), kfData.size())) continue;
+                        uint8_t kfNalType = (kfPkt.payload.size() >= 2) ? ((kfPkt.payload[0] >> 1) & 0x3F) : 0;
+                        if (kfNalType == NAL_TYPE_H265_VPS) {
+                            session->vps = kfPkt.payload;
+                            sendSingleNalRtp(session->vps, packet.timestamp);
+                            break;
+                        }
+                    }
+                }
             }
-            if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
-            if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
+            
+            // 发送 SPS/PPS（H.264 和 H.265 都需要）
+            if (!session->sps.empty()) {
+                sendSingleNalRtp(session->sps, packet.timestamp);
+            } else {
+                // 如果没有 SPS，尝试从关键帧缓存中提取
+                for (auto& kfData : kfPkts) {
+                    RTPPacket kfPkt;
+                    if (!kfPkt.parse(kfData.data(), kfData.size())) continue;
+                    uint8_t kfNalType;
+                    if (isH265) {
+                        kfNalType = (kfPkt.payload.size() >= 2) ? ((kfPkt.payload[0] >> 1) & 0x3F) : 0;
+                    } else {
+                        kfNalType = (kfPkt.payload.size() >= 1) ? (kfPkt.payload[0] & 0x1F) : 0;
+                    }
+                    if ((isH265 && kfNalType == NAL_TYPE_H265_SPS) || (!isH265 && kfNalType == NAL_TYPE_SPS)) {
+                        session->sps = kfPkt.payload;
+                        sendSingleNalRtp(session->sps, packet.timestamp);
+                        break;
+                    }
+                }
+            }
+            
+            if (!session->pps.empty()) {
+                sendSingleNalRtp(session->pps, packet.timestamp);
+            } else {
+                // 如果没有 PPS，尝试从关键帧缓存中提取
+                for (auto& kfData : kfPkts) {
+                    RTPPacket kfPkt;
+                    if (!kfPkt.parse(kfData.data(), kfData.size())) continue;
+                    uint8_t kfNalType;
+                    if (isH265) {
+                        kfNalType = (kfPkt.payload.size() >= 2) ? ((kfPkt.payload[0] >> 1) & 0x3F) : 0;
+                    } else {
+                        kfNalType = (kfPkt.payload.size() >= 1) ? (kfPkt.payload[0] & 0x1F) : 0;
+                    }
+                    if ((isH265 && kfNalType == NAL_TYPE_H265_PPS) || (!isH265 && kfNalType == NAL_TYPE_PPS)) {
+                        session->pps = kfPkt.payload;
+                        sendSingleNalRtp(session->pps, packet.timestamp);
+                        break;
+                    }
+                }
+            }
+            
             RTPPacket kfPkt;
             for (auto& kfData : kfPkts) {
                 if (!kfPkt.parse(kfData.data(), kfData.size())) continue;
@@ -658,6 +725,41 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
                 std::lock_guard<std::mutex> lk(keyframe_cache_mutex_);
                 kfReady = keyframe_cache_.complete && !keyframe_cache_.pkts.empty();
             }
+            
+            // 对于 H.265，必须确保参数集（VPS/SPS/PPS）已准备好
+            bool h265ParamsReady = true;
+            if (isH265) {
+                h265ParamsReady = !session->vps.empty() && !session->sps.empty() && !session->pps.empty();
+                if (!h265ParamsReady) {
+                    // 尝试从关键帧缓存中提取参数集
+                    if (kfReady) {
+                        std::vector<std::vector<uint8_t>> kfPkts;
+                        {
+                            std::lock_guard<std::mutex> lk(keyframe_cache_mutex_);
+                            kfPkts = keyframe_cache_.pkts;
+                        }
+                        for (auto& kfData : kfPkts) {
+                            RTPPacket kfPkt;
+                            if (!kfPkt.parse(kfData.data(), kfData.size())) continue;
+                            uint8_t kfNalType = (kfPkt.payload.size() >= 2) ? ((kfPkt.payload[0] >> 1) & 0x3F) : 0;
+                            if (kfNalType == NAL_TYPE_H265_VPS && session->vps.empty()) {
+                                session->vps = kfPkt.payload;
+                            } else if (kfNalType == NAL_TYPE_H265_SPS && session->sps.empty()) {
+                                session->sps = kfPkt.payload;
+                            } else if (kfNalType == NAL_TYPE_H265_PPS && session->pps.empty()) {
+                                session->pps = kfPkt.payload;
+                            }
+                        }
+                        h265ParamsReady = !session->vps.empty() && !session->sps.empty() && !session->pps.empty();
+                    }
+                    
+                    // 如果仍然没有参数集，记录警告并继续（可能依赖 SDP 中的 sprop）
+                    if (!h265ParamsReady) {
+                        LOG("[WebRTC] WARNING: H265 session missing VPS/SPS/PPS, attempting to continue");
+                    }
+                }
+            }
+            
             if (!kfReady && !packet.isIdrNalu) {
                 continue;  // 无参考帧可发，丢弃非关键帧，等下一个 IDR
             }
@@ -683,7 +785,13 @@ void StreamNode::sendRTPPacketToClients(const RTPPacket& packet) {
         // 相机 RTP 流不带参数集包（仅 SDP sprop 提供）时，IDR 帧到达同样算关键帧已发送，
         // 否则周期重发会在每个 IDR 帧上再叠加一次完整重发（关键帧流量翻倍）
         else if (packet.isIdrNalu && packet.isLastIdrNalu == false) {
-            if (isH265 && !session->vps.empty()) sendSingleNalRtp(session->vps, packet.timestamp);
+            if (isH265) {
+                if (!session->vps.empty()) {
+                    sendSingleNalRtp(session->vps, packet.timestamp);
+                } else {
+                    LOG("[WebRTC] WARNING: H265 IDR frame without VPS");
+                }
+            }
             if (!session->sps.empty()) sendSingleNalRtp(session->sps, packet.timestamp);
             if (!session->pps.empty()) sendSingleNalRtp(session->pps, packet.timestamp);
             dtlsState->last_idr_sent_time_ = now_steady;

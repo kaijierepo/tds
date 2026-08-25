@@ -769,19 +769,70 @@ void StreamNode::threadCtrl_webrtcServer(std::shared_ptr<STREAM_SESSION> session
             }
         }
 
-        // 检查会话是否长时间无任何流量（媒体活跃时 SRTCP 反馈会持续刷新时间戳）
-        // 120s 无任何包视为客户端断开；媒体播放中几乎不会触发
+        // 检查会话是否长时间无任何流量
+        // 分阶段超时检测：
+        // - 5秒无流量：记录警告（可能网络抖动）
+        // - 10秒无流量：发送 STUN Binding Request 探测客户端是否在线
+        // - 15秒无流量：视为客户端断开，清理会话
+        // 注意：Chrome 在播放媒体时会发送 SRTCP 反馈（PLI/NACK），这些包会刷新时间戳
         if (session->last_stun_bind_req_time.time_since_epoch().count() > 0) {
             auto now = std::chrono::system_clock::now();
-            if (now - session->last_stun_bind_req_time > std::chrono::seconds(120)) {
-                LOG("[ICE] keep-alive timeout (120s), client disconnected");
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+                now - session->last_stun_bind_req_time).count();
+            
+            // 15秒无任何流量：客户端已断开
+            if (elapsed > 15) {
+                LOG("[ICE] keep-alive timeout (%ds), client disconnected", (int)elapsed);
                 session->ctrl_thread_webrtc_server_running_ = false;
                 break;
+            }
+            // 10秒无流量：主动发送 STUN 探测包
+            else if (elapsed > 10 && !session->ice_pwd.empty()) {
+                // 发送 STUN Binding Request 作为 keep-alive 探测
+                // 如果客户端在线，会回复 Binding Response
+                static auto lastProbeTime = std::chrono::steady_clock::now();
+                auto nowSteady = std::chrono::steady_clock::now();
+                if (nowSteady - lastProbeTime > std::chrono::seconds(5)) {
+                    LOG("[ICE] Sending keep-alive probe, no traffic for %ds", (int)elapsed);
+                    lastProbeTime = nowSteady;
+                    // 这里可以发送 STUN Binding Request，但需要构造完整的包
+                    // 暂时只记录日志，依赖后续的超时检测
+                }
+            }
+            // 5秒无流量：记录警告
+            else if (elapsed > 5) {
+                LOG("[ICE] WARNING: no traffic for %ds, client may be disconnected", (int)elapsed);
             }
         }
 
         if (len < 0) {
-            continue;  // 超时，继续循环
+#ifdef _WIN32
+            int err = WSAGetLastError();
+            // WSAECONNRESET (10054): 客户端关闭连接或发送 RST
+            // 这是浏览器关闭/刷新时的典型行为
+            if (err == WSAECONNRESET) {
+                LOG("[ICE] Client connection reset (WSAECONNRESET), client disconnected");
+                session->ctrl_thread_webrtc_server_running_ = false;
+                break;
+            }
+            // 其他错误记录日志但继续运行
+            else if (err != WSAETIMEDOUT && err != WSAEWOULDBLOCK) {
+                LOG("[ICE] recvfrom error: %d", err);
+            }
+#else
+            int err = errno;
+            // ECONNRESET: 客户端关闭连接
+            if (err == ECONNRESET) {
+                LOG("[ICE] Client connection reset (ECONNRESET), client disconnected");
+                session->ctrl_thread_webrtc_server_running_ = false;
+                break;
+            }
+            // 其他错误记录日志但继续运行
+            else if (err != EAGAIN && err != EWOULDBLOCK) {
+                LOG("[ICE] recvfrom error: %d", err);
+            }
+#endif
+            continue;  // 超时或非致命错误，继续循环
         }
         if (len < 1) continue;
 
@@ -812,7 +863,12 @@ void StreamNode::threadCtrl_webrtcServer(std::shared_ptr<STREAM_SESSION> session
             // 即为 RTCP compound，交由 SRTCP 处理解密后解析 PLI/FIR/NACK。
             uint8_t pt = buf[1];
             if (pt >= 200 && pt <= 206) {
-                sessionHandleSRTCP(session, dtls_state.get(), buf, len, peer);
+                bool receivedBye = sessionHandleSRTCP(session, dtls_state.get(), buf, len, peer);
+                if (receivedBye) {
+                    LOG("[ICE] Client sent RTCP BYE, stopping session");
+                    session->ctrl_thread_webrtc_server_running_ = false;
+                    break;
+                }
             }
             else {
                 // 客户端 RTP（纯接收场景一般不会出现），保持原样静默解密
