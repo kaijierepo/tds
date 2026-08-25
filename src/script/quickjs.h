@@ -99,10 +99,10 @@ typedef struct JSRefCountHeader {
     int ref_count;
 } JSRefCountHeader;
 
+static inline double __js_nan(void) { double x = 0.0; return x / x; }
 #ifdef _MSC_VER
 /* MSVC 的 math.h 把 NAN 定义为除零字面量宏 (0.0/0.0)，在普通代码中会被
    常量折叠触发 C2124（被零除），因此这里用运行时内联函数产生 NaN 位模式。 */
-static inline double __js_nan(void) { double x = 0.0; return x / x; }
 #define JS_FLOAT64_NAN __js_nan()
 #else
 #define JS_FLOAT64_NAN NAN

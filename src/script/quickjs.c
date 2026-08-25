@@ -36,12 +36,14 @@
 #include <time.h>
 #include <fenv.h>
 #include <math.h>
+/* 用运行时内联函数产生 Infinity/NaN 位模式，避免 NAN/INFINITY 宏在不同
+   平台编译器下不能作为普通表达式的问题（MSVC 下还可能被定义为函数调用）。 */
+static __inline double __js_infinity(void) { double x = 1.0; return x / 0.0; }
 #ifdef _MSC_VER
 #undef NAN
 #undef INFINITY
 #define NAN (0.0 / 0.0)
 #define INFINITY (1.0 / 0.0)
-static __inline double __js_infinity(void) { double x = 1.0; return x / 0.0; }
 #endif
 #if defined(__APPLE__)
 #include <malloc/malloc.h>
