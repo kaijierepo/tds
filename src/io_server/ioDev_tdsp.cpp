@@ -1453,9 +1453,6 @@ void ioDev_tdsp::DoCycleTask()
 	}
 }
 
-//录像分析结果文件写入互斥(拉取周期可能重叠,多个线程并发写同一 {YYYYMMDD}_result.json)
-static std::mutex g_csAnalyseResultFile;
-
 void ioDev_tdsp::pullRecordFiles()
 {
 	// 仅对子服务类型执行
@@ -1483,9 +1480,6 @@ void ioDev_tdsp::pullRecordFiles()
 	LOG("[录像采集] 获取到 %d 个录像文件", (int)result.size());
 
 	int chunkSize = 5000;
-
-	// 本次拉取中下载成功的录像,等待逐个分析
-	std::vector<json> analyseTasks;
 
 	for (size_t i = 0; i < result.size(); i++) {
 		json record = result[i];
@@ -1578,11 +1572,22 @@ void ioDev_tdsp::pullRecordFiles()
 			fname = fname.substr(tagPrefix.size());
 		}
 
+		// 子服务端位号(tag): 作为子目录，点分层级转斜杠路径
+		// 例: "左" -> "左"，"左.摄像头1" -> "左/摄像头1"
+		std::string streamTag = record.value("tag", "");
+		for (char& c : streamTag) {
+			if (c == '.') c = '/';
+		}
+
 		std::string savePath = tds->conf->dbPath;
 		if (!dateYM.empty() && !dateDD.empty()) {
 			savePath += "/" + dateYM + "/" + dateDD;
 		}
-		savePath += "/" + tagPath + "/" + fname;
+		savePath += "/" + tagPath;
+		if (!streamTag.empty()) {
+			savePath += "/" + streamTag;
+		}
+		savePath += "/" + fname;
 		fs::createFolderOfPath(savePath);
 
 		FILE* fp = nullptr;
@@ -1612,25 +1617,94 @@ void ioDev_tdsp::pullRecordFiles()
 			delParams["fileUrl"] = fileUrl.substr(0, fileUrl.size() - 4) + ".h264";
 			call("deleteRecord", delParams, nullptr, delResult, delError);
 
-			// 5. 下载成功,收集分析任务(分析在后台线程执行,不阻塞IO线程)
-			json analyseTask;
-			analyseTask["tag"] = m_strTagBind;   // 中心端完整位号
-			analyseTask["time"] = timeStr;       // "YYYY-MM-DD HH:MM:SS",rpc_doAnalyse会只取数字位
-			analyseTask["file"] = fname;
-			analyseTask["dir"] = savePath.substr(0, savePath.size() - fname.size()); // 录像所在目录(末尾带/)
-			analyseTask["dateStr"] = dateStr;    // YYYYMMDD
-			analyseTasks.push_back(analyseTask);
-		}
-	}
+			// 4.1 重命名文件,去掉 _pre{N}_duration{N} 后缀
+			// 原始文件名: 105127_pre0_duration10.mp4 -> 105127.mp4
+			std::string newFname = fname;
+			std::string dirPath = savePath.substr(0, savePath.size() - fname.size());
+			{
+				// 查找 _pre 的位置
+				size_t prePos = fname.find("_pre");
+				if (prePos != std::string::npos) {
+					// 提取 _pre 之前的部分(如 105127)和扩展名(如 .mp4)
+					std::string nameWithoutExt = fname.substr(0, prePos);
+					size_t dotPos = fname.rfind('.');
+					std::string ext = (dotPos != std::string::npos) ? fname.substr(dotPos) : "";
+					newFname = nameWithoutExt + ext;
 
-	// 6. 对本次下载的录像逐个调用rpc_doAnalyse(后台线程,不阻塞IO线程),结果追加写入录像同目录 {YYYYMMDD}_result.json
-	if (!analyseTasks.empty()) {
-		std::thread t([analyseTasks]() {
-			for (auto& task : analyseTasks) {
+					// 重命名视频文件
+					std::string oldPath = savePath;
+					std::string newPath = dirPath + newFname;
+#ifdef _WIN32
+					std::wstring wOldPath = str::utf8_to_utf16(oldPath);
+					std::wstring wNewPath = str::utf8_to_utf16(newPath);
+					if (_wrename(wOldPath.c_str(), wNewPath.c_str()) == 0) {
+#else
+					if (std::rename(oldPath.c_str(), newPath.c_str()) == 0) {
+#endif
+						LOG("[录像采集] 重命名文件: %s -> %s", fname.c_str(), newFname.c_str());
+						savePath = newPath;
+						fname = newFname;
+					} else {
+						LOG("[warn][录像采集] 重命名文件失败: %s -> %s", fname.c_str(), newFname.c_str());
+					}
+
+					// 重命名对应的曲线文件(如果存在)
+					// 原始: 105127_pre0_duration10_curve.json -> 105127_curve.json
+					// 用原始的 fileUrl 来构造曲线文件名(fileUrl 未被修改)
+					std::string origFname = fileUrl.substr(fileUrl.rfind('/') + 1);
+					std::string origNameNoExt = origFname.substr(0, origFname.rfind('.'));
+					std::string oldCurvePath = dirPath + origNameNoExt + "_curve.json";
+					std::string newCurvePath = dirPath + origNameNoExt.substr(0, origNameNoExt.find("_pre")) + "_curve.json";
+
+#ifdef _WIN32
+					std::wstring wOldCurvePath = str::utf8_to_utf16(oldCurvePath);
+					std::wstring wNewCurvePath = str::utf8_to_utf16(newCurvePath);
+					if (_wrename(wOldCurvePath.c_str(), wNewCurvePath.c_str()) == 0) {
+#else
+					if (std::rename(oldCurvePath.c_str(), newCurvePath.c_str()) == 0) {
+#endif
+						LOG("[录像采集] 重命名曲线文件: %s -> %s", 
+							oldCurvePath.substr(dirPath.size()).c_str(), 
+							newCurvePath.substr(dirPath.size()).c_str());
+					}
+				}
+			}
+
+			// 5. 创建 db.json 元数据文件(写入可以立即获取的数据)
+			{
+				std::string dbJsonPath = dirPath + "db.json";
+				json dbEntry;
+				dbEntry["time"] = timeopt::stTimeToStr(timeopt::now());  // 当前时间
+				dbEntry["startTime"] = timeStr;  // 录像时间
+				dbEntry["endTime"] = timeStr;    // 暂时与startTime相同,分析完成后会更新
+				dbEntry["ptCount"] = 0;          // 暂时为0,分析完成后会更新
+				dbEntry["preRec"] = record.value("preSeconds", 0);
+				dbEntry["duration"] = record.value("duration", 0);
+				dbEntry["avg"] = 0;              // 暂时为0,分析完成后会更新
+				dbEntry["max"] = 0;              // 暂时为0,分析完成后会更新
+				dbEntry["min"] = 0;              // 暂时为0,分析完成后会更新
+				dbEntry["file"] = fname;         // 关联的视频文件名(重命名后的)
+
+				// 读取已有的 db.json 文件(如果存在)
+				json dbArr = json::array();
+				std::string sExist;
+				if (fs::readFile(dbJsonPath, sExist) && !sExist.empty()) {
+					try { dbArr = json::parse(sExist); } catch (...) { dbArr = json::array(); }
+					if (!dbArr.is_array()) dbArr = json::array();
+				}
+				dbArr.push_back(dbEntry);
+				std::string sOut = dbArr.dump(2);
+				fs::writeFile(dbJsonPath, sOut);
+				LOG("[录像采集] 创建 db.json: %s", dbJsonPath.c_str());
+			}
+
+			// 6. 向 IAS 发送分析请求(在后台线程执行,不阻塞IO线程)
+			// 曲线文件和db.json更新由IAS负责
+			std::thread([tag = m_strTagBind, time = timeStr]() {
 				json params;
-				params["tag"] = task["tag"];
-				params["time"] = task["time"];
-				params["async"] = false;
+				params["tag"] = tag;
+				params["time"] = time;
+				params["async"] = true;
 				params["noCache"] = false;
 				params["orient"] = "auto";
 				params["margin"] = 150;
@@ -1640,36 +1714,11 @@ void ioDev_tdsp::pullRecordFiles()
 				RPC_RESP resp;
 				RPC_SESSION session;
 				rpcSrv.rpc_doAnalyse(params, resp, session);
-
-				json one;
-				one["tag"] = task["tag"];
-				one["time"] = task["time"];
-				one["file"] = task["file"];
-				if (resp.error != "") {
-					try { one["error"] = json::parse(resp.error); } catch (...) { one["error"] = resp.error; }
-					LOG("[录像分析] %s 分析失败: %s", task["file"].get<std::string>().c_str(), resp.error.c_str());
-				}
-				else {
-					try { one["result"] = json::parse(resp.result); } catch (...) { one["result"] = resp.result; }
-					LOG("[录像分析] %s 分析完成", task["file"].get<std::string>().c_str());
-				}
-
-				// 追加写入 录像同目录 {YYYYMMDD}_result.json(JSON数组,每个文件一个元素)
-				std::string resultPath = task["dir"].get<std::string>() + task["dateStr"].get<std::string>() + "_result.json";
-				std::lock_guard<std::mutex> lock(g_csAnalyseResultFile);
-				std::string sExist;
-				json arr = json::array();
-				if (fs::readFile(resultPath, sExist) && !sExist.empty()) {
-					try { arr = json::parse(sExist); } catch (...) { arr = json::array(); }
-					if (!arr.is_array()) arr = json::array();
-				}
-				arr.push_back(one);
-				std::string sOut = arr.dump(2);
-				fs::writeFile(resultPath, sOut);
-			}
-			LOG("[录像分析] 本批 %d 个录像分析结束", (int)analyseTasks.size());
-		});
-		t.detach();
+				LOG("[录像采集] 发送分析请求完成: tag=%s, time=%s, result=%s", 
+					tag.c_str(), time.c_str(), 
+					resp.error.empty() ? "ok" : resp.error.c_str());
+			}).detach();
+		}
 	}
 }
 
