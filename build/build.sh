@@ -389,7 +389,6 @@ cpp_srcs="$(cat <<'EOF'
 ./func_module/userMng.cpp
 ./func_module/diskCleaner.cpp
 ./func_module/gzhServer.cpp
-./func_module/licence.cpp
 ./func_module/xiaot.cpp
 ./include/tds.cpp
 ./io_server/ioChan.cpp
