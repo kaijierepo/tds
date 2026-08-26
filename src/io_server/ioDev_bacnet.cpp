@@ -516,6 +516,7 @@ void ioDev_bacnet::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UD
 				resp->setData(recvData, recvDataLen);
 				if(m_bIsWaitingResp)
 					m_transaction.setResp(resp);
+				delete resp;
 			}
 		}
 	}

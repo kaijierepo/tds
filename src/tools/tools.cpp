@@ -85,7 +85,7 @@ void tcpSwitch::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo
 			memcpy(p, pData, iLen);
 			string s = p;
 			LOG("Server" + str::fromInt(portLeft) + "-->Server" + str::fromInt(pSrv->m_iServerPort) + " " + str::fromInt(iLen) + "bytes   " + s);
-			delete p;
+			delete[] p;
 		}
 	}
 	else
@@ -102,7 +102,7 @@ void tcpSwitch::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo
 			memcpy(p, pData, iLen);
 			string s = p;
 			LOG("Server" + str::fromInt(portLeft) + "<--Server" + str::fromInt(fromPort) + " " + str::fromInt(iLen) + "bytes   " + s);
-			delete p;
+			delete[] p;
 		}
 	}
 }

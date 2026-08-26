@@ -92,6 +92,7 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		lastErr = WSAGetLastError();
 #endif
 		printf("MG_EV_CLOSE,lastErr=%d,remoteIp=%s,remotePort=%d\r\n",lastErr, pts->remoteIP.c_str(), pts->remotePort);
+		delete pts;
 	}
 	else if (ev == MG_EV_ACCEPT) {
 		tcpSession* pts = new tcpSession();
