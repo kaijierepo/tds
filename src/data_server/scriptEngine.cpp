@@ -1747,7 +1747,6 @@ void thread_watchScriptFile(std::string scriptPath) {
     while (true) {
         // 等待 scripts 目录被创建
         while (!stdfs::exists(scriptPath)) {
-            LOG("脚本目录不存在，等待创建: " + scriptPath);
             std::this_thread::sleep_for(std::chrono::seconds(RETRY_INTERVAL_SEC));
         }
 
