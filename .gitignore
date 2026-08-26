@@ -16,6 +16,7 @@ publish/
 front_end/
 temp/
 src/version.h
+/build/build.ini
 
 *.o
 *.obj

@@ -18,7 +18,12 @@ set -e
 #   NO_CCACHE=1  禁用 ccache 加速
 #
 # 输出:
-#   所有架构 → ../out/tds/tds
+#   默认 → ../out/tds/tds；可用 build.ini 覆盖（见下）
+#
+# build.ini（可选，已被 git 忽略，本机临时指定输出目录用）:
+#   与 build.sh 同目录放置 build.ini，键名 output_dir 指定输出目录（等号两侧可加空格）:
+#     output_dir=/data/DCX/tds
+#   未提供 build.ini 或未配置 output_dir 时，使用默认输出目录 ../out/tds
 #
 # 注意: 切勿同时启动多个 build.sh 实例（并行写 .o 会冲突）。
 #
@@ -55,6 +60,23 @@ done
 
 echo "目标架构: $ARCH    模式: $MODE    并行数: $JOBS"
 
+# ===================== 1.4 读取 build.ini（可选配置） =====================
+# build.ini 与脚本同目录，已被 git 忽略，用于本机临时指定编译输出目录。
+# 键名 output_dir（等号两侧可加空格，值可用双引号包裹）：
+#   output_dir=/data/DCX/tds
+# 未提供 build.ini 或未配置 output_dir 时，使用默认输出目录 ../out/tds
+OUTPUT_DIR="../out/tds"
+BUILD_INI="$(cd "$(dirname "$0")" && pwd)/build.ini"
+if [ -f "$BUILD_INI" ]; then
+    INI_DIR="$(sed -n 's/^[[:space:]]*output_dir[[:space:]]*=[[:space:]]*//p' "$BUILD_INI" | head -1 | tr -d '"' | tr -d "'")"
+    if [ -n "$INI_DIR" ]; then
+        OUTPUT_DIR="$INI_DIR"
+        echo "build.ini: 输出目录设为 $OUTPUT_DIR"
+    else
+        echo "build.ini: 未配置 output_dir，使用默认输出目录 $OUTPUT_DIR"
+    fi
+fi
+
 # ===================== 1.5 生成版本信息 =====================
 # 从 Gitee API 获取提交次数生成 GIT_VERSION（tds_imp.cpp 通过 -DGIT_VERSION 注入 g_version）
 # Gitee 公开匿名 API：commits 接口响应头含 commit_count/total_count，无需本地 git
@@ -83,7 +105,7 @@ x86_64)
     strip_tool="strip"
     # 本机编译：链接系统基础库（MG_TLS_BUILTIN 内置 mbedtls，不需要 openssl/krb5）
     linkerflags="-lpthread -lutil -lrt -ldl -static-libgcc -static-libstdc++"
-    output_file="../out/tds/tds"
+    output_file="$OUTPUT_DIR/tds"
     ;;
 arm64)
     TOOLCHAIN_PATH="/opt/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu"
@@ -101,7 +123,7 @@ arm64)
 -Wl,--end-group \
 -static-libgcc -static-libstdc++ \
 "
-    output_file="../out/tds/tds"
+    output_file="$OUTPUT_DIR/tds"
     ;;
 armv7)
     TOOLCHAIN_PATH="/opt/armv7-eabihf--glibc--stable-2020.08-1"
@@ -118,7 +140,7 @@ armv7)
 -Wl,--end-group \
 -static-libgcc -static-libstdc++ \
 "
-    output_file="../out/tds/tds"
+    output_file="$OUTPUT_DIR/tds"
     ;;
 *)
     echo "错误: 未知架构 '$ARCH'，支持 x86_64 / arm64 / armv7"
