@@ -4666,14 +4666,14 @@ struct INPUT_DE {
 	json online;
 	json file;
 	json ioAddr;
-	json valAttr;
-	bool hasAttr;
+	json valCtx;
+	bool hasCtx;
 	string sTime;
 	TIME time;
 };
 
 
-json getValAttr(json de) {
+json getValCtx(json de) {
 	de.erase("time");
 	de.erase("val");
 	de.erase("tag");
@@ -4781,7 +4781,7 @@ void rpcHandler::rpc_input(json params, RPC_RESP& resp, RPC_SESSION& session) {
 					de.val = j["val"];
 					de.file = j["file"];
 					de.online = j["online"];
-					de.valAttr = getValAttr(j);
+					de.valCtx = getValCtx(j);
 					inputDEList.push_back(de);
 				}
 			}
@@ -4812,8 +4812,8 @@ void rpcHandler::rpc_input(json params, RPC_RESP& resp, RPC_SESSION& session) {
 				de.val = val;
 				de.online = online;
 				de.file = file;
-				de.valAttr= getValAttr(params);
-				de.hasAttr = de.valAttr.size() > 0;
+				de.valCtx= getValCtx(params);
+				de.hasCtx = de.valCtx.size() > 0;
 
 				if (time.is_string()) {
 					de.sTime = time;
@@ -4907,9 +4907,9 @@ void rpcHandler::rpc_input(json params, RPC_RESP& resp, RPC_SESSION& session) {
 				if (pmp) {
 					pmp->input(val, &file, &de.time);
 					if (pmp->m_bEnableIO) {
-						if (de.hasAttr) {
-							for (auto& iter : de.valAttr.items()) {
-								pmp->m_curValAttr[iter.key()] = iter.value().dump();
+						if (de.hasCtx) {
+							for (auto& iter : de.valCtx.items()) {
+								pmp->m_curValCtx[iter.key()] = iter.value().dump();
 							}
 						}
 						vecMps.push_back(pmp);

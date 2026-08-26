@@ -167,7 +167,7 @@ public:
 	std::string m_orgVal = "null";
 	std::string m_curVal = "null";
 	std::string m_defaultVal = "null"; //默认值，软件刚启动时加载的值
-	map<std::string,std::string> m_curValAttr;  //与val同级的Attri
+	map<std::string,std::string> m_curValCtx;  //与val同级的Attri
 	std::string m_curFileData = "null";
 	std::string m_lastVal = "null";
 	TIME m_lastSaveTime;

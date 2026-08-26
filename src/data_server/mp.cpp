@@ -619,7 +619,28 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_PROP_SEL q, bool*
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
+		//上下文属性（与val同级的Attri，统一放入ctx对象）
+		if (m_curValCtx.size() > 0) {
+			yyjson_mut_val* ctx_obj = yyjson_mut_obj(doc);
+			for (auto& item : m_curValCtx) {
+				yyjson_mut_val* ctx_key = yyjson_mut_strcpy(doc, item.first.c_str());
+				yyjson_doc* ctx_read_doc = yyjson_read_opts((char*)item.second.c_str(), item.second.size(), 0, NULL, NULL);
+				yyjson_mut_val* ctx_val;
+				if (ctx_read_doc) {
+					yyjson_val* ctx_read_root = yyjson_doc_get_root(ctx_read_doc);
+					ctx_val = yyjson_val_mut_copy(doc, ctx_read_root);
+					yyjson_doc_free(ctx_read_doc);
+				}
+				else {
+					ctx_val = yyjson_mut_strcpy(doc, item.second.c_str());
+				}
+				yyjson_mut_obj_put(ctx_obj, ctx_key, ctx_val);
+			}
+			key = yyjson_mut_strcpy(doc, "ctx");
+			yyjson_mut_obj_put(conf, key, ctx_obj);
+		}
 
+		
 		if (timeopt::isValidTime(m_stDataLastUpdate)) {
 			key = yyjson_mut_strcpy(doc, "time");
 			val = yyjson_mut_strcpy(doc, timeopt::st2str(m_stDataLastUpdate).c_str());
@@ -1035,8 +1056,8 @@ void MP::saveToDB() {
 		sDe += ",\"file\":" + m_curFileData;
 	}
 
-	if (m_curValAttr.size() > 0) {
-		for (auto& item : m_curValAttr) {
+	if (m_curValCtx.size() > 0) {
+		for (auto& item : m_curValCtx) {
 			sDe += ",\"" + item.first + "\":" + item.second;
 		}
 	}
