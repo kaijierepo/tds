@@ -1647,26 +1647,6 @@ void ioDev_tdsp::pullRecordFiles()
 					} else {
 						LOG("[warn][录像采集] 重命名文件失败: %s -> %s", fname.c_str(), newFname.c_str());
 					}
-
-					// 重命名对应的曲线文件(如果存在)
-					// 原始: 105127_pre0_duration10_curve.json -> 105127_curve.json
-					// 用原始的 fileUrl 来构造曲线文件名(fileUrl 未被修改)
-					std::string origFname = fileUrl.substr(fileUrl.rfind('/') + 1);
-					std::string origNameNoExt = origFname.substr(0, origFname.rfind('.'));
-					std::string oldCurvePath = dirPath + origNameNoExt + "_curve.json";
-					std::string newCurvePath = dirPath + origNameNoExt.substr(0, origNameNoExt.find("_pre")) + "_curve.json";
-
-#ifdef _WIN32
-					std::wstring wOldCurvePath = str::utf8_to_utf16(oldCurvePath);
-					std::wstring wNewCurvePath = str::utf8_to_utf16(newCurvePath);
-					if (_wrename(wOldCurvePath.c_str(), wNewCurvePath.c_str()) == 0) {
-#else
-					if (std::rename(oldCurvePath.c_str(), newCurvePath.c_str()) == 0) {
-#endif
-						LOG("[录像采集] 重命名曲线文件: %s -> %s", 
-							oldCurvePath.substr(dirPath.size()).c_str(), 
-							newCurvePath.substr(dirPath.size()).c_str());
-					}
 				}
 			}
 
