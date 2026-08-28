@@ -1009,6 +1009,7 @@ public:
 
 	//db.update functions
 	int Update(std::string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);
+	int UpdateMetadata(std::string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFileParam);
 
 	//db.merge functions
 	int Merge(std::string tag, const DB_TIME& stTime, const DB_TIME &stTimeRange1, const DB_TIME& stTimeRange2, const std::multimap<std::string, yyjson_val*>& mMergeParams);
