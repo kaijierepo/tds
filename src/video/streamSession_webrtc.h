@@ -68,7 +68,8 @@ void sessionHandleDTLS(std::shared_ptr<STREAM_SESSION> session,
 
 // SRTCP 反馈处理：解密浏览器的 RTCP compound，识别 PLI/FIR（请求关键帧）
 // 与 NACK（按序号从重传缓存重发已加密的 SRTP 包）
-void sessionHandleSRTCP(std::shared_ptr<STREAM_SESSION> session,
+// 返回值：true 表示收到 RTCP BYE（客户端断开），false 表示正常
+bool sessionHandleSRTCP(std::shared_ptr<STREAM_SESSION> session,
                         SessionDtlsState* dtls_state,
                         uint8_t* buf, int len,
                         struct sockaddr_in& peer);

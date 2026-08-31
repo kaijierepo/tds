@@ -5,6 +5,7 @@
 #include "logger.h"
 #include <thread>
 #include <cmath>
+#include <fstream>
 
 string toTimeStr(std::chrono::system_clock::time_point tp) {
 	std::time_t tt = std::chrono::system_clock::to_time_t(tp);
@@ -172,6 +173,9 @@ bool StreamServer::handleRpc(std::string method, yyjson_val* params, RPC_RESP& r
 	}
 	else if (method == "playWebRtc") {
 		rpc_playWebRtc(params, rpcResp, session);
+	}
+	else if (method == "stopWebRtc") {
+		rpc_stopWebRtc(params, rpcResp, session);
 	}
 	else if (method == "getStreamInfo") {
 		rpc_getStreamInfo(params, rpcResp, session);
@@ -443,6 +447,12 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		auto sessionPtr = std::make_shared<STREAM_SESSION>();
 		sessionPtr->copyClientSessionFrom(si);
 		sessionPtr->open_time_ = std::chrono::system_clock::now();
+		
+		// 生成一个唯一的 sessionId 用于客户端标识会话
+		std::string webrtcSessionId = "webrtc_" + std::to_string(
+			std::chrono::system_clock::now().time_since_epoch().count());
+		sessionPtr->webrtc_session_id = webrtcSessionId;
+		
 		sn->session_list_client_pull_mutex_.lock();
 		sn->session_list_client_pull_.push_back(sessionPtr);
 		sn->session_list_client_pull_mutex_.unlock();
@@ -457,12 +467,126 @@ bool StreamServer::rpc_playWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		j["serverRtpPort"] = si.server_rtp_port;
 		j["serverRtspPort"] = si.server_rtcp_port;
 		j["clientRtpPort"] = si.client_rtp_port;
+		j["sessionId"] = webrtcSessionId;
 		rpcResp.result = j.dump();
 	}
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "stream node of specified tag not found");
 	}
 
+	return true;
+}
+
+bool StreamServer::rpc_stopWebRtc(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string sessionId;
+	yyjson_val* yyv = yyjson_obj_get(params, "sessionId");
+	if (yyv)
+		sessionId = yyjson_get_str(yyv);
+	
+	LOG("[WebRTC] stopWebRtc sessionId=%s", sessionId.c_str());
+	
+	// 遍历所有 StreamNode，查找并停止匹配的 WebRTC 会话
+	bool found = false;
+	for (auto& pair : m_mapStreamNodes) {
+		auto& sn = pair.second;
+		if (!sn) continue;
+		
+		std::lock_guard<std::mutex> lock(sn->session_list_client_pull_mutex_);
+		for (auto it = sn->session_list_client_pull_.begin(); 
+		     it != sn->session_list_client_pull_.end(); ++it) {
+			auto& s = *it;
+			if (!s || !s->is_webrtc) continue;
+			
+			// 通过 webrtc_session_id 精确匹配会话
+			if (!sessionId.empty() && s->webrtc_session_id != sessionId) {
+				continue;
+			}
+			
+			LOG("[WebRTC] Stopping WebRTC session for tag=%s, socket=%d, sessionId=%s", 
+			    sn->config_.tag.c_str(), (int)s->rtp_socket, 
+			    s->webrtc_session_id.c_str());
+			
+			// 停止 ICE 线程
+			s->ctrl_thread_webrtc_server_running_ = false;
+			
+			// 关闭 socket
+			if (s->rtp_socket != kInvalidSocket) {
+#ifdef _WIN32
+				closesocket(static_cast<SOCKET>(s->rtp_socket));
+#else
+				close(s->rtp_socket);
+#endif
+				s->rtp_socket = kInvalidSocket;
+			}
+			if (s->rtcp_socket != kInvalidSocket) {
+#ifdef _WIN32
+				closesocket(static_cast<SOCKET>(s->rtcp_socket));
+#else
+				close(s->rtcp_socket);
+#endif
+				s->rtcp_socket = kInvalidSocket;
+			}
+			
+			// 从列表中移除
+			it = sn->session_list_client_pull_.erase(it);
+			found = true;
+			break;
+		}
+		
+		if (found) break;
+	}
+	
+	if (found) {
+		rpcResp.result = RPC_OK;
+		LOG("[WebRTC] stopWebRtc success");
+	} else {
+		// 如果没有找到匹配的会话，尝试停止所有 WebRTC 会话（向后兼容）
+		LOG("[WebRTC] stopWebRtc: session not found by ID, stopping all WebRTC sessions");
+		for (auto& pair : m_mapStreamNodes) {
+			auto& sn = pair.second;
+			if (!sn) continue;
+			
+			std::lock_guard<std::mutex> lock(sn->session_list_client_pull_mutex_);
+			for (auto& s : sn->session_list_client_pull_) {
+				if (!s || !s->is_webrtc) continue;
+				
+				LOG("[WebRTC] Stopping WebRTC session for tag=%s, socket=%d", 
+				    sn->config_.tag.c_str(), (int)s->rtp_socket);
+				
+				s->ctrl_thread_webrtc_server_running_ = false;
+				
+				if (s->rtp_socket != kInvalidSocket) {
+#ifdef _WIN32
+					closesocket(static_cast<SOCKET>(s->rtp_socket));
+#else
+					close(s->rtp_socket);
+#endif
+					s->rtp_socket = kInvalidSocket;
+				}
+				if (s->rtcp_socket != kInvalidSocket) {
+#ifdef _WIN32
+					closesocket(static_cast<SOCKET>(s->rtcp_socket));
+#else
+					close(s->rtcp_socket);
+#endif
+					s->rtcp_socket = kInvalidSocket;
+				}
+				
+				found = true;
+			}
+			sn->session_list_client_pull_.clear();
+		}
+		
+		if (found) {
+			rpcResp.result = RPC_OK;
+			LOG("[WebRTC] stopWebRtc success (stopped all sessions)");
+		} else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "No WebRTC sessions found");
+			LOG("[WebRTC] stopWebRtc failed: no sessions found");
+		}
+	}
+	
 	return true;
 }
 
@@ -595,6 +719,14 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		{
 			rc->flushRecordBuffer();
 
+			// 诊断：flush 后立即检查原文件大小
+			{
+				std::ifstream chk(rc->rec_ctrl_.path, std::ios::binary | std::ios::ate);
+				size_t sz = chk ? static_cast<size_t>(chk.tellg()) : 0;
+				LOG("[录像] flushRecordBuffer done, path=%s, file size=%zu, nal count=%zu, codec=%s",
+					rc->rec_ctrl_.path.c_str(), sz, rc->rec_ctrl_.nalCount, recCodec.c_str());
+			}
+
 			auto now = std::chrono::steady_clock::now();
 			// 用首末帧 RTP 时间戳计算真实媒体时长（比墙钟准确：
 			// 不受等待首个关键帧、断流空洞的影响，且支持 32 位回绕）
@@ -650,21 +782,19 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		}
 		std::string fileUrl = "/db/record/" + mp4FileName;
 
+			// 同步将 .h264/.h265 转为 .mp4（等待转换完成后再发送 RPC 响应）
+			std::string mp4Path = filePath.substr(0, filePath.size() - 5) + ".mp4";
+			const bool ok = isH265
+				? mp4::convertH265toMP4(filePath, mp4Path, mediaDurationSec, spsFps)
+				: mp4::convertH264toMP4(filePath, mp4Path, mediaDurationSec, spsFps);
+			LOG("[MP4] remux %s: %s -> %s",
+				ok ? "success" : "failed", filePath.c_str(), mp4Path.c_str());
+
 			json j;
 			j["fileUrl"] = fileUrl;
 			j["duration"] = duration;
 			j["preSeconds"] = rc->rec_ctrl_.preSeconds;
 			rpcResp.result = j.dump();
-
-			// 异步将 .h264/.h265 转为 .mp4（不阻塞 RPC 响应）
-			std::string mp4Path = filePath.substr(0, filePath.size() - 5) + ".mp4";
-			std::thread([srcPath = filePath, mp4Path, mediaDurationSec, spsFps, isH265]() {
-					const bool ok = isH265
-						? mp4::convertH265toMP4(srcPath, mp4Path, mediaDurationSec, spsFps)
-						: mp4::convertH264toMP4(srcPath, mp4Path, mediaDurationSec, spsFps);
-					LOG("[MP4] async remux %s: %s -> %s",
-						ok ? "success" : "failed", srcPath.c_str(), mp4Path.c_str());
-			}).detach();
 
 			cleanOldRecords();
 		}
