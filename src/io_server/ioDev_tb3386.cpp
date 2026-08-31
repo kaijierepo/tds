@@ -1,6 +1,7 @@
 #include "ioDev_tb3386.h"
 #include <cstring>
 #include "prj.h"
+#include "mp.h"
 #include "database/tDatabase.h"
 #include "common.h"
 #include "yyjson.h"
@@ -268,21 +269,48 @@ std::string ioDev_tb3386::buildGapJson(const StZZJCache& cache, const std::strin
     yyjson_mut_obj_add_real(doc, root, "std", cache.std);
     yyjson_mut_obj_add_str(doc, root, "pos", cache.pos == 0 ? "fix" : "invert");
 
+    // 采集类型：来自缺口帧的采集原因值，1 扳动(switch)、2 周期(cyclic)、5 过车(cross)。
+    const char* acqType = "unknown";
+    switch (cache.acqType) {
+    case 1: acqType = "switch"; break;
+    case 2: acqType = "cyclic"; break;
+    case 5: acqType = "cross"; break;
+    default: break;
+    }
+    yyjson_mut_obj_add_str(doc, root, "acqType", acqType);
+
     // tempZZJ 来自 0x24 命令的设备温度。
     if (cache.validTemp) {
         yyjson_mut_obj_add_real(doc, root, "tempZZJ", cache.temp);
-        // 轨温与天气预报温度协议未提供，暂用同一温度占位，后续可从其他 MP 接入。
+        // 轨温协议未提供，暂用设备温度占位，后续可从其他 MP 接入。
         yyjson_mut_obj_add_real(doc, root, "tempRail", cache.temp);
-        yyjson_mut_obj_add_real(doc, root, "tempWeather", cache.temp);
-    }
 
-    //根据 m_strTagBind 找到站点对象
-	//OBJ* pObj = prj.queryObj(m_strTagBind, "zh");
-	//获取站点下面的天气MP的当前值
-    //MP* pmp = pObj->GetMPByTag("天气","zh");
-    //string curVal = pmp->m_curVal;
-    //使用yyjson解析curVal
-    //将值填入到 root
+        // 天气预报：优先从站点天气MP当前值读取实时温度与天气状况，缺失时沿用设备温度占位。
+        double tempWeather = cache.temp;
+        OBJ* pObj = prj.queryObj(m_strTagBind, "zh"); //根据 m_strTagBind 找到站点对象
+        if (pObj) {
+            MP* pmp = pObj->GetMPByTag("天气", "zh"); //获取站点下面的天气MP的当前值
+            if (pmp) {
+                const std::string& curVal = pmp->m_curVal;
+                if (!curVal.empty() && curVal != "null") {
+                    yyjson_doc* wdoc = yyjson_read(curVal.c_str(), curVal.size(), 0); //使用yyjson解析curVal
+                    if (wdoc) {
+                        yyjson_val* wroot = yyjson_doc_get_root(wdoc);
+                        yyjson_val* wt = wroot ? yyjson_obj_get(wroot, "temperature") : nullptr; //实时温度
+                        if (wt && yyjson_is_num(wt)) {
+                            tempWeather = yyjson_get_num(wt); //将值填入到 root
+                        }
+                        yyjson_val* wc = wroot ? yyjson_obj_get(wroot, "condition_code") : nullptr; //天气状况代码
+                        if (wc && yyjson_is_num(wc)) {
+                            yyjson_mut_obj_add_int(doc, root, "weatherCondition", (int)yyjson_get_num(wc));
+                        }
+                        yyjson_doc_free(wdoc);
+                    }
+                }
+            }
+        }
+        yyjson_mut_obj_add_real(doc, root, "tempWeather", tempWeather);
+    }
 
     const char* json = yyjson_mut_write(doc, 0, NULL);
     std::string sDE = json ? json : "{}";
