@@ -276,6 +276,14 @@ std::string ioDev_tb3386::buildGapJson(const StZZJCache& cache, const std::strin
         yyjson_mut_obj_add_real(doc, root, "tempWeather", cache.temp);
     }
 
+    //根据 m_strTagBind 找到站点对象
+	//OBJ* pObj = prj.queryObj(m_strTagBind, "zh");
+	//获取站点下面的天气MP的当前值
+    //MP* pmp = pObj->GetMPByTag("天气","zh");
+    //string curVal = pmp->m_curVal;
+    //使用yyjson解析curVal
+    //将值填入到 root
+
     const char* json = yyjson_mut_write(doc, 0, NULL);
     std::string sDE = json ? json : "{}";
     free((void*)json);
