@@ -5,6 +5,7 @@
 #include "logger.h"
 #include <thread>
 #include <cmath>
+#include <fstream>
 
 string toTimeStr(std::chrono::system_clock::time_point tp) {
 	std::time_t tt = std::chrono::system_clock::to_time_t(tp);
@@ -718,6 +719,14 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		{
 			rc->flushRecordBuffer();
 
+			// 诊断：flush 后立即检查原文件大小
+			{
+				std::ifstream chk(rc->rec_ctrl_.path, std::ios::binary | std::ios::ate);
+				size_t sz = chk ? static_cast<size_t>(chk.tellg()) : 0;
+				LOG("[录像] flushRecordBuffer done, path=%s, file size=%zu, nal count=%zu, codec=%s",
+					rc->rec_ctrl_.path.c_str(), sz, rc->rec_ctrl_.nalCount, recCodec.c_str());
+			}
+
 			auto now = std::chrono::steady_clock::now();
 			// 用首末帧 RTP 时间戳计算真实媒体时长（比墙钟准确：
 			// 不受等待首个关键帧、断流空洞的影响，且支持 32 位回绕）
@@ -773,21 +782,19 @@ bool StreamServer::rpc_stopRecord(yyjson_val* params, RPC_RESP& rpcResp, RPC_SES
 		}
 		std::string fileUrl = "/db/record/" + mp4FileName;
 
+			// 同步将 .h264/.h265 转为 .mp4（等待转换完成后再发送 RPC 响应）
+			std::string mp4Path = filePath.substr(0, filePath.size() - 5) + ".mp4";
+			const bool ok = isH265
+				? mp4::convertH265toMP4(filePath, mp4Path, mediaDurationSec, spsFps)
+				: mp4::convertH264toMP4(filePath, mp4Path, mediaDurationSec, spsFps);
+			LOG("[MP4] remux %s: %s -> %s",
+				ok ? "success" : "failed", filePath.c_str(), mp4Path.c_str());
+
 			json j;
 			j["fileUrl"] = fileUrl;
 			j["duration"] = duration;
 			j["preSeconds"] = rc->rec_ctrl_.preSeconds;
 			rpcResp.result = j.dump();
-
-			// 异步将 .h264/.h265 转为 .mp4（不阻塞 RPC 响应）
-			std::string mp4Path = filePath.substr(0, filePath.size() - 5) + ".mp4";
-			std::thread([srcPath = filePath, mp4Path, mediaDurationSec, spsFps, isH265]() {
-					const bool ok = isH265
-						? mp4::convertH265toMP4(srcPath, mp4Path, mediaDurationSec, spsFps)
-						: mp4::convertH264toMP4(srcPath, mp4Path, mediaDurationSec, spsFps);
-					LOG("[MP4] async remux %s: %s -> %s",
-						ok ? "success" : "failed", srcPath.c_str(), mp4Path.c_str());
-			}).detach();
 
 			cleanOldRecords();
 		}
