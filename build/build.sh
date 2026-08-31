@@ -417,7 +417,7 @@ cpp_srcs="$(cat <<'EOF'
 ./io_server/ioDev.cpp
 ./io_server/ioDev_bacnet.cpp
 ./io_server/ioDev_custom.cpp
-./io_server/ioDev_dcqk.cpp
+./io_server/ioDev_tb3386.cpp
 ./io_server/ioDev_dlt645_2007.cpp
 ./io_server/ioDev_eip.cpp
 ./io_server/ioDev_iq60.cpp

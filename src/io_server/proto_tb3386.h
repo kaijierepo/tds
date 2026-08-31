@@ -3,9 +3,11 @@
 /*
 315协议解析类
 */
-//#include <string>
+#include <string>
+#include <vector>
+#include <cstdint>
 #include "common/common.h"
-#include "common/winCompat.h"
+#include <cstring>
 
 using namespace std;
 
@@ -99,7 +101,7 @@ enum class E_315_JSON_TYPE : uint8_t
 	JSON_ARRAY = 0x01, 
 	JSON_OBJECT = 0x02,
 };
-extern DWORD g_dw0x23ExCmdID;	//道岔缺口扩展配置命令ID
+extern uint32_t g_dw0x23ExCmdID;	//道岔缺口扩展配置命令ID
 
 //命令码
 #define CMD_CODE_GAPCFG			0x23			//缺口配置（315）
@@ -242,9 +244,9 @@ enum FRAME_KIND {
 //请求
 typedef struct
 {
-	BYTE cmdid;		//命令码：0x65
-	WORD sid;		//转辙机ID
-	BYTE res[3];	//预留：填充3字节0xFF
+	uint8_t cmdid;		//命令码：0x65
+	uint16_t sid;		//转辙机ID
+	uint8_t res[3];	//预留：填充3字节0xFF
 }StAlarmListReq;
 
 //0x65 文件记录 结构体
@@ -276,18 +278,18 @@ typedef struct tagJSON3FINFO
 //应答
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x63
-	WORD cnt;				//记录数
-	LPVOID lprecord;		//文件记录
+	uint8_t cmdid;				//命令码：0x63
+	uint16_t cnt;				//记录数
+	void* lprecord;		//文件记录
 }StAlarmListRes;
 
 //应答
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x81
-	WORD zzjid;			//转辙机编号
+	uint8_t cmdid;				//命令码：0x81
+	uint16_t zzjid;			//转辙机编号
 	uint32_t time;			//采集时间
-	WORD valType;			//值类型
+	uint16_t valType;			//值类型
 	short value;			//值
 	uint32_t reserve;	//预留：填充4字节0xFF
 }StWorkingConditionValRes;
@@ -295,45 +297,45 @@ typedef struct
 //应答
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x82
-	WORD zzjid;				//转辙机编号
+	uint8_t cmdid;				//命令码：0x82
+	uint16_t zzjid;				//转辙机编号
 	uint32_t time;			//时间
-	BYTE actionType;		//动作类型
-	BYTE valType;			//值类型
+	uint8_t actionType;		//动作类型
+	uint8_t valType;			//值类型
 	int valueK;				//值
 	int valueB;				//值
-	BYTE result;			//返回值 0成功 1失败
+	uint8_t result;			//返回值 0成功 1失败
 	uint32_t reserve;	//预留：填充4字节0xFF
 }StOpWorkingConditionRes;
 
 //应答
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x83
-	WORD zzjid;			//转辙机编号
+	uint8_t cmdid;				//命令码：0x83
+	uint16_t zzjid;			//转辙机编号
 	uint32_t time;			//采集时间
-	BYTE curveType;			//曲线类型(1B)
-	BYTE acpfreq;			//采样间隔（1B，如:10ms）
-	WORD curveLen;			//本条曲线数据长度(2B)
+	uint8_t curveType;			//曲线类型(1B)
+	uint8_t acpfreq;			//采样间隔（1B，如:10ms）
+	uint16_t curveLen;			//本条曲线数据长度(2B)
 }StVibrationCurveRes;
 
 //帧总体结构
 struct StFrame
 {
-	BYTE fheader[5];	//帧头：字符型 5字节“qknet”(71 6B 6E 65 74)
-	BYTE protocode;		//协议码：此版本协议码为0x02H.
-	BYTE dataversion;	//数据版本：此版本号由道岔缺口厂家提供给监测厂家。若监测接收到的数据版本类型和厂家提供的不一致，则不处理接收的数据。
-	BYTE ftype;			//帧类型：0x0FH表示心跳帧，0x8FH表示数据帧。
-	DWORD datalen;		//数据长度
-	LPVOID lpdata;		//数据
-	DWORD ftail;		//帧尾：填充4个字节的0xFF。
+	uint8_t fheader[5];	//帧头：字符型 5字节“qknet”(71 6B 6E 65 74)
+	uint8_t protocode;		//协议码：此版本协议码为0x02H.
+	uint8_t dataversion;	//数据版本：此版本号由道岔缺口厂家提供给监测厂家。若监测接收到的数据版本类型和厂家提供的不一致，则不处理接收的数据。
+	uint8_t ftype;			//帧类型：0x0FH表示心跳帧，0x8FH表示数据帧。
+	uint32_t datalen;		//数据长度
+	void* lpdata;		//数据
+	uint32_t ftail;		//帧尾：填充4个字节的0xFF。
 
 	//新增一些维护型字段
 	FRAME_KIND e_frmKind;
 	StFrame()
 	{
 		memset(this, 0, sizeof(StFrame));
-		memcpy_s(fheader, 5, FRAME_HEADER_315, 5);
+		memcpy(fheader, FRAME_HEADER_315, 5);
 		protocode = PROTOCAL_CODE;
 		dataversion = PROTOCAL_DATAVERSION;
 		ftail = FRAME_TAIL_315;
@@ -348,22 +350,22 @@ struct StFrame
 //心跳数据
 typedef struct
 {
-	DWORD hbtime;		//时间: 4B的unix时间用于时钟同步
-	BYTE filldata[3];	//填充3个字节的0xFF
+	uint32_t hbtime;		//时间: 4B的unix时间用于时钟同步
+	uint8_t filldata[3];	//填充3个字节的0xFF
 }StHeartBeat315;
 
 
 //基础命令数据结构，所有数据命令都包含该格式，解析数据时可用此结构判断命令类型，然后再用相应数据结构解析
 typedef struct
 {
-	BYTE cmdid;			//请求命令的命令码
+	uint8_t cmdid;			//请求命令的命令码
 }StDataBasic;
 
 
 //JDSP 命令吗 0xf0
 struct StJDSP {
-	BYTE cmdid;
-	BYTE res[4];
+	uint8_t cmdid;
+	uint8_t res[4];
 	string jdsp;
 };
 
@@ -371,20 +373,20 @@ struct StJDSP {
 //道岔缺口配置信息（315） 命令码：0x23
 typedef struct
 {
-	BYTE cmdid;			//命令码：0x23
-	WORD cfgcnt;		//配置数
-	LPVOID lpcfg;		//转辙机配置i
+	uint8_t cmdid;			//命令码：0x23
+	uint16_t cfgcnt;		//配置数
+	void* lpcfg;		//转辙机配置i
 }StGapCfgRes;
 
 //转辙机配置
 typedef struct
 {
-	BYTE nlen;		//转辙机名称长度
-	LPSTR lpname;	//转辙机名称
-	BYTE stype;		//转辙机类型
-	WORD sid;		//转辙机ID
-	WORD cnt;		//采集信息个数
-	LPWORD lpinfo;	//采集信息类型
+	uint8_t nlen;		//转辙机名称长度
+	char* lpname;	//转辙机名称
+	uint8_t stype;		//转辙机类型
+	uint16_t sid;		//转辙机ID
+	uint16_t cnt;		//采集信息个数
+	uint16_t* lpinfo;	//采集信息类型
 }StSwitchCfg;
 //道岔缺口配置信息 end
 
@@ -392,74 +394,74 @@ typedef struct
 //道岔缺口值 命令码：0x26
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x26
-	WORD cnt;				//总记录数
-	LPVOID lpdata;			//缺口数据记录
+	uint8_t cmdid;				//命令码：0x26
+	uint16_t cnt;				//总记录数
+	void* lpdata;			//缺口数据记录
 }StGapValue;
 
 //缺口数据记录
 typedef struct
 {
-	DWORD time;				//时间：4字节(Unix时间)
-	WORD sid;				//转辙机ID
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
-	WORD offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
-	WORD gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
-	WORD std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
-	BYTE gaptype;			//缺口值类型：0 静态采集， 1 道岔操纵后采集， 2 过车时采集 （315协议中定义，在卡斯科中填充OxFF）
-	BYTE filldata[3];		//0xFF(3B, 预留)
+	uint32_t time;				//时间：4字节(Unix时间)
+	uint16_t sid;				//转辙机ID
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
+	uint16_t offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
+	uint8_t gaptype;			//缺口值类型：0 静态采集， 1 道岔操纵后采集， 2 过车时采集 （315协议中定义，在卡斯科中填充OxFF）
+	uint8_t filldata[3];		//0xFF(3B, 预留)
 }StGapRecord;
 //道岔缺口值 end
 
 typedef struct
 {
-	DWORD time;				//时间：4字节(Unix时间)
-	WORD sid;				//转辙机ID
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
-	WORD offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
-	WORD gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
-	WORD std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
-	BYTE gaptype;			//缺口值类型：0 静态采集， 1 道岔操纵后采集， 2 过车时采集 （315协议中定义，在卡斯科中填充OxFF）
-	BYTE filldata[4];		//0xFF(3B, 预留)
+	uint32_t time;				//时间：4字节(Unix时间)
+	uint16_t sid;				//转辙机ID
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
+	uint16_t offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
+	uint8_t gaptype;			//缺口值类型：0 静态采集， 1 道岔操纵后采集， 2 过车时采集 （315协议中定义，在卡斯科中填充OxFF）
+	uint8_t filldata[4];		//0xFF(3B, 预留)
 }StGapRecord_4res;
 
 
 //报警/预警信息及缺口图像信息回执  上位机收到完整的报警信息后，给下位机一个回执，予以确认
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x27 0x97
-	WORD sid;				//转辙机ID
-	DWORD time;				//报警时间：4字节(Unix时间)
-	DWORD alarmconfirm;		//报警确认信号, 用于监测回执
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
-	BYTE alarmtype;			//报警类型
-	WORD offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
-	WORD gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
-	WORD std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
-	DWORD filldata;			//0xFF(4B, 预留)
-	DWORD imglen;			//图像长度
+	uint8_t cmdid;				//命令码：0x27 0x97
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//报警时间：4字节(Unix时间)
+	uint32_t alarmconfirm;		//报警确认信号, 用于监测回执
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
+	uint8_t alarmtype;			//报警类型
+	uint16_t offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
+	uint32_t filldata;			//0xFF(4B, 预留)
+	uint32_t imglen;			//图像长度
 }StAlarmAndImgRec;
 //报警/预警信息及缺口图像信息 end
 // 
 //报警/预警信息及缺口图像信息  命令码：0x27
 struct StAlarmAndImgInfo : public StAlarmAndImgRec
 {
-	//BYTE cmdid;				//命令码：0x27
-	//WORD sid;				//转辙机ID
-	//DWORD time;				//报警时间：4字节(Unix时间)
-	//DWORD alarmconfirm;		//报警确认信号, 用于监测回执
-	//BYTE fixorinvert;		//定反位：0 定位，1  反位
-	//BYTE lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
-	//BYTE alarmtype;			//报警类型
-	//WORD offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
-	//WORD gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
-	//WORD std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
-	//DWORD filldata;			//0xFF(4B, 预留)
-	//DWORD imglen;			//图像长度
-	LPVOID lpimg;			//图像内容
+	//uint8_t cmdid;				//命令码：0x27
+	//uint16_t sid;				//转辙机ID
+	//uint32_t time;				//报警时间：4字节(Unix时间)
+	//uint32_t alarmconfirm;		//报警确认信号, 用于监测回执
+	//uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	//uint8_t lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
+	//uint8_t alarmtype;			//报警类型
+	//uint16_t offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
+	//uint16_t gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
+	//uint16_t std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
+	//uint32_t filldata;			//0xFF(4B, 预留)
+	//uint32_t imglen;			//图像长度
+	void* lpimg;			//图像内容
 };
 
 
@@ -467,36 +469,36 @@ struct StAlarmAndImgInfo : public StAlarmAndImgRec
 //道岔动作后模拟量及缺口图像信息  命令码：0x28 （卡斯科）
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x28
-	WORD sid;				//转辙机ID
-	DWORD collecttime;		//图像采集时间：4字节(Unix时间)
-	DWORD actioncttime;		//道岔动作时间：4字节(Unix时间)
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
-	BYTE filldata1;			//0xFF(1B, 预留)
-	WORD offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
-	WORD gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
-	WORD std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
-	DWORD filldata2;		//0xFF(4B, 预留)
-	DWORD imglen;			//图像长度
-	LPVOID lpimg;			//图像内容
+	uint8_t cmdid;				//命令码：0x28
+	uint16_t sid;				//转辙机ID
+	uint32_t collecttime;		//图像采集时间：4字节(Unix时间)
+	uint32_t actioncttime;		//道岔动作时间：4字节(Unix时间)
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
+	uint8_t filldata1;			//0xFF(1B, 预留)
+	uint16_t offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
+	uint32_t filldata2;		//0xFF(4B, 预留)
+	uint32_t imglen;			//图像长度
+	void* lpimg;			//图像内容
 }StActionInfo;
 
 //道岔动作后模拟量及缺口图像信息回执
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x28
-	WORD sid;				//转辙机ID
-	DWORD collecttime;		//图像采集时间：4字节(Unix时间)
-	DWORD actioncttime;		//道岔动作时间：4字节(Unix时间)
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
-	BYTE filldata1;			//0xFF(1B, 预留)
-	WORD offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
-	WORD gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
-	WORD std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
-	DWORD filldata2;		//0xFF(4B, 预留)
-	DWORD imglen;			//图像长度
+	uint8_t cmdid;				//命令码：0x28
+	uint16_t sid;				//转辙机ID
+	uint32_t collecttime;		//图像采集时间：4字节(Unix时间)
+	uint32_t actioncttime;		//道岔动作时间：4字节(Unix时间)
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
+	uint8_t filldata1;			//0xFF(1B, 预留)
+	uint16_t offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
+	uint32_t filldata2;		//0xFF(4B, 预留)
+	uint32_t imglen;			//图像长度
 }StActionInfoRec;
 //道岔动作后模拟量及缺口图像信息 end
 
@@ -505,27 +507,27 @@ typedef struct
 //请求
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x29
-	WORD sid;				//转辙机ID
-	DWORD filldata;			//0xFF(4B, 预留)
+	uint8_t cmdid;				//命令码：0x29
+	uint16_t sid;				//转辙机ID
+	uint32_t filldata;			//0xFF(4B, 预留)
 }StLastGapImgReq;
 
 //应答
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x29
-	WORD sid;				//转辙机ID
-	DWORD time;				//图像采集时间：4字节(Unix时间)
-	DWORD filldata1;		//0xFF(4B, 预留)
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
-	BYTE filldata2;			//0xFF(1B, 预留)
-	WORD offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
-	WORD gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
-	WORD std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
-	DWORD filldata3;		//0xFF(4B, 预留)
-	DWORD imglen;			//图像/视频长度
-	LPVOID lpimg;			//图像/视频内容
+	uint8_t cmdid;				//命令码：0x29
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//图像采集时间：4字节(Unix时间)
+	uint32_t filldata1;		//0xFF(4B, 预留)
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
+	uint8_t filldata2;			//0xFF(1B, 预留)
+	uint16_t offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
+	uint32_t filldata3;		//0xFF(4B, 预留)
+	uint32_t imglen;			//图像/视频长度
+	void* lpimg;			//图像/视频内容
 }StLastGapImgRes;
 //道岔缺口最新图像 end
 
@@ -534,39 +536,39 @@ typedef struct
 //请求
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x32
-	WORD sid;				//转辙机ID
-	DWORD begintime;		//开始时间：4字节(Unix时间)
-	DWORD endtime;			//结束时间：4字节(Unix时间)
-	BYTE imgtype;			//图像类型：0 静态图像列表， 2 操纵后图像列表， 3 过车时图像列表， 0xFF 所有类型 （315协议中定义，在卡斯科中填充OxFF）
-	BYTE resqid;			//请求编号
-	BYTE filldata[2];		//0xFF(2B, 预留)
+	uint8_t cmdid;				//命令码：0x32
+	uint16_t sid;				//转辙机ID
+	uint32_t begintime;		//开始时间：4字节(Unix时间)
+	uint32_t endtime;			//结束时间：4字节(Unix时间)
+	uint8_t imgtype;			//图像类型：0 静态图像列表， 2 操纵后图像列表， 3 过车时图像列表， 0xFF 所有类型 （315协议中定义，在卡斯科中填充OxFF）
+	uint8_t resqid;			//请求编号
+	uint8_t filldata[2];		//0xFF(2B, 预留)
 }StImgListReq;
 
 //应答
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x32
-	WORD sid;				//转辙机ID
-	WORD cnt;				//记录数
-	BYTE resqid;			//请求编号
-	BYTE filldata[3];		//0xFF(3B, 预留)
-	LPVOID lprecord;		//文件记录
+	uint8_t cmdid;				//命令码：0x32
+	uint16_t sid;				//转辙机ID
+	uint16_t cnt;				//记录数
+	uint8_t resqid;			//请求编号
+	uint8_t filldata[3];		//0xFF(3B, 预留)
+	void* lprecord;		//文件记录
 }StImgListRes;
 
 //文件记录
 typedef struct
 {
-	DWORD time;				//时间：4字节(Unix时间)
-	DWORD filldata1;		//0xFF(4B, 预留)
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
-	BYTE imgtype;			//图像类型：0 静态图像列表， 2 操纵后图像列表， 3 过车时图像列表 （315协议中定义，在卡斯科中填充OxFF）
-	WORD offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
-	WORD gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
-	WORD std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
-	DWORD filldata2;		//0xFF(4B, 预留)
-	DWORD imglen;			//图像长度
+	uint32_t time;				//时间：4字节(Unix时间)
+	uint32_t filldata1;		//0xFF(4B, 预留)
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
+	uint8_t imgtype;			//图像类型：0 静态图像列表， 2 操纵后图像列表， 3 过车时图像列表 （315协议中定义，在卡斯科中填充OxFF）
+	uint16_t offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
+	uint32_t filldata2;		//0xFF(4B, 预留)
+	uint32_t imglen;			//图像长度
 }StFileRecord;
 //图像列表 end
 
@@ -575,30 +577,30 @@ typedef struct
 //请求
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x2A
-	WORD sid;				//转辙机ID
-	DWORD time;				//时间：4字节(Unix时间)
-	BYTE imgtype;			//图像类型：0 静态图像列表， 2 操纵后图像列表， 3 过车时图像列表， 0xFF 所有类型 （315协议中定义，在卡斯科中填充OxFF）
-	BYTE filldata[3];		//0xFF(3B, 预留)
+	uint8_t cmdid;				//命令码：0x2A
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//时间：4字节(Unix时间)
+	uint8_t imgtype;			//图像类型：0 静态图像列表， 2 操纵后图像列表， 3 过车时图像列表， 0xFF 所有类型 （315协议中定义，在卡斯科中填充OxFF）
+	uint8_t filldata[3];		//0xFF(3B, 预留)
 }StImgInfoReq;
 
 //应答
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x2A
-	WORD sid;				//转辙机ID
-	DWORD time;				//时间：4字节(Unix时间) (应答帧中的时间为下位机采集时间，下位机上送上位机给出的时间之前最接近的图像)
-	BYTE imgtype;			//图像类型：0 静态图像列表， 2 操纵后图像列表， 3 过车时图像列表， 0xFF 所有类型 （315协议中定义，在卡斯科中填充OxFF）
-	BYTE filldata1[3];		//0xFF(3B, 预留)
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
-	BYTE filldata2;			//0xFF(1B, 预留)
-	WORD offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
-	WORD gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
-	WORD std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
-	DWORD filldata3;		//0xFF(4B, 预留) (卡斯科：第一字节为是否是路径的标识，路径：1， 其他：文件内容) （315：填充0xFF）
-	DWORD imglen;			//图像长度
-	LPVOID lpimg;			//图像内容
+	uint8_t cmdid;				//命令码：0x2A
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//时间：4字节(Unix时间) (应答帧中的时间为下位机采集时间，下位机上送上位机给出的时间之前最接近的图像)
+	uint8_t imgtype;			//图像类型：0 静态图像列表， 2 操纵后图像列表， 3 过车时图像列表， 0xFF 所有类型 （315协议中定义，在卡斯科中填充OxFF）
+	uint8_t filldata1[3];		//0xFF(3B, 预留)
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t lrsign;			//左右偏标志：0 无效，1 左偏， 2 右偏 (315跟卡斯科左偏右偏的含义不同)
+	uint8_t filldata2;			//0xFF(1B, 预留)
+	uint16_t offset;			//偏移值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t gap;				//缺口值：2字节，低位在前，除以100为实际值，单位mm
+	uint16_t std;				//标准值：2字节，低位在前，除以100为实际值，单位mm
+	uint32_t filldata3;		//0xFF(4B, 预留) (卡斯科：第一字节为是否是路径的标识，路径：1， 其他：文件内容) （315：填充0xFF）
+	uint32_t imglen;			//图像长度
+	void* lpimg;			//图像内容
 }StImgInfoRes;
 //图像信息 end
 
@@ -607,35 +609,35 @@ typedef struct
 //请求
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x2E
-	BYTE vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
-	WORD sid;				//转辙机ID
-	DWORD begintime;		//开始时间：4字节(Unix时间)
-	DWORD endtime;			//结束时间：4字节(Unix时间)
-	BYTE resqid;			//请求编号
-	BYTE filldata[3];		//0xFF(3B, 预留)
+	uint8_t cmdid;				//命令码：0x2E
+	uint8_t vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
+	uint16_t sid;				//转辙机ID
+	uint32_t begintime;		//开始时间：4字节(Unix时间)
+	uint32_t endtime;			//结束时间：4字节(Unix时间)
+	uint8_t resqid;			//请求编号
+	uint8_t filldata[3];		//0xFF(3B, 预留)
 }StVedioListReq;
 
 //响应
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x2E
-	BYTE vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
-	WORD sid;				//转辙机ID
-	BYTE resqid;			//请求编号
-	BYTE filldata[3];		//0xFF(3B, 预留)
-	WORD cnt;				//记录数
-	LPVOID lprecord;		//视频时间记录
+	uint8_t cmdid;				//命令码：0x2E
+	uint8_t vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
+	uint16_t sid;				//转辙机ID
+	uint8_t resqid;			//请求编号
+	uint8_t filldata[3];		//0xFF(3B, 预留)
+	uint16_t cnt;				//记录数
+	void* lprecord;		//视频时间记录
 }StVedioListRes;
 
 //视频时间记录
 typedef struct
 {
-	DWORD time;				//开始录制时间：4字节(Unix时间)
-	BYTE fixorinvert1;		//录制前定反位：0 定位，1  反位
-	BYTE fixorinvert2;		//录制后定反位：0 定位，1  反位
-	DWORD len;				//视频长度：视频的大小，字节数
-	DWORD filldata;			//0xFF(4B, 预留)
+	uint32_t time;				//开始录制时间：4字节(Unix时间)
+	uint8_t fixorinvert1;		//录制前定反位：0 定位，1  反位
+	uint8_t fixorinvert2;		//录制后定反位：0 定位，1  反位
+	uint32_t len;				//视频长度：视频的大小，字节数
+	uint32_t filldata;			//0xFF(4B, 预留)
 }StVedioRecord;
 //视频时间列表 end
 
@@ -644,50 +646,50 @@ typedef struct
 //请求
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x2F
-	BYTE vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
-	WORD sid;				//转辙机ID
-	DWORD time;				//开始时间：4字节(Unix时间)
-	DWORD filldata;			//0xFF(4B, 预留)
+	uint8_t cmdid;				//命令码：0x2F
+	uint8_t vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//开始时间：4字节(Unix时间)
+	uint32_t filldata;			//0xFF(4B, 预留)
 }StVedioFileReq;
 
 
 //响应
 struct StVedioFileRes4
 {
-	BYTE cmdid;				//命令码：0x2F
-	BYTE vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
-	WORD sid;				//转辙机ID
-	DWORD time;				//开始时间：4字节(Unix时间)
-	BYTE fixorinvert1;		//录制前定反位：0 定位，1  反位
-	BYTE fixorinvert2;		//录制后定反位：0 定位，1  反位
-	WORD timelen;			//视频时长
-	DWORD filldata;			//0xFF(4B, 预留)
-	DWORD len;				//视频长度：视频的大小，字节数
-	WORD packcnt;			//总包数
-	WORD curpackid;			//本包序号
-	DWORD datalen;			//本包内容长
-	LPVOID lpdata;			//本包内容
+	uint8_t cmdid;				//命令码：0x2F
+	uint8_t vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//开始时间：4字节(Unix时间)
+	uint8_t fixorinvert1;		//录制前定反位：0 定位，1  反位
+	uint8_t fixorinvert2;		//录制后定反位：0 定位，1  反位
+	uint16_t timelen;			//视频时长
+	uint32_t filldata;			//0xFF(4B, 预留)
+	uint32_t len;				//视频长度：视频的大小，字节数
+	uint16_t packcnt;			//总包数
+	uint16_t curpackid;			//本包序号
+	uint32_t datalen;			//本包内容长
+	void* lpdata;			//本包内容
 };
 
 //响应
 struct StVedioFileRes2
 {
-	BYTE cmdid;				//命令码：0x2F
-	BYTE vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
-	WORD sid;				//转辙机ID
-	DWORD time;				//开始时间：4字节(Unix时间)
-	BYTE fixorinvert1;		//录制前定反位：0 定位，1  反位
-	BYTE fixorinvert2;		//录制后定反位：0 定位，1  反位
-	WORD timelen;			//视频时长
-	DWORD filldata;			//0xFF(4B, 预留)
-	DWORD len;				//视频长度：视频的大小，字节数
-	WORD packcnt;			//总包数
-	WORD curpackid;			//本包序号
-	WORD datalen;			//本包内容长
-	LPVOID lpdata;			//本包内容
+	uint8_t cmdid;				//命令码：0x2F
+	uint8_t vediotype;			//视频类型：0x01 道岔动作视频; 0x02	过车视频
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//开始时间：4字节(Unix时间)
+	uint8_t fixorinvert1;		//录制前定反位：0 定位，1  反位
+	uint8_t fixorinvert2;		//录制后定反位：0 定位，1  反位
+	uint16_t timelen;			//视频时长
+	uint32_t filldata;			//0xFF(4B, 预留)
+	uint32_t len;				//视频长度：视频的大小，字节数
+	uint16_t packcnt;			//总包数
+	uint16_t curpackid;			//本包序号
+	uint16_t datalen;			//本包内容长
+	void* lpdata;			//本包内容
 
-	//virtual DWORD GetDataLen() const
+	//virtual uint32_t GetDataLen() const
 	//{
 	//	return datalen;
 	//}
@@ -695,11 +697,11 @@ struct StVedioFileRes2
 	//{
 	//	return sizeof(datalen);
 	//}
-	//virtual LPVOID &GetData()
+	//virtual void* &GetData()
 	//{
 	//	return lpdata;
 	//}
-	//virtual int SetDataLen(BYTE *da)
+	//virtual int SetDataLen(uint8_t *da)
 	//{
 	//	datalen = (*(decltype(datalen) *)da);
 	//	return GetItemSize();
@@ -719,10 +721,10 @@ struct StVedioFileRes2
 //1DQJ及道岔区段状态信息 命令码：0x22
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x22
-	WORD sid;				//转辙机ID
-	BYTE status;			//开关量状态：0x01  转辙机启动扳动(1DQJ吸起), 0x02  转辙机扳动结束(1DQJ落下), 0x03  道岔区段有车, 0x04  道岔区段车出清
-	DWORD time;				//时间：4字节(Unix时间)
+	uint8_t cmdid;				//命令码：0x22
+	uint16_t sid;				//转辙机ID
+	uint8_t status;			//开关量状态：0x01  转辙机启动扳动(1DQJ吸起), 0x02  转辙机扳动结束(1DQJ落下), 0x03  道岔区段有车, 0x04  道岔区段车出清
+	uint32_t time;				//时间：4字节(Unix时间)
 }St1DQJInfo;
 //1DQJ及道岔区段状态信息 end
 
@@ -730,62 +732,62 @@ typedef struct
 //请求
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x33
-	BYTE winType;			//天窗修类型
-	DWORD startTime;		//开始时间：4字节(Unix时间)
-	DWORD endTime;			//结束时间：4字节(Unix时间)
-	WORD winInfoLen;		//天窗修内容长度n
+	uint8_t cmdid;				//命令码：0x33
+	uint8_t winType;			//天窗修类型
+	uint32_t startTime;		//开始时间：4字节(Unix时间)
+	uint32_t endTime;			//结束时间：4字节(Unix时间)
+	uint16_t winInfoLen;		//天窗修内容长度n
 }StWinTimeReq;
 
 //曲线数据
 typedef struct
 {
-	BYTE type;				//曲线类型：左油压0x00、右油压0x01、启动电流0x02
-	DWORD filldata;			//0xFF(4B, 预留)
-	WORD len;				//本条曲线数据长度：指本条曲线数据本身长度，为字节数，不包含长度本身的2个字节
-	LPVOID lpdata;			//曲线数据：一个数据点用2个字节，低字节在前。 倍率0.01。油压曲线单位：MPa，启动电流曲线单位：A
+	uint8_t type;				//曲线类型：左油压0x00、右油压0x01、启动电流0x02
+	uint32_t filldata;			//0xFF(4B, 预留)
+	uint16_t len;				//本条曲线数据长度：指本条曲线数据本身长度，为字节数，不包含长度本身的2个字节
+	void* lpdata;			//曲线数据：一个数据点用2个字节，低字节在前。 倍率0.01。油压曲线单位：MPa，启动电流曲线单位：A
 }StCurve;
 
 //油压曲线回执
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x25
-	WORD sid;				//转辙机ID
-	DWORD time;				//时间：4字节(Unix时间)低字节在前，上位机发送动作开始时间时，此值为上位机发下来的时间；上位机没有发送道岔动作开始时间时，下位机按自己检测的道岔动作开始时间填充。
-	BYTE collectfreq;		//采集频率：每秒钟采集的数据数。
-	BYTE direct;			//定反位操作方向
-	DWORD filldata;			//0xFF(4B, 预留)
-	BYTE cnt;				//曲线条数
+	uint8_t cmdid;				//命令码：0x25
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//时间：4字节(Unix时间)低字节在前，上位机发送动作开始时间时，此值为上位机发下来的时间；上位机没有发送道岔动作开始时间时，下位机按自己检测的道岔动作开始时间填充。
+	uint8_t collectfreq;		//采集频率：每秒钟采集的数据数。
+	uint8_t direct;			//定反位操作方向
+	uint32_t filldata;			//0xFF(4B, 预留)
+	uint8_t cnt;				//曲线条数
 }StOilPreCurveRec;
 //油压曲线 end
 
 //油压曲线 命令码：0x25    (315预留，卡斯科已在使用) 
 struct StOilPreCurve :public StOilPreCurveRec
 {
-	LPVOID lpdata;			//曲线数据
+	void* lpdata;			//曲线数据
 };
 
 //油位及缺口采集设备状态信息  命令码：0x24
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x24
-	WORD cnt;				//转辙机个数：本帧数据对应的转辙机数目按实际监测的转辙机数计算。
-	LPVOID lpdata;			//转辙机数据记录
+	uint8_t cmdid;				//命令码：0x24
+	uint16_t cnt;				//转辙机个数：本帧数据对应的转辙机数目按实际监测的转辙机数计算。
+	void* lpdata;			//转辙机数据记录
 }StOilLevelInfo;
 
 //转辙机数据记录
 typedef struct
 {
-	WORD sid;				//转辙机ID
-	WORD oillevel;			//油位：0xFFFF为不监测，其他为正常
-	DWORD oiltime;			//油位时间：4字节(Unix时间)
-	WORD camerastate;		//摄像头状态： 0：正常，1：故障,  0xFF：不监测
-	DWORD camtime;			//摄像头采集时间：4字节(Unix时间)
-	SHORT temperature;		//采集设备温度：2字节(低位在前),  倍率 0.01, 采用有符号数。
-	DWORD temptime;			//温度采集时间：4字节(Unix时间)
-	WORD humidity;			//采集设备湿度：2字节(低位在前),  倍率 0.01。
-	DWORD humtime;			//湿度采集时间：4字节(Unix时间)
-	DWORD filldata;			//0xFF(4B, 预留)
+	uint16_t sid;				//转辙机ID
+	uint16_t oillevel;			//油位：0xFFFF为不监测，其他为正常
+	uint32_t oiltime;			//油位时间：4字节(Unix时间)
+	uint16_t camerastate;		//摄像头状态： 0：正常，1：故障,  0xFF：不监测
+	uint32_t camtime;			//摄像头采集时间：4字节(Unix时间)
+	int16_t temperature;		//采集设备温度：2字节(低位在前),  倍率 0.01, 采用有符号数。
+	uint32_t temptime;			//温度采集时间：4字节(Unix时间)
+	uint16_t humidity;			//采集设备湿度：2字节(低位在前),  倍率 0.01。
+	uint32_t humtime;			//湿度采集时间：4字节(Unix时间)
+	uint32_t filldata;			//0xFF(4B, 预留)
 }StSdataRecord;
 //油位及缺口采集设备状态信息 end
 
@@ -793,39 +795,39 @@ typedef struct
 //参数设置与获取 命令码：0x21 （卡斯科）
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x21
-	BYTE cmdtype;			//命令类型：0x01获取， 0x02设置
-	BYTE paramtype;			//参数类型：0x01报警参数，0x02预警参数
-	LPVOID lpdata;			//参数内容：命令类型为0x01时，上位机发送命令时内容为空。下位机回送全部转辙机信息
+	uint8_t cmdid;				//命令码：0x21
+	uint8_t cmdtype;			//命令类型：0x01获取， 0x02设置
+	uint8_t paramtype;			//参数类型：0x01报警参数，0x02预警参数
+	void* lpdata;			//参数内容：命令类型为0x01时，上位机发送命令时内容为空。下位机回送全部转辙机信息
 }StParamSet;
 
 //参数肉容
 typedef struct
 {
-	WORD cnt;				//转辙机个数
-	LPVOID lpdata;			//转辙机参数
+	uint16_t cnt;				//转辙机个数
+	void* lpdata;			//转辙机参数
 }StParamSetData;
 
 //转辙机参数(没有的用0xFFFF，缺口值按 0.01)
 typedef struct
 {
-	WORD sid;				//转辙机ID
-	WORD fixgapu;			//定位缺口值上限
-	WORD fixgapl;			//定位缺口值下限
-	WORD fixoffsetu;		//定位偏移值上限
-	WORD fixoffsetl;		//定位偏移值下限
-	WORD fixstd;			//定位标准值
-	WORD invertgapu;		//反位缺口值上限
-	WORD invertgapl;		//反位缺口值下限
-	WORD invertoffsetu;		//反位偏移值上限
-	WORD invertoffsetl;		//反位偏移值下限
-	WORD invertstd;			//反位标准值
-	WORD tempu;				//温度上限
-	WORD templ;				//温度下限
-	WORD humu;				//湿度上限
-	WORD huml;				//湿度下限
-	WORD oillevelu;			//油位上限
-	WORD oillevell;			//油位下限
+	uint16_t sid;				//转辙机ID
+	uint16_t fixgapu;			//定位缺口值上限
+	uint16_t fixgapl;			//定位缺口值下限
+	uint16_t fixoffsetu;		//定位偏移值上限
+	uint16_t fixoffsetl;		//定位偏移值下限
+	uint16_t fixstd;			//定位标准值
+	uint16_t invertgapu;		//反位缺口值上限
+	uint16_t invertgapl;		//反位缺口值下限
+	uint16_t invertoffsetu;		//反位偏移值上限
+	uint16_t invertoffsetl;		//反位偏移值下限
+	uint16_t invertstd;			//反位标准值
+	uint16_t tempu;				//温度上限
+	uint16_t templ;				//温度下限
+	uint16_t humu;				//湿度上限
+	uint16_t huml;				//湿度下限
+	uint16_t oillevelu;			//油位上限
+	uint16_t oillevell;			//油位下限
 }StSwitchParam;
 //参数设置与获取 end
 
@@ -834,52 +836,52 @@ typedef struct
 //请求
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x30
-	WORD sid;				//转辙机ID
-	BYTE fixorinvert;		//请求命令时转辙机的定反位状态：0 定位，1  反位
-	BYTE cmdtype;			//命令类型：
+	uint8_t cmdid;				//命令码：0x30
+	uint16_t sid;				//转辙机ID
+	uint8_t fixorinvert;		//请求命令时转辙机的定反位状态：0 定位，1  反位
+	uint8_t cmdtype;			//命令类型：
 	//0x01  请求码流。命令内容为：帧率(1B) + 图像宽度(2B) + 图像高度(2B) + 预留(2B)。此时命令内容长度为7
 	//0x02  开始。此时命令内容长度为0，没有命令内容
 	//0x04  停止。此时命令内容长度为0，没有命令内容
 	//0x05  设置帧率。命令长度为1。命令内容为：帧率（1B）
 	//0x06  设置图像大小。命令长度为4。命令内容为：图像宽度(2B) + 图像高度(2B)
-	LPVOID lpdata;			//命令内容
+	void* lpdata;			//命令内容
 }StRealCtrlReq;
 
 //请求码流
 typedef struct
 {
-	BYTE rate;				//帧率
-	WORD width;				//图像宽度
-	WORD heigh;				//图像高度
-	WORD filldata;			//预留
+	uint8_t rate;				//帧率
+	uint16_t width;				//图像宽度
+	uint16_t heigh;				//图像高度
+	uint16_t filldata;			//预留
 }StRealReqStream;
 
 //设置帧率
 typedef struct
 {
-	BYTE rate;				//帧率
+	uint8_t rate;				//帧率
 }StRealSetRate;
 
 //设置图像大小
 typedef struct
 {
-	WORD width;				//图像宽度
-	WORD heigh;				//图像高度
+	uint16_t width;				//图像宽度
+	uint16_t heigh;				//图像高度
 }StRealSetSize;
 
 //响应
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x30
-	WORD sid;				//转辙机ID
-	BYTE result;			//响应结果：
+	uint8_t cmdid;				//命令码：0x30
+	uint16_t sid;				//转辙机ID
+	uint8_t result;			//响应结果：
 	//0x00 失败。其他内容：失败原因(1B)
 	//		失败原因：1 摄像头正在拍照，请5s后再直播。
 	//				2 直播失败
 	//0x01 成功。其他内容为空
 	//0x02 已有用户建立连接。其他内容：连接用户IP(4B)
-	LPVOID lpdata;//其他内容
+	void* lpdata;//其他内容
 
 }StRealCtrlRes;
 //实时视频流控制命令 end
@@ -888,50 +890,50 @@ typedef struct
 //实时码流 命令码：0x31
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x31
-	WORD sid;				//转辙机ID
-	DWORD packid;			//实时码流包序号：从 1开始
-	DWORD packlen;			//实时码流包长度：< 64kB
-	LPVOID lpdata;			//实时码流包数据
+	uint8_t cmdid;				//命令码：0x31
+	uint16_t sid;				//转辙机ID
+	uint32_t packid;			//实时码流包序号：从 1开始
+	uint32_t packlen;			//实时码流包长度：< 64kB
+	void* lpdata;			//实时码流包数据
 }StRealStream;
 //实时码流 end
 
 //室外电参数动作曲线回执
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x41
-	WORD sid;				//转辙机ID
-	DWORD time;				//采集时间: unix时间，低字节在前. 上位机发送动作开始时间时，此值为上位机发下来的时间；上位机没有发送道岔动作开始时间时，下位机按自己检测的道岔动作开始时间填充。
-	BYTE freq;				//采集频率：每秒钟采集的数据数。  25个点
-	BYTE dir;				//方向：0-定到反  1-反到定  2-定到定  3-反到反  4-定位到故障位  5-反位到故障位  6-故障到定位  7-故障到反位  8-故障到故障位  0xFF-无效
-	DWORD acttime;			//动作次数
-	BYTE r[4];				//预留(4B, 填充4字节0xFF)
-	WORD cnt;				//曲线条数：本次采集的曲线条数。
+	uint8_t cmdid;				//命令码：0x41
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//采集时间: unix时间，低字节在前. 上位机发送动作开始时间时，此值为上位机发下来的时间；上位机没有发送道岔动作开始时间时，下位机按自己检测的道岔动作开始时间填充。
+	uint8_t freq;				//采集频率：每秒钟采集的数据数。  25个点
+	uint8_t dir;				//方向：0-定到反  1-反到定  2-定到定  3-反到反  4-定位到故障位  5-反位到故障位  6-故障到定位  7-故障到反位  8-故障到故障位  0xFF-无效
+	uint32_t acttime;			//动作次数
+	uint8_t r[4];				//预留(4B, 填充4字节0xFF)
+	uint16_t cnt;				//曲线条数：本次采集的曲线条数。
 }StElecCurveRec;
 //室外电参数动作曲线 end
 
 //室外电参数动作曲线 命令码：0x41
 struct StElecCurve : public StElecCurveRec
 {
-	//BYTE cmdid;				//命令码：0x41
-	//WORD sid;				//转辙机ID
-	//DWORD time;				//采集时间: unix时间，低字节在前. 上位机发送动作开始时间时，此值为上位机发下来的时间；上位机没有发送道岔动作开始时间时，下位机按自己检测的道岔动作开始时间填充。
-	//BYTE freq;				//采集频率：每秒钟采集的数据数。  25个点
-	//BYTE dir;				//方向：0-定到反  1-反到定  2-定到定  3-反到反  4-定位到故障位  5-反位到故障位  6-故障到定位  7-故障到反位  8-故障到故障位  0xFF-无效
-	//DWORD acttime;			//动作次数
-	//BYTE r[4];				//预留(4B, 填充4字节0xFF)
-	//WORD cnt;				//曲线条数：本次采集的曲线条数。
-	LPVOID lpdata;			//曲线数据
+	//uint8_t cmdid;				//命令码：0x41
+	//uint16_t sid;				//转辙机ID
+	//uint32_t time;				//采集时间: unix时间，低字节在前. 上位机发送动作开始时间时，此值为上位机发下来的时间；上位机没有发送道岔动作开始时间时，下位机按自己检测的道岔动作开始时间填充。
+	//uint8_t freq;				//采集频率：每秒钟采集的数据数。  25个点
+	//uint8_t dir;				//方向：0-定到反  1-反到定  2-定到定  3-反到反  4-定位到故障位  5-反位到故障位  6-故障到定位  7-故障到反位  8-故障到故障位  0xFF-无效
+	//uint32_t acttime;			//动作次数
+	//uint8_t r[4];				//预留(4B, 填充4字节0xFF)
+	//uint16_t cnt;				//曲线条数：本次采集的曲线条数。
+	void* lpdata;			//曲线数据
 };
 
 //曲线数据
 typedef struct
 {
-	BYTE type;				//曲线类型
-	BYTE r[4];				//预留(4B, 填充4字节0xFF)
-	WORD datalen;			//本条曲线数据长度：指本条曲线数据本身长度，为字节数，不包含长度本身的2个字节。
-	WORD datacnt;			//曲线数据点数：本条曲线包含的数据点个数。
-	LPVOID lpdata;			//曲线数据：每个数据点的内容与曲线类型相关：（重要：曲线类型中选定的一条曲线，曲线数据每个点都是2字节：而不是每一个点包含一个完整的各类数据结构！）
+	uint8_t type;				//曲线类型
+	uint8_t r[4];				//预留(4B, 填充4字节0xFF)
+	uint16_t datalen;			//本条曲线数据长度：指本条曲线数据本身长度，为字节数，不包含长度本身的2个字节。
+	uint16_t datacnt;			//曲线数据点数：本条曲线包含的数据点个数。
+	void* lpdata;			//曲线数据：每个数据点的内容与曲线类型相关：（重要：曲线类型中选定的一条曲线，曲线数据每个点都是2字节：而不是每一个点包含一个完整的各类数据结构！）
 }StElecCurveData;
 
 
@@ -945,100 +947,100 @@ typedef struct
 //帧头
 typedef struct
 {
-	BYTE fheader[5];		//帧头：字符型 5字节“qknet”(71 6B 6E 65 74)
-	DWORD datalen;			//数据长度
-	LPVOID lpdata;			//数据
-	DWORD ftail;			//帧尾：填充4个字节的0xFF。
+	uint8_t fheader[5];		//帧头：字符型 5字节“qknet”(71 6B 6E 65 74)
+	uint32_t datalen;			//数据长度
+	void* lpdata;			//数据
+	uint32_t ftail;			//帧尾：填充4个字节的0xFF。
 }StVedioFrame;
 
 //开始播放历史视频文件 命令码：0x10
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x10
-	BYTE type;				//视频类型：0x01 道岔动作视频; 0x02 过车视频
-	WORD sid;				//转辙机ID
-	WORD titlelen;			//显示标题长度
-	LPSTR title;			//显示标题
-	WORD pathlen;			//本地视频路径长度
-	LPSTR path;				//本地视频路径
+	uint8_t cmdid;				//命令码：0x10
+	uint8_t type;				//视频类型：0x01 道岔动作视频; 0x02 过车视频
+	uint16_t sid;				//转辙机ID
+	uint16_t titlelen;			//显示标题长度
+	char* title;			//显示标题
+	uint16_t pathlen;			//本地视频路径长度
+	char* path;				//本地视频路径
 }StVedioFileStart;
 
 //结束播放历史视频文件 命令码：0x11
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x11
-	BYTE type;				//视频类型：0x01 道岔动作视频; 0x02 过车视频
+	uint8_t cmdid;				//命令码：0x11
+	uint8_t type;				//视频类型：0x01 道岔动作视频; 0x02 过车视频
 }StVedioFileStop;
 
 //请求设置视频显示标题 命令码：0x12
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x12
-	BYTE type;				//视频类型：0x00 实时视频，0x01 道岔动作视频; 0x02 过车视频
-	WORD titlelen;			//显示标题长度
-	LPSTR title;			//显示标题
+	uint8_t cmdid;				//命令码：0x12
+	uint8_t type;				//视频类型：0x00 实时视频，0x01 道岔动作视频; 0x02 过车视频
+	uint16_t titlelen;			//显示标题长度
+	char* title;			//显示标题
 }StVedioSetTitle;
 
 //开始或结束实时视频流 命令码：0x13
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x13
-	BYTE type;				//视频类型：0x00 实时视频
-	BYTE sign;				//标志：0x00 结束播放实时视频流； 0x01开始播放实时视频流
-	WORD sid;				//转辙机ID
-	BYTE rate;				//帧率：每秒播放的帧数
-	WORD width;				//图像宽度：单位为像素，播放图像的宽度（像素）
-	WORD heigh;				//图像高度：单位为像素，播放图像的高度（像素）
+	uint8_t cmdid;				//命令码：0x13
+	uint8_t type;				//视频类型：0x00 实时视频
+	uint8_t sign;				//标志：0x00 结束播放实时视频流； 0x01开始播放实时视频流
+	uint16_t sid;				//转辙机ID
+	uint8_t rate;				//帧率：每秒播放的帧数
+	uint16_t width;				//图像宽度：单位为像素，播放图像的宽度（像素）
+	uint16_t heigh;				//图像高度：单位为像素，播放图像的高度（像素）
 }StVedioRealCtrl;
 
 //播放实时视频流 命令码：0x14
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x14
-	BYTE type;				//视频类型：0x00 实时视频
-	WORD sid;				//转辙机ID
-	WORD len;				//码流数据长度
-	LPVOID lpdata;			//码流数据
+	uint8_t cmdid;				//命令码：0x14
+	uint8_t type;				//视频类型：0x00 实时视频
+	uint16_t sid;				//转辙机ID
+	uint16_t len;				//码流数据长度
+	void* lpdata;			//码流数据
 }StVedioRealPlay;
 
 //视频插件通信协议 end
 
 typedef struct
 {
-	BYTE cmdid;			//命令码：0x40
-	WORD zzjcnt;		//转辙机数
-	LPVOID lprecord;	//记录
+	uint8_t cmdid;			//命令码：0x40
+	uint16_t zzjcnt;		//转辙机数
+	void* lprecord;	//记录
 }StStaticPowerList;
 
 typedef struct
 {
-	WORD zzjid;
+	uint16_t zzjid;
 	short powVal;
-	DWORD acqtime;
-	BYTE r[4];//预留(4B, 填充4字节0xFF)
+	uint32_t acqtime;
+	uint8_t r[4];//预留(4B, 填充4字节0xFF)
 }StStaticPowerData;
 
 //电参数计算阻力 命令码：0x42
 //曲线数据
 typedef struct CurveInfoHead
 {
-	BYTE  type;				//曲线类型
-	DWORD rbuf;				//预留
-	WORD  length;			//本条曲线数据长度
-	WORD  count;			//曲线数据点数
-	vector<WORD> data;
+	uint8_t  type;				//曲线类型
+	uint32_t rbuf;				//预留
+	uint16_t  length;			//本条曲线数据长度
+	uint16_t  count;			//曲线数据点数
+	vector<uint16_t> data;
 }CurveInfoHead;
 //请求
 typedef struct CalPower
 {
-	BYTE cmdid;			//命令码：0x42
-	WORD sid;			//转辙机ID
-	DWORD time;			//采集时间
-	BYTE frequency;		//最高采集频率
-	BYTE dir;			//方向
-	DWORD moveCount;	//动作次数
-	DWORD rbuf;			//预留
-	WORD curveCount;	//曲线条数
+	uint8_t cmdid;			//命令码：0x42
+	uint16_t sid;			//转辙机ID
+	uint32_t time;			//采集时间
+	uint8_t frequency;		//最高采集频率
+	uint8_t dir;			//方向
+	uint32_t moveCount;	//动作次数
+	uint32_t rbuf;			//预留
+	uint16_t curveCount;	//曲线条数
 	vector<CurveInfoHead> curveInfoList;	//曲线数据 CurveInfoHead
 
 	CalPower()
@@ -1051,15 +1053,15 @@ typedef struct CalPower
 //电参数 请求转阻力 命令码：0x42///////////////////////////////////////sadfhsa
 typedef struct CalPowerResp
 {
-	BYTE  cmdid;			//命令码：0x42
-	WORD  sid;			//转辙机ID
-	DWORD time;			//采集时间
-	BYTE  frequency;	//最高采集频率1B
-	BYTE  dir;			//方向1B
-	DWORD moveCount;	//动作次数4B
-	DWORD rbuf;			//预留4B 0xFF
-	BYTE  ret;			//计算结果 1B
-	WORD  curveCount;	//曲线条数2B
+	uint8_t  cmdid;			//命令码：0x42
+	uint16_t  sid;			//转辙机ID
+	uint32_t time;			//采集时间
+	uint8_t  frequency;	//最高采集频率1B
+	uint8_t  dir;			//方向1B
+	uint32_t moveCount;	//动作次数4B
+	uint32_t rbuf;			//预留4B 0xFF
+	uint8_t  ret;			//计算结果 1B
+	uint16_t  curveCount;	//曲线条数2B
 	vector<CurveInfoHead> curveInfoList;	//曲线数据 CurveInfoHead
 
 	CalPowerResp()
@@ -1085,23 +1087,23 @@ typedef struct CalPowerResp
 //请求
 typedef struct
 {
-	BYTE cmdid;		//命令码：0x43
-	WORD sid;		//转辙机ID
-	DWORD begintime;//开始时间：4字节(Unix时间)
-	DWORD endtime;	//结束时间：4字节(Unix时间)
-	BYTE direction;	//方向：0定到反//1反到定//2定到定//3反到反//4定位到故障位//5反位到故障位//6故障到定位//7故障到反位//8故障到故障位//0xFF 无效
+	uint8_t cmdid;		//命令码：0x43
+	uint16_t sid;		//转辙机ID
+	uint32_t begintime;//开始时间：4字节(Unix时间)
+	uint32_t endtime;	//结束时间：4字节(Unix时间)
+	uint8_t direction;	//方向：0定到反//1反到定//2定到定//3反到反//4定位到故障位//5反位到故障位//6故障到定位//7故障到反位//8故障到故障位//0xFF 无效
 }StPowerListReq;
 
 //0x43 文件记录 结构体 
 typedef struct StPowerRecord
 {
-	DWORD time;				//采集时间：4字节(Unix时间)
-	BYTE acqfreq;		    //采集频率
-	DWORD movecount;		//动作次数
+	uint32_t time;				//采集时间：4字节(Unix时间)
+	uint8_t acqfreq;		    //采集频率
+	uint32_t movecount;		//动作次数
 	eMOVE_DIRECT dir;
-	BYTE bFrictionCurve;	//是否摩擦力，0x01是摩擦力，0x00正常转换阻力, 0xFF 无效
-	BYTE r[2];				//预留(2B, 填充2字节0xFF)
-	BYTE calresult;         //计算结果
+	uint8_t bFrictionCurve;	//是否摩擦力，0x01是摩擦力，0x00正常转换阻力, 0xFF 无效
+	uint8_t r[2];				//预留(2B, 填充2字节0xFF)
+	uint8_t calresult;         //计算结果
 	uint8_t curvenum;          //曲线条数
 	uint8_t rever = 0xff;
 }StPowerRecord;
@@ -1109,96 +1111,96 @@ typedef struct StPowerRecord
 //应答
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x43
-	WORD sid;				//转辙机ID
-	BYTE direction;         //方向
-	WORD cnt;				//记录数
-	LPVOID lprecord;		//文件记录
+	uint8_t cmdid;				//命令码：0x43
+	uint16_t sid;				//转辙机ID
+	uint8_t direction;         //方向
+	uint16_t cnt;				//记录数
+	void* lprecord;		//文件记录
 }StPowerListRes;
 
 //阻力信息 命令码：0x44
 //请求
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x44
-	WORD sid;				//转辙机ID
-	DWORD time;				//时间：4字节(Unix时间)
-	BYTE direction;         //方向
+	uint8_t cmdid;				//命令码：0x44
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//时间：4字节(Unix时间)
+	uint8_t direction;         //方向
 }StPowerInfoReq;
 
 //0x44 曲线信息结构体
 typedef struct
 {
-	BYTE bycurvetype;
-	BYTE r[4];				//预留(4B, 填充4字节0xFF)
-	WORD curvelen;          //曲线长度
-	LPVOID lpcurvedata;		//曲线数据
+	uint8_t bycurvetype;
+	uint8_t r[4];				//预留(4B, 填充4字节0xFF)
+	uint16_t curvelen;          //曲线长度
+	void* lpcurvedata;		//曲线数据
 }StPowerCurveInfo;
 //0x44应答
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x44
-	WORD sid;				//转辙机ID
-	DWORD time;				//时间：4字节(Unix时间) (应答帧中的时间为下位机采集时间，下位机上送上位机给出的时间之前最接近的阻力文件)
-	BYTE acqfreq;           //采集频率
-	BYTE direction;         //方向
-	DWORD movecount;        //动作次数
-	DWORD r;				//预留(4B, 填充4字节0xFF)
-	BYTE calresult;         //计算结果
-	WORD cnt;				//曲线条数
-	LPVOID lprecord;		//曲线记录
+	uint8_t cmdid;				//命令码：0x44
+	uint16_t sid;				//转辙机ID
+	uint32_t time;				//时间：4字节(Unix时间) (应答帧中的时间为下位机采集时间，下位机上送上位机给出的时间之前最接近的阻力文件)
+	uint8_t acqfreq;           //采集频率
+	uint8_t direction;         //方向
+	uint32_t movecount;        //动作次数
+	uint32_t r;				//预留(4B, 填充4字节0xFF)
+	uint8_t calresult;         //计算结果
+	uint16_t cnt;				//曲线条数
+	void* lprecord;		//曲线记录
 }StPowerInfoRes;
 
 ////315新文件生成 命令码：0xF1
 typedef struct
 {
-	BYTE cmdid;				//命令码：0xF1
-	WORD sid;				//转辙机ID
-	WORD acqObjType;		//采集对象类型
-	DWORD time;				//时间：4字节(Unix时间)
+	uint8_t cmdid;				//命令码：0xF1
+	uint16_t sid;				//转辙机ID
+	uint16_t acqObjType;		//采集对象类型
+	uint32_t time;				//时间：4字节(Unix时间)
 }NewDataFile;
 
 ////新阻力通知
 //typedef struct
 //{
-//	BYTE cmdid;				//命令码：0xF1
-//	DWORD r;				//预留
-//	WORD sid;				//转辙机ID
-//	DWORD r1;				//预留
-//	BYTE cbDataType;		//数据类型
-//	WORD acqObjType;		//采集对象类型
-//	DWORD time;				//时间：4字节(Unix时间)
-//	DWORD r2;				//预留
+//	uint8_t cmdid;				//命令码：0xF1
+//	uint32_t r;				//预留
+//	uint16_t sid;				//转辙机ID
+//	uint32_t r1;				//预留
+//	uint8_t cbDataType;		//数据类型
+//	uint16_t acqObjType;		//采集对象类型
+//	uint32_t time;				//时间：4字节(Unix时间)
+//	uint32_t r2;				//预留
 //}StNewPowerNotify;
 
 //315新文件生成 命令码：0xF2
 //新阻力列表
 typedef struct
 {
-	BYTE cmdid;				//命令码：0xF2
-	WORD sid;				//转辙机ID
-	DWORD r;				//预留
-	BYTE cbDataType;		//数据类型
-	WORD acqObjType;		//采集对象类型
-	DWORD starttime;		//开始时间：4字节(Unix时间)
-	DWORD endtime;			//结束时间：4字节(Unix时间)
+	uint8_t cmdid;				//命令码：0xF2
+	uint16_t sid;				//转辙机ID
+	uint32_t r;				//预留
+	uint8_t cbDataType;		//数据类型
+	uint16_t acqObjType;		//采集对象类型
+	uint32_t starttime;		//开始时间：4字节(Unix时间)
+	uint32_t endtime;			//结束时间：4字节(Unix时间)
 }StPowerFileListResq;
 
 //315新文件生成 命令码：0xF2
 //新阻力列表
 typedef struct
 {
-	WORD sid;				//转辙机ID
-	DWORD r;				//预留
-	BYTE cbDataType;		//数据类型
-	WORD acqObjType;		//采集对象类型
-	DWORD time;				//采集时间：4字节(Unix时间)
-	DWORD r1;				//预留
+	uint16_t sid;				//转辙机ID
+	uint32_t r;				//预留
+	uint8_t cbDataType;		//数据类型
+	uint16_t acqObjType;		//采集对象类型
+	uint32_t time;				//采集时间：4字节(Unix时间)
+	uint32_t r1;				//预留
 }StPowerFileList;
 
 typedef struct
 {
-	BYTE cmdid;				//命令码：0xF2
+	uint8_t cmdid;				//命令码：0xF2
 	StPowerFileList* list;
 	int	 nListCount;
 }StPowerFileListF2;
@@ -1206,35 +1208,35 @@ typedef struct
 //文件请求 命令码：0xF3
 typedef struct
 {
-	BYTE cmdid;				//命令码：0xF3
-	WORD sid;				//转辙机ID
-	WORD acqObjType;		//采集对象类型
-	DWORD time;				//时间：4字节(Unix时间)
+	uint8_t cmdid;				//命令码：0xF3
+	uint16_t sid;				//转辙机ID
+	uint16_t acqObjType;		//采集对象类型
+	uint32_t time;				//时间：4字节(Unix时间)
 
 	/*读取模式:
 	0: 服务器一次性返回所有文件分包
 	1: 服务器返回指定的分包编号。分包编号由后续字段 “分包号”指定。数据包从1开始编号，1为第一包
 	*/
-	BYTE cbReadMode;		//读取模式
-	WORD wSubID;			//分包号
-	DWORD r;				//预留
+	uint8_t cbReadMode;		//读取模式
+	uint16_t wSubID;			//分包号
+	uint32_t r;				//预留
 }StPowerFileDataResq;
 
 //回包
 typedef struct
 {
-	BYTE cmdid;				//命令码：0xF3
-	WORD sid;				//转辙机ID
-	WORD acqObjType;		//采集对象类型
-	DWORD time;				//时间：4字节(Unix时间)
-	BYTE result;			//0：成功 1：文件不存在 2：文件被占用
-	DWORD fileLen;			//文件总长度
-	WORD pakNo;				//包序号
-	WORD pakAll;			//总包数
-	WORD crc;				//crc校验
-	DWORD r;				//预留
-	DWORD pakLen;			//本包包长
-	LPVOID dataInfo;		//文件信息
+	uint8_t cmdid;				//命令码：0xF3
+	uint16_t sid;				//转辙机ID
+	uint16_t acqObjType;		//采集对象类型
+	uint32_t time;				//时间：4字节(Unix时间)
+	uint8_t result;			//0：成功 1：文件不存在 2：文件被占用
+	uint32_t fileLen;			//文件总长度
+	uint16_t pakNo;				//包序号
+	uint16_t pakAll;			//总包数
+	uint16_t crc;				//crc校验
+	uint32_t r;				//预留
+	uint32_t pakLen;			//本包包长
+	void* dataInfo;		//文件信息
 }StPowerFileData;
 
 
@@ -1242,87 +1244,87 @@ typedef struct
 //手动加油请求 命令码：0x51
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x51
-	WORD sid;				//转辙机ID
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	DWORD r;				//预留
+	uint8_t cmdid;				//命令码：0x51
+	uint16_t sid;				//转辙机ID
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint32_t r;				//预留
 }StManualOilingResq;
 
 //手动加油应答 命令码：0x51
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x51
-	WORD sid;				//转辙机ID
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE result;			//响应结果：0：成功 1：没有找到设备 2：不支持手动加油功能
-	DWORD r;				//预留
+	uint8_t cmdid;				//命令码：0x51
+	uint16_t sid;				//转辙机ID
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t result;			//响应结果：0：成功 1：没有找到设备 2：不支持手动加油功能
+	uint32_t r;				//预留
 }StManualOilingRes;
 
 //加油结果通知 命令码：0x52  参照JIAYOU_RECORD
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x52
-	WORD sid;				//转辙机ID
-	BYTE type;				//加油方式 JIAYOU_TYPE
-	WORD status;			//加油状态 0：未知 1：加油成功 2: 加油失败
-	BYTE failCode;			//异常码 bFailCode
-	DWORD time;				//时间：4字节(Unix时间) JiaYouTime
-	WORD  timeLen;			//持续时间 JiayouTimeLen
-	DWORD triggerTime;		//触发时间：4字节(Unix时间) TriggerTime
-	BYTE fixorinvert;		//定反位：0 定位，1  反位
-	BYTE r[9];				//预留
+	uint8_t cmdid;				//命令码：0x52
+	uint16_t sid;				//转辙机ID
+	uint8_t type;				//加油方式 JIAYOU_TYPE
+	uint16_t status;			//加油状态 0：未知 1：加油成功 2: 加油失败
+	uint8_t failCode;			//异常码 bFailCode
+	uint32_t time;				//时间：4字节(Unix时间) JiaYouTime
+	uint16_t  timeLen;			//持续时间 JiayouTimeLen
+	uint32_t triggerTime;		//触发时间：4字节(Unix时间) TriggerTime
+	uint8_t fixorinvert;		//定反位：0 定位，1  反位
+	uint8_t r[9];				//预留
 }StOilingResultNotify;
 
 //加油箱储油量 请求包
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x53
-	DWORD r;				//预留
-	WORD sid;				//转辙机ID
+	uint8_t cmdid;				//命令码：0x53
+	uint32_t r;				//预留
+	uint16_t sid;				//转辙机ID
 }StOilBoxVolumeResq;
 
 
 //加油箱储油量 转辙机数据
 typedef struct
 {
-	WORD sid;				//转辙机ID
-	WORD value;				//数据
-	DWORD r;				//预留
+	uint16_t sid;				//转辙机ID
+	uint16_t value;				//数据
+	uint32_t r;				//预留
 }StOilBoxVolume;
 
 //加油箱储油量 应答包
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x53
-	WORD cnt;				//转辙机数量
+	uint8_t cmdid;				//命令码：0x53
+	uint16_t cnt;				//转辙机数量
 }StOilBoxVolumeRes;
 
 //加油箱储油量
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x53
-	WORD v;					//
-	LPVOID dataInfo;		//文件信息
+	uint8_t cmdid;				//命令码：0x53
+	uint16_t v;					//
+	void* dataInfo;		//文件信息
 }StOilBoxVolumeData;
 
 //定反表 转辙机状态
 typedef struct ZZJIDANDSTATUS
 {
-	WORD  zzjID;
-	BYTE  ZZJStatus;
+	uint16_t  zzjID;
+	uint8_t  ZZJStatus;
 
 }ZZJIDAndStatus;
 
 //0x60 DBJ FBJ信息
 typedef struct DBJFBJINFO
 {
-	BYTE cmdid;			//命令码：0x60
-	DWORD time;			//采集时间
-	DWORD ret;			//预留
+	uint8_t cmdid;			//命令码：0x60
+	uint32_t time;			//采集时间
+	uint32_t ret;			//预留
 
 	//数据包部分
-	WORD dataCount;	//动作次数
-	LPVOID curveInfoList;
+	uint16_t dataCount;	//动作次数
+	void* curveInfoList;
 	
 	DBJFBJINFO()
 	{
@@ -1333,12 +1335,12 @@ typedef struct DBJFBJINFO
 //315扩展的json格式的视频列表
 typedef struct
 {
-	BYTE cmdid;				//命令码：0x2E
-	WORD pkt_num;				//包序号
-	BYTE filldata[4];		//0xFF(4B, 预留)
-	BYTE frmType;		//0x01 代表json数组  0x02 json对象
-	DWORD frmLength;				//json帧内容长度
-	LPSTR lpContent;			//json帧内容
+	uint8_t cmdid;				//命令码：0x2E
+	uint16_t pkt_num;				//包序号
+	uint8_t filldata[4];		//0xFF(4B, 预留)
+	uint8_t frmType;		//0x01 代表json数组  0x02 json对象
+	uint32_t frmLength;				//json帧内容长度
+	char* lpContent;			//json帧内容
 }St315Json;
 
 #pragma pack(pop)
@@ -1360,131 +1362,131 @@ public:
 	virtual ~Parse315Protocol() {}
 	//static tstring GetAcqDescByAcqObjType(ACQ_OBJ_TYPE acqObjType);
 
-	static BOOL Parse(StFrame&, LPVOID, int, int dir = 1);//解析  JHD->微机监测数据包（JHD就是站机端）
-	static BOOL ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir);
-	static BOOL ParseDataFrmJson(StFrame& data, LPVOID* buf, int len, int dir);
+	static bool Parse(StFrame&, void*, int, int dir = 1);//解析  JHD->微机监测数据包（JHD就是站机端）
+	static bool ParseDataFrm(StFrame& data, void** buf, int len, int dir);
+	static bool ParseDataFrmJson(StFrame& data, void** buf, int len, int dir);
 
-	static BOOL Parse_4res(StGapValue& data, LPVOID buf, int len);//对接四川众合缺口值解析
-	static BOOL Unparse(StFrame&, vector<BYTE>&, int&, int dir = 0);//反解析   微机监测->JHD数据包
-	static BOOL Unparse(StFrame& data, vector<BYTE>& buf, int& len, BYTE* subbuf, int sublen);
-	static BOOL Release(StFrame&, int dir = 0);//释放内存，dir: 数据包方向  0-微机监测->JHD  1-JHD->微机监测
-	static BOOL CheckPackData(StFrame&, LPVOID, int, int dir);//检查数据包是否合法并进行解析，dir: 数据包方向  0-微机监测->JHD  1-JHD->微机监测
+	static bool Parse_4res(StGapValue& data, void* buf, int len);//对接四川众合缺口值解析
+	static bool Unparse(StFrame&, vector<uint8_t>&, int&, int dir = 0);//反解析   微机监测->JHD数据包
+	static bool Unparse(StFrame& data, vector<uint8_t>& buf, int& len, uint8_t* subbuf, int sublen);
+	static bool Release(StFrame&, int dir = 0);//释放内存，dir: 数据包方向  0-微机监测->JHD  1-JHD->微机监测
+	static bool CheckPackData(StFrame&, void*, int, int dir);//检查数据包是否合法并进行解析，dir: 数据包方向  0-微机监测->JHD  1-JHD->微机监测
 
-	static BYTE GetCommandId(const StFrame&);
-	static BOOL GetFrameData(LPVOID&, int&, int&);//从缓冲区取得一帧数据
+	static uint8_t GetCommandId(const StFrame&);
+	static bool GetFrameData(void*&, int&, int&);//从缓冲区取得一帧数据
 	static tstring ToString(const StFrame&, int dir);//将数据包翻译成字符串，dir: 数据包方向  0-微机监测->JHD  1-JHD->微机监测
-	static tstring AStringToTString(LPCSTR lpStr);
+	static tstring AStringToTString(const char* lpStr);
 	static TIME Time_tToSystemTime(time_t t);
-	static BOOL TimeToString(const TIME& time, string& str);
-	static BYTE GetOptDirIndex(tstring direct);//根据操作方向类型描述文本获取对应值
+	static bool TimeToString(const TIME& time, string& str);
+	static uint8_t GetOptDirIndex(tstring direct);//根据操作方向类型描述文本获取对应值
 	static tstring GetOptDirDesc(int direct);//根据操作方向类型值获取对应描述文本
 	static tstring GetOptDirDesc(eMOVE_DIRECT direct);//根据操作方向类型值获取对应描述文本
 	static tstring GetElecCurveTypeDesc(int ElecCurveType);//根据室外电参数曲线类型值获取对应描述文本
 	static tstring GetCurveTypeDesc(int CurveType, int nVer);//根据曲线类型值获取对应描述文本
 	static tstring GetAlarmTypeDesc(int Alarmtype, int nVer);//根据报警类型值获取对应描述文本
-	static tstring GetJiaYouTypeDesc(BYTE nType);//根据加油类型值获取对应描述文本
+	static tstring GetJiaYouTypeDesc(uint8_t nType);//根据加油类型值获取对应描述文本
 
-	static string GetStrFromData(BYTE* buf, int dwLen);
+	static string GetStrFromData(uint8_t* buf, int dwLen);
 
 private:
-	static BOOL Parse(StHeartBeat315&, LPVOID, int);
-	static BOOL Parse(StGapCfgRes&, LPVOID, int, FRAME_KIND& kind);
-	static BOOL Parse(StGapValue&, LPVOID, int, FRAME_KIND& kind);
-	static BOOL Parse(StAlarmAndImgInfo&, LPVOID, int, FRAME_KIND& kind);
-	static BOOL Parse(StActionInfo&, LPVOID, int, FRAME_KIND& kind);
-	static BOOL Parse(StOilBoxVolumeData&, LPVOID, int, FRAME_KIND& kind);
+	static bool Parse(StHeartBeat315&, void*, int);
+	static bool Parse(StGapCfgRes&, void*, int, FRAME_KIND& kind);
+	static bool Parse(StGapValue&, void*, int, FRAME_KIND& kind);
+	static bool Parse(StAlarmAndImgInfo&, void*, int, FRAME_KIND& kind);
+	static bool Parse(StActionInfo&, void*, int, FRAME_KIND& kind);
+	static bool Parse(StOilBoxVolumeData&, void*, int, FRAME_KIND& kind);
 
-	static BOOL Parse(StLastGapImgRes&, LPVOID, int, FRAME_KIND& kind);
-	static BOOL ParseReq(StImgListReq&, LPVOID, int);
-	static BOOL Parse(StImgListRes&, LPVOID, int);
-	static BOOL ParseReq(StImgInfoReq&, LPVOID, int);
-	static BOOL Parse(StImgInfoRes &, LPVOID, int); 
-	static BOOL Parse(StImgInfoReq &, LPVOID, int); 
-	static BOOL Parse(StWorkingConditionValRes&, LPVOID, int);
-	static BOOL Parse(StOpWorkingConditionRes&, LPVOID, int);
-	static BOOL Parse(StVibrationCurveRes&, LPVOID, int);
+	static bool Parse(StLastGapImgRes&, void*, int, FRAME_KIND& kind);
+	static bool ParseReq(StImgListReq&, void*, int);
+	static bool Parse(StImgListRes&, void*, int);
+	static bool ParseReq(StImgInfoReq&, void*, int);
+	static bool Parse(StImgInfoRes &, void*, int); 
+	static bool Parse(StImgInfoReq &, void*, int); 
+	static bool Parse(StWorkingConditionValRes&, void*, int);
+	static bool Parse(StOpWorkingConditionRes&, void*, int);
+	static bool Parse(StVibrationCurveRes&, void*, int);
 
-	static BOOL ParseReq(StVedioListReq&, LPVOID, int);
-	static BOOL Parse(StVedioListRes&, LPVOID, int);
-	static BOOL ParseReq(StVedioFileReq&, LPVOID, int);
+	static bool ParseReq(StVedioListReq&, void*, int);
+	static bool Parse(StVedioListRes&, void*, int);
+	static bool ParseReq(StVedioFileReq&, void*, int);
 	template<typename T>
-	static BOOL Parse(T*, LPVOID, int);
-	static BOOL ParseReq(St1DQJInfo&, LPVOID, int);//0x22这个没有响应
+	static bool Parse(T*, void*, int);
+	static bool ParseReq(St1DQJInfo&, void*, int);//0x22这个没有响应
 
-	static BOOL Parse(StOilPreCurve&, LPVOID, int);//0x25这个是JHD主动发出去的，以后再特别处理
-	static BOOL Parse(StOilLevelInfo&, LPVOID, int);//0x24这个是JHD主动发出去的，以后再特别处理
+	static bool Parse(StOilPreCurve&, void*, int);//0x25这个是JHD主动发出去的，以后再特别处理
+	static bool Parse(StOilLevelInfo&, void*, int);//0x24这个是JHD主动发出去的，以后再特别处理
 
-	static BOOL ParseReq(StRealCtrlReq&, LPVOID, int);
-	static BOOL Parse(StRealCtrlRes&, LPVOID, int);
+	static bool ParseReq(StRealCtrlReq&, void*, int);
+	static bool Parse(StRealCtrlRes&, void*, int);
 
-	static BOOL Parse(StRealStream&, LPVOID, int);
-	static BOOL Parse(StElecCurve&, LPVOID, int);
-	static BOOL Parse(StElecCurveRec&, LPVOID, int);
-	static BOOL Parse(StStaticPowerList&, LPVOID, int);
-	static BOOL Parse(StPowerListRes &, LPVOID, int);
-	static BOOL Parse(StPowerListReq &, LPVOID, int);
-	static BOOL Parse(StPowerInfoRes&, LPVOID, int);
-	static BOOL Parse(NewDataFile& data, LPVOID buf, int len);
-// 	static BOOL Parse(StNewPowerNotify& data, LPVOID buf, int len);
-	static BOOL Parse(StPowerFileData& data, LPVOID buf, int len);
-	static BOOL Parse(DBJFBJInfo& data, LPVOID buf, int len);
-	static BOOL Parse(StAlarmListRes&, LPVOID, int);
-	static BOOL Parse(St315Json& data, LPVOID buf, int len, FRAME_KIND& kind);
+	static bool Parse(StRealStream&, void*, int);
+	static bool Parse(StElecCurve&, void*, int);
+	static bool Parse(StElecCurveRec&, void*, int);
+	static bool Parse(StStaticPowerList&, void*, int);
+	static bool Parse(StPowerListRes &, void*, int);
+	static bool Parse(StPowerListReq &, void*, int);
+	static bool Parse(StPowerInfoRes&, void*, int);
+	static bool Parse(NewDataFile& data, void* buf, int len);
+// 	static bool Parse(StNewPowerNotify& data, void* buf, int len);
+	static bool Parse(StPowerFileData& data, void* buf, int len);
+	static bool Parse(DBJFBJInfo& data, void* buf, int len);
+	static bool Parse(StAlarmListRes&, void*, int);
+	static bool Parse(St315Json& data, void* buf, int len, FRAME_KIND& kind);
 
 
-	static BOOL Unparse(StHeartBeat315&, vector<BYTE>&, int&);
-	static BOOL Unparse(StDataBasic&, vector<BYTE>&, int&);
-	static BOOL Unparse(StAlarmAndImgRec&, vector<BYTE>&, int&);
-	static BOOL Unparse(StActionInfoRec&, vector<BYTE>&, int&);
-	static BOOL Unparse(StManualOilingResq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StLastGapImgReq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StImgListReq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StImgInfoReq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StVedioListReq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StVedioFileReq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StPowerFileListResq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StPowerFileDataResq&, vector<BYTE>&, int&);
-	static BOOL Unparse(St1DQJInfo&, vector<BYTE>&, int&);
-	static BOOL Unparse(StOilPreCurveRec&, vector<BYTE>&, int&);
-	static BOOL Unparse(StRealCtrlReq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StPowerListReq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StPowerInfoReq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StPowerFileData& data, vector<BYTE>& buf, int& len);
-	static BOOL Unparse(CalPower& data, vector<BYTE>& buf, int& len);
-	static BOOL Unparse(DBJFBJInfo& data, vector<BYTE>& buf, int& len);
-	static BOOL Unparse(StAlarmListReq&, vector<BYTE>&, int&);
-	static BOOL Unparse(StOilBoxVolumeResq&, vector<BYTE>&, int&);
-	static BOOL Unparse(St315Json& data, vector<BYTE>&, int& len);
+	static bool Unparse(StHeartBeat315&, vector<uint8_t>&, int&);
+	static bool Unparse(StDataBasic&, vector<uint8_t>&, int&);
+	static bool Unparse(StAlarmAndImgRec&, vector<uint8_t>&, int&);
+	static bool Unparse(StActionInfoRec&, vector<uint8_t>&, int&);
+	static bool Unparse(StManualOilingResq&, vector<uint8_t>&, int&);
+	static bool Unparse(StLastGapImgReq&, vector<uint8_t>&, int&);
+	static bool Unparse(StImgListReq&, vector<uint8_t>&, int&);
+	static bool Unparse(StImgInfoReq&, vector<uint8_t>&, int&);
+	static bool Unparse(StVedioListReq&, vector<uint8_t>&, int&);
+	static bool Unparse(StVedioFileReq&, vector<uint8_t>&, int&);
+	static bool Unparse(StPowerFileListResq&, vector<uint8_t>&, int&);
+	static bool Unparse(StPowerFileDataResq&, vector<uint8_t>&, int&);
+	static bool Unparse(St1DQJInfo&, vector<uint8_t>&, int&);
+	static bool Unparse(StOilPreCurveRec&, vector<uint8_t>&, int&);
+	static bool Unparse(StRealCtrlReq&, vector<uint8_t>&, int&);
+	static bool Unparse(StPowerListReq&, vector<uint8_t>&, int&);
+	static bool Unparse(StPowerInfoReq&, vector<uint8_t>&, int&);
+	static bool Unparse(StPowerFileData& data, vector<uint8_t>& buf, int& len);
+	static bool Unparse(CalPower& data, vector<uint8_t>& buf, int& len);
+	static bool Unparse(DBJFBJInfo& data, vector<uint8_t>& buf, int& len);
+	static bool Unparse(StAlarmListReq&, vector<uint8_t>&, int&);
+	static bool Unparse(StOilBoxVolumeResq&, vector<uint8_t>&, int&);
+	static bool Unparse(St315Json& data, vector<uint8_t>&, int& len);
 
-	static BOOL Release(StGapCfgRes&);
-	static BOOL Release(StGapValue&);
-	static BOOL Release(StAlarmAndImgInfo&);
-	static BOOL Release(StActionInfo&);
-	static BOOL Release(StOilBoxVolumeData&);
+	static bool Release(StGapCfgRes&);
+	static bool Release(StGapValue&);
+	static bool Release(StAlarmAndImgInfo&);
+	static bool Release(StActionInfo&);
+	static bool Release(StOilBoxVolumeData&);
 	
-	static BOOL Release(StLastGapImgRes&);
-	static BOOL ReleaseReq(StImgListReq&);
-	static BOOL Release(StImgListRes&);
+	static bool Release(StLastGapImgRes&);
+	static bool ReleaseReq(StImgListReq&);
+	static bool Release(StImgListRes&);
 
-	static BOOL Release(StImgInfoRes&);
-	static BOOL Release(StVedioListRes&);
+	static bool Release(StImgInfoRes&);
+	static bool Release(StVedioListRes&);
 	template<typename T>
-	static BOOL Release(T *);//未释放数据内存
-	static BOOL Release(StPowerFileListResq& data);
-	static BOOL Release(StPowerFileDataResq& data);
-	static BOOL Release(StOilPreCurve&);
-	static BOOL Release(StOilLevelInfo&);
-	static BOOL Release(StRealCtrlReq&);
-	static BOOL Release(StRealCtrlRes&);
-	static BOOL Release(StRealStream&);
-	static BOOL Release(StElecCurve&);
-// 	static BOOL Release(StNewPowerNotify&);
-	static BOOL Release(StStaticPowerList&);
-	static BOOL Release(StPowerListRes&);
-	static BOOL Release(StPowerInfoRes&);
-	static BOOL Release(DBJFBJInfo&);
-	static BOOL Release(StAlarmListRes&);
-	static BOOL Release(St315Json&);
+	static bool Release(T *);//未释放数据内存
+	static bool Release(StPowerFileListResq& data);
+	static bool Release(StPowerFileDataResq& data);
+	static bool Release(StOilPreCurve&);
+	static bool Release(StOilLevelInfo&);
+	static bool Release(StRealCtrlReq&);
+	static bool Release(StRealCtrlRes&);
+	static bool Release(StRealStream&);
+	static bool Release(StElecCurve&);
+// 	static bool Release(StNewPowerNotify&);
+	static bool Release(StStaticPowerList&);
+	static bool Release(StPowerListRes&);
+	static bool Release(StPowerInfoRes&);
+	static bool Release(DBJFBJInfo&);
+	static bool Release(StAlarmListRes&);
+	static bool Release(St315Json&);
 
 	static tstring ToString(const StHeartBeat315&);
 	static tstring ToString(const StGapCfgRes&);
@@ -1530,8 +1532,8 @@ private:
 	static tstring ToString(const StAlarmListReq&);
 	static tstring ToString(const StAlarmListRes&);
 public:
-	static BOOL b26res4byte;
-	static BOOL b2Flen2byte;
+	static bool b26res4byte;
+	static bool b2Flen2byte;
 };
 
 
@@ -1542,19 +1544,19 @@ public:
 	CVedioParser() {}
 	virtual ~CVedioParser() {}
 
-	static BOOL Parse(StVedioFrame&, LPVOID, int);				//解析
-	static BOOL Unparse(StVedioFrame&, vector<BYTE>&, int&);			//反解析
-	static BOOL Release(StVedioFrame&);							//释放内存
+	static bool Parse(StVedioFrame&, void*, int);				//解析
+	static bool Unparse(StVedioFrame&, vector<uint8_t>&, int&);			//反解析
+	static bool Release(StVedioFrame&);							//释放内存
 
 private:
-	static BOOL Unparse(StVedioFileStart&, vector<BYTE>&, int&);
-	static BOOL Unparse(StVedioFileStop&, vector<BYTE>&, int&);
-	static BOOL Unparse(StVedioSetTitle&, vector<BYTE>&, int&);
-	static BOOL Unparse(StVedioRealCtrl&, vector<BYTE>&, int&);
-	static BOOL Unparse(StVedioRealPlay&, vector<BYTE>&, int&);
+	static bool Unparse(StVedioFileStart&, vector<uint8_t>&, int&);
+	static bool Unparse(StVedioFileStop&, vector<uint8_t>&, int&);
+	static bool Unparse(StVedioSetTitle&, vector<uint8_t>&, int&);
+	static bool Unparse(StVedioRealCtrl&, vector<uint8_t>&, int&);
+	static bool Unparse(StVedioRealPlay&, vector<uint8_t>&, int&);
 
-	static BOOL Release(StVedioFileStart&);
-	static BOOL Release(StVedioSetTitle&);
-	static BOOL Release(StVedioRealPlay&);
+	static bool Release(StVedioFileStart&);
+	static bool Release(StVedioSetTitle&);
+	static bool Release(StVedioRealPlay&);
 };
 #endif /* TDS_IO_SERVER_PROTO_TB3386_H */

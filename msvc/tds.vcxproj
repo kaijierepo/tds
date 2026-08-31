@@ -656,7 +656,7 @@
     <ClCompile Include="..\src\io_server\ioDev.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_bacnet.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp" />
-    <ClCompile Include="..\src\io_server\ioDev_dcqk.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_tb3386.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_dlt645_2007.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_eip.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_iq60.cpp" />
@@ -858,7 +858,7 @@
     <ClInclude Include="..\src\io_server\ioDev_bacnet.h" />
     <ClInclude Include="..\src\io_server\ioDev_camera.h" />
     <ClInclude Include="..\src\io_server\ioDev_custom.h" />
-    <ClInclude Include="..\src\io_server\ioDev_dcqk.h" />
+    <ClInclude Include="..\src\io_server\ioDev_tb3386.h" />
     <ClInclude Include="..\src\io_server\ioDev_dlt645_2007.h" />
     <ClInclude Include="..\src\io_server\ioDev_eip.h" />
     <ClInclude Include="..\src\io_server\ioDev_iq60.h" />

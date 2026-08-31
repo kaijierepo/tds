@@ -2234,7 +2234,6 @@ typedef struct _GapValPicParam {
 	float offset;
 	BYTE lrsign; //0 无效，1 左偏， 2 右偏
 	string zzj;
-	string zzj315;
 	BYTE location;
 	BYTE acqreason;
 } GapValPicParam;
@@ -2253,6 +2252,15 @@ BYTE* reqCompose_0x2A(WORD zzjid, DWORD time, BYTE imgType)
 	return req;
 }
 
+string ioDev_dcqk::getZZJTag(unsigned short id) {
+	for (int i = 0; i < m_channels.size(); i++) {
+		if (m_channels[i]->getAddr() == to_string(id)) {
+			return m_channels[i]->m_strTagBind;
+		}
+	}
+	return "";
+}
+
 
 void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 {
@@ -2269,36 +2277,23 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		//TDS配置的名字不一定和JHD一致 下载文件时的url以JHD的转辙机名字为准
 		//m_mapSIDToName;
 		//发送0x26命令
-		BYTE* req_0x2A_0x00 = reqCompose_0x2A(pRecord->sid, pRecord->time, 0x00);
+
+		//0x2A获取图像信息命令帧的帧内容格式 0周期 2扳动 3过车
+		BYTE* req_0x2A_0x00 = reqCompose_0x2A(pRecord->sid, pRecord->time, pRecord->gaptype);
 		sendData(req_0x2A_0x00, 27);
-		BYTE* req_0x2A_0x02 = reqCompose_0x2A(pRecord->sid, pRecord->time, 0x02);
-		sendData(req_0x2A_0x02, 27);
-		BYTE* req_0x2A_0x03 = reqCompose_0x2A(pRecord->sid, pRecord->time, 0x03);
-		sendData(req_0x2A_0x03, 27);
-		OBJ* zzjMo = pStation->getObjByID(to_string(pRecord->sid));
+		string zzjTag = getZZJTag(pRecord->sid);
+		if (zzjTag == "")
+			continue;
+		OBJ* zzjMo = pStation->queryObj(zzjTag);
 		if (!zzjMo) {
-			//log
 			continue;
 		}
 		string zzj =zzjMo->getName("");
-		EnterCriticalSection(&m_csEqp);
-
-		string zzj315;
-		if (m_mapEqp.find(pRecord->sid) != m_mapEqp.end()) {
-			zzj315 = m_mapEqp[pRecord->sid]->eqpName;
-		}
-		
-		LeaveCriticalSection(&m_csEqp);
 		BYTE location = pRecord->fixorinvert;
 		BYTE acqreason = pRecord->gaptype;
 
 		string theTag;
-		if (pRecord->fixorinvert == 1) {
-			theTag += zzjMo->getTag() + ".反位缺口";
-		}
-		else {
-			theTag += zzjMo->getTag() + ".定位缺口";
-		}
+		theTag += zzjMo->getTag() + ".缺口";
 
 		TIME ti;
 		ti.fromUnixTime(pRecord->time);
@@ -2316,7 +2311,6 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		param->offset = pRecord->offset * 1.0 / 100;
 		param->lrsign = pRecord->lrsign;
 		param->zzj = zzj;
-		param->zzj315 = zzj315;
 		param->location = location;
 		param->acqreason = acqreason;
 	}
