@@ -2359,12 +2359,8 @@ bool Parse315Protocol::Parse(StAlarmAndImgInfo& data, void* buf, int len, FRAME_
 		szcnt += sz;
 		if (szcnt > len)
 			return false;
-		if (sz < 100)
-		{
-			data.lpimg = new uint8_t[sz];
-			memcpy(data.lpimg, pos, sz);
-		}
-		else data.lpimg = NULL;
+		data.lpimg = new uint8_t[sz];
+		memcpy(data.lpimg, pos, sz);
 		pos += sz;
 	}
 

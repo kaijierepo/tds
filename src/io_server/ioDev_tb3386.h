@@ -50,6 +50,7 @@ private:
     void updateStateCache(unsigned short id, const StSdataRecord& record);
     void storeGapData(unsigned short id);
     std::string buildGapJson(const StZZJCache& cache, const std::string& strTag, const std::string& strTime);
+    void saveGapImageForId(unsigned short sid, unsigned int time, const unsigned char* pImgData, size_t imgLen);
 
     std::map<unsigned short, StZZJCache> m_mapZZJ;
     std::mutex m_csZZJ;

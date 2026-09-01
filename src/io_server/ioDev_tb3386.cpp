@@ -62,6 +62,29 @@ namespace ns_ioDev_tb3386
 
 using namespace ns_ioDev_tb3386;
 
+// 手动将缺口图像写入 db 目录，与 db.json 放在同一文件夹（.缺口）
+static bool saveGapImageFile(const std::string& storeTag, const DB_TIME& stTime, const unsigned char* pImgData, size_t imgLen)
+{
+    if (pImgData == NULL || imgLen == 0) {
+        return false;
+    }
+
+    std::string folder = db.getPath_dataFolder(storeTag, stTime);
+    if (folder.empty()) {
+        return false;
+    }
+
+    std::string path = folder + "/" + stTime.toStampHMS() + ".jpg";
+
+    if (TDB::fileExist(path)) {
+        return false;
+    }
+
+    DB_FS::createFolderOfPath(path);
+    bool ret = DB_FS::writeFile(path, (unsigned char*)pImgData, imgLen);
+    return ret;
+}
+
 ioDev_tb3386::ioDev_tb3386()
 {
 }
@@ -146,6 +169,27 @@ bool ioDev_tb3386::onRecvPkt(unsigned char* pData, size_t iLen)
                     StSdataRecord* pRecord = &((StSdataRecord*)pState->lpdata)[i];
                     updateStateCache(pRecord->sid, *pRecord);
                 }
+            }
+            break;
+        }
+        case CMD_CODE_IMGINFO: {   //0x2A 图像信息，下位机上发的缺口图像
+            StImgInfoRes* pImg = (StImgInfoRes*)data.lpdata;
+            if (pImg->lpimg != NULL && pImg->imglen > 0) {
+                saveGapImageForId(pImg->sid, pImg->time, (const unsigned char*)pImg->lpimg, pImg->imglen);
+            }
+            break;
+        }
+        case CMD_CODE_ALARM_AND_IMG: {   //0x27 报警/预警信息及缺口图像信息
+            StAlarmAndImgInfo* pImg = (StAlarmAndImgInfo*)data.lpdata;
+            if (pImg->lpimg != NULL && pImg->imglen > 0) {
+                saveGapImageForId(pImg->sid, pImg->time, (const unsigned char*)pImg->lpimg, pImg->imglen);
+            }
+            break;
+        }
+        case CMD_CODE_LASTGAPIMG: {   //0x29 道岔缺口最新图像
+            StLastGapImgRes* pImg = (StLastGapImgRes*)data.lpdata;
+            if (pImg->lpimg != NULL && pImg->imglen > 0) {
+                saveGapImageForId(pImg->sid, pImg->time, (const unsigned char*)pImg->lpimg, pImg->imglen);
             }
             break;
         }
@@ -249,7 +293,7 @@ void ioDev_tb3386::storeGapData(unsigned short id)
         return;
     }
 
-    std::string storeTag = zzjTag + (cache.pos == 0 ? ".定位缺口" : ".反位缺口");
+    std::string storeTag = zzjTag + ".缺口";
     DB_TIME stTime;
     stTime.fromUnixTime(cache.gapTime);
     std::string strTime = stTime.toStr(false);
@@ -257,7 +301,6 @@ void ioDev_tb3386::storeGapData(unsigned short id)
 
     RPC_RESP rr;
     tds->call("input", sDE, rr);
-    LOG("[ioDev]input 返回: " + rr.error + " result: " + rr.result);
 }
 
 std::string ioDev_tb3386::buildGapJson(const StZZJCache& cache, const std::string& strTag,const std::string& strTime)
@@ -320,4 +363,22 @@ std::string ioDev_tb3386::buildGapJson(const StZZJCache& cache, const std::strin
     yyjson_mut_doc_free(doc);
 
     return sDE;
+}
+
+void ioDev_tb3386::saveGapImageForId(unsigned short sid, unsigned int time, const unsigned char* pImgData, size_t imgLen)
+{
+    if (pImgData == NULL || imgLen == 0) {
+        return;
+    }
+
+    std::string zzjTag = getZZJTagByID(sid);
+    if (zzjTag.empty()) {
+        return;
+    }
+
+    // 与数据落盘保持一致的 tag：zzjTag + ".缺口"
+    std::string storeTag = zzjTag + ".缺口";
+    DB_TIME stTime;
+    stTime.fromUnixTime(time);
+    saveGapImageFile(storeTag, stTime, pImgData, imgLen);
 }
