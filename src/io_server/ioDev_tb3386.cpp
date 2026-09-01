@@ -194,6 +194,7 @@ void ioDev_tb3386::updateGapCache(unsigned short id, const StGapRecord& record)
         cache.std = (float)record.std / 100.0f;
         cache.offset = (float)record.offset / 100.0f;
         cache.acqType = record.gaptype;
+        cache.pos = record.fixorinvert;
 
         if (record.time != cache.gapTime) {
             cache.gapTime = record.time;
@@ -233,7 +234,6 @@ void ioDev_tb3386::storeGapData(unsigned short id)
         return;
     }
 
-    std::string storeTag = zzjTag + ".缺口";
 
     StZZJCache cache;
     {
@@ -249,6 +249,7 @@ void ioDev_tb3386::storeGapData(unsigned short id)
         return;
     }
 
+    std::string storeTag = zzjTag + (cache.pos == 0 ? ".定位缺口" : ".反位缺口");
     DB_TIME stTime;
     stTime.fromUnixTime(cache.gapTime);
     std::string strTime = stTime.toStr(false);
@@ -256,6 +257,7 @@ void ioDev_tb3386::storeGapData(unsigned short id)
 
     RPC_RESP rr;
     tds->call("input", sDE, rr);
+    LOG("[ioDev]input 返回: " + rr.error + " result: " + rr.result);
 }
 
 std::string ioDev_tb3386::buildGapJson(const StZZJCache& cache, const std::string& strTag,const std::string& strTime)
