@@ -134,6 +134,7 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 					setChanValToRegBuff(pC, tempVal, pCmd->reg_data);
 
 					pduReq.setData(pCmd, pCmd->getSize());
+					delete (unsigned char*)pCmd;
 				}
 				else
 				{
@@ -143,6 +144,7 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 					pCmd->setVal(mbVal);
 
 					pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
+					delete pCmd;
 				}
 			}
 			else
@@ -168,6 +170,7 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 					setChanValToRegBuff(pC, jVal, pCmd->reg_data);
 
 					pduReq.setData(pCmd, pCmd->getSize());
+					delete (unsigned char*)pCmd;
 				}
 				else
 				{
@@ -186,6 +189,7 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 					}
 
 					pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
+					delete pCmd;
 				}
 			}
 			else
@@ -198,6 +202,7 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 				setChanValToRegBuff(pC, jVal, pCmd->reg_data);
 
 				pduReq.setData(pCmd, pCmd->getSize());
+				delete (unsigned char*)pCmd;
 			}
 		}
 	}
@@ -209,6 +214,7 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 		pCmd->setVal(jVal.get<bool>());
 
 		pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleCoil));
+		delete pCmd;
 	}
 	else
 	{

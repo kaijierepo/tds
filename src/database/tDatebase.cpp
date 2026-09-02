@@ -1,4 +1,4 @@
-﻿/*
+/*
   TDB version 1.0.0
   a minimal time series database based on json files for iot
   https://gitee.com/liangtuSoft/tds.git
@@ -39,6 +39,7 @@ SOFTWARE.
 #include <atomic>
 #include <string>
 #include <iomanip>
+#include "logger.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -1357,6 +1358,9 @@ std::string TDB::getPath_dbFile(std::string strTag, const DB_TIME& date, std::st
 			return folder + "/" + m_dbFmt.deListName;
 	}
 	else if (deType == "curveIdx") {
+		//曲线索引统一使用db.json(tdsp录像元数据记录本身即索引);旧的独立db.curve.json仍可读,兼容历史数据
+		if (fileExist((folder + "/" + m_dbFmt.deListName).c_str()))
+			return folder + "/" + m_dbFmt.deListName;
 		return folder + "/" + m_dbFmt.curveIdxListName;
 	}
 	else if (deType == "statisDe" || deType == "statisByDay" || deType == "statisByMonth") {
@@ -1453,8 +1457,42 @@ bool TDB::InsertByDeType(std::string strTag, std::string& sDe, const std::string
 	}
 
 	std::string dataListPath;
-	if (fileType == "curve")
-		dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+	//曲线是否需要追加索引条目:db.json中已有startTime/time匹配的记录时不需要(录像元数据记录本身就是曲线索引)
+	bool bSkipSaveIdx = false;
+	if (fileType == "curve") {
+		//曲线索引统一使用db.json,不再生成db.curve.json
+		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
+
+		std::string sIdxList;
+		if (DB_FS::readFile(dataListPath, sIdxList) && sIdxList != "") {
+			yyjson_doc* idxDoc = yyjson_read(sIdxList.c_str(), sIdxList.length(), 0);
+			if (idxDoc) {
+				yyjson_val* idxRoot = yyjson_doc_get_root(idxDoc);
+				if (!yyjson_is_arr(idxRoot)) {
+					//db.json是带描述的对象(值列表),不能按数组追加,曲线索引退回独立文件
+					dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+				}
+				else {
+					std::string sTime19 = sTime.substr(0, 19);
+					size_t aidx, amax;
+					yyjson_val* ade;
+					yyjson_arr_foreach(idxRoot, aidx, amax, ade) {
+						//录像元数据记录的曲线时间在startTime,纯曲线条目的曲线时间在time
+						yyjson_val* yyT = yyjson_obj_get(ade, "startTime");
+						if (!yyT || !yyjson_is_str(yyT)) {
+							yyT = yyjson_obj_get(ade, "time");
+						}
+						if (yyT && yyjson_is_str(yyT) &&
+							strncmp(yyjson_get_str(yyT), sTime19.c_str(), 19) == 0) {
+							bSkipSaveIdx = true;
+							break;
+						}
+					}
+				}
+				yyjson_doc_free(idxDoc);
+			}
+		}
+	}
 	else if (sDeType == "statisDe" || sDeType == "statisByDay" || sDeType == "statisByMonth")
 		dataListPath = deListFolderPath + "/" + m_dbFmt.deListStatisticsName;
 	else
@@ -1488,7 +1526,9 @@ bool TDB::InsertByDeType(std::string strTag, std::string& sDe, const std::string
 		}
 	}
 
-	saveDeToDataListFile(dataListPath, yymDe);
+	if (!bSkipSaveIdx) {
+		saveDeToDataListFile(dataListPath, yymDe);
+	}
 
 	yyjson_mut_doc_free(mdoc);
 	yyjson_doc_free(doc);
@@ -2848,6 +2888,11 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 			yyjson_mut_val* yyv_time = yyjson_mut_obj_get(iter.second, "time");
 
 			std::string time = yyjson_mut_get_str(yyv_time);
+			//曲线索引用db.json(录像元数据)时,记录的time是下载时间,曲线时间点取startTime
+			yyjson_mut_val* yyv_start = yyjson_mut_obj_get(iter.second, "startTime");
+			if (yyv_start && yyjson_mut_is_str(yyv_start)) {
+				time = yyjson_mut_get_str(yyv_start);
+			}
 			timePointList[time] = time;
 		}
 
@@ -4581,6 +4626,13 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, std::vector<TAG_FILE_SET*
 					yyjson_val* yyTime = nullptr;
 					if (deJsonType == DE_J_OBJ) {
 						yyTime = yyjson_obj_get(de, "time");
+						//曲线索引用db.json(录像元数据)时,记录的time是下载时间,与db目录日期不一致,曲线时间取startTime
+						if (deSel.deType == "curveIdx") {
+							yyjson_val* yyStart = yyjson_obj_get(de, "startTime");
+							if (yyStart && yyjson_is_str(yyStart)) {
+								yyTime = yyStart;
+							}
+						}
 					}
 					else {
 						yyTime = yyjson_arr_get(de, 0);
@@ -5624,10 +5676,21 @@ void TDB::rpc_db_insert(yyjson_val* params, std::string& rlt, std::string& err, 
 		if (yyjson_is_str(yyv_db)) {
 			std::string dbName = yyjson_get_str(yyv_db);
 			TDB* tdb = db.getChildDB(dbName);
-			success = tdb->Insert(tag, sDe, &tNow, buffered);
+			// 如果包含 file 字段，使用 InsertByDeType 函数
+			if (yyv_file) {
+				success = tdb->InsertByDeType(tag, sDe, "", &tNow);
+			} else {
+				success = tdb->Insert(tag, sDe, &tNow, buffered);
+			}
 		}
-		else
-			success = Insert(tag, sDe, &tNow, buffered);
+		else {
+			// 如果包含 file 字段，使用 InsertByDeType 函数
+			if (yyv_file) {
+				success = InsertByDeType(tag, sDe, "", &tNow);
+			} else {
+				success = Insert(tag, sDe, &tNow, buffered);
+			}
+		}
 		if(success)
 			rlt = "\"ok\"";
 		else
@@ -6271,7 +6334,8 @@ bool TDB::Insert(std::string strTag, std::string& sDeIdx, std::string& sDeCurve,
 	DB_FS::writeFile(deFilePath, (char*)sDeCurve.c_str(), sDeCurve.length());
 
 	std::string dataListPath;
-	dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+	//曲线索引统一使用db.json,不再生成db.curve.json
+	dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 	saveDeToDataListFile(dataListPath, yymDe);
 
 	yyjson_mut_doc_free(mdoc);
@@ -6470,6 +6534,15 @@ void TDB::rpc_db_update(std::string& sParams, std::string& rlt, std::string& err
 	yyjson_doc_free(doc);
 }
 void TDB::rpc_db_update(yyjson_val* params, std::string& rlt, std::string& err, std::string& queryInfo, std::string org, std::string language) {
+	// 诊断日志：打印收到的完整参数
+	{
+		char* paramsStr = yyjson_val_write(params, YYJSON_WRITE_PRETTY, nullptr);
+		if (paramsStr) {
+			LOG("[db.update]收到请求, params:\n%s", paramsStr);
+			free(paramsStr);
+		}
+	}
+
 	std::string dbName;
 	TDB* tdb = nullptr;
 	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
@@ -6499,12 +6572,27 @@ void TDB::rpc_db_update(yyjson_val* params, std::string& rlt, std::string& err, 
 	std::string tag = yyjson_get_str(yyTag);
 	std::string time = yyjson_get_str(yyTime);
 
+	// 诊断日志：打印解析后的字段
+	LOG("[db.update]tag=%s, time=%s, hasVal=%s, hasFile=%s", 
+		tag.c_str(), time.c_str(), 
+		updateVal ? "true" : "false",
+		yyjson_obj_get(params, "file") ? "true" : "false");
+
 	if (time.length() != 19 && time.length() != 23) {
 		err = JSON_STR_VAL("wrong time format,should be XXXX-XX-XX XX:XX:XX or XXXX-XX-XX XX:XX:XX.XXX");
 		return;
 	}
 
 	yyjson_val* updateFile = yyjson_obj_get(params, "file");
+
+	// 诊断日志：打印 file 参数详情
+	if (updateFile) {
+		char* fileStr = yyjson_val_write(updateFile, YYJSON_WRITE_PRETTY, nullptr);
+		if (fileStr) {
+			LOG("[db.update]file参数:\n%s", fileStr);
+			free(fileStr);
+		}
+	}
 
 	DB_TIME dbTime;
 	dbTime.fromStr(time);
@@ -6517,6 +6605,8 @@ void TDB::rpc_db_update(yyjson_val* params, std::string& rlt, std::string& err, 
 		updateRet = Update(tag, dbTime, updateVal, updateFile);
 	}
 
+	LOG("[db.update]更新结果: %d (0=成功)", updateRet);
+
 	if (updateRet == 0) {
 		rlt = JSON_STR_VAL("ok");
 	}
@@ -6525,13 +6615,143 @@ void TDB::rpc_db_update(yyjson_val* params, std::string& rlt, std::string& err, 
 	}
 }
 
+//file.type=="metadata":按文件名匹配并更新tdsp录像采集流程创建的独立db.json
+int TDB::UpdateMetadata(std::string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFileParam)
+{
+	std::string metadataFile = getPath_dataFolder(tag, stTime, "") + "/db.json";
+
+	std::string dbData;
+	DB_FS::readFile(metadataFile, dbData);
+	if (dbData == "") {
+		LOG("[db.update]元数据文件不存在或为空: %s", metadataFile.c_str());
+		return -1;
+	}
+
+	yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
+	if (!doc) {
+		return -2;
+	}
+
+	yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc, nullptr);
+	yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
+
+	if (yyjson_mut_get_type(mut_root) != YYJSON_TYPE_ARR) { //tdsp创建的db.json是记录数组
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
+		return -2;
+	}
+
+	yyjson_val* yyName = yyjson_obj_get(updateFileParam, "name");
+	const char* fileName = yyjson_get_str(yyName);
+	bool hasName = fileName != nullptr;
+
+	// 获取时间字符串用于匹配
+	std::string updateTime = stTime.toStr();
+
+	bool findDE = false;
+	size_t idx, max;
+	yyjson_mut_val* de;
+	yyjson_mut_arr_foreach(mut_root, idx, max, de) {
+		// 如果指定了 name，按 file 字段匹配
+		if (hasName) {
+			yyjson_mut_val* yyFile = yyjson_mut_obj_get(de, "file");
+			if (!yyFile || !yyjson_mut_is_str(yyFile) ||
+				strcmp(yyjson_mut_get_str(yyFile), fileName) != 0) {
+				continue; //按记录的file字段精确匹配视频文件名
+			}
+		} else {
+			// 如果没有指定 name，按 time 字段匹配
+			// 曲线索引条目(file为对象,如{"type":"curve"})不是录像元数据记录,跳过
+			yyjson_mut_val* yyFileChk = yyjson_mut_obj_get(de, "file");
+			if (yyFileChk && !yyjson_mut_is_str(yyFileChk)) {
+				continue;
+			}
+			yyjson_mut_val* yyTime = yyjson_mut_obj_get(de, "time");
+			if (yyTime && yyjson_mut_is_str(yyTime)) {
+				std::string deTime = yyjson_mut_get_str(yyTime);
+				// 比较时间（只比较前19位，忽略毫秒）
+				if (deTime.length() >= 19 && updateTime.length() >= 19) {
+					if (deTime.substr(0, 19) != updateTime.substr(0, 19)) {
+						continue; // 时间不匹配，跳过
+					}
+				}
+			}
+		}
+
+		//file参数中除type/name外的所有字段直接覆盖写入记录(startTime/endTime/ptCount/avg/max/min等)
+		size_t kidx, kmax;
+		yyjson_val* key;
+		yyjson_val* kval;
+		yyjson_obj_foreach(updateFileParam, kidx, kmax, key, kval) {
+			const char* k = yyjson_get_str(key);
+			if (!k || strcmp(k, "type") == 0 || strcmp(k, "name") == 0)
+				continue;
+			yyjson_mut_val* mKey = yyjson_mut_strcpy(mut_doc, k);
+			yyjson_mut_obj_put(de, mKey, yyjson_val_mut_copy(mut_doc, kval));
+		}
+
+		findDE = true;
+		if (hasName)
+			break; //指定name时只更新第一个匹配记录
+	}
+
+	if (!findDE) {
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
+		return -3;
+	}
+
+	size_t len = 0;
+	char* p = yyjson_mut_write(mut_doc, 0, &len);
+	if (p) {
+		DB_FS::writeFile(metadataFile, p, len);
+		free(p);
+	}
+
+	yyjson_mut_doc_free(mut_doc);
+	yyjson_doc_free(doc);
+
+	LOG("[db.update]元数据更新成功: %s", metadataFile.c_str());
+	return 0;
+}
+
 int TDB::Update(std::string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFileParam)
 {
+	LOG("[db.update]Update函数, tag=%s, time=%s", tag.c_str(), stTime.toStr().c_str());
+
+	//file.type=="metadata":更新录像目录下独立的db.json元数据文件
+	if (updateFileParam && yyjson_is_obj(updateFileParam)) {
+		yyjson_val* yyType = yyjson_obj_get(updateFileParam, "type");
+		if (yyType && yyjson_is_str(yyType)) {
+			std::string type = yyjson_get_str(yyType);
+			if (type == "metadata") {
+				return UpdateMetadata(tag, stTime, yyVal, updateFileParam);
+			}
+		}
+	}
+
+	// 如果没有 file 参数，或者 file 参数不是对象，尝试更新 db.json 元数据文件
+	// 这是为了兼容 IAS 应用直接更新 db.json 的情况
+	if (!updateFileParam || !yyjson_is_obj(updateFileParam)) {
+		// 尝试更新 db.json 元数据文件
+		std::string metadataFile = getPath_dataFolder(tag, stTime, "") + "/db.json";
+		if (DB_FS::fileExist(metadataFile)) {
+			LOG("[db.update]尝试更新元数据文件: %s", metadataFile.c_str());
+			return UpdateMetadata(tag, stTime, yyVal, updateFileParam);
+		}
+	}
+
 	std::string dbFile = getPath_dbFile(tag, stTime);
+	LOG("[db.update]数据文件路径: %s", dbFile.c_str());
+
 	std::string dbData;
 	DB_FS::readFile(dbFile, dbData);
-	if (dbData == "")
+	if (dbData == "") {
+		LOG("[db.update]数据文件不存在或为空: %s", dbFile.c_str());
 		return -1;
+	}
+
+	LOG("[db.update]数据文件大小: %zu 字节", dbData.size());
 
 	yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
 
@@ -6542,11 +6762,14 @@ int TDB::Update(std::string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* 
 	yyjson_type type = yyjson_mut_get_type(mut_root);
 	if (type == YYJSON_TYPE_OBJ) { //file with desc
 		deList = yyjson_mut_obj_get(mut_root, "data");
+		LOG("[db.update]数据格式: 对象(包含data字段)");
 	}
 	else if (type == YYJSON_TYPE_ARR) {
 		deList = mut_root;
+		LOG("[db.update]数据格式: 数组");
 	}
 	else {
+		LOG("[db.update]数据格式错误: %d", type);
 		yyjson_mut_doc_free(mut_doc);
 		yyjson_doc_free(doc);
 
@@ -6556,6 +6779,8 @@ int TDB::Update(std::string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* 
 	bool findDE = false;
 	std::string deTime = stTime.toYMD() + " 00:00:00.000";
 	std::string updateTime = stTime.toStr();
+	LOG("[db.update]查找记录, updateTime=%s", updateTime.c_str());
+	
 	size_t idx, max;
 	yyjson_mut_val* de;
 	//the file contont and url to be updated
@@ -6564,10 +6789,16 @@ int TDB::Update(std::string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* 
 	std::vector<stoBeUpdatedFile > vecToBeUpdatedFile; std::string theDir;
 	int nSomeWrong = 0;
 	bool bEmptyAry = false;
+	
+	LOG("[db.update]数据列表大小: %zu", yyjson_mut_arr_size(deList));
+	
 	yyjson_mut_arr_foreach(deList, idx, max, de) {
 		yyjson_mut_val* yyTime = yyjson_mut_obj_get(de, "time");
 		getDeTime(yyTime, deTime);
+		LOG("[db.update]记录 %zu: deTime=%s", idx, deTime.c_str());
+		
 		if (updateTime == deTime) {
+			LOG("[db.update]找到匹配记录 at index %zu", idx);
 			//replace the "val", update the file urls, refresh the file dir
 			yyjson_mut_val* yyValKey = yyjson_mut_strcpy(mut_doc, "val");
 			yyjson_mut_val* yyToUpdateValNew = yyjson_val_mut_copy(mut_doc, yyVal);
@@ -6648,7 +6879,8 @@ int TDB::Update(std::string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* 
 						nSomeWrong = -10;
 						break;
 					}
-					if ((int)dbFile.rfind(m_dbFmt.curveIdxListName) > 0) {
+					if ((int)dbFile.rfind(m_dbFmt.curveIdxListName) > 0 ||
+						(int)dbFile.rfind(m_dbFmt.deListName) > 0) { //曲线索引统一为db.json,容器也可能是db.json
 						one.dbFile1 = folder + stTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
 					}
 					else {

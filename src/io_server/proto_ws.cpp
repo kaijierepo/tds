@@ -25,7 +25,7 @@ CWSPPkt::CWSPPkt()
 CWSPPkt::~CWSPPkt()
 {
 	if (payloadData)
-		delete payloadData;
+		delete[] payloadData;
 }
 
 bool CWSPPkt::unpack(unsigned char* pBuf, int iBufLen, bool bGetCmdInfo)

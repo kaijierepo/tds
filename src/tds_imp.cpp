@@ -354,12 +354,17 @@ void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
 				db_Fmt.deItemKey_value = "value";
 				
 			}
-			else if (fi.name.rfind("db.json") == fi.name.length() - 7 || fi.name.rfind(".curve.json") == fi.name.length() - 11)
+			else if (fi.name.rfind("db.json") == fi.name.length() - 7 || fi.name.rfind(".curve.json") == fi.name.length() - 11 || fi.name.rfind("_curve.json") == fi.name.length() - 11)
 			{
 				bCheckEnd = true;
 				db_Fmt.deListName = "db.json";
 				db_Fmt.curveIdxListName = "db.curve.json";
-				db_Fmt.curveDeNameSuffix = ".curve.json";
+				// 根据检测到的文件格式设置曲线文件后缀
+				if (fi.name.rfind("_curve.json") == fi.name.length() - 11) {
+					db_Fmt.curveDeNameSuffix = "_curve.json";
+				} else {
+					db_Fmt.curveDeNameSuffix = ".curve.json";
+				}
 				db_Fmt.deItemKey_value = "val";
 			}
 

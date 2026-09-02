@@ -22,14 +22,15 @@
 // 识别 PLI/FIR（请求关键帧）与 NACK（按序号重传缓存的 SRTP 包，修复花屏）
 // ============================================================================
 
-void sessionHandleSRTCP(std::shared_ptr<STREAM_SESSION> session,
+bool sessionHandleSRTCP(std::shared_ptr<STREAM_SESSION> session,
                         SessionDtlsState* dtls_state,
                         uint8_t* buf, int len,
                         struct sockaddr_in& peer) {
+    bool receivedBye = false;
     // 解密整个 SRTCP compound（NACK 的丢包序号位于加密段，必须解密后才能读取）
     std::vector<uint8_t> rtcp;
     if (SrptProtect::unprotectRtcp(dtls_state->recv_ctx, buf, (size_t)len, rtcp) != 0) {
-        return;  // 认证失败或格式错误
+        return false;  // 认证失败或格式错误
     }
 
     // 从重传缓存取出已加密的 SRTP 包并原样重发（不触碰 srtp_ctx/local_seq）
@@ -54,7 +55,13 @@ void sessionHandleSRTCP(std::shared_ptr<STREAM_SESSION> session,
         size_t   pkt_len = ((size_t)words + 1) * 4;
         if (off + pkt_len > rtcp.size()) break;
 
-        if (pt == 206 && (fmt == 1 || fmt == 4)) {
+        // RTCP BYE (pt=203): 浏览器关闭/刷新页面时发送，表示会话结束
+        if (pt == 203) {
+            LOG("[ICE] Received RTCP BYE from client, session ending");
+            receivedBye = true;
+            // 不立即返回，继续解析剩余包以保持协议一致性
+        }
+        else if (pt == 206 && (fmt == 1 || fmt == 4)) {
             // PSFB: PLI(1)/FIR(4) -> 请求重发关键帧
             // LOG("[ICE] client feedback %s, request keyframe resend",
             //     fmt == 1 ? "PLI" : "FIR");
@@ -80,6 +87,8 @@ void sessionHandleSRTCP(std::shared_ptr<STREAM_SESSION> session,
     if (resent > 0) {
         LOG("[ICE] NACK: retransmitted %d cached packet(s)", resent);
     }
+    
+    return receivedBye;
 }
 
 

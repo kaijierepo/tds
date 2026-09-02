@@ -56,7 +56,7 @@ public:
 
 	void setData(unsigned char* p, size_t l)
 	{
-		if (data)delete data;
+		if (data)delete[] data;
 		data = new unsigned char[l];
 		memcpy(data, p, l);
 		len = l;

@@ -161,6 +161,9 @@ public:
 	std::string streamId;
 	std::vector<std::shared_ptr<TDS_SESSION>> m_vecPuller;
 	mutex m_csPuller;
+
+	//disconnect time
+	time_t lastDisconnectTime;
 };
 
 extern std::vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;

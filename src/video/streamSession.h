@@ -123,6 +123,7 @@ struct STREAM_SESSION {
     bool is_webrtc = false;
     std::string ice_ufrag;
     std::string ice_pwd;
+    std::string webrtc_session_id;  // WebRTC 会话唯一标识，用于 stopWebRtc 精确匹配
     SESSION_STATE state_ = SESSION_STATE::SESSION_IDLE;
     // 最近一次错误描述（state_==SESSION_ERROR 时有效，成功/重连后清空）
     std::string last_error_;
