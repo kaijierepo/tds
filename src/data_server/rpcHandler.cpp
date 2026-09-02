@@ -4712,7 +4712,104 @@ json getValCtx(json de) {
 	"val": [26.5,65.1]
 }
 */
+
+//带 file(grh/jpg) 的 db.input 请求：图片数据以 base64 放在 file.data 中。
+//grh 为封装格式，开头 1KB 是头信息，去掉后剩余即为 jpg 数据。
+//将图片转存为该 tag 数据目录下的 <时分秒>.jpg（如 142033.jpg），
+//与 db.json 中该 tag 的记录时间点一一对应（落盘格式与 ioDev_tb3386::saveGapImageFile 一致）。
+//返回值：true 表示该条上送是一条 grh/jpg 缺口图像，已只落盘 .jpg，调用方无需再写 db.json/MP 记录；
+//         false 表示非缺口图像文件，调用方继续按原流程处理。
+static bool saveGapImgFromInputFile(const std::string& tag, const json& file, const std::string& sTime)
+{
+	if (file.is_null() || !file.is_object()) {
+		return false;
+	}
+
+	std::string type = file.value("type", std::string(""));
+	bool isGrh = type.find("grh") != std::string::npos;
+	bool isJpg = type.find("jpg") != std::string::npos;
+	if (!isGrh && !isJpg) {
+		return false; //非缺口图片文件(如曲线等)不做转换，走原流程
+	}
+
+	//下面属于缺口图像处理分支，无论是否成功落盘都不再把 base64 原样写入 db.json
+	if (!file.contains("data") || !file["data"].is_string()) {
+		LOG("[warn]saveGapImgFromInputFile tag=[%s] file.data缺失", tag.c_str());
+		return true;
+	}
+	std::string b64 = file["data"].get<std::string>();
+
+	DB_TIME stTime;
+	if (!sTime.empty()) {
+		stTime.fromStr(sTime);
+	}
+	if (!(stTime.wYear > 0)) { //记录时间缺失或解析失败，退回当前时间
+		TIME tNow;
+		tNow.setNow();
+		stTime.fromUnixTime(tNow.toUnixTime());
+	}
+
+	std::string folder = db.getPath_dataFolder(tag, stTime);
+	if (folder.empty()) {
+		LOG("[warn]saveGapImgFromInputFile tag=[%s] 数据目录为空", tag.c_str());
+		return true;
+	}
+
+	std::string path = folder + "/" + stTime.toStampHMS() + ".jpg";
+	if (TDB::fileExist(path)) {
+		return true; //该时间点图片已存在
+	}
+
+	//兼容 data:image/...;base64, 前缀
+	size_t startPos = 0;
+	if (b64.find("data:") == 0) {
+		startPos = b64.find(",");
+		if (startPos == std::string::npos) {
+			LOG("[warn]saveGapImgFromInputFile tag=[%s] data:前缀不完整", tag.c_str());
+			return true;
+		}
+		startPos += 1;
+	}
+
+	size_t outSize = (b64.size() - startPos) / 4 * 3 + 4;
+	std::vector<unsigned char> buff(outSize, 0);
+	unsigned int outLen = base64_decode(b64.c_str() + startPos, (unsigned int)(b64.size() - startPos), buff.data());
+
+	//grh 容器：去掉开头 1KB 头信息，剩余为 jpg
+	size_t jpgStart = 0;
+	if (isGrh && outLen > 1024) {
+		jpgStart = 1024;
+	}
+	size_t jpgLen = outLen - jpgStart;
+
+	//校验 jpg 头(FFD8)，不符合则从头查找，兼容纯 jpg 或头长度不一致的情况
+	if (jpgLen < 2 || buff[jpgStart] != 0xFF || buff[jpgStart + 1] != 0xD8) {
+		jpgStart = 0;
+		jpgLen = 0;
+		for (size_t i = 0; i + 1 < outLen; i++) {
+			if (buff[i] == 0xFF && buff[i + 1] == 0xD8) {
+				jpgStart = i;
+				jpgLen = outLen - i;
+				break;
+			}
+		}
+	}
+
+	if (jpgLen == 0) {
+		LOG("[warn]saveGapImgFromInputFile tag=[%s] 未解析出jpg数据 len=%u", tag.c_str(), (unsigned int)outLen);
+		return true;
+	}
+
+	DB_FS::createFolderOfPath(path);
+	bool ret = DB_FS::writeFile(path, buff.data() + jpgStart, jpgLen);
+	LOG("[diag]saveGapImgFromInputFile tag=[%s] time=%s type=%s -> %s ret=%d", tag.c_str(), sTime.c_str(), type.c_str(), path.c_str(), (int)ret);
+	return true;
+}
+
 void rpcHandler::rpc_input(json params, RPC_RESP& resp, RPC_SESSION& session) {
+	//[diag] 打印 db.input 入口的完整请求体，用于排查图片/file.data 是否正确上送
+	LOG("[diag][db.input] req, remote=%s:%d body=%s", session.remoteIP.c_str(), session.remotePort, params.dump().c_str());
+
 	if (params.is_object() && params.contains("name")) { //tdsp接收到子服务的数据后，会进入到此处
 		string rootTag;
 		if (params.contains("rootTag")) {
@@ -4901,6 +4998,14 @@ void rpcHandler::rpc_input(json params, RPC_RESP& resp, RPC_SESSION& session) {
 
 			tag = TAG::addRoot(tag, rootTag);
 			tag = TAG::addRoot(tag, session.org);
+
+			//带 file(grh/jpg) 的上送：把图片转存为该 tag 目录下的 <时分秒>.jpg，与 db.json 记录时间点对应。
+			//grh/jpg 缺口图像只落盘 .jpg 文件，不再写 db.json/MP 记录（缺口数值记录由值数据流另存，避免 db.json 膨胀与重复）。
+			if (!tag.empty() && file.is_object()) {
+				if (saveGapImgFromInputFile(tag, file, de.sTime)) {
+					continue;
+				}
+			}
 
 			if (tag != "") {
 				MP* pmp = prj.GetMPByTag(tag, session.language);

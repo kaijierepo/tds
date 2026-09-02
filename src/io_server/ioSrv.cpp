@@ -403,6 +403,50 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 						}
 					}
 
+					//道岔缺口 grh 图像上送：下位机 HTTP POST /rpc method=input，无 ioAddr，tag 为相对位号(如 2#.2J2.缺口)。
+					//http仅依靠发送方源IP区分设备，故用 ioSession->remoteIP 匹配登记的 dcqk-sys-device(tcpServer)下位机，
+					//补充站点前缀(如 海宁西站.)后转发数据服务入库，由 rpcHandler 把 grh 落盘为 <时分秒>.jpg。
+					if (!handled && tdspPkt.find("grh") != string::npos) {
+						yyjson_val* yyv_method = yyjson_obj_get(yyv_resp, "method");
+						if (yyv_method && string(yyjson_get_str(yyv_method)) == "input") {
+							ioDev* pGapDev = NULL;
+							string remoteIP = ioSession->remoteIP;
+							if (!remoteIP.empty()) {
+								pGapDev = getIODev(remoteIP, false, true);
+							}
+
+							if (pGapDev && pGapDev->m_strTagBind != "" && pGapDev->m_devType == "dcqk-sys-device") {
+								json jRoot = json::parse(tdspPkt);
+								json jParams = jRoot.value("params", json());
+								json deList;
+								if (jParams.is_array()) {
+									deList = jParams;
+								}
+								else if (jParams.is_object()) {
+									deList = json::array();
+									deList.push_back(jParams);
+								}
+
+								for (auto& jDe : deList) {
+									if (!jDe.is_object() || !jDe.contains("tag") || !jDe["tag"].is_string()) {
+										continue;
+									}
+									if (!jDe.contains("file") || !jDe["file"].is_object()) {
+										continue; //仅转发缺口图像上送，数值记录由帧值数据流入库
+									}
+									string relTag = jDe["tag"].get<string>();
+									if (relTag.empty()) {
+										continue;
+									}
+									jDe["tag"] = pGapDev->m_strTagBind + "." + relTag;
+									LOG("[diag]gapImg grh 上送 归属站点=[%s] tag=[%s] remote=%s", pGapDev->m_strTagBind.c_str(), jDe["tag"].get<string>().c_str(), remoteIP.c_str());
+									tds->callAsyn("input", jDe);
+								}
+								handled = true;
+							}
+						}
+					}
+
 					yyjson_doc_free(doc);
 				}
 				catch (const std::exception&) {

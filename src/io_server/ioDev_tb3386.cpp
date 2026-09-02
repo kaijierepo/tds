@@ -70,11 +70,13 @@ static bool saveGapImageFile(const std::string& storeTag, const DB_TIME& stTime,
     }
 
     std::string folder = db.getPath_dataFolder(storeTag, stTime);
+    LOG("[diag]saveGapImageFile folder=[%s]", folder.c_str());
     if (folder.empty()) {
         return false;
     }
 
     std::string path = folder + "/" + stTime.toStampHMS() + ".jpg";
+    LOG("[diag]saveGapImageFile path=[%s] 存在=%d", path.c_str(), (int)TDB::fileExist(path));
 
     if (TDB::fileExist(path)) {
         return false;
@@ -82,6 +84,7 @@ static bool saveGapImageFile(const std::string& storeTag, const DB_TIME& stTime,
 
     DB_FS::createFolderOfPath(path);
     bool ret = DB_FS::writeFile(path, (unsigned char*)pImgData, imgLen);
+    LOG("[diag]saveGapImageFile writeFile ret=%d", (int)ret);
     return ret;
 }
 
@@ -97,6 +100,16 @@ void ioDev_tb3386::DoAcq()
 {
     // TB3386 下位机主动上发 0x24/0x26 数据帧，上位机无需主动轮询。
     timeopt::now(&m_stLastAcqTime);
+
+    static bool s_bDumpOnce = false;
+    if (!s_bDumpOnce && m_channels.size() > 0) {
+        s_bDumpOnce = true;
+        LOG("[diag]通道总数=%d", (int)m_channels.size());
+        for (size_t i = 0; i < m_channels.size(); i++) {
+            ioChannel* pCh = m_channels[i];
+            LOG("[diag]通道 addr=[%s] tag=[%s]", pCh->getDevAddrStr().c_str(), pCh->m_strTagBind.c_str());
+        }
+    }
 }
 
 void ioDev_tb3386::DoCycleTask()
@@ -126,6 +139,12 @@ void ioDev_tb3386::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessio
     timeopt::now(&m_stLastActiveTime);
     setOnline();
 
+    if (len >= 15 && pData[7] == FRAME_TYPE_DATA) {
+        uint8_t cmdid = pData[12];
+        uint16_t sid = *(uint16_t*)(pData + 13);
+        LOG("[diag][流] cmdid=0x%02X sid=%d len=%d", (int)cmdid, (int)sid, (int)len);
+    }
+
     stream2pkt* pab = &m_pab;
     pab->PushStream(pData, len);
 
@@ -150,6 +169,12 @@ bool ioDev_tb3386::onRecvPkt(unsigned char* pData, size_t iLen)
 
     if (data.ftype == FRAME_TYPE_DATA && data.lpdata != NULL) {
         StDataBasic* pBasic = (StDataBasic*)data.lpdata;
+        if (pBasic->cmdid == CMD_CODE_ALARM_AND_IMG) {
+            StAlarmAndImgInfo* pImg = (StAlarmAndImgInfo*)data.lpdata;
+            LOG("[diag]0x27帧 sid=%d time=%u imglen=%u lpimg=%s", (int)pImg->sid, (unsigned int)pImg->time, (unsigned int)pImg->imglen, (pImg->lpimg ? "有" : "无"));
+        } else {
+            LOG("[diag]收到数据帧 cmdid=0x%02X", (int)pBasic->cmdid);
+        }
 
         switch (pBasic->cmdid) {
         case CMD_CODE_GAPVAL: {
@@ -372,6 +397,7 @@ void ioDev_tb3386::saveGapImageForId(unsigned short sid, unsigned int time, cons
     }
 
     std::string zzjTag = getZZJTagByID(sid);
+    LOG("[diag]saveGapImageForId sid=%d zzjTag=[%s]", (int)sid, zzjTag.c_str());
     if (zzjTag.empty()) {
         return;
     }
