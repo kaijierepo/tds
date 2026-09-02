@@ -262,7 +262,13 @@ void ioDev_tb3386::updateGapCache(unsigned short id, const StGapRecord& record)
         cache.gap = (float)record.gap / 100.0f;
         cache.std = (float)record.std / 100.0f;
         cache.offset = (float)record.offset / 100.0f;
-        cache.acqType = record.gaptype;
+        switch (record.gaptype)
+        {
+        case 1:cache.acqType = 1; break;
+        case 2:cache.acqType = 5; break;
+        default:cache.acqType = 2; break;
+        }
+        
         cache.pos = record.fixorinvert;
 
         if (record.time != cache.gapTime) {
