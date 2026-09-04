@@ -365,7 +365,9 @@ std::string ioDev_tb3386::buildGapJson(const StZZJCache& cache, const std::strin
         double tempWeather = cache.temp;
         OBJ* pObj = prj.queryObj(m_strTagBind, "zh"); //根据 m_strTagBind 找到站点对象
         if (pObj) {
-            MP* pmp = pObj->GetMPByTag("天气", "zh"); //获取站点下面的天气MP的当前值
+            // 不能直接用 pObj->GetMPByTag("天气","zh")：queryObj 精确查找要求传入以站点自身位号为前缀的
+            // 完整相对位号(如"站.天气")，单传叶子名"天气"会因前缀不匹配直接返回空。改用按名字在站点子树内查找。
+            MP* pmp = pObj->GetDescendantMPByName("天气"); //获取站点下面的天气MP的当前值
             if (pmp) {
                 const std::string& curVal = pmp->m_curVal;
                 if (!curVal.empty() && curVal != "null") {
