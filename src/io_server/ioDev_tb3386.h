@@ -28,17 +28,19 @@ private:
         unsigned char pos;
         unsigned int gapTime;
         float temp;
+        float railTemp;
         float humi;
         unsigned int tempTime;
         unsigned int humiTime;
         bool validGap;
         bool validTemp;
+        bool validRailTemp;
         bool validHumi;
 
         StZZJCache()
             : id(0), gap(0.0f), std(0.0f), offset(0.0f), pos(0),
-              gapTime(0), temp(0.0f), humi(0.0f), tempTime(0), humiTime(0),
-              validGap(false), validTemp(false), validHumi(false)
+              gapTime(0), temp(0.0f), railTemp(0.0f), humi(0.0f), tempTime(0), humiTime(0),
+              validGap(false), validTemp(false), validRailTemp(false), validHumi(false)
         {
         }
     };
@@ -48,6 +50,7 @@ private:
     OBJ* getZZJObj(unsigned short id);
     void updateGapCache(unsigned short id, const StGapRecord& record);
     void updateStateCache(unsigned short id, const StSdataRecord& record);
+    void updateRailTempCache(unsigned short id, short val);
     void storeGapData(unsigned short id);
     std::string buildGapJson(const StZZJCache& cache, const std::string& strTag, const std::string& strTime);
     void saveGapImageForId(unsigned short sid, unsigned int time, const unsigned char* pImgData, size_t imgLen);

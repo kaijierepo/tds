@@ -1,5 +1,6 @@
 #include "ioDev_tb3386.h"
 #include <cstring>
+#include <cstdlib>
 #include "prj.h"
 #include "mp.h"
 #include "database/tDatabase.h"
@@ -218,6 +219,13 @@ bool ioDev_tb3386::onRecvPkt(unsigned char* pData, size_t iLen)
             }
             break;
         }
+        case (uint8_t)E_315_PROTOCOL_TYPE::GONGKUANG_REAL_VAL_0x81: {   //0x81 工况参数实时值更新，valType=0x20 为轨温
+            StWorkingConditionValRes* pRes = (StWorkingConditionValRes*)data.lpdata;
+            if (pRes->valType == 0x20) {   //0x20 轨温（挂在对应道岔下）
+                updateRailTempCache(pRes->zzjid, pRes->value);
+            }
+            break;
+        }
         default:
             break;
         }
@@ -302,6 +310,45 @@ void ioDev_tb3386::updateStateCache(unsigned short id, const StSdataRecord& reco
     }
 }
 
+void ioDev_tb3386::updateRailTempCache(unsigned short id, short val)
+{
+    if (val == 0x7FFF) {   //0x7FFF 表示无效
+        return;
+    }
+
+    //0x81 工况实时值精度0.1℃。轨温属于整组道岔，但下位机只在某一台转辙机(J1)上上报。
+    //此处按“道岔”定位：把轨温写入与上报转辙机同处一个道岔下的所有转辙机缓存(id)，同步给 J2/J3/X1。
+    std::string srcTag = getZZJTagByID(id);
+    if (srcTag.empty()) {
+        return;
+    }
+    size_t dot = srcTag.rfind('.');
+    std::string group = (dot == std::string::npos) ? srcTag : srcTag.substr(0, dot);   //道岔位号
+    float fRailTemp = (float)val / 10.0f;
+
+    std::lock_guard<std::mutex> lock(m_csZZJ);
+    for (size_t i = 0; i < m_channels.size(); i++) {
+        ioChannel* pCh = m_channels[i];
+
+        //同一道岔下的兄弟转辙机通道
+        std::string chTag = m_strTagBind + "." + pCh->m_strTagBind;
+        size_t dot2 = chTag.rfind('.');
+        std::string chGroup = (dot2 == std::string::npos) ? chTag : chTag.substr(0, dot2);
+        if (chGroup != group) {
+            continue;
+        }
+
+        int sid = atoi(pCh->getDevAddrStr().c_str());
+        if (sid <= 0) {
+            continue;
+        }
+        StZZJCache& cache = m_mapZZJ[sid];
+        cache.id = (unsigned short)sid;
+        cache.railTemp = fRailTemp;
+        cache.validRailTemp = true;
+    }
+}
+
 void ioDev_tb3386::storeGapData(unsigned short id)
 {
     std::string zzjTag = getZZJTagByID(id);
@@ -358,8 +405,10 @@ std::string ioDev_tb3386::buildGapJson(const StZZJCache& cache, const std::strin
     // tempZZJ 来自 0x24 命令的设备温度。
     if (cache.validTemp) {
         yyjson_mut_obj_add_real(doc, root, "tempZZJ", cache.temp);
-        // 轨温协议未提供，暂用设备温度占位，后续可从其他 MP 接入。
-        yyjson_mut_obj_add_real(doc, root, "tempRail", cache.temp);
+
+        // tempRail 来自 0x81 工况实时值(valType=0x20 轨温)，0x81收到时已按道岔同步进本转辙机缓存。
+        // 尚未收到轨温时回退为设备温度占位。
+        yyjson_mut_obj_add_real(doc, root, "tempRail", cache.validRailTemp ? cache.railTemp : cache.temp);
 
         // 天气预报：优先从站点天气MP当前值读取实时温度与天气状况，缺失时沿用设备温度占位。
         double tempWeather = cache.temp;
