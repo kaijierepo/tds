@@ -116,11 +116,22 @@ void ioDev_tb3386::DoAcq()
 void ioDev_tb3386::DoCycleTask()
 {
     // 下位机主动上发模式，只保留离线检测，不执行基类 TDSP 的 JSON 轮询。
-    if (m_bEnableOfflineTimeout && m_offlineTimeout > 0) {
-        long long inactiveTime = timeopt::CalcTimePassMilliSecond(m_stLastActiveTime);
-        if (inactiveTime > m_offlineTimeout) {
-            std::string s = str::format("%dms未收到数据,超时时间%dms", inactiveTime, m_offlineTimeout);
-            setOffline(false, s);
+    // 超时未收到数据说明链路已死。常见为半开连接：对端异常断开未发FIN，
+    // 本端socket始终处于已连接状态，永远收不到数据，仅标记离线无法自愈。
+    // 故超时后主动stop+run重建TCP连接，让下位机重新建立链路（参照 ioSrv 周期重连的做法）。
+    const long long OFFLINE_TIMEOUT_MS = 90000;   // 90秒无数据判定链路已死（正常周期上发约60秒一次，留有余量）
+    const int RECONNECT_INTERVAL_SEC = 60;        // 重连最小间隔，避免死循环狂刷
+
+    long long inactiveTime = timeopt::CalcTimePassMilliSecond(m_stLastActiveTime);
+    if (inactiveTime > OFFLINE_TIMEOUT_MS) {
+        std::string s = str::format("%dms未收到数据,超时时间%lldms", (int)inactiveTime, OFFLINE_TIMEOUT_MS);
+        setOffline(false, s);
+
+        if (timeopt::CalcTimePassSecond(m_stLastReconnectTime) > RECONNECT_INTERVAL_SEC) {
+            LOG("[warn]tb3386超时无数据,主动重连,ioAddr=%s,tag=%s,inactive=%lldms", getIOAddrStr().c_str(), m_strTagBind.c_str(), inactiveTime);
+            timeopt::now(&m_stLastReconnectTime);
+            stop();
+            run();
         }
     }
 }
