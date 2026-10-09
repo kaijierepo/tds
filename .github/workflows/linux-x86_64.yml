@@ -98,6 +98,9 @@ jobs:
       - name: 创建 GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # release job 未 checkout（无 .git），显式指定仓库，避免 gh 调 git 失败：
+          # fatal: not a git repository (or any of the parent directories): .git
+          GH_REPO: ${{ github.repository }}
         run: |
           TAG="tds-v${GITHUB_RUN_NUMBER}-linux-x86_64"
           gh release create "$TAG" ./dist/tds-v*.tar.gz \
