@@ -50,7 +50,7 @@ jobs:
     # 可直接在银河麒麟 V10（glibc 2.31）上运行。
     container: ubuntu:20.04
     steps:
-      - name: 安装 git/CA（checkout 依赖）
+      - name: 安装 git/CA（checkout ）
         # ubuntu:20.04 基础镜像不含 git 与 ca-certificates，需先装才能 checkout
         run: |
           apt-get update
