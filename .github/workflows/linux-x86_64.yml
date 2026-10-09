@@ -1,0 +1,105 @@
+name: linux-x86_64
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (gcc)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 安装编译依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ make file libssl-dev libkrb5-dev
+
+      - name: 编译 (JOBS=2 避免 CI 节点 OOM)
+        run: |
+          cd build
+          export JOBS=2
+          bash build.sh x86_64
+
+      - name: 打包
+        # package.sh 版本号默认取 Gitee API，改为用 GitHub run 号覆盖，保证包名/标签可预期。
+        run: |
+          cd build
+          export TDS_VERSION_OVERRIDE="tds-v${GITHUB_RUN_NUMBER}-linux-x86_64-$(date +%Y%m%d_%H%M%S)"
+          bash package.sh x86_64
+          cp ../out/tds/tds-v*.tar.gz ../
+          ls -la ../tds-v*.tar.gz
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: BUILD_ARTIFACT
+          path: ./tds-v*.tar.gz
+
+  build-kylin:
+    name: Build (Kylin / glibc 2.31)
+    runs-on: ubuntu-latest
+    # 在 ubuntu:20.04 容器内编译：二进制仅依赖 GLIBC_2.31，
+    # 可直接在银河麒麟 V10（glibc 2.31）上运行。
+    container: ubuntu:20.04
+    steps:
+      - name: 安装 git/CA（checkout 依赖）
+        # ubuntu:20.04 基础镜像不含 git 与 ca-certificates，需先装才能 checkout
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 安装编译依赖
+        run: |
+          apt-get install -y gcc g++ make file curl
+
+      - name: 编译 (JOBS=2 避免 CI 节点 OOM)
+        run: |
+          cd build
+          export JOBS=2
+          bash build.sh x86_64
+
+      - name: 打包 (麒麟版)
+        run: |
+          cd build
+          export TDS_VERSION_OVERRIDE="tds-v${GITHUB_RUN_NUMBER}-linux-x86_64-kylin-$(date +%Y%m%d_%H%M%S)"
+          bash package.sh x86_64
+          cp ../out/tds/tds-v*.tar.gz ../
+          ls -la ../tds-v*.tar.gz
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: BUILD_ARTIFACT_KYLIN
+          path: ./tds-v*.tar.gz
+
+  release:
+    name: 发布 GitHub Release
+    needs: [build, build-kylin]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载构建产物（通用版 + 麒麟版）
+        uses: actions/download-artifact@v4
+        with:
+          pattern: BUILD_ARTIFACT*
+          merge-multiple: true
+          path: ./dist
+
+      - name: 创建 GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="tds-v${GITHUB_RUN_NUMBER}-linux-x86_64"
+          gh release create "$TAG" ./dist/tds-v*.tar.gz \
+            --title "TDS Linux x86_64 v${GITHUB_RUN_NUMBER}" \
+            --notes "TDS Linux x86_64 自动构建发布包：通用版 tds-v${GITHUB_RUN_NUMBER}-linux-x86_64-{yyyyMMdd_HHmmss}.tar.gz；麒麟版 tds-v${GITHUB_RUN_NUMBER}-linux-x86_64-kylin-{yyyyMMdd_HHmmss}.tar.gz（在 ubuntu:20.04 编译，依赖 GLIBC 2.31，适配银河麒麟 V10）。均为扁平包，仅含 tds 可执行文件。"
