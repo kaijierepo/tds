@@ -418,8 +418,12 @@ std::string ioDev_tb3386::buildGapJson(const StZZJCache& cache, const std::strin
         yyjson_mut_obj_add_real(doc, root, "tempZZJ", cache.temp);
 
         // tempRail 来自 0x81 工况实时值(valType=0x20 轨温)，0x81收到时已按道岔同步进本转辙机缓存。
-        // 尚未收到轨温时回退为设备温度占位。
-        yyjson_mut_obj_add_real(doc, root, "tempRail", cache.validRailTemp ? cache.railTemp : cache.temp);
+        // 尚未收到轨温时赋空值，不用设备温度占位。
+        if (cache.validRailTemp) {
+            yyjson_mut_obj_add_real(doc, root, "tempRail", cache.railTemp);
+        } else {
+            yyjson_mut_obj_add_null(doc, root, "tempRail");
+        }
 
         // 天气预报：优先从站点天气MP当前值读取实时温度与天气状况，缺失时沿用设备温度占位。
         double tempWeather = cache.temp;
